@@ -6,7 +6,7 @@
   "category": "PUZZLE",
   "tags": ["sand", "blast", "puzzle", "physics", "casual"],
   "description": "Drop colored blocks that shatter into flowing sand. When one connected color band bridges the left and right walls it blasts away for points. Chain blasts for combo multipliers and beat your best score.",
-  "controls": "Drag to move the block, tap to rotate, swipe down to hard drop",
+  "controls": "Drag a block from the tray onto a column, then release to pour it down as sand",
   "aiContext": "",
   "aiBuildLink": "",
   "demoUrl": "",

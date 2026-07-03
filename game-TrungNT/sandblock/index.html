@@ -69,8 +69,17 @@
     gap: 10px;
     padding: 0 14px 4px;
   }
-  .scoreboard { display: flex; gap: calc(26px * var(--sc)); align-items: center; }
-  .stat { display: flex; flex-direction: column; align-items: center; line-height: 1.05; }
+  .scoreboard { display: flex; align-items: center; gap: calc(10px * var(--sc)); }
+  /* mỗi loại điểm 1 khung riêng */
+  .stat {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05;
+    background: rgba(255,255,255,.05);
+    border: 1.5px solid rgba(120,160,255,.16);
+    border-radius: calc(14px * var(--sc));
+    padding: calc(5px * var(--sc)) calc(16px * var(--sc));
+    min-width: calc(64px * var(--sc));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 4px 12px rgba(0,0,0,.25);
+  }
   .stat .k {
     font-family: system-ui, sans-serif;
     font-size: calc(10px * var(--sc)); letter-spacing: 2px; font-weight: 800;
@@ -949,7 +958,7 @@ function resize() {
   const aspect = GW / GH;
   // Scale theo màn hình: rộng gần hết bề ngang (cap 1000 cho màn cực lớn), cao
   // giới hạn bởi phần còn lại sau khi chừa khay. Khay/ô khay cũng nở theo.
-  const availW = Math.min(window.innerWidth, 1000) - 18;
+  const availW = Math.min(window.innerWidth, 1000) - 24;   // -24: chừa lề + viền board-wrap (16)
   const slotEst = Math.min((availW - 52) / 3, 150);        // cạnh ô khay ước lượng (cap 150)
   const trayReserve = slotEst + 26;                        // chừa cho khay + gap
   const availH = window.innerHeight - topBottom - 12 - trayReserve;
@@ -960,7 +969,8 @@ function resize() {
   cv.style.width = w + 'px'; cv.style.height = h + 'px';
   cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
   tray.style.maxWidth = w + 'px';                          // khay khớp bề rộng khung
-  topbar.style.maxWidth = w + 'px';                        // HUD khớp bề rộng khung
+  // KHÔNG ép topbar theo board (tránh tràn khi nội dung > board) — để CSS max-width
+  // + full viewport như skydom/runic-blaze, nút luôn ở góc, không lệch/tràn.
   const sc = Math.min(Math.max(w / 360, 1), 1.6);          // scale nút/HUD theo cỡ khung
   document.documentElement.style.setProperty('--sc', sc.toFixed(3));
   renderTray();
@@ -978,6 +988,7 @@ function boot() {
   requestAnimationFrame(frame);
 }
 window.addEventListener('resize', resize);
+window.addEventListener('load', resize);   // chạy lại khi kích thước cửa sổ đã ổn định
 
 (function waitForNativeInjection() {
   const start = Date.now();
