@@ -1,0 +1,989 @@
+<!--
+  Sand Block Color Blast (clone) — TrungNT
+  Kiểu Block Blast + cát: khay cho sẵn 3 khối. Kéo 1 khối rồi CHỌN CỘT để
+  ĐỔ khối đó xuống — khối tan thành cát rơi theo trọng lực. Khi một dải cát
+  cùng màu nối liền tường TRÁI ↔ PHẢI thì cả cụm NỔ (blast) → điểm + combo.
+  Hết 3 khối thì khay tự nạp 3 khối mới. Endless / điểm cao (không level).
+  Single-file HTML (CSS + JS inline).
+  Tuân thủ .claude/game-common.md + popup-common.md + zip-common.md.
+-->
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Sand Block Color Blast</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap" rel="stylesheet" />
+
+<style>
+  /* ── Reset + tắt highlight khi chạm (game-common §UI) ─────────────── */
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+
+  :root {
+    --ui-font: 'Google Sans Flex', system-ui, sans-serif;
+    --bg-1: #101a2e;
+    --bg-2: #060b16;
+    --ink: #eaf1ff;
+    --ink-soft: #8fb4ff;
+    --wall: #223257;
+    --board-bg: #0a1120;
+    --gold: #ffd23f;
+    --sc: 1;                 /* hệ số scale UI theo cỡ khung (JS đặt trong resize) */
+  }
+
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: var(--ui-font);
+    font-weight: 700;
+    color: var(--ink);
+    background:
+      radial-gradient(120% 80% at 50% -10%, #1b2b4d 0%, transparent 60%),
+      linear-gradient(180deg, var(--bg-1), var(--bg-2));
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: none;
+  }
+
+  .app {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── HUD trên cùng ────────────────────────────────────────────────── */
+  .topbar {
+    width: 100%;
+    max-width: 620px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 14px 4px;
+  }
+  .scoreboard { display: flex; gap: calc(26px * var(--sc)); align-items: center; }
+  .stat { display: flex; flex-direction: column; align-items: center; line-height: 1.05; }
+  .stat .k {
+    font-family: system-ui, sans-serif;
+    font-size: calc(10px * var(--sc)); letter-spacing: 2px; font-weight: 800;
+    color: var(--ink-soft); text-transform: uppercase;
+  }
+  .stat .v { font-size: calc(24px * var(--sc)); color: #fff; }
+  .stat .v.best { color: var(--gold); }
+
+  .btn3d {
+    --radius: 14px; --surface-color: #16233f; --surface-text: #cfe0ff;
+    position: relative; display: inline-block; padding: 0; border: 0;
+    background: transparent; cursor: pointer; font: inherit; color: inherit;
+  }
+  .btn3d-shadow { display: none; }
+  .btn3d-surface {
+    position: relative; z-index: 1;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: var(--radius);
+    background-color: var(--surface-color); color: var(--surface-text);
+    box-shadow: 0 3px 0 rgba(0,0,0,.4), 0 6px 14px rgba(0,0,0,.35);
+    transition: transform .09s ease-out;
+  }
+  .btn3d:active .btn3d-surface { transform: scale(.95); }
+  .btn3d.btn-icon .btn3d-surface { width: calc(46px * var(--sc)); height: calc(46px * var(--sc)); border-radius: calc(14px * var(--sc)); }
+  .btn3d.btn-icon { -webkit-user-select: none; user-select: none; }
+  .back-ico { width: 52%; height: 52%; fill: currentColor; display: block; }
+  .snd-ico { width: 58%; height: 58%; display: block; }
+  #sound-btn .snd-slash { display: none; }
+  #sound-btn.muted .snd-wave { display: none; }
+  #sound-btn.muted .snd-slash { display: block; }
+  #sound-btn.muted .snd-ico { opacity: .75; }
+
+  /* ── Sân chơi ─────────────────────────────────────────────────────── */
+  .stage {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    width: 100%;
+    gap: 12px;
+    padding: 2px 0 12px;
+  }
+  .board-wrap {
+    position: relative;
+    background: var(--board-bg);
+    border-radius: 16px;
+    padding: 6px;
+    border: 2px solid var(--wall);
+    box-shadow: 0 12px 34px rgba(0,0,0,.5), inset 0 0 40px rgba(0,0,0,.4);
+  }
+  #game { display: block; border-radius: 10px; touch-action: none; }
+
+  /* ── Khay 3 khối ──────────────────────────────────────────────────── */
+  .tray {
+    display: flex; gap: 12px; align-items: center; justify-content: center;
+    width: 100%; max-width: 600px; padding: 0 14px;
+  }
+  .slot {
+    flex: 1;
+    aspect-ratio: 1 / 1;
+    max-width: 150px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,.04);
+    border: 1.5px solid rgba(120,160,255,.14);
+    border-radius: 16px;
+    touch-action: none;
+    transition: transform .1s, opacity .15s, background .15s;
+  }
+  .slot.used { opacity: .25; }
+  .slot.grabbing { transform: scale(.92); background: rgba(120,160,255,.12); }
+  .slot canvas { display: block; width: 82%; height: 82%; }
+
+  /* Khối đang kéo (bay theo ngón tay) */
+  #drag {
+    position: fixed; left: 0; top: 0; z-index: 30;
+    pointer-events: none; display: none;
+    filter: drop-shadow(0 8px 14px rgba(0,0,0,.5));
+  }
+
+  .hint {
+    position: absolute;
+    left: 50%; bottom: 14px; transform: translateX(-50%);
+    background: rgba(8,14,28,.72); color: #cfe0ff;
+    padding: 8px 14px; border-radius: 12px;
+    font-size: 12px; letter-spacing: .3px; white-space: nowrap;
+    pointer-events: none; opacity: 1; transition: opacity .5s;
+    box-shadow: 0 6px 18px rgba(0,0,0,.4);
+  }
+  .hint.gone { opacity: 0; }
+
+  /* ── Popup Combo + điểm mỗi lần nổ ────────────────────────────────── */
+  .combo-pop {
+    position: absolute; left: 50%; top: 40%;
+    transform: translate(-50%, -50%) scale(.5);
+    text-align: center; line-height: 1.04; pointer-events: none;
+    opacity: 0; z-index: 6;
+    text-shadow: 0 2px 12px rgba(0,0,0,.65);
+  }
+  .combo-pop .cmb { font-size: calc(30px * var(--sc)); font-weight: 900; color: var(--gold); letter-spacing: .5px; }
+  .combo-pop .pts { font-size: calc(22px * var(--sc)); font-weight: 800; color: #fff; }
+  .combo-pop.show { animation: comboPop .62s ease-out forwards; }
+  @keyframes comboPop {
+    0%   { opacity: 0; transform: translate(-50%, -46%) scale(.5); }
+    22%  { opacity: 1; transform: translate(-50%, -58%) scale(1.18); }
+    68%  { opacity: 1; transform: translate(-50%, -60%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -76%) scale(1); }
+  }
+
+  /* ── Popup Game Over / New Best (popup-common.md) ─────────────────── */
+  .overlay {
+    position: absolute; inset: 0; z-index: 40;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(3,9,24,.7); opacity: 1; transition: opacity .25s;
+  }
+  .overlay.hidden { opacity: 0; pointer-events: none; }
+  .card {
+    width: min(82%, calc(360px * var(--sc))); padding: calc(26px * var(--sc)); text-align: center; border-radius: calc(22px * var(--sc));
+    background: linear-gradient(180deg, #1c2f63, #0c1838);
+    border: 2px solid rgba(120,160,255,.22);
+    box-shadow: 0 18px 50px rgba(0,0,0,.5);
+    transform: scale(1); transition: transform .25s;
+  }
+  .overlay.hidden .card { transform: scale(.9); }
+  .card-title { color: #fff; font-size: calc(30px * var(--sc)); margin-bottom: calc(14px * var(--sc)); }
+  .sb { display: flex; justify-content: center; gap: calc(30px * var(--sc)); margin-bottom: calc(18px * var(--sc)); }
+  .sb .k { font-family: system-ui, sans-serif; font-size: calc(11px * var(--sc)); letter-spacing: 2px; color: #8fb4ff; font-weight: 800; }
+  .sb .v { font-size: calc(32px * var(--sc)); color: #fff; }
+  .sb .v.best { color: var(--gold); }
+  .btn3d.play { --radius: calc(14px * var(--sc)); }
+  .btn3d.play .btn3d-surface {
+    height: calc(52px * var(--sc)); padding: 0 calc(34px * var(--sc));
+    background-color: #ffb02e; color: #3a2400;
+    font-family: var(--ui-font); font-size: calc(17px * var(--sc)); letter-spacing: .6px;
+    box-shadow: 0 6px 16px rgba(255,176,46,.35);
+  }
+</style>
+
+<div class="app" id="app">
+  <div class="topbar" id="topbar">
+    <div class="btn3d btn-icon" id="back-btn" role="button" aria-label="Back">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="back-ico" viewBox="0 0 447.243 447.243" aria-hidden="true">
+          <path fill="currentColor" d="M420.361 192.229a31.967 31.967 0 0 0-5.535-.41H99.305l6.88-3.2a63.998 63.998 0 0 0 18.08-12.8l88.48-88.48c11.653-11.124 13.611-29.019 4.64-42.4-10.441-14.259-30.464-17.355-44.724-6.914a32.018 32.018 0 0 0-3.276 2.754l-160 160c-12.504 12.49-12.515 32.751-.025 45.255l.025.025 160 160c12.514 12.479 32.775 12.451 45.255-.063a32.084 32.084 0 0 0 2.745-3.137c8.971-13.381 7.013-31.276-4.64-42.4l-88.32-88.64a64.002 64.002 0 0 0-16-11.68l-9.6-4.32h314.24c16.347.607 30.689-10.812 33.76-26.88 2.829-17.445-9.019-33.88-26.464-36.71z"/>
+        </svg>
+      </span>
+    </div>
+    <div class="scoreboard">
+      <div class="stat"><div class="k" id="lbl-score">SCORE</div><div class="v" id="hud-score">0</div></div>
+      <div class="stat"><div class="k" id="lbl-best">BEST</div><div class="v best" id="hud-best">0</div></div>
+    </div>
+    <div class="btn3d btn-icon" id="sound-btn" role="button" aria-label="Sound">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="snd-ico" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" d="M4 9v6h4l5 4V5L8 9H4z"/>
+          <path class="snd-wave" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16.5 8.5a4.5 4.5 0 0 1 0 7"/>
+          <line class="snd-slash" x1="4" y1="4" x2="20" y2="20" stroke="#ff6b6b" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+      </span>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="board-wrap" id="board-wrap">
+      <canvas id="game"></canvas>
+      <div class="combo-pop" id="combo-pop"></div>
+      <div class="hint" id="hint"></div>
+    </div>
+    <div class="tray" id="tray">
+      <div class="slot" data-slot="0"><canvas></canvas></div>
+      <div class="slot" data-slot="1"><canvas></canvas></div>
+      <div class="slot" data-slot="2"><canvas></canvas></div>
+    </div>
+  </div>
+
+  <canvas id="drag"></canvas>
+
+  <div id="overlay" class="overlay hidden">
+    <div class="card">
+      <div class="card-title" id="ov-title">Game Over</div>
+      <div class="sb">
+        <div><div class="k" id="ov-k-score">SCORE</div><div class="v" id="ov-score">0</div></div>
+        <div><div class="k" id="ov-k-best">BEST</div><div class="v best" id="ov-best">0</div></div>
+      </div>
+      <button class="btn3d play" id="ov-btn" type="button">
+        <span class="btn3d-shadow"></span><span class="btn3d-surface" id="ov-btn-txt">Play Again</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+ * 0. Localization (inline — game-common §5)
+ * ===================================================================== */
+const SUPPORTED_LANGS = [
+  'en','vi','zh-Hans','zh-Hant','ja','ko','es','es-MX','es-AR','pt-BR','pt',
+  'fr','de','it','nl','pl','ru','tr','ar','hi','th','id','fil',
+];
+const DEFAULT_LANG = 'en';
+const LATIN_LANGS = new Set([
+  'en','vi','es','es-MX','es-AR','pt-BR','pt','fr','de','it','nl','pl','tr','id','fil',
+]);
+const I18N = {
+  en: { score: 'Score', best: 'Best', playAgain: 'Play Again', gameOver: 'Game Over', newBest: 'New Best!', hint: 'Drag a block onto a column to pour it', combo: 'Combo' },
+  vi: { score: 'Điểm', best: 'Cao nhất', playAgain: 'Chơi lại', gameOver: 'Thua rồi', newBest: 'Kỷ lục mới!', hint: 'Kéo một khối vào cột để đổ cát xuống', combo: 'Combo' },
+  es: { score: 'Puntos', best: 'Récord', playAgain: 'Jugar de nuevo', gameOver: 'Fin del juego', newBest: '¡Nuevo récord!', hint: 'Arrastra un bloque a una columna para verterlo' },
+  fr: { score: 'Score', best: 'Record', playAgain: 'Rejouer', gameOver: 'Partie terminée', newBest: 'Nouveau record !', hint: 'Glisse un bloc sur une colonne pour le verser' },
+  de: { score: 'Punkte', best: 'Bestwert', playAgain: 'Nochmal', gameOver: 'Game Over', newBest: 'Neuer Rekord!', hint: 'Ziehe einen Block auf eine Spalte zum Ausgießen' },
+  'pt-BR': { score: 'Pontos', best: 'Recorde', playAgain: 'Jogar de novo', gameOver: 'Fim de jogo', newBest: 'Novo recorde!', hint: 'Arraste um bloco para uma coluna para despejar' },
+  pt: { score: 'Pontos', best: 'Recorde', playAgain: 'Jogar de novo', gameOver: 'Fim de jogo', newBest: 'Novo recorde!', hint: 'Arraste um bloco para uma coluna para despejar' },
+  it: { score: 'Punti', best: 'Record', playAgain: 'Rigioca', gameOver: 'Game Over', newBest: 'Nuovo record!', hint: 'Trascina un blocco su una colonna per versarlo' },
+  nl: { score: 'Score', best: 'Beste', playAgain: 'Opnieuw', gameOver: 'Game Over', newBest: 'Nieuw record!', hint: 'Sleep een blok naar een kolom om te gieten' },
+  pl: { score: 'Wynik', best: 'Rekord', playAgain: 'Zagraj znów', gameOver: 'Koniec gry', newBest: 'Nowy rekord!', hint: 'Przeciągnij blok na kolumnę, aby wysypać' },
+  tr: { score: 'Skor', best: 'En iyi', playAgain: 'Tekrar oyna', gameOver: 'Oyun bitti', newBest: 'Yeni rekor!', hint: 'Bir bloğu bir sütuna sürükleyip dök' },
+  id: { score: 'Skor', best: 'Terbaik', playAgain: 'Main lagi', gameOver: 'Game Over', newBest: 'Rekor baru!', hint: 'Seret balok ke kolom untuk menuang' },
+  fil: { score: 'Puntos', best: 'Pinakamahusay', playAgain: 'Ulitin', gameOver: 'Tapos na', newBest: 'Bagong rekord!', hint: 'I-drag ang bloke sa kolum para ibuhos' },
+  ja: { score: 'スコア', best: 'ベスト', playAgain: 'もう一度', gameOver: 'ゲームオーバー', newBest: '新記録！', hint: 'ブロックを列にドラッグして流し込む' },
+  ko: { score: '점수', best: '최고', playAgain: '다시하기', gameOver: '게임 오버', newBest: '신기록!', hint: '블록을 열로 드래그해 쏟기' },
+  'zh-Hans': { score: '分数', best: '最高', playAgain: '再玩一次', gameOver: '游戏结束', newBest: '新纪录！', hint: '拖动方块到某一列倒下沙子' },
+  'zh-Hant': { score: '分數', best: '最高', playAgain: '再玩一次', gameOver: '遊戲結束', newBest: '新紀錄！', hint: '拖曳方塊到某一列倒下沙子' },
+  ru: { score: 'Счёт', best: 'Рекорд', playAgain: 'Играть снова', gameOver: 'Игра окончена', newBest: 'Новый рекорд!', hint: 'Перетащите блок на столбец, чтобы высыпать' },
+  ar: { score: 'النقاط', best: 'الأفضل', playAgain: 'العب مجددًا', gameOver: 'انتهت اللعبة', newBest: 'رقم قياسي!', hint: 'اسحب كتلة إلى عمود لصبها' },
+  hi: { score: 'स्कोर', best: 'सर्वश्रेष्ठ', playAgain: 'फिर खेलें', gameOver: 'खेल समाप्त', newBest: 'नया रिकॉर्ड!', hint: 'ब्लॉक को कॉलम पर खींचकर डालें' },
+  th: { score: 'คะแนน', best: 'สูงสุด', playAgain: 'เล่นอีกครั้ง', gameOver: 'เกมจบแล้ว', newBest: 'สถิติใหม่!', hint: 'ลากบล็อกไปที่คอลัมน์เพื่อเทลง' },
+};
+function getLanguage() {
+  const fromWin = typeof window.language === 'string' ? window.language : null;
+  const fromUrl = new URLSearchParams(location.search).get('language');
+  const raw = fromWin != null ? fromWin : fromUrl;
+  return SUPPORTED_LANGS.includes(raw) ? raw : DEFAULT_LANG;
+}
+let LANG = getLanguage();
+function t(key) { return (I18N[LANG] && I18N[LANG][key]) || I18N.en[key] || key; }
+function applyUiFont(lang) {
+  if (!LATIN_LANGS.has(lang)) {
+    document.documentElement.style.setProperty('--ui-font', 'system-ui, sans-serif');
+  }
+}
+
+/* =====================================================================
+ * 1. Native bridge (game-common §1) — game KHÔNG level (điểm cao)
+ * ===================================================================== */
+function post(msg) {
+  try {
+    if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+      window.ReactNativeWebView.postMessage(JSON.stringify(msg));
+    } else {
+      console.log('[sandblock → native]', msg);
+    }
+  } catch (e) { /* ignore */ }
+}
+function sendMessage(type, opts) {
+  opts = opts || {};
+  post({
+    type,
+    level: null,
+    result: opts.result != null ? opts.result : null,
+    data: opts.data != null ? opts.data : null,
+    showModal: opts.showModal === true,
+  });
+}
+function saveData(payload) {
+  const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
+  sendMessage('save_data', { data });
+}
+const LS_KEY = 'sandblock_save';
+function saveLocal(payload) { try { localStorage.setItem(LS_KEY, JSON.stringify(payload)); } catch (e) {} }
+function readLocal() { try { return localStorage.getItem(LS_KEY) || ''; } catch (e) { return ''; } }
+
+/* =====================================================================
+ * 1b. SFX — tổng hợp âm bằng Web Audio API (không cần file audio ngoài)
+ * ===================================================================== */
+const SFX_KEY = 'sandblock_sfx';
+const AudioFX = (() => {
+  let ac = null, master = null;
+  let enabled = true;
+  try { enabled = localStorage.getItem(SFX_KEY) !== '0'; } catch (e) {}
+  function ctx() {
+    if (!ac) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      ac = new AC();
+      master = ac.createGain(); master.gain.value = 0.35; master.connect(ac.destination);
+    }
+    return ac;
+  }
+  function resume() { const c = ctx(); if (c && c.state === 'suspended') c.resume(); }
+  // 1 dao động ngắn (có thể trượt cao độ freq→to)
+  function tone(freq, dur, type, gain, delay, to) {
+    if (!enabled) return; const c = ctx(); if (!c) return;
+    const t0 = c.currentTime + (delay || 0);
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(freq, t0);
+    if (to) o.frequency.exponentialRampToValueAtTime(to, t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain || 0.3, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(master); o.start(t0); o.stop(t0 + dur + 0.03);
+  }
+  // nhiễu trắng tắt dần (tiếng cát vỡ / xì)
+  function noise(dur, gain, cutoff) {
+    if (!enabled) return; const c = ctx(); if (!c) return;
+    const t0 = c.currentTime, len = Math.floor(c.sampleRate * dur);
+    const buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const src = c.createBufferSource(); src.buffer = buf;
+    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = cutoff || 2000;
+    const g = c.createGain(); g.gain.value = gain || 0.3;
+    src.connect(f); f.connect(g); g.connect(master); src.start(t0);
+  }
+  return {
+    resume,
+    isEnabled() { return enabled; },
+    setEnabled(v) { enabled = v; try { localStorage.setItem(SFX_KEY, v ? '1' : '0'); } catch (e) {} if (v) tone(660, 0.09, 'triangle', 0.25); },
+    pick()  { tone(540, 0.07, 'triangle', 0.22); },
+    drop()  { tone(340, 0.13, 'sine', 0.24, 0, 190); },
+    land()  { noise(0.20, 0.32, 1500); tone(150, 0.12, 'sine', 0.20, 0, 85); },
+    blast(combo) {                                   // combo càng cao → cao độ càng lên
+      const base = 440 * Math.pow(2, Math.min((combo || 1) - 1, 7) / 12);
+      tone(base, 0.13, 'square', 0.20, 0, base * 1.5);
+      tone(base * 1.5, 0.16, 'triangle', 0.16, 0.04, base * 2);
+      noise(0.16, 0.16, 3800);
+    },
+    over()  { tone(320, 0.5, 'sawtooth', 0.24, 0, 90); tone(160, 0.55, 'sine', 0.18, 0.06, 70); },
+  };
+})();
+
+function getStatusBarHeight() {
+  const params = new URLSearchParams(location.search);
+  const fromUrl = params.get('statusBarHeight');
+  const fromWin = typeof window.statusBarHeight !== 'undefined' ? window.statusBarHeight : null;
+  let h = Number(fromUrl != null ? fromUrl : fromWin);
+  if (Number.isNaN(h) || h < 0) h = 0;
+  return h;
+}
+function getInitialData() {
+  const fromWin = typeof window.data === 'string' ? window.data : null;
+  const fromUrl = new URLSearchParams(location.search).get('data');
+  return fromWin != null ? fromWin : (fromUrl || '');
+}
+function parseInitialBest() {
+  let n = null, l = null;
+  const raw = getInitialData();
+  if (raw) { try { n = JSON.parse(raw); } catch (e) {} }
+  const lraw = readLocal();
+  if (lraw) { try { l = JSON.parse(lraw); } catch (e) {} }
+  const nb = n && typeof n.best === 'number' ? n.best : 0;
+  const lb = l && typeof l.best === 'number' ? l.best : 0;
+  return Math.max(nb, lb, 0);
+}
+
+/* =====================================================================
+ * 2. Grid + hằng số
+ *   Sân = lưới hạt cát GW×GH. Mỗi ô khối = B×B hạt.
+ * ===================================================================== */
+const B = 8;                     // số hạt mỗi cạnh của 1 ô khối
+const BW = 8, BH = 11;           // sân rộng/cao (đơn vị ô) — ít ô hơn → KHỐI TO hơn so
+                                 // với khung, vẫn giữ khung đứng (aspect ~0.73)
+const GW = BW * B, GH = BH * B;  // = 64 × 88 hạt
+const NG = GW * GH;
+const EMPTY = 0;
+const LINE_Y = B;                // vạch game over: cát dâng cao vượt vạch này (1 ô từ đỉnh) → thua
+
+const COLORS = ['#ff4d4f', '#ffb02e', '#2ecc71', '#3d9bff']; // red / amber / green / blue
+const NCOLORS = COLORS.length;
+const RGB = COLORS.map(hexToRgb);
+function hexToRgb(h) {
+  const n = parseInt(h.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+const NOISE = new Int8Array(NG);
+for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
+  const h = (x * 131 + y * 197 + x * y * 7) % 29;
+  NOISE[y * GW + x] = (h - 14) * 1.6;
+}
+
+// Bộ khối kiểu Block Blast (toạ độ ô, gọn trong 3×3)
+const SHAPES = [
+  [[0,0],[1,0]],                               // ▬ 2
+  [[0,0],[1,0],[2,0]],                         // ▬ 3
+  [[0,0],[0,1]],                               // ▮ 2
+  [[0,0],[0,1],[0,2]],                         // ▮ 3
+  [[0,0],[1,0],[0,1],[1,1]],                   // ■ 2×2
+  [[0,0],[0,1],[1,1]],                         // ⌐
+  [[1,0],[0,1],[1,1]],                         // ¬
+  [[0,0],[1,0],[0,1]],                         // ⌐ (khác)
+  [[0,0],[1,0],[2,0],[1,1]],                   // T
+  [[1,0],[2,0],[0,1],[1,1]],                   // S
+];
+
+const idx = (x, y) => y * GW + x;
+const rnd = (n) => (Math.random() * n) | 0;
+function pieceW(cells) { let m = 0; for (const [x] of cells) if (x > m) m = x; return m + 1; }
+function pieceH(cells) { let m = 0; for (const [, y] of cells) if (y > m) m = y; return m + 1; }
+// Cạnh lớn nhất trong mọi SHAPES → khay dùng CÙNG cỡ ô cho mọi khối, nên tỉ lệ
+// to/nhỏ giữa các khối khớp đúng với lúc khối được thả xuống sân.
+const SHAPE_UNIT = SHAPES.reduce((m, c) => Math.max(m, pieceW(c), pieceH(c)), 1);
+
+/* =====================================================================
+ * 3. State
+ * ===================================================================== */
+const grid = new Uint8Array(NG);
+const visited = new Uint8Array(NG);
+let slots = [null, null, null];      // 3 khối trong khay: {cells,color} | null
+let ghost = null;                    // {cells,color,gx,valid} khi đang kéo
+let drag = null;                     // {slot, piece, offX, offY}
+let fallBlock = null;                // {cells,color,gx,gy} khối RẮN đang rơi (chưa vỡ)
+let score = 0, best = 0, bestAtStart = 0, combo = 0;
+let running = false, over = false;
+let flashes = [];                    // [{i,life,max,r,g,b}]
+let blastHold = 0;                   // frame còn giữ nhịp sau một lần nổ (blast chậm lại)
+const BLAST_HOLD = 24;               // ~0.4s: đủ chậm để đọc combo + điểm trước lần nổ kế
+
+const cv = document.getElementById('game');
+const ctx = cv.getContext('2d');
+const os = document.createElement('canvas'); os.width = GW; os.height = GH;
+const octx = os.getContext('2d');
+const img = octx.createImageData(GW, GH);
+const DATA = img.data;
+const dragCv = document.getElementById('drag');
+
+/* =====================================================================
+ * 4. Khối / khay
+ * ===================================================================== */
+const TWO_COLOR_SCORE = 2500;    // từ điểm này trở lên, khối CÓ THỂ có 2 màu (khó hơn)
+const TWO_COLOR_RATE = 0.30;     // tần suất khối 2 màu (30%), còn lại vẫn 1 màu
+// Piece: { cells, colors } — colors[k] là màu của ô cells[k]. Khối 1 màu thì mọi ô cùng màu.
+function randPiece() {
+  const cells = SHAPES[rnd(SHAPES.length)];
+  if (score >= TWO_COLOR_SCORE && Math.random() < TWO_COLOR_RATE) {
+    let a = rnd(NCOLORS), b = rnd(NCOLORS);
+    while (b === a) b = rnd(NCOLORS);
+    const colors = cells.map(() => (Math.random() < 0.5 ? a : b));
+    if (colors.every(c => c === colors[0])) colors[rnd(colors.length)] = (colors[0] === a ? b : a); // ép đủ 2 màu
+    return { cells, colors };
+  }
+  const c = rnd(NCOLORS);
+  return { cells, colors: cells.map(() => c) };
+}
+function newTray() { slots = [randPiece(), randPiece(), randPiece()]; renderTray(); }
+
+function forEachGrain(cells, gx, gy, cb) {
+  for (const [bx, by] of cells) {
+    const ox = gx + bx * B, oy = gy + by * B;
+    for (let j = 0; j < B; j++) for (let i = 0; i < B; i++) cb(ox + i, oy + j);
+  }
+}
+// Kiểm tra footprint tại (gx,gy) có nằm trong sân & toàn ô trống không.
+function fits(cells, gx, gy) {
+  let ok = true;
+  forEachGrain(cells, gx, gy, (x, y) => {
+    if (!ok) return;
+    if (x < 0 || x >= GW || y < 0 || y >= GH || grid[idx(x, y)] !== EMPTY) ok = false;
+  });
+  return ok;
+}
+// Cột hợp lệ để đổ: căn giữa footprint tại clientX, đổ từ đỉnh (gy=0).
+function ghostFromPointer(cells, clientX) {
+  const rect = cv.getBoundingClientRect();
+  const px = (clientX - rect.left) / rect.width * GW;
+  const pw = pieceW(cells) * B;
+  let gx = Math.round(px - pw / 2);
+  gx = Math.max(0, Math.min(GW - pw, gx));
+  return { gx, valid: fits(cells, gx, 0) };
+}
+// (1) Rigid→Granular: thả khối RẮN rơi thẳng theo cột từ đỉnh; giữ nguyên
+// hình khối gạch cho tới khi chạm đáy/bề mặt khác → mới vỡ thành cát.
+const FALL_SPEED = 1;                // số hạt khối rắn rơi mỗi BƯỚC
+const FALL_EVERY = 2;                // khối rơi 1 bước mỗi 2 frame → nhanh hơn một chút
+let fallTick = 0;
+function startFall(cells, colors, gx) {
+  fallBlock = { cells, colors, gx, gy: 0 };
+  fallTick = 0;
+  combo = 0;
+}
+function stepFallBlock() {
+  if (!fallBlock) return;
+  if (++fallTick < FALL_EVERY) return;   // chưa tới nhịp → khối đứng yên frame này
+  fallTick = 0;
+  const fb = fallBlock;
+  for (let s = 0; s < FALL_SPEED; s++) {
+    if (fits(fb.cells, fb.gx, fb.gy + 1)) { fb.gy++; }   // còn chỗ trống bên dưới → rơi tiếp
+    else {                                                // chạm đáy/bề mặt → VỠ VỤN tại chỗ
+      // Ghi cát đúng hình khối (giữ màu từng ô); physics sẽ tự cho chảy/lắng xuống.
+      fb.cells.forEach(([bx, by], k) => {
+        const v = fb.colors[k] + 1, ox = fb.gx + bx * B, oy = fb.gy + by * B;
+        for (let j = 0; j < B; j++) for (let i = 0; i < B; i++) {
+          const x = ox + i, y = oy + j;
+          if (x >= 0 && x < GW && y >= 0 && y < GH && grid[idx(x, y)] === EMPTY) grid[idx(x, y)] = v;
+        }
+      });
+      AudioFX.land();
+      fallBlock = null;
+      return;
+    }
+  }
+}
+// Còn nước đi? Khối nào đó đổ được từ đỉnh ở cột nào đó.
+function anyPlaceable() {
+  for (const p of slots) {
+    if (!p) continue;
+    const pw = pieceW(p.cells) * B;
+    for (let gx = 0; gx <= GW - pw; gx++) if (fits(p.cells, gx, 0)) return true;
+  }
+  return false;
+}
+// Cát đã dâng vượt vạch game over chưa? (có hạt nào nằm trên vạch = row < LINE_Y)
+function crossedLine() {
+  for (let y = 0; y < LINE_Y; y++) {
+    const row = y * GW;
+    for (let x = 0; x < GW; x++) if (grid[row + x] !== EMPTY) return true;
+  }
+  return false;
+}
+
+/* =====================================================================
+ * 5. Falling-sand physics — duyệt dưới lên, đảo chiều quét mỗi frame
+ * ===================================================================== */
+let scanFlip = false;
+function sandStep() {
+  scanFlip = !scanFlip;
+  let moved = false;
+  for (let y = GH - 2; y >= 0; y--) {
+    if (scanFlip) { for (let x = 0; x < GW; x++) { if (stepGrain(x, y)) moved = true; } }
+    else { for (let x = GW - 1; x >= 0; x--) { if (stepGrain(x, y)) moved = true; } }
+  }
+  return moved;
+}
+function stepGrain(x, y) {
+  const i = idx(x, y);
+  const v = grid[i];
+  if (v === EMPTY) return false;
+  const below = y + 1;
+  if (grid[idx(x, below)] === EMPTY) { grid[i] = EMPTY; grid[idx(x, below)] = v; return true; }
+  // Trượt chéo chỉ khi CẢ ô bên cạnh cùng hàng lẫn ô chéo-dưới đều trống →
+  // hạt bám được trên sườn dốc ~45°, nên đống cát settle thành ĐỈNH NHỌN.
+  const canL = x > 0 && grid[idx(x - 1, below)] === EMPTY && grid[idx(x - 1, y)] === EMPTY;
+  const canR = x < GW - 1 && grid[idx(x + 1, below)] === EMPTY && grid[idx(x + 1, y)] === EMPTY;
+  if (canL && canR) {
+    if (scanFlip) { grid[i] = EMPTY; grid[idx(x - 1, below)] = v; }
+    else { grid[i] = EMPTY; grid[idx(x + 1, below)] = v; }
+    return true;
+  } else if (canL) { grid[i] = EMPTY; grid[idx(x - 1, below)] = v; return true; }
+  else if (canR) { grid[i] = EMPTY; grid[idx(x + 1, below)] = v; return true; }
+  return false;
+}
+
+/* =====================================================================
+ * 6. Blast: cụm cùng màu chạm cả 2 tường trái+phải → nổ
+ * ===================================================================== */
+const stackX = new Int16Array(NG), stackY = new Int16Array(NG);
+function checkBlast() {
+  visited.fill(0);
+  let cleared = 0;
+  const toClear = [];
+  for (let sy = 0; sy < GH; sy++) {
+    const si = idx(0, sy);               // chỉ flood từ cột trái (x=0)
+    if (grid[si] === EMPTY || visited[si]) continue;
+    const color = grid[si];
+    let sp = 0; stackX[0] = 0; stackY[0] = sy; visited[si] = 1;
+    let touchRight = false;
+    const comp = [];
+    while (sp >= 0) {
+      const cx = stackX[sp], cy = stackY[sp]; sp--;
+      comp.push(idx(cx, cy));
+      if (cx === GW - 1) touchRight = true;
+      const nb = [[cx - 1, cy], [cx + 1, cy], [cx, cy - 1], [cx, cy + 1]];
+      for (const [nx, ny] of nb) {
+        if (nx < 0 || nx >= GW || ny < 0 || ny >= GH) continue;
+        const ni = idx(nx, ny);
+        if (!visited[ni] && grid[ni] === color) { visited[ni] = 1; sp++; stackX[sp] = nx; stackY[sp] = ny; }
+      }
+    }
+    if (touchRight) { for (const ci of comp) toClear.push(ci); cleared += comp.length; }
+  }
+  if (cleared === 0) return;
+  combo++;
+  const pts = Math.round(cleared * (1 + (combo - 1) * 0.5));
+  addScore(pts);
+  AudioFX.blast(combo);
+  showComboPop(combo, pts);
+  blastHold = BLAST_HOLD;               // giữ nhịp → mỗi lần nổ chậm lại, đọc được combo
+  for (const ci of toClear) {
+    const c = grid[ci] - 1;
+    grid[ci] = EMPTY;
+    flashes.push({ i: ci, life: BLAST_HOLD, max: BLAST_HOLD, r: RGB[c][0], g: RGB[c][1], b: RGB[c][2] });
+  }
+}
+// Popup combo + điểm cộng giữa sân (chạy lại animation mỗi lần nổ).
+function showComboPop(combo, pts) {
+  const el = document.getElementById('combo-pop');
+  el.innerHTML = (combo > 1 ? '<div class="cmb">' + t('combo').toUpperCase() + ' ×' + combo + '</div>' : '') +
+                 '<div class="pts">+' + pts + '</div>';
+  el.classList.remove('show');
+  void el.offsetWidth;                  // reflow để restart animation
+  el.classList.add('show');
+}
+
+/* =====================================================================
+ * 7. Score / end
+ * ===================================================================== */
+function addScore(n) {
+  score += n;
+  document.getElementById('hud-score').textContent = score;
+  if (score > best) { best = score; saveData({ best }); saveLocal({ best }); }
+}
+function updateBestHud() { document.getElementById('hud-best').textContent = best; }
+
+function gameOver() {
+  if (over) return;
+  over = true; running = false;
+  AudioFX.over();
+  const isNew = score > bestAtStart;
+  document.getElementById('ov-title').textContent = isNew ? t('newBest') : t('gameOver');
+  document.getElementById('ov-score').textContent = score;
+  document.getElementById('ov-best').textContent = best;
+  fitScores();
+  updateBestHud();
+  sendMessage('game_result');   // điểm-cao: result=null, showModal=false
+  setTimeout(() => document.getElementById('overlay').classList.remove('hidden'), 450);
+}
+function fitScores() {
+  const r = document.querySelector('.overlay .sb');
+  if (!r) return;
+  const card = r.closest('.card');
+  const vals = r.querySelectorAll('.v');
+  vals.forEach(v => { v.style.fontSize = ''; });
+  const pad = parseFloat(getComputedStyle(card).paddingLeft) || 26;
+  const max = card.clientWidth - 2 * pad;
+  let fz = parseFloat(getComputedStyle(vals[0]).fontSize) || 32;
+  while (r.scrollWidth > max && fz > 14) { fz -= 1; vals.forEach(v => { v.style.fontSize = fz + 'px'; }); }
+}
+function newRun() {
+  grid.fill(0); flashes = []; ghost = null; drag = null; fallBlock = null; blastHold = 0;
+  score = 0; combo = 0; over = false; bestAtStart = best;
+  document.getElementById('hud-score').textContent = '0';
+  updateBestHud();
+  document.getElementById('overlay').classList.add('hidden');
+  hideDrag();
+  newTray();
+  running = true;
+  showHint();
+}
+
+/* =====================================================================
+ * 8. Render sân (canvas ImageData, scale pixel-perfect)
+ * ===================================================================== */
+const BG = [10, 17, 32];
+function draw() {
+  for (let i = 0; i < NG; i++) {
+    const p = i * 4, v = grid[i];
+    if (v !== EMPTY) {
+      const c = RGB[v - 1], nz = NOISE[i];
+      DATA[p] = clamp(c[0] + nz); DATA[p + 1] = clamp(c[1] + nz); DATA[p + 2] = clamp(c[2] + nz); DATA[p + 3] = 255;
+    } else { DATA[p] = BG[0]; DATA[p + 1] = BG[1]; DATA[p + 2] = BG[2]; DATA[p + 3] = 255; }
+  }
+  for (const f of flashes) {
+    const p = f.i * 4, k = f.life / f.max;
+    DATA[p] = clamp(255 * k + f.r * (1 - k)); DATA[p + 1] = clamp(255 * k + f.g * (1 - k)); DATA[p + 2] = clamp(255 * k + f.b * (1 - k)); DATA[p + 3] = 255;
+  }
+  // (đã bỏ hẳn ghost vẽ ở đỉnh — không còn "cát rơi" mờ trên đầu sân khi kéo;
+  //  khối đang kéo theo ngón tay đã cho biết cột thả)
+  if (fallBlock) {                            // (1) khối đang rơi vẽ bằng CÁT, MÀU theo từng ô
+    const fb = fallBlock;
+    fb.cells.forEach(([bx, by], k) => {
+      const c = RGB[fb.colors[k]], ox = fb.gx + bx * B, oy = fb.gy + by * B;
+      for (let j = 0; j < B; j++) for (let i2 = 0; i2 < B; i2++) {
+        const x = ox + i2, y = oy + j;
+        if (x < 0 || x >= GW || y < 0 || y >= GH) continue;
+        const p = idx(x, y) * 4;
+        // nhiễu theo toạ độ CỐ ĐỊNH trong khối → pattern đứng yên khi rơi, không nhấp nháy.
+        const lx = x - fb.gx, ly = y - fb.gy;
+        const nz = (((lx * 131 + ly * 197 + lx * ly * 7) % 29) - 14) * 1.6;
+        DATA[p] = clamp(c[0] + nz); DATA[p + 1] = clamp(c[1] + nz); DATA[p + 2] = clamp(c[2] + nz); DATA[p + 3] = 255;
+      }
+    });
+  }
+  octx.putImageData(img, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.drawImage(os, 0, 0, GW, GH, 0, 0, cv.width, cv.height);
+  drawGameOverLine();
+}
+// Vạch game over: đường đứt đỏ ngang sân tại LINE_Y — cát vượt qua là thua.
+function drawGameOverLine() {
+  const y = LINE_Y / GH * cv.height;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,70,70,.7)';
+  ctx.lineWidth = Math.max(1.5, cv.height / GH);
+  ctx.setLineDash([cv.width / 26, cv.width / 42]);
+  ctx.shadowColor = 'rgba(255,60,60,.9)';
+  ctx.shadowBlur = ctx.lineWidth * 2;
+  ctx.beginPath();
+  ctx.moveTo(0, y); ctx.lineTo(cv.width, y);
+  ctx.stroke();
+  ctx.restore();
+}
+function clamp(v) { return v < 0 ? 0 : v > 255 ? 255 : v | 0; }
+
+/* =====================================================================
+ * 9. Render khay + khối kéo
+ * ===================================================================== */
+// Vẽ khối trong khay bằng TEXTURE CÁT (màu + nhiễu hạt, giống hệt sân) để đồng
+// bộ. Dựng ở độ phân giải hạt (B hạt/ô) rồi phóng to pixel-perfect.
+function drawSandPieceCanvas(canvas, cells, colors, cellPx) {
+  const w = pieceW(cells), h = pieceH(cells);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.round(w * cellPx * dpr);
+  canvas.height = Math.round(h * cellPx * dpr);
+  canvas.style.width = (w * cellPx) + 'px';
+  canvas.style.height = (h * cellPx) + 'px';
+  const gw = w * B, gh = h * B;
+  const cellCol = new Int8Array(w * h).fill(-1);        // màu từng ô (-1 = ô trống)
+  cells.forEach(([bx, by], k) => { cellCol[by * w + bx] = colors[k]; });
+  const tmp = document.createElement('canvas'); tmp.width = gw; tmp.height = gh;
+  const tctx = tmp.getContext('2d');
+  const sImg = tctx.createImageData(gw, gh), sd = sImg.data;
+  for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) {
+    const p = (y * gw + x) * 4;
+    const ci = cellCol[((y / B) | 0) * w + ((x / B) | 0)];
+    if (ci >= 0) {
+      const c = RGB[ci];
+      const nz = (((x * 131 + y * 197 + x * y * 7) % 29) - 14) * 1.6;   // cùng công thức NOISE của sân
+      sd[p] = clamp(c[0] + nz); sd[p + 1] = clamp(c[1] + nz); sd[p + 2] = clamp(c[2] + nz); sd[p + 3] = 255;
+    } else sd[p + 3] = 0;
+  }
+  tctx.putImageData(sImg, 0, 0);
+  const g = canvas.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.imageSmoothingEnabled = false;
+  g.clearRect(0, 0, w * cellPx, h * cellPx);
+  g.drawImage(tmp, 0, 0, gw, gh, 0, 0, w * cellPx, h * cellPx);
+}
+function renderTray() {
+  const slotEls = document.querySelectorAll('#tray .slot');
+  slots.forEach((p, i) => {
+    const el = slotEls[i], canvas = el.querySelector('canvas');
+    el.classList.toggle('used', !p);
+    el.classList.remove('grabbing');
+    if (!p) { canvas.width = canvas.height = 0; return; }
+    const box = el.clientWidth * 0.82;
+    const cellPx = box / SHAPE_UNIT;   // cùng cỡ ô cho mọi khối → đồng bộ tỉ lệ với khối thả
+    drawSandPieceCanvas(canvas, p.cells, p.colors, cellPx);   // khay là "thanh cát" cho đồng bộ
+  });
+}
+function showDrag(p, clientX, clientY) {
+  const rect = cv.getBoundingClientRect();
+  const cellPx = rect.width / GW * B;         // 1 ô = B hạt, khớp cỡ sân
+  drawSandPieceCanvas(dragCv, p.cells, p.colors, cellPx);   // khối đang kéo cũng là cát
+  dragCv.style.display = 'block';
+  moveDrag(clientX, clientY);
+}
+function moveDrag(clientX, clientY) {
+  const w = dragCv.offsetWidth, h = dragCv.offsetHeight;
+  dragCv.style.transform = 'translate(' + (clientX - w / 2) + 'px,' + (clientY - h - 24) + 'px)';
+}
+function hideDrag() { dragCv.style.display = 'none'; }
+
+/* =====================================================================
+ * 10. Main loop
+ * ===================================================================== */
+let stableFrames = 0;
+const SAND_STEPS = 1;               // số bước sand mỗi frame → THẤY cát chảy (nhỏ = chảy chậm)
+function frame() {
+  if (running && !over) {
+    stepFallBlock();
+    if (blastHold > 0) {
+      blastHold--;                    // đang giữ nhịp blast → tạm dừng cát để thấy nổ + combo
+    } else {
+      // Hiệu ứng cát chảy: mỗi frame chỉ chạy vài bước sand để thấy cát trôi/lắng.
+      let moved = false;
+      for (let s = 0; s < SAND_STEPS; s++) { if (sandStep()) moved = true; }
+      checkBlast();                   // nếu nổ → đặt lại blastHold, vòng sau lại giữ nhịp
+      if (!moved && flashes.length === 0 && !drag && !fallBlock && blastHold === 0) {
+        stableFrames++;
+        if (stableFrames > 2 && (crossedLine() || !anyPlaceable())) gameOver();
+      } else stableFrames = 0;
+    }
+  }
+  if (flashes.length) { for (const f of flashes) f.life--; flashes = flashes.filter(f => f.life > 0); }
+  draw();
+  requestAnimationFrame(frame);
+}
+
+/* =====================================================================
+ * 11. Input — kéo khối từ khay → chọn cột → thả để đổ
+ * ===================================================================== */
+document.querySelectorAll('#tray .slot').forEach(el => {
+  el.addEventListener('pointerdown', (e) => {
+    if (!running || over || fallBlock || blastHold > 0) return;   // chờ khối rơi/nổ xong
+    const i = +el.dataset.slot;
+    if (!slots[i]) return;
+    drag = { slot: i, piece: slots[i] };
+    el.classList.add('grabbing');
+    showDrag(slots[i], e.clientX, e.clientY);
+    ghost = null;
+    hideHint();
+    AudioFX.resume(); AudioFX.pick();   // cần gesture để bật audio (mobile)
+    e.preventDefault();
+  });
+});
+window.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  moveDrag(e.clientX, e.clientY);
+  const rect = cv.getBoundingClientRect();
+  const overBoard = e.clientY < rect.bottom + 10 && e.clientX > rect.left - 20 && e.clientX < rect.right + 20;
+  if (overBoard) {
+    const g = ghostFromPointer(drag.piece.cells, e.clientX);
+    ghost = { cells: drag.piece.cells, gx: g.gx, valid: g.valid };
+  } else ghost = null;
+});
+window.addEventListener('pointerup', () => {
+  if (!drag) return;
+  const d = drag; drag = null;
+  hideDrag();
+  document.querySelectorAll('#tray .slot').forEach(s => s.classList.remove('grabbing'));
+  if (ghost && ghost.valid) {
+    startFall(d.piece.cells, d.piece.colors, ghost.gx);
+    AudioFX.drop();
+    slots[d.slot] = null;
+    if (slots.every(s => !s)) newTray(); else renderTray();
+    stableFrames = 0;
+  }
+  ghost = null;
+});
+window.addEventListener('pointercancel', () => {
+  if (!drag) return;
+  drag = null; ghost = null; hideDrag();
+  document.querySelectorAll('#tray .slot').forEach(s => s.classList.remove('grabbing'));
+});
+
+/* =====================================================================
+ * 12. HUD + native callbacks
+ * ===================================================================== */
+document.getElementById('back-btn').addEventListener('click', (e) => { e.stopPropagation(); sendMessage('quit'); });
+document.getElementById('ov-btn').addEventListener('click', () => { sendMessage('retry_level'); newRun(); });
+const soundBtn = document.getElementById('sound-btn');
+function updateSoundBtn() { soundBtn.classList.toggle('muted', !AudioFX.isEnabled()); }
+soundBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  AudioFX.resume();
+  AudioFX.setEnabled(!AudioFX.isEnabled());   // lưu vào localStorage + blip khi bật
+  updateSoundBtn();
+});
+window.onAppPause = function () { running = false; };
+window.onNextLevel = function () { /* game không level — no-op */ };
+window.onRetryLevel = function () { newRun(); };
+
+/* =====================================================================
+ * 13. Hint + boot
+ * ===================================================================== */
+let hintTimer = null;
+function showHint() {
+  const h = document.getElementById('hint');
+  h.textContent = t('hint'); h.classList.remove('gone');
+  clearTimeout(hintTimer); hintTimer = setTimeout(hideHint, 3800);
+}
+function hideHint() { document.getElementById('hint').classList.add('gone'); }
+
+function applyStatusBarPad() {
+  const sb = getStatusBarHeight();
+  document.getElementById('topbar').style.paddingTop = 'calc(max(' + sb + 'px, env(safe-area-inset-top)) + 8px)';
+}
+function applyStaticI18n() {
+  document.getElementById('lbl-score').textContent = t('score').toUpperCase();
+  document.getElementById('lbl-best').textContent = t('best').toUpperCase();
+  document.getElementById('ov-k-score').textContent = t('score').toUpperCase();
+  document.getElementById('ov-k-best').textContent = t('best').toUpperCase();
+  document.getElementById('ov-btn-txt').textContent = t('playAgain');
+}
+function resize() {
+  const topbar = document.getElementById('topbar');
+  const tray = document.getElementById('tray');
+  const topBottom = topbar.getBoundingClientRect().bottom;
+  const aspect = GW / GH;
+  // Scale theo màn hình: rộng gần hết bề ngang (cap 1000 cho màn cực lớn), cao
+  // giới hạn bởi phần còn lại sau khi chừa khay. Khay/ô khay cũng nở theo.
+  const availW = Math.min(window.innerWidth, 1000) - 18;
+  const slotEst = Math.min((availW - 52) / 3, 150);        // cạnh ô khay ước lượng (cap 150)
+  const trayReserve = slotEst + 26;                        // chừa cho khay + gap
+  const availH = window.innerHeight - topBottom - 12 - trayReserve;
+  let w = availW, h = w / aspect;
+  if (h > availH) { h = availH; w = h * aspect; }
+  w = Math.max(140, Math.floor(w)); h = Math.floor(w / aspect);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.style.width = w + 'px'; cv.style.height = h + 'px';
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  tray.style.maxWidth = w + 'px';                          // khay khớp bề rộng khung
+  topbar.style.maxWidth = w + 'px';                        // HUD khớp bề rộng khung
+  const sc = Math.min(Math.max(w / 360, 1), 1.6);          // scale nút/HUD theo cỡ khung
+  document.documentElement.style.setProperty('--sc', sc.toFixed(3));
+  renderTray();
+}
+function boot() {
+  LANG = getLanguage();
+  applyUiFont(LANG);
+  applyStatusBarPad();
+  applyStaticI18n();
+  best = parseInitialBest();
+  updateBestHud();
+  updateSoundBtn();
+  resize();
+  newRun();
+  requestAnimationFrame(frame);
+}
+window.addEventListener('resize', resize);
+
+(function waitForNativeInjection() {
+  const start = Date.now();
+  (function check() {
+    if (typeof window.language === 'string' || typeof window.data === 'string' || Date.now() - start > 200) boot();
+    else setTimeout(check, 10);
+  })();
+})();
+</script>
