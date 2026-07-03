@@ -1,0 +1,1069 @@
+<!--
+  Royal Match (clone) — HaND
+  Match-3 swap game, flat theme. Single-file HTML (CSS + JS inline).
+  Tuân thủ .claude/game-common.md (bridge, level), popup-common.md, zip-common.md.
+-->
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Royal Match</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap" rel="stylesheet" />
+
+<style>
+  /* ── Reset + tắt highlight khi chạm (game-common §UI) ─────────────── */
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+
+  :root {
+    --ui-font: 'Google Sans Flex', system-ui, sans-serif;
+    /* Flat royal theme */
+    --bg-1: #eaf0ff;
+    --bg-2: #dbe6ff;
+    --board-bg: #ffffff;
+    --cell-bg: #f2f5fc;
+    --ink: #24304d;
+    --ink-soft: #5b6b8f;
+    --royal: #3b5bdb;
+    --gold: #f5b301;
+    --danger: #ff5a5f;
+    --cell: 40px; /* set bởi JS */
+  }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+  body {
+    font-family: var(--ui-font);
+    font-weight: 700;
+    color: var(--ink);
+    background: linear-gradient(180deg, var(--bg-1), var(--bg-2));
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: none;
+  }
+
+  .app {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── HUD trên cùng ────────────────────────────────────────────────── */
+  .topbar {
+    width: 100%;
+    max-width: 560px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 14px;
+    /* padding-top set bởi JS = max(statusBar, safe) + 8 */
+  }
+  .top-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.1;
+  }
+  .level-label {
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+  }
+  .level-num { font-size: 22px; color: var(--ink); }
+
+  /* Btn3d — biến thể flat (shadow ẩn), icon vuông */
+  .btn3d {
+    --radius: 14px;
+    --surface-color: #ffffff;
+    --surface-text: var(--royal);
+    position: relative;
+    display: inline-block;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+  }
+  .btn3d-shadow { display: none; }
+  .btn3d-surface {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius);
+    background-color: var(--surface-color);
+    color: var(--surface-text);
+    box-shadow: 0 3px 0 rgba(59, 91, 219, .18), 0 6px 14px rgba(36, 48, 77, .12);
+    transition: transform .09s ease-out;
+  }
+  .btn3d:active .btn3d-surface { transform: scale(.95); }
+  .btn3d.btn-icon .btn3d-surface { width: 46px; height: 46px; }
+  .btn3d.btn-icon { -webkit-user-select: none; user-select: none; }
+  .back-ico { width: 52%; height: 52%; fill: currentColor; display: block; }
+  .restart-ico { width: 62%; height: 62%; fill: currentColor; display: block; }
+
+  /* ── Hàng mục tiêu (goals) ────────────────────────────────────────── */
+  .goals {
+    width: 100%;
+    max-width: 560px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px 14px 6px;
+  }
+  .goal {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 6px 12px 6px 7px;
+    box-shadow: 0 3px 10px rgba(36, 48, 77, .1);
+  }
+  .goal-ico {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .goal-ico svg { width: 66%; height: 66%; display: block; }
+  .goal-count { font-size: 18px; color: var(--ink); min-width: 22px; text-align: left; }
+  .goal.done .goal-count { color: #22a06b; }
+  .goal.done::after {
+    content: "✓";
+    color: #22a06b;
+    font-size: 16px;
+    margin-left: -2px;
+  }
+
+  .moves-pill {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--royal);
+    color: #fff;
+    border-radius: 14px;
+    padding: 6px 4px;
+    min-width: 62px;
+    box-shadow: 0 3px 0 rgba(28, 45, 120, .35);
+  }
+  .moves-num { font-size: 24px; line-height: 1; }
+  .moves-txt { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; opacity: .85; }
+  .moves-pill.low { background: var(--danger); box-shadow: 0 3px 0 rgba(150, 40, 40, .35); }
+
+  /* ── Bàn chơi ─────────────────────────────────────────────────────── */
+  .stage {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 6px 0 16px;
+  }
+  .board-wrap {
+    position: relative;
+    background: var(--board-bg);
+    border-radius: 20px;
+    padding: 6px;
+    box-shadow: 0 10px 30px rgba(36, 48, 77, .16);
+  }
+  .grid-bg {
+    position: absolute;
+    inset: 6px;
+    display: grid;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .grid-bg .slot { background: var(--cell-bg); outline: 2px solid var(--board-bg); }
+  .board {
+    position: relative;
+  }
+
+  .tile {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: var(--cell);
+    height: var(--cell);
+    padding: 3px;
+    transition: transform .26s cubic-bezier(.2, .8, .3, 1);
+    will-change: transform;
+    z-index: 2;
+  }
+  .tile.no-anim { transition: none; }
+  .tile-face {
+    width: 100%;
+    height: 100%;
+    border-radius: 22%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: transform .12s ease, box-shadow .12s ease;
+  }
+  .tile-face svg { width: 58%; height: 58%; display: block; }
+  .tile.sel .tile-face {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--gold);
+  }
+  .tile.clearing {
+    transition: transform .2s ease, opacity .2s ease;
+    transform: scale(1.35);
+    opacity: 0;
+    z-index: 3;
+  }
+
+  /* Special overlays (flat) */
+  .tile.sp-row .tile-face::after,
+  .tile.sp-col .tile-face::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 22%;
+    background:
+      repeating-linear-gradient(var(--dir, 90deg),
+        rgba(255,255,255,.0) 0 6px,
+        rgba(255,255,255,.55) 6px 10px);
+    mix-blend-mode: screen;
+  }
+  .tile.sp-row .tile-face { --dir: 90deg; }
+  .tile.sp-col .tile-face { --dir: 0deg; }
+  .tile.sp-bomb .tile-face {
+    box-shadow: inset 0 0 0 3px rgba(255,255,255,.85), inset 0 0 0 6px rgba(0,0,0,.15);
+  }
+  .tile.sp-rainbow .tile-face {
+    background: conic-gradient(from 0deg,
+      #ff5a5f, #f6c445, #22c55e, #3b82f6, #a855f7, #ff5a5f) !important;
+  }
+  .tile.sp-rainbow .tile-face svg { fill: #fff; }
+
+  .hidden { display: none !important; }
+
+  /* Dev-only result bar (chỉ hiện khi mở bằng browser thường, KHÔNG có RN WebView).
+     Trong app thật, native tự hiện popup theo game-common §1.1 — game không vẽ modal. */
+  .devbar {
+    position: absolute;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    background: rgba(36, 48, 77, .92);
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 16px;
+    z-index: 50;
+    box-shadow: 0 10px 24px rgba(0,0,0,.3);
+  }
+  .devbar b { font-size: 15px; }
+  .devbar button {
+    font: inherit;
+    font-weight: 700;
+    border: 0;
+    border-radius: 10px;
+    padding: 8px 14px;
+    background: var(--gold);
+    color: #3a2400;
+    cursor: pointer;
+  }
+</style>
+
+<div class="app" id="app">
+  <div class="topbar" id="topbar">
+    <div class="btn3d btn-icon" id="back-btn" role="button" aria-label="Back">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="back-ico" viewBox="0 0 447.243 447.243" aria-hidden="true">
+          <path fill="currentColor" d="M420.361 192.229a31.967 31.967 0 0 0-5.535-.41H99.305l6.88-3.2a63.998 63.998 0 0 0 18.08-12.8l88.48-88.48c11.653-11.124 13.611-29.019 4.64-42.4-10.441-14.259-30.464-17.355-44.724-6.914a32.018 32.018 0 0 0-3.276 2.754l-160 160c-12.504 12.49-12.515 32.751-.025 45.255l.025.025 160 160c12.514 12.479 32.775 12.451 45.255-.063a32.084 32.084 0 0 0 2.745-3.137c8.971-13.381 7.013-31.276-4.64-42.4l-88.32-88.64a64.002 64.002 0 0 0-16-11.68l-9.6-4.32h314.24c16.347.607 30.689-10.812 33.76-26.88 2.829-17.445-9.019-33.88-26.464-36.71z"/>
+        </svg>
+      </span>
+    </div>
+
+    <div class="top-center">
+      <div class="level-label" id="level-label">Level</div>
+      <div class="level-num" id="level-num">1</div>
+    </div>
+
+    <div class="btn3d btn-icon" id="restart-btn" role="button" aria-label="Restart">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="restart-ico" viewBox="0 0 100 100" aria-hidden="true">
+          <path fill="currentColor" d="m50.7 19.003 4.793-4.793c2.696-2.697 2.696-6.991 0-9.688s-6.991-2.696-9.687 0L29.327 21.001a6.812 6.812 0 0 0 0 9.687l16.479 16.478a6.9 6.9 0 0 0 4.793 1.998c1.798 0 3.496-.7 4.794-1.998a6.812 6.812 0 0 0 0-9.687l-4.794-4.794c13.682.4 24.768 11.685 24.768 25.467 0 14.081-11.485 25.466-25.467 25.466S24.534 72.233 24.534 58.252c0-3.096.599-6.192 1.597-8.989 1.299-3.495-.4-7.49-3.994-8.788-3.496-1.298-7.49.4-8.789 3.995-1.698 4.394-2.496 9.088-2.496 13.882C10.852 79.923 28.428 97.5 50 97.5s39.148-17.577 39.148-39.148c0-21.472-17.177-38.95-38.449-39.349z"/>
+        </svg>
+      </span>
+    </div>
+  </div>
+
+  <div class="goals" id="goals"></div>
+
+  <div class="stage">
+    <div class="board-wrap" id="board-wrap">
+      <div class="grid-bg" id="grid-bg"></div>
+      <div class="board" id="board"></div>
+    </div>
+  </div>
+
+  <div class="devbar hidden" id="devbar">
+    <b id="dev-title">Level complete</b>
+    <button id="dev-btn">Next</button>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+ * 0. Localization (inline — game-common §5)
+ * ===================================================================== */
+const SUPPORTED_LANGS = [
+  'en','vi','zh-Hans','zh-Hant','ja','ko','es','es-MX','es-AR','pt-BR','pt',
+  'fr','de','it','nl','pl','ru','tr','ar','hi','th','id','fil',
+];
+const DEFAULT_LANG = 'en';
+const LATIN_LANGS = new Set([
+  'en','vi','es','es-MX','es-AR','pt-BR','pt','fr','de','it','nl','pl','tr','id','fil',
+]);
+
+const I18N = {
+  en: { level: 'Level', moves: 'Moves', win: 'Level complete!', lose: 'Out of moves', victory: 'You won the game!', next: 'Next', retry: 'Retry' },
+  vi: { level: 'Màn', moves: 'Lượt', win: 'Qua màn!', lose: 'Hết lượt', victory: 'Bạn đã thắng!', next: 'Tiếp', retry: 'Chơi lại' },
+  es: { level: 'Nivel', moves: 'Mov.', win: '¡Nivel completo!', lose: 'Sin movimientos', victory: '¡Ganaste!', next: 'Siguiente', retry: 'Reintentar' },
+  fr: { level: 'Niveau', moves: 'Coups', win: 'Niveau terminé !', lose: 'Plus de coups', victory: 'Vous avez gagné !', next: 'Suivant', retry: 'Réessayer' },
+  de: { level: 'Level', moves: 'Züge', win: 'Level geschafft!', lose: 'Keine Züge', victory: 'Gewonnen!', next: 'Weiter', retry: 'Nochmal' },
+  'pt-BR': { level: 'Nível', moves: 'Jogadas', win: 'Nível concluído!', lose: 'Sem jogadas', victory: 'Você venceu!', next: 'Próximo', retry: 'Repetir' },
+  ja: { level: 'レベル', moves: '手数', win: 'クリア！', lose: '手数切れ', victory: 'ゲームクリア！', next: '次へ', retry: '再挑戦' },
+  ko: { level: '레벨', moves: '이동', win: '레벨 완료!', lose: '이동 부족', victory: '게임 클리어!', next: '다음', retry: '다시' },
+  'zh-Hans': { level: '关卡', moves: '步数', win: '过关！', lose: '步数用尽', victory: '通关啦！', next: '下一关', retry: '重玩' },
+  ru: { level: 'Уровень', moves: 'Ходы', win: 'Уровень пройден!', lose: 'Ходы кончились', victory: 'Вы выиграли!', next: 'Дальше', retry: 'Заново' },
+  tr: { level: 'Bölüm', moves: 'Hamle', win: 'Bölüm tamam!', lose: 'Hamle bitti', victory: 'Kazandın!', next: 'İleri', retry: 'Tekrar' },
+  id: { level: 'Level', moves: 'Langkah', win: 'Level selesai!', lose: 'Langkah habis', victory: 'Kamu menang!', next: 'Lanjut', retry: 'Ulangi' },
+};
+
+function getLanguage() {
+  const fromWin = typeof window.language === 'string' ? window.language : null;
+  const fromUrl = new URLSearchParams(location.search).get('language');
+  const raw = fromWin != null ? fromWin : fromUrl;
+  return SUPPORTED_LANGS.includes(raw) ? raw : DEFAULT_LANG;
+}
+let LANG = getLanguage();
+function t(key) { return (I18N[LANG] && I18N[LANG][key]) || I18N.en[key] || key; }
+function applyUiFont(lang) {
+  if (!LATIN_LANGS.has(lang)) {
+    document.documentElement.style.setProperty('--ui-font', 'system-ui, sans-serif');
+  }
+}
+
+/* =====================================================================
+ * 1. Native bridge (game-common §1) — game CÓ level
+ * ===================================================================== */
+function post(msg) {
+  try {
+    if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+      window.ReactNativeWebView.postMessage(JSON.stringify(msg));
+    } else {
+      console.log('[royal-match → native]', msg);
+    }
+  } catch (e) { /* ignore */ }
+}
+function sendMessage(type, opts) {
+  opts = opts || {};
+  post({
+    type,
+    level: currentLevelIdx + 1,
+    result: opts.result != null ? opts.result : null,
+    data: opts.data != null ? opts.data : null,
+    showModal: opts.showModal === true,
+  });
+}
+function saveData(payload) {
+  const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
+  sendMessage('save_data', { data });
+}
+
+function getStatusBarHeight() {
+  const params = new URLSearchParams(location.search);
+  const fromUrl = params.get('statusBarHeight');
+  const fromWin = typeof window.statusBarHeight !== 'undefined' ? window.statusBarHeight : null;
+  let h = Number(fromUrl != null ? fromUrl : fromWin);
+  if (Number.isNaN(h) || h < 0) h = 0;
+  return h;
+}
+function getInitialLevelIdx() {
+  const fromWin = typeof window.currentLevel === 'number' ? window.currentLevel : null;
+  const fromUrl = new URLSearchParams(location.search).get('currentLevel');
+  const raw = Number(fromWin != null ? fromWin : fromUrl);
+  if (!Number.isFinite(raw) || raw < 1) return 0;
+  return Math.min(Math.floor(raw), LEVELS.length) - 1;
+}
+
+/* =====================================================================
+ * 2. Level design
+ * Colors: 0 red · 1 blue · 2 green · 3 yellow · 4 purple · 5 orange
+ * ===================================================================== */
+const COLS = 8, ROWS = 8, NCOLORS = 6;
+const LEVELS = [
+  { moves: 22, goals: [{ color: 0, need: 20 }] },
+  { moves: 24, goals: [{ color: 1, need: 18 }, { color: 3, need: 18 }] },
+  { moves: 22, goals: [{ color: 2, need: 25 }] },
+  { moves: 26, goals: [{ color: 4, need: 20 }, { color: 5, need: 20 }] },
+  { moves: 24, goals: [{ color: 0, need: 16 }, { color: 1, need: 16 }, { color: 2, need: 16 }] },
+  { moves: 26, goals: [{ color: 3, need: 28 }] },
+  { moves: 28, goals: [{ color: 4, need: 22 }, { color: 5, need: 22 }] },
+  { moves: 30, goals: [{ color: 0, need: 18 }, { color: 2, need: 18 }, { color: 4, need: 18 }] },
+];
+
+const COLORS = ['#ff5a5f', '#3b82f6', '#22c55e', '#f6c445', '#a855f7', '#fb923c'];
+// SVG shape cho từng màu (đồng thời phân biệt cho người mù màu)
+const SHAPES = [
+  '<path d="M50 78 C18 56 20 30 38 30 C46 30 50 36 50 40 C50 36 54 30 62 30 C80 30 82 56 50 78 Z"/>', // heart
+  '<circle cx="50" cy="50" r="24"/>',                                                                  // circle
+  '<rect x="28" y="28" width="44" height="44" rx="9"/>',                                               // square
+  '<path d="M50 24 L58 43 L79 44 L62 57 L68 78 L50 65 L32 78 L38 57 L21 44 L42 43 Z"/>',               // star
+  '<path d="M50 24 L74 50 L50 76 L26 50 Z"/>',                                                         // diamond
+  '<path d="M50 26 L76 72 L24 72 Z"/>',                                                                // triangle
+];
+const RAINBOW_STAR = '<path d="M50 24 L58 43 L79 44 L62 57 L68 78 L50 65 L32 78 L38 57 L21 44 L42 43 Z"/>';
+
+/* =====================================================================
+ * 3. State
+ * ===================================================================== */
+let currentLevelIdx = 0;
+let board = [];          // board[r][c] = tile | null
+let goals = [];          // [{color, need, got}]
+let movesLeft = 0;
+let cell = 40;
+let busy = false;
+let ended = false;
+let sel = null;          // {r,c} đang chọn
+let idc = 0;
+
+const boardEl = document.getElementById('board');
+const wrapEl = document.getElementById('board-wrap');
+const gridBgEl = document.getElementById('grid-bg');
+const goalsEl = document.getElementById('goals');
+
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const key = (r, c) => r + ',' + c;
+const inb = (r, c) => r >= 0 && r < ROWS && c >= 0 && c < COLS;
+function tileAt(r, c) { return inb(r, c) ? board[r][c] : null; }
+function shapeSvg(color) {
+  return '<svg viewBox="0 0 100 100" fill="rgba(255,255,255,.94)" aria-hidden="true">' + SHAPES[color] + '</svg>';
+}
+
+/* =====================================================================
+ * 4. Tile / DOM
+ * ===================================================================== */
+function makeTile(color, special) {
+  const el = document.createElement('div');
+  el.className = 'tile';
+  el.innerHTML = '<div class="tile-face"></div>';
+  boardEl.appendChild(el);
+  const tile = { id: ++idc, color, special: special || null, el, face: el.firstChild };
+  paintTile(tile);
+  return tile;
+}
+function paintTile(tile) {
+  tile.el.className = 'tile' +
+    (tile.special ? ' sp-' + tile.special : '');
+  tile.face.style.background = COLORS[tile.color];
+  if (tile.special === 'rainbow') {
+    tile.face.innerHTML = '<svg viewBox="0 0 100 100" fill="#fff" aria-hidden="true">' + RAINBOW_STAR + '</svg>';
+  } else {
+    tile.face.innerHTML = shapeSvg(tile.color);
+  }
+}
+function pos(r, c) { return 'translate(' + (c * cell) + 'px,' + (r * cell) + 'px)'; }
+function layout() {
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const tl = board[r][c];
+    if (tl) tl.el.style.transform = pos(r, c);
+  }
+}
+
+/* =====================================================================
+ * 5. Sizing
+ * ===================================================================== */
+function resize() {
+  const topbar = document.getElementById('topbar');
+  const usedTop = topbar.getBoundingClientRect().bottom + goalsEl.offsetHeight;
+  const availH = window.innerHeight - usedTop - 40;
+  const availW = Math.min(window.innerWidth, 560) - 28;
+  let boardPx = Math.min(availW, availH);
+  cell = Math.floor(boardPx / COLS);
+  cell = Math.max(30, cell);
+  const size = cell * COLS;
+  document.documentElement.style.setProperty('--cell', cell + 'px');
+  boardEl.style.width = size + 'px';
+  boardEl.style.height = size + 'px';
+  gridBgEl.style.width = size + 'px';
+  gridBgEl.style.height = size + 'px';
+  gridBgEl.style.gridTemplateColumns = 'repeat(' + COLS + ',1fr)';
+  gridBgEl.style.gridTemplateRows = 'repeat(' + ROWS + ',1fr)';
+  if (!gridBgEl.childElementCount) {
+    for (let i = 0; i < ROWS * COLS; i++) {
+      const s = document.createElement('div'); s.className = 'slot'; gridBgEl.appendChild(s);
+    }
+  }
+  layout();
+}
+
+/* =====================================================================
+ * 6. Match / special detection
+ * ===================================================================== */
+function computeRunLens() {
+  const H = Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
+  const V = Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
+  for (let r = 0; r < ROWS; r++) {
+    let c = 0;
+    while (c < COLS) {
+      let j = c;
+      const t0 = board[r][c];
+      while (j < COLS && board[r][j] && t0 && board[r][j].color === t0.color) j++;
+      const len = j - c;
+      if (len >= 3) for (let k = c; k < j; k++) H[r][k] = len;
+      c = j;
+    }
+  }
+  for (let c = 0; c < COLS; c++) {
+    let r = 0;
+    while (r < ROWS) {
+      let j = r;
+      const t0 = board[r][c];
+      while (j < ROWS && board[j][c] && t0 && board[j][c].color === t0.color) j++;
+      const len = j - r;
+      if (len >= 3) for (let k = r; k < j; k++) V[k][c] = len;
+      r = j;
+    }
+  }
+  return { H, V };
+}
+
+// Trả về { clearCells:Set, specialPlans:[{r,c,type,color}] }
+function findMatches(swapCells) {
+  const { H, V } = computeRunLens();
+  const seen = Array.from({ length: ROWS }, () => new Array(COLS).fill(false));
+  const clearCells = new Set();
+  const specialPlans = [];
+
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    if (seen[r][c] || (H[r][c] < 3 && V[r][c] < 3)) continue;
+    // BFS component (nối các ô matched cùng màu)
+    const color = board[r][c].color;
+    const comp = [];
+    const stack = [[r, c]];
+    seen[r][c] = true;
+    let maxH = 0, maxV = 0, inter = null;
+    while (stack.length) {
+      const [cr, cc] = stack.pop();
+      comp.push({ r: cr, c: cc });
+      maxH = Math.max(maxH, H[cr][cc]);
+      maxV = Math.max(maxV, V[cr][cc]);
+      if (H[cr][cc] >= 3 && V[cr][cc] >= 3 && !inter) inter = { r: cr, c: cc };
+      const nb = [[cr - 1, cc], [cr + 1, cc], [cr, cc - 1], [cr, cc + 1]];
+      for (const [nr, nc] of nb) {
+        if (inb(nr, nc) && !seen[nr][nc] && (H[nr][nc] >= 3 || V[nr][nc] >= 3) &&
+            board[nr][nc] && board[nr][nc].color === color) {
+          seen[nr][nc] = true; stack.push([nr, nc]);
+        }
+      }
+    }
+
+    // Loại special cho component
+    let type = null;
+    if (maxH >= 5 || maxV >= 5) type = 'rainbow';
+    else if (inter) type = 'bomb';
+    else if (maxH >= 4) type = 'row';
+    else if (maxV >= 4) type = 'col';
+
+    let spPos = null;
+    if (type) {
+      const sw = (swapCells || []).find(s => comp.some(p => p.r === s.r && p.c === s.c));
+      if (sw) spPos = sw;
+      else if (type === 'bomb' && inter) spPos = inter;
+      else spPos = comp[(comp.length / 2) | 0];
+      specialPlans.push({ r: spPos.r, c: spPos.c, type, color });
+    }
+    for (const p of comp) {
+      if (spPos && p.r === spPos.r && p.c === spPos.c) continue;
+      clearCells.add(key(p.r, p.c));
+    }
+  }
+  return { clearCells, specialPlans };
+}
+
+function anyMatch(swapCells) {
+  const m = findMatches(swapCells);
+  return m.clearCells.size > 0 || m.specialPlans.length > 0;
+}
+
+/* Ô bị ảnh hưởng khi 1 special phát nổ */
+function specialBlast(r, c, type, color) {
+  const out = [];
+  if (type === 'row') for (let cc = 0; cc < COLS; cc++) out.push(key(r, cc));
+  else if (type === 'col') for (let rr = 0; rr < ROWS; rr++) out.push(key(rr, c));
+  else if (type === 'bomb') {
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++)
+      if (inb(r + dr, c + dc)) out.push(key(r + dr, c + dc));
+  } else if (type === 'rainbow') {
+    for (let rr = 0; rr < ROWS; rr++) for (let cc = 0; cc < COLS; cc++)
+      if (board[rr][cc] && board[rr][cc].color === color) out.push(key(rr, cc));
+  }
+  return out;
+}
+
+/* Kích hoạt dây chuyền: mọi special trong clr sẽ nổ, kéo theo special khác */
+function expandActivations(clr) {
+  const stack = [];
+  for (const k of clr) {
+    const [r, c] = k.split(',').map(Number);
+    const t = board[r][c];
+    if (t && t.special) stack.push(k);
+  }
+  const done = new Set();
+  while (stack.length) {
+    const k = stack.pop();
+    if (done.has(k)) continue;
+    const [r, c] = k.split(',').map(Number);
+    const t = board[r][c];
+    if (!t || !t.special) continue;
+    done.add(k);
+    for (const b of specialBlast(r, c, t.special, t.color)) {
+      if (!clr.has(b)) clr.add(b);
+      const [br, bc] = b.split(',').map(Number);
+      const bt = board[br][bc];
+      if (bt && bt.special && !done.has(b)) stack.push(b);
+    }
+  }
+}
+
+/* =====================================================================
+ * 7. Player move + cascade
+ * ===================================================================== */
+function swapModel(a, b) {
+  const t = board[a.r][a.c];
+  board[a.r][a.c] = board[b.r][b.c];
+  board[b.r][b.c] = t;
+}
+
+async function animateSwap() { layout(); await sleep(150); }
+
+function comboClears(ta, a, tb, b) {
+  const clr = new Set();
+  const raInvolved = ta.special === 'rainbow' || tb.special === 'rainbow';
+  if (raInvolved) {
+    if (ta.special === 'rainbow' && tb.special === 'rainbow') {
+      for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) clr.add(key(r, c));
+    } else {
+      const ra = ta.special === 'rainbow' ? a : b;
+      const other = ta.special === 'rainbow' ? tb : ta;
+      const oPos = ta.special === 'rainbow' ? b : a;
+      if (other.special) {
+        for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) clr.add(key(r, c));
+      } else {
+        for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++)
+          if (board[r][c] && board[r][c].color === other.color) clr.add(key(r, c));
+        clr.add(key(ra.r, ra.c));
+        clr.add(key(oPos.r, oPos.c));
+      }
+    }
+    return clr;
+  }
+  // hai special thường (row/col/bomb)
+  if (ta.special && tb.special) {
+    const s1 = ta.special, s2 = tb.special, ctr = b;
+    const both = s1 + '+' + s2;
+    const hasBomb = s1 === 'bomb' || s2 === 'bomb';
+    const bothRocket = (s1 === 'row' || s1 === 'col') && (s2 === 'row' || s2 === 'col');
+    if (s1 === 'bomb' && s2 === 'bomb') {
+      for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++)
+        if (inb(ctr.r + dr, ctr.c + dc)) clr.add(key(ctr.r + dr, ctr.c + dc));
+    } else if (bothRocket) {
+      for (let cc = 0; cc < COLS; cc++) clr.add(key(ctr.r, cc));
+      for (let rr = 0; rr < ROWS; rr++) clr.add(key(rr, ctr.c));
+    } else if (hasBomb) { // bomb + rocket → 3 hàng + 3 cột
+      for (let dr = -1; dr <= 1; dr++) for (let cc = 0; cc < COLS; cc++)
+        if (inb(ctr.r + dr, cc)) clr.add(key(ctr.r + dr, cc));
+      for (let dc = -1; dc <= 1; dc++) for (let rr = 0; rr < ROWS; rr++)
+        if (inb(rr, ctr.c + dc)) clr.add(key(rr, ctr.c + dc));
+    }
+    return clr;
+  }
+  // 1 special thường + 1 thường → special nổ tại chỗ
+  if (ta.special) clr.add(key(a.r, a.c));
+  if (tb.special) clr.add(key(b.r, b.c));
+  return clr;
+}
+
+async function tryMove(a, b) {
+  if (busy || ended) return;
+  if (!(Math.abs(a.r - b.r) + Math.abs(a.c - b.c) === 1)) return;
+  const ta = tileAt(a.r, a.c), tb = tileAt(b.r, b.c);
+  if (!ta || !tb) return;
+
+  busy = true;
+  clearSelection();
+  swapModel(a, b);
+  await animateSwap();
+
+  const pending = comboClears(tileAt(a.r, a.c), a, tileAt(b.r, b.c), b);
+  const test = findMatches([a, b]);
+  const valid = pending.size > 0 || test.clearCells.size > 0 || test.specialPlans.length > 0;
+
+  if (!valid) {
+    swapModel(a, b);           // hoàn tác
+    await animateSwap();
+    busy = false;
+    return;
+  }
+
+  consumeMove();
+  await cascade(pending, [a, b]);
+  await settleAfterMove();
+  busy = false;
+}
+
+async function cascade(pending, swapCells) {
+  let first = true;
+  while (true) {
+    const { clearCells, specialPlans } = findMatches(first ? swapCells : []);
+    const clr = new Set(clearCells);
+    if (first && pending) for (const k of pending) clr.add(k);
+
+    expandActivations(clr);
+    for (const p of specialPlans) clr.delete(key(p.r, p.c));
+
+    if (clr.size === 0 && specialPlans.length === 0) break;
+
+    // Tally goal + đánh dấu clear
+    for (const k of clr) {
+      const [r, c] = k.split(',').map(Number);
+      const t = board[r][c];
+      if (t) { tallyGoal(t.color); t.el.classList.add('clearing'); }
+    }
+    // Tạo special (nâng cấp tile tại chỗ)
+    for (const p of specialPlans) {
+      const t = board[p.r][p.c];
+      if (t) { t.special = p.type; paintTile(t); t.el.style.transform = pos(p.r, p.c); }
+    }
+
+    await sleep(clr.size ? 210 : 60);
+
+    // Xoá các tile đã clear
+    for (const k of clr) {
+      const [r, c] = k.split(',').map(Number);
+      const t = board[r][c];
+      if (t) { t.el.remove(); board[r][c] = null; }
+    }
+
+    gravityAndRefill();
+    await sleep(260);
+    first = false;
+  }
+}
+
+function gravityAndRefill() {
+  const fresh = [];
+  for (let c = 0; c < COLS; c++) {
+    let ptr = ROWS - 1;
+    for (let r = ROWS - 1; r >= 0; r--) {
+      if (board[r][c]) {
+        if (r !== ptr) { board[ptr][c] = board[r][c]; board[r][c] = null; }
+        ptr--;
+      }
+    }
+    // ptr..0 trống → tile mới rơi từ trên
+    let above = 1;
+    for (let r = ptr; r >= 0; r--) {
+      const t = makeTile(randColor());
+      board[r][c] = t;
+      t.el.classList.add('no-anim');
+      t.el.style.transform = pos(r - (ptr + above), c); // bắt đầu phía trên bàn
+      fresh.push(t);
+    }
+  }
+  // ép reflow rồi bật lại animation để rơi xuống
+  void boardEl.offsetWidth;
+  for (const t of fresh) t.el.classList.remove('no-anim');
+  layout();
+}
+
+function randColor() { return (Math.random() * NCOLORS) | 0; }
+
+/* =====================================================================
+ * 8. Goals / HUD / end
+ * ===================================================================== */
+function tallyGoal(color) {
+  for (const g of goals) if (g.color === color && g.got < g.need) { g.got++; renderGoals(); return; }
+}
+function renderGoals() {
+  goalsEl.innerHTML = '';
+  for (const g of goals) {
+    const done = g.got >= g.need;
+    const el = document.createElement('div');
+    el.className = 'goal' + (done ? ' done' : '');
+    el.innerHTML =
+      '<div class="goal-ico" style="background:' + COLORS[g.color] + '">' + shapeSvg(g.color) + '</div>' +
+      '<div class="goal-count">' + (done ? '' : Math.max(0, g.need - g.got)) + '</div>';
+    goalsEl.appendChild(el);
+  }
+}
+function updateMoves() {
+  const pill = document.getElementById('moves-pill');
+  if (pill) {
+    pill.querySelector('.moves-num').textContent = movesLeft;
+    pill.classList.toggle('low', movesLeft <= 5);
+  }
+}
+function consumeMove() { movesLeft--; updateMoves(); }
+
+function goalsMet() { return goals.every(g => g.got >= g.need); }
+
+async function settleAfterMove() {
+  if (ended) return;
+  if (goalsMet()) { win(); return; }
+  if (movesLeft <= 0) { lose(); return; }
+  if (!hasAnyMove()) reshuffle();
+}
+
+function win() {
+  ended = true;
+  saveData({ levelIdx: currentLevelIdx });
+  if (currentLevelIdx === LEVELS.length - 1) {
+    sendMessage('victory');                              // level cuối: chỉ victory
+    showDevBar(t('victory'), null);
+  } else {
+    sendMessage('game_result', { result: 'win', showModal: true });
+    showDevBar(t('win'), 'next');
+  }
+}
+function lose() {
+  ended = true;
+  sendMessage('game_result', { result: 'lose', showModal: true });
+  showDevBar(t('lose'), 'retry');
+}
+
+/* =====================================================================
+ * 9. No-move detection + reshuffle
+ * ===================================================================== */
+function hasAnyMove() {
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    if (board[r][c] && board[r][c].special) return true; // special luôn dùng được
+    for (const [nr, nc] of [[r, c + 1], [r + 1, c]]) {
+      if (!inb(nr, nc)) continue;
+      swapPlain(r, c, nr, nc);
+      const ok = anyMatch(null);
+      swapPlain(r, c, nr, nc);
+      if (ok) return true;
+    }
+  }
+  return false;
+}
+function swapPlain(r1, c1, r2, c2) {
+  const t = board[r1][c1]; board[r1][c1] = board[r2][c2]; board[r2][c2] = t;
+}
+function reshuffle() {
+  let tries = 0;
+  do {
+    const colors = [];
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) colors.push(board[r][c].color);
+    for (let i = colors.length - 1; i > 0; i--) {
+      const j = (Math.random() * (i + 1)) | 0;
+      [colors[i], colors[j]] = [colors[j], colors[i]];
+    }
+    let k = 0;
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      board[r][c].color = colors[k++]; paintTile(board[r][c]);
+    }
+    tries++;
+  } while ((anyMatch(null) || !hasAnyMove()) && tries < 40);
+  layout();
+}
+
+/* =====================================================================
+ * 10. Build board / level
+ * ===================================================================== */
+function buildBoard() {
+  boardEl.innerHTML = '';
+  board = Array.from({ length: ROWS }, () => new Array(COLS).fill(null));
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    let color;
+    let guard = 0;
+    do {
+      color = randColor();
+      guard++;
+    } while (guard < 40 && (
+      (c >= 2 && board[r][c - 1] && board[r][c - 2] &&
+        board[r][c - 1].color === color && board[r][c - 2].color === color) ||
+      (r >= 2 && board[r - 1][c] && board[r - 2][c] &&
+        board[r - 1][c].color === color && board[r - 2][c].color === color)
+    ));
+    board[r][c] = makeTile(color);
+  }
+  if (!hasAnyMove()) reshuffle();
+  resize();
+}
+
+function loadLevel(idx) {
+  currentLevelIdx = Math.max(0, Math.min(idx, LEVELS.length - 1));
+  const lv = LEVELS[currentLevelIdx];
+  goals = lv.goals.map(g => ({ color: g.color, need: g.need, got: 0 }));
+  movesLeft = lv.moves;
+  ended = false;
+  busy = false;
+  sel = null;
+  hideDevBar();
+  document.getElementById('level-num').textContent = currentLevelIdx + 1;
+  buildBoard();
+  renderGoals();
+  updateMoves();
+}
+
+/* =====================================================================
+ * 11. Input (tap + swipe)
+ * ===================================================================== */
+function cellFromEvent(e) {
+  const rect = boardEl.getBoundingClientRect();
+  const c = Math.floor((e.clientX - rect.left) / cell);
+  const r = Math.floor((e.clientY - rect.top) / cell);
+  return inb(r, c) ? { r, c } : null;
+}
+function clearSelection() {
+  if (sel && board[sel.r] && board[sel.r][sel.c]) board[sel.r][sel.c].el.classList.remove('sel');
+  sel = null;
+}
+function selectCell(p) {
+  clearSelection();
+  sel = p;
+  if (board[p.r][p.c]) board[p.r][p.c].el.classList.add('sel');
+}
+
+let downCell = null, downX = 0, downY = 0, swiped = false;
+boardEl.addEventListener('pointerdown', (e) => {
+  if (busy || ended) return;
+  const p = cellFromEvent(e);
+  if (!p) return;
+  downCell = p; downX = e.clientX; downY = e.clientY; swiped = false;
+});
+boardEl.addEventListener('pointermove', (e) => {
+  if (busy || ended || !downCell || swiped) return;
+  const dx = e.clientX - downX, dy = e.clientY - downY;
+  if (Math.abs(dx) < cell * 0.4 && Math.abs(dy) < cell * 0.4) return;
+  swiped = true;
+  let nr = downCell.r, nc = downCell.c;
+  if (Math.abs(dx) > Math.abs(dy)) nc += dx > 0 ? 1 : -1;
+  else nr += dy > 0 ? 1 : -1;
+  if (inb(nr, nc)) tryMove(downCell, { r: nr, c: nc });
+  downCell = null;
+});
+window.addEventListener('pointerup', (e) => {
+  if (busy || ended || !downCell || swiped) { downCell = null; return; }
+  const p = downCell; downCell = null;
+  if (sel) {
+    if (sel.r === p.r && sel.c === p.c) { clearSelection(); return; }
+    if (Math.abs(sel.r - p.r) + Math.abs(sel.c - p.c) === 1) {
+      const a = sel; clearSelection(); tryMove(a, p); return;
+    }
+  }
+  selectCell(p);
+});
+
+/* =====================================================================
+ * 12. HUD buttons + native callbacks
+ * ===================================================================== */
+document.getElementById('back-btn').addEventListener('click', (e) => {
+  e.stopPropagation(); sendMessage('quit');
+});
+document.getElementById('restart-btn').addEventListener('click', (e) => {
+  e.stopPropagation(); loadLevel(currentLevelIdx);
+});
+
+window.onAppPause = function () { /* game không có loop chạy nền; no-op */ };
+window.onNextLevel = function () {
+  if (currentLevelIdx < LEVELS.length - 1) loadLevel(currentLevelIdx + 1);
+};
+window.onRetryLevel = function () { loadLevel(currentLevelIdx); };
+
+/* Dev-only result bar (chỉ browser thường, không có RN WebView) */
+function showDevBar(title, action) {
+  if (window.ReactNativeWebView) return;   // trong app: native lo popup
+  const bar = document.getElementById('devbar');
+  document.getElementById('dev-title').textContent = title;
+  const btn = document.getElementById('dev-btn');
+  if (!action) { btn.classList.add('hidden'); }
+  else {
+    btn.classList.remove('hidden');
+    btn.textContent = action === 'next' ? t('next') : t('retry');
+    btn.onclick = () => { hideDevBar(); action === 'next' ? window.onNextLevel() : window.onRetryLevel(); };
+  }
+  bar.classList.remove('hidden');
+}
+function hideDevBar() { document.getElementById('devbar').classList.add('hidden'); }
+
+/* =====================================================================
+ * 13. Boot
+ * ===================================================================== */
+function applyStaticI18n() {
+  document.getElementById('level-label').textContent = t('level');
+  const mt = document.querySelector('#moves-pill .moves-txt');
+  if (mt) mt.textContent = t('moves');
+}
+function applyStatusBarPad() {
+  const sb = getStatusBarHeight();
+  document.getElementById('topbar').style.paddingTop =
+    'calc(max(' + sb + 'px, env(safe-area-inset-top)) + 8px)';
+}
+
+// moves pill nằm bên phải khối level? Không — đặt riêng: chèn vào topbar giữa.
+function injectMovesPill() {
+  const holder = document.querySelector('.top-center');
+  const pill = document.createElement('div');
+  pill.className = 'moves-pill'; pill.id = 'moves-pill';
+  pill.style.marginTop = '6px';
+  pill.innerHTML = '<div class="moves-num">0</div><div class="moves-txt">' + t('moves') + '</div>';
+  holder.appendChild(pill);
+}
+
+function boot() {
+  LANG = getLanguage();
+  applyUiFont(LANG);
+  applyStatusBarPad();
+  injectMovesPill();
+  applyStaticI18n();
+  currentLevelIdx = getInitialLevelIdx();
+  loadLevel(currentLevelIdx);
+}
+
+window.addEventListener('resize', () => { resize(); });
+
+// Đợi native inject (chống race) — game-common §3
+(function waitForNativeInjection() {
+  const start = Date.now();
+  (function check() {
+    if (typeof window.currentLevel === 'number' ||
+        typeof window.language === 'string' ||
+        Date.now() - start > 200) {
+      boot();
+    } else {
+      setTimeout(check, 10);
+    }
+  })();
+})();
+</script>

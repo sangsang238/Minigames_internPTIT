@@ -1,0 +1,24 @@
+{
+  "title": "Royal Match",
+  "packageName": "com.falcon.royalmatch",
+  "engine": "HTML5",
+  "version": "1.0.0",
+  "category": "PUZZLE",
+  "tags": ["match3", "puzzle", "royal", "swap", "casual"],
+  "description": "Swap adjacent pieces to line up three or more and clear the level goals before you run out of moves. Chain rockets, bombs and light balls for big combos.",
+  "controls": "Swipe or tap two adjacent pieces to swap them",
+  "aiContext": "",
+  "aiBuildLink": "",
+  "demoUrl": "",
+  "storeLinks": {
+    "googlePlay": { "url": "", "downloads": 0 },
+    "iosAppStore": { "url": "", "downloads": 0 },
+    "steam": { "url": "", "downloads": 0 }
+  },
+  "entry": "index.html",
+  "coverImages": {
+    "landscape16x9": "cover-landscape-1920x1080.png",
+    "portrait2x3": "cover-portrait-800x1200.png",
+    "square1x1": "cover-square-800x800.png"
+  }
+}
