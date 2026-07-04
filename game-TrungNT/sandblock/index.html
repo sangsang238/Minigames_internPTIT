@@ -70,26 +70,27 @@
     padding: 0 14px 4px;
   }
   .scoreboard { display: flex; align-items: center; gap: calc(10px * var(--sc)); }
-  /* mỗi loại điểm 1 khung riêng */
+  /* mỗi loại điểm 1 khung riêng: icon bên trái + (nhãn / số) bên phải */
   .stat {
-    display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05;
+    display: flex; flex-direction: row; align-items: center; gap: calc(8px * var(--sc));
     background: rgba(255,255,255,.05);
     border: 1.5px solid rgba(120,160,255,.16);
     border-radius: calc(14px * var(--sc));
-    padding: calc(5px * var(--sc)) calc(16px * var(--sc));
-    min-width: calc(64px * var(--sc));
+    padding: calc(5px * var(--sc)) calc(14px * var(--sc));
     box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 4px 12px rgba(0,0,0,.25);
   }
+  .stat-ico { width: calc(20px * var(--sc)); height: calc(20px * var(--sc)); fill: var(--gold); flex-shrink: 0; display: block; }
+  .stat-txt { display: flex; flex-direction: column; align-items: center; line-height: 1.05; min-width: calc(40px * var(--sc)); }
   .stat .k {
     font-family: system-ui, sans-serif;
     font-size: calc(10px * var(--sc)); letter-spacing: 2px; font-weight: 800;
-    color: var(--ink-soft); text-transform: uppercase;
+    color: var(--ink-soft); text-transform: uppercase;   /* nhãn màu xanh như cũ */
   }
   .stat .v { font-size: calc(24px * var(--sc)); color: #fff; }
   .stat .v.best { color: var(--gold); }
 
   .btn3d {
-    --radius: 14px; --surface-color: #16233f; --surface-text: #cfe0ff;
+    --radius: 14px; --surface-color: #2eb1d6; --surface-text: #fff;   /* nút icon: xanh lơ + icon trắng */
     position: relative; display: inline-block; padding: 0; border: 0;
     background: transparent; cursor: pointer; font: inherit; color: inherit;
   }
@@ -234,8 +235,14 @@
       </span>
     </div>
     <div class="scoreboard">
-      <div class="stat"><div class="k" id="lbl-score">SCORE</div><div class="v" id="hud-score">0</div></div>
-      <div class="stat"><div class="k" id="lbl-best">BEST</div><div class="v best" id="hud-best">0</div></div>
+      <div class="stat">
+        <svg class="stat-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 17.27l6.18 3.73-1.64-7.03L22 9.24l-7.19-.62L12 2 9.19 8.62 2 9.24l5.46 4.73L5.82 21z"/></svg>
+        <div class="stat-txt"><div class="k" id="lbl-score">SCORE</div><div class="v" id="hud-score">0</div></div>
+      </div>
+      <div class="stat">
+        <svg class="stat-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8.2l4.1 3.5L12 5l4.9 6.7 4.1-3.5-1.6 9.6H4.6zM4.4 20h15.2v2.2H4.4z"/></svg>
+        <div class="stat-txt"><div class="k" id="lbl-best">BEST</div><div class="v best" id="hud-best">0</div></div>
+      </div>
     </div>
     <div class="btn3d btn-icon" id="sound-btn" role="button" aria-label="Sound">
       <span class="btn3d-shadow"></span>
@@ -394,7 +401,7 @@ function tryRestore() {                          // khôi phục ván dở lúc 
     score = g.score || 0; combo = g.combo || 0;
     bestAtStart = typeof g.bestAtStart === 'number' ? g.bestAtStart : best;
     over = false; ghost = null; drag = null; fallBlocks = [];
-    blastHold = 0; slowMo = 0; flashes = []; pendingMove = false; moveScored = false; stableFrames = 0;
+    blastHold = 0; flashes = []; pendingMove = false; moveScored = false; stableFrames = 0;
     document.getElementById('hud-score').textContent = score;
     document.getElementById('overlay').classList.add('hidden');
     hideDrag(); renderTray();
@@ -558,7 +565,7 @@ let pendingMove = false, moveScored = false;   // combo = CHUỖI ăn điểm qu
 let running = false, over = false;
 let flashes = [];                    // [{i,life,max,r,g,b}]
 let blastHold = 0;                   // frame còn giữ nhịp sau một lần nổ (blast chậm lại)
-const BLAST_HOLD = 50;               // ~0.83s: blast giữ/nháy lâu hơn nữa
+const BLAST_HOLD = 26;               // FREEZE ~0.43s ≈ đúng thời lượng blast SFX (hết tiếng thì hết freeze)
 
 const cv = document.getElementById('game');
 const ctx = cv.getContext('2d');
@@ -619,10 +626,9 @@ function ghostFromPointer(cells, clientX, clientY) {
 }
 // (1) Rigid→Granular: thả khối RẮN rơi thẳng theo cột từ đỉnh; giữ nguyên
 // hình khối gạch cho tới khi chạm đáy/bề mặt khác → mới vỡ thành cát.
-const FALL_SPEED = 1;                // số hạt khối rắn rơi mỗi BƯỚC
-const FALL_EVERY = 2;                // khối rơi 1 bước mỗi 2 frame → nhanh hơn một chút
+const FALL_SPEED = 6;                // số hạt khối rơi mỗi TICK (60/giây) → thả ra rơi VÈO xuống
 function startFall(cells, colors, gx, gy) {
-  fallBlocks.push({ cells, colors, gx, gy: gy || 0, tick: 0 });   // thêm 1 khối rơi (có thể chồng với khối đang rơi khác)
+  fallBlocks.push({ cells, colors, gx, gy: gy || 0, pgy: gy || 0 });   // pgy: vị trí tick trước (nội suy render)
   if (!pendingMove) { pendingMove = true; moveScored = false; }   // bắt đầu "lượt" nếu chưa có — combo giữ nguyên
 }
 function shatterFall(fb) {            // chạm đáy/bề mặt → ghi cát đúng hình khối (giữ màu từng ô)
@@ -635,11 +641,10 @@ function shatterFall(fb) {            // chạm đáy/bề mặt → ghi cát đ
   });
   AudioFX.land();
 }
-function stepFallBlocks() {
+function stepFallBlocks() {           // chạy MỖI TICK (60/giây) → tốc độ rơi đều mọi refresh rate
   for (let bi = fallBlocks.length - 1; bi >= 0; bi--) {
     const fb = fallBlocks[bi];
-    if (++fb.tick < FALL_EVERY) continue;               // chưa tới nhịp của khối này
-    fb.tick = 0;
+    fb.pgy = fb.gy;                                     // lưu vị trí đầu tick cho nội suy render mượt
     let landed = false;
     for (let s = 0; s < FALL_SPEED; s++) {
       if (fits(fb.cells, fb.gx, fb.gy + 1)) { fb.gy++; }  // còn chỗ trống → rơi tiếp
@@ -733,8 +738,7 @@ function checkBlast() {
   addScore(pts);
   AudioFX.blast(combo);
   showComboPop(combo, pts);
-  blastHold = BLAST_HOLD;               // giữ nhịp → mỗi lần nổ chậm lại, đọc được combo
-  slowMo = SLOWMO;                       // sau blast → cát sụp đổ ở SLOW MOTION
+  blastHold = BLAST_HOLD;               // FREEZE: đóng băng cát + nháy để đọc combo/điểm
   for (const ci of toClear) {
     const c = grid[ci] - 1;
     grid[ci] = EMPTY;
@@ -791,7 +795,7 @@ function fitScores() {
   while (r.scrollWidth > max && fz > 14) { fz -= 1; vals.forEach(v => { v.style.fontSize = fz + 'px'; }); }
 }
 function newRun() {
-  grid.fill(0); flashes = []; ghost = null; drag = null; fallBlocks = []; blastHold = 0; slowMo = 0;
+  grid.fill(0); flashes = []; ghost = null; drag = null; fallBlocks = []; blastHold = 0;
   score = 0; combo = 0; pendingMove = false; moveScored = false; over = false; bestAtStart = best;
   document.getElementById('hud-score').textContent = '0';
   updateBestHud();
@@ -828,14 +832,15 @@ function draw() {
   // (đã bỏ hẳn ghost vẽ ở đỉnh — không còn "cát rơi" mờ trên đầu sân khi kéo;
   //  khối đang kéo theo ngón tay đã cho biết cột thả)
   for (const fb of fallBlocks) {              // (1) mọi khối đang rơi vẽ bằng CÁT, MÀU theo từng ô
+    const ry = Math.round(fb.pgy + (fb.gy - fb.pgy) * renderAlpha);   // NỘI SUY vị trí → rơi mượt trên màn tần số cao
     fb.cells.forEach(([bx, by], k) => {
-      const c = RGB[fb.colors[k]], ox = fb.gx + bx * B, oy = fb.gy + by * B;
+      const c = RGB[fb.colors[k]], ox = fb.gx + bx * B, oy = ry + by * B;
       for (let j = 0; j < B; j++) for (let i2 = 0; i2 < B; i2++) {
         const x = ox + i2, y = oy + j;
         if (x < 0 || x >= GW || y < 0 || y >= GH) continue;
         const p = idx(x, y) * 4;
-        // nhiễu theo toạ độ CỐ ĐỊNH trong khối → pattern đứng yên khi rơi, không nhấp nháy.
-        const lx = x - fb.gx, ly = y - fb.gy;
+        // nhiễu theo toạ độ TRONG KHỐI → pattern đứng yên khi rơi, không nhấp nháy.
+        const lx = bx * B + i2, ly = by * B + j;
         const nz = (((lx * 131 + ly * 197 + lx * ly * 7) % 29) - 14) * 1.6;
         DATA[p] = clamp(c[0] + nz); DATA[p + 1] = clamp(c[1] + nz); DATA[p + 2] = clamp(c[2] + nz); DATA[p + 3] = 255;
       }
@@ -937,7 +942,12 @@ function showDrag(p, clientX, clientY) {
 }
 function moveDrag(clientX, clientY) {
   const w = dragCv.offsetWidth, h = dragCv.offsetHeight;
-  dragCv.style.transform = 'translate(' + (clientX - w / 2) + 'px,' + (clientY - h - 24) + 'px)';
+  const rect = cv.getBoundingClientRect();
+  let px = clientX - w / 2;
+  px = Math.max(rect.left, Math.min(rect.right - w, px));   // GIỮ khối trong khung: không thò ra 2 tường
+  let py = clientY - h - 24;
+  py = Math.max(rect.top, py);                              // không thò lên TRÊN đỉnh khung
+  dragCv.style.transform = 'translate(' + px + 'px,' + py + 'px)';
 }
 function hideDrag() { dragCv.style.display = 'none'; }
 
@@ -946,39 +956,46 @@ function hideDrag() { dragCv.style.display = 'none'; }
  * ===================================================================== */
 let stableFrames = 0;
 let animTick = 0;                   // đếm frame cho hoạt ảnh (nháy thua…), tăng cả khi over
-let slowMo = 0;                     // frame còn lại của SLOW MOTION sau blast
-const SLOWMO = 50;                  // ~0.8s slow-mo sau mỗi lần nổ
-const SLOWMO_EVERY = 3;             // trong slow-mo: 1 bước cát mỗi 3 frame
-const SAND_STEPS = 1;               // số bước sand mỗi frame → THẤY cát chảy (nhỏ = chảy chậm)
-function frame() {
+const SAND_STEPS = 3;              // số bước sand mỗi tick → cát chảy/lắng NHANH hơn
+// ── Fixed timestep: SIM chạy đều 60 tick/giây bất kể refresh rate (60/90/144Hz),
+//    RENDER theo tần số màn hình. Nhờ vậy tốc độ game GIỐNG NHAU trên mọi máy. ──
+const TICK_MS = 1000 / 60;
+let lastTime = 0, acc = 0, renderAlpha = 0;
+function tick() {                   // 1 bước simulation cố định (16.67ms)
   animTick++;
   if (running && !over) {
     stepFallBlocks();
     if (blastHold > 0) {
-      blastHold--;                    // đang giữ nhịp blast → tạm dừng cát để thấy nổ + combo
-    } else if (slowMo > 0) {
-      // SLOW MOTION sau blast: cát sụp đổ chậm lại cho đã mắt.
-      slowMo--;
-      if (slowMo % SLOWMO_EVERY === 0 && !sandStep()) slowMo = 0;  // cát đứng yên → thoát sớm
-      checkBlast();                   // nổ dây chuyền → refresh blastHold/slowMo
-      stableFrames = 0;               // đang slow-mo → chưa xét ổn định/thua
+      blastHold--;                    // FREEZE sau blast: đóng băng cát, chỉ nháy — đọc combo/điểm
     } else {
-      // Hiệu ứng cát chảy: mỗi frame chỉ chạy vài bước sand để thấy cát trôi/lắng.
       let moved = false;
       for (let s = 0; s < SAND_STEPS; s++) { if (sandStep()) moved = true; }
-      checkBlast();                   // nếu nổ → đặt lại blastHold, vòng sau lại giữ nhịp
-      if (!moved && flashes.length === 0 && !drag && fallBlocks.length === 0 && blastHold === 0) {
-        if (pendingMove) {              // lượt thả đã lắng xong
-          if (!moveScored) combo = 0;   // không nổ được gì → đứt chuỗi combo
-          pendingMove = false;
-          saveGame();                   // lưu ván dở vào localStorage để mở lại chơi tiếp
+      if (moved || fallBlocks.length > 0) {
+        stableFrames = 0;             // cát còn chảy / còn khối rơi → CHƯA xét nổ (chờ tan hết thành cát)
+      } else {
+        checkBlast();                 // cát đã LẮNG HẾT → giờ mới xét nổ (→ đặt blastHold nếu nổ)
+        if (blastHold === 0 && flashes.length === 0 && !drag) {
+          if (pendingMove) {            // không nổ nữa → lượt lắng xong
+            if (!moveScored) combo = 0; // không nổ được gì → đứt chuỗi combo
+            pendingMove = false;
+            saveGame();                 // lưu ván dở vào localStorage
+          }
+          stableFrames++;
+          if (stableFrames > 2 && (crossedLine() || !anyPlaceable())) gameOver();
         }
-        stableFrames++;
-        if (stableFrames > 2 && (crossedLine() || !anyPlaceable())) gameOver();
-      } else stableFrames = 0;
+      }
     }
   }
   if (flashes.length) { for (const f of flashes) f.life--; flashes = flashes.filter(f => f.life > 0); }
+}
+function frame(now) {
+  if (!lastTime) lastTime = now;
+  let dt = now - lastTime; lastTime = now;
+  if (dt > 250) dt = 250;             // tab ẩn/lag lớn → chống dồn quá nhiều tick
+  acc += dt;
+  let n = 0;
+  while (acc >= TICK_MS && n < 8) { tick(); acc -= TICK_MS; n++; }   // cap 8 tick/frame (chống spiral)
+  renderAlpha = acc / TICK_MS;        // phần dư → nội suy render khối rơi cho mượt
   draw();
   requestAnimationFrame(frame);
 }
