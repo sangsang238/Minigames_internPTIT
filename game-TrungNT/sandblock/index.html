@@ -186,11 +186,11 @@
   .combo-pop.tier4 .praise { color: #ffb02e; }
   .combo-pop.tier5 .praise { color: #ff7a3d; }
   .combo-pop.tier6 .praise { color: #ff4d6d; }
-  .combo-pop.show { animation: comboPop .62s ease-out forwards; }
+  .combo-pop.show { animation: comboPop 1.05s ease-out forwards; }
   @keyframes comboPop {
     0%   { opacity: 0; transform: translate(-50%, -46%) scale(.5); }
-    22%  { opacity: 1; transform: translate(-50%, -58%) scale(1.18); }
-    68%  { opacity: 1; transform: translate(-50%, -60%) scale(1); }
+    16%  { opacity: 1; transform: translate(-50%, -58%) scale(1.18); }
+    80%  { opacity: 1; transform: translate(-50%, -60%) scale(1); }
     100% { opacity: 0; transform: translate(-50%, -76%) scale(1); }
   }
 
@@ -242,7 +242,7 @@
       <span class="btn3d-surface">
         <svg class="snd-ico" viewBox="0 0 24 24" aria-hidden="true">
           <path fill="currentColor" d="M4 9v6h4l5 4V5L8 9H4z"/>
-          <path class="snd-wave" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16.5 8.5a4.5 4.5 0 0 1 0 7"/>
+          <path class="snd-wave" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M15.8 9.2a3.6 3.6 0 0 1 0 5.6 M18.4 6.6a7.6 7.6 0 0 1 0 10.8"/>
           <line class="snd-slash" x1="4" y1="4" x2="20" y2="20" stroke="#ff6b6b" stroke-width="2.2" stroke-linecap="round"/>
         </svg>
       </span>
@@ -357,6 +357,53 @@ const LS_KEY = 'sandblock_save';
 function saveLocal(payload) { try { localStorage.setItem(LS_KEY, JSON.stringify(payload)); } catch (e) {} }
 function readLocal() { try { return localStorage.getItem(LS_KEY) || ''; } catch (e) { return ''; } }
 
+// ── Lưu / khôi phục VÁN CHƠI DỞ (state nặng → localStorage, game-common §1.2) ──
+function encodeGrid() {                          // Uint8Array cát → chuỗi base64 gọn
+  let s = '';
+  for (let i = 0; i < NG; i++) s += String.fromCharCode(grid[i]);
+  return btoa(s);
+}
+function decodeGrid(b64) {
+  const s = atob(b64), n = Math.min(NG, s.length);
+  for (let i = 0; i < n; i++) grid[i] = s.charCodeAt(i);
+}
+function saveGame() {                            // ghi cả best (nhẹ) + snapshot ván (nặng)
+  const snap = {
+    best: best,
+    game: {
+      grid: encodeGrid(),
+      slots: slots.map(function (s) { return s ? { cells: s.cells, colors: s.colors } : null; }),
+      score: score, combo: combo, bestAtStart: bestAtStart,
+    },
+  };
+  try { localStorage.setItem(LS_KEY, JSON.stringify(snap)); } catch (e) {}
+}
+function clearGameSave() {                       // xoá snapshot ván (giữ best) — khi thua / ván mới
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ best: best })); } catch (e) {}
+}
+function tryRestore() {                          // khôi phục ván dở lúc boot; true nếu có ván để tiếp
+  let obj = null;
+  const lraw = readLocal();
+  if (lraw) { try { obj = JSON.parse(lraw); } catch (e) {} }
+  const g = obj && obj.game;
+  if (!g || !g.grid || !Array.isArray(g.slots)) return false;
+  try {
+    grid.fill(0); decodeGrid(g.grid);
+    slots = g.slots.map(function (s) { return s ? { cells: s.cells, colors: s.colors } : null; });
+    if (slots.every(function (s) { return !s; })) return false;   // không còn khối → chơi mới
+    score = g.score || 0; combo = g.combo || 0;
+    bestAtStart = typeof g.bestAtStart === 'number' ? g.bestAtStart : best;
+    over = false; ghost = null; drag = null; fallBlocks = [];
+    blastHold = 0; slowMo = 0; flashes = []; pendingMove = false; moveScored = false; stableFrames = 0;
+    document.getElementById('hud-score').textContent = score;
+    document.getElementById('overlay').classList.add('hidden');
+    hideDrag(); renderTray();
+    running = true;
+    showHint();                    // mở lại vẫn hiện hướng dẫn ở dưới như ván mới
+    return true;
+  } catch (e) { return false; }
+}
+
 /* =====================================================================
  * 1b. SFX — tổng hợp âm bằng Web Audio API (không cần file audio ngoài)
  * ===================================================================== */
@@ -459,7 +506,7 @@ const BW = 10, BH = 15;          // sân rộng/cao (đơn vị ô) — khung đ
 const GW = BW * B, GH = BH * B;  // = 80 × 120 hạt
 const NG = GW * GH;
 const EMPTY = 0;
-const LINE_Y = B;                // vạch game over: cát dâng cao vượt vạch này (1 ô từ đỉnh) → thua
+const LINE_Y = B * 2;            // vạch game over: cách đỉnh 2 ô (vừa 1 khối cao 2 ô) → cát vượt là thua
 
 const COLORS = ['#ff4d4f', '#ffb02e', '#2ecc71', '#3d9bff']; // red / amber / green / blue
 const NCOLORS = COLORS.length;
@@ -504,14 +551,14 @@ const visited = new Uint8Array(NG);
 let slots = [null, null, null];      // 3 khối trong khay: {cells,color} | null
 let ghost = null;                    // {cells,color,gx,valid} khi đang kéo
 let drag = null;                     // {slot, piece, offX, offY}
-let fallBlock = null;                // {cells,color,gx,gy} khối RẮN đang rơi (chưa vỡ)
+let fallBlocks = [];                 // các khối RẮN đang rơi (chưa vỡ) — cho phép nhiều khối cùng lúc
 let score = 0, best = 0, bestAtStart = 0, combo = 0;
 let pendingMove = false, moveScored = false;   // combo = CHUỖI ăn điểm qua nhiều lượt:
                                                // 1 lượt thả xong mà không nổ gì → reset
 let running = false, over = false;
 let flashes = [];                    // [{i,life,max,r,g,b}]
 let blastHold = 0;                   // frame còn giữ nhịp sau một lần nổ (blast chậm lại)
-const BLAST_HOLD = 36;               // ~0.6s: blast giữ/nháy lâu hơn, đọc combo + điểm rõ hơn
+const BLAST_HOLD = 50;               // ~0.83s: blast giữ/nháy lâu hơn nữa
 
 const cv = document.getElementById('game');
 const ctx = cv.getContext('2d');
@@ -574,32 +621,31 @@ function ghostFromPointer(cells, clientX, clientY) {
 // hình khối gạch cho tới khi chạm đáy/bề mặt khác → mới vỡ thành cát.
 const FALL_SPEED = 1;                // số hạt khối rắn rơi mỗi BƯỚC
 const FALL_EVERY = 2;                // khối rơi 1 bước mỗi 2 frame → nhanh hơn một chút
-let fallTick = 0;
 function startFall(cells, colors, gx, gy) {
-  fallBlock = { cells, colors, gx, gy: gy || 0 };   // hiện ngay tại chỗ thả (gy), rồi rơi/vỡ từ đó
-  fallTick = 0;
-  pendingMove = true; moveScored = false;           // lượt thả mới — combo GIỮ NGUYÊN, chỉ reset nếu lượt này không nổ
+  fallBlocks.push({ cells, colors, gx, gy: gy || 0, tick: 0 });   // thêm 1 khối rơi (có thể chồng với khối đang rơi khác)
+  if (!pendingMove) { pendingMove = true; moveScored = false; }   // bắt đầu "lượt" nếu chưa có — combo giữ nguyên
 }
-function stepFallBlock() {
-  if (!fallBlock) return;
-  if (++fallTick < FALL_EVERY) return;   // chưa tới nhịp → khối đứng yên frame này
-  fallTick = 0;
-  const fb = fallBlock;
-  for (let s = 0; s < FALL_SPEED; s++) {
-    if (fits(fb.cells, fb.gx, fb.gy + 1)) { fb.gy++; }   // còn chỗ trống bên dưới → rơi tiếp
-    else {                                                // chạm đáy/bề mặt → VỠ VỤN tại chỗ
-      // Ghi cát đúng hình khối (giữ màu từng ô); physics sẽ tự cho chảy/lắng xuống.
-      fb.cells.forEach(([bx, by], k) => {
-        const v = fb.colors[k] + 1, ox = fb.gx + bx * B, oy = fb.gy + by * B;
-        for (let j = 0; j < B; j++) for (let i = 0; i < B; i++) {
-          const x = ox + i, y = oy + j;
-          if (x >= 0 && x < GW && y >= 0 && y < GH && grid[idx(x, y)] === EMPTY) grid[idx(x, y)] = v;
-        }
-      });
-      AudioFX.land();
-      fallBlock = null;
-      return;
+function shatterFall(fb) {            // chạm đáy/bề mặt → ghi cát đúng hình khối (giữ màu từng ô)
+  fb.cells.forEach(([bx, by], k) => {
+    const v = fb.colors[k] + 1, ox = fb.gx + bx * B, oy = fb.gy + by * B;
+    for (let j = 0; j < B; j++) for (let i = 0; i < B; i++) {
+      const x = ox + i, y = oy + j;
+      if (x >= 0 && x < GW && y >= 0 && y < GH && grid[idx(x, y)] === EMPTY) grid[idx(x, y)] = v;
     }
+  });
+  AudioFX.land();
+}
+function stepFallBlocks() {
+  for (let bi = fallBlocks.length - 1; bi >= 0; bi--) {
+    const fb = fallBlocks[bi];
+    if (++fb.tick < FALL_EVERY) continue;               // chưa tới nhịp của khối này
+    fb.tick = 0;
+    let landed = false;
+    for (let s = 0; s < FALL_SPEED; s++) {
+      if (fits(fb.cells, fb.gx, fb.gy + 1)) { fb.gy++; }  // còn chỗ trống → rơi tiếp
+      else { shatterFall(fb); landed = true; break; }     // chạm → vỡ
+    }
+    if (landed) fallBlocks.splice(bi, 1);
   }
 }
 // Còn nước đi? Khối nào đó đổ được từ đỉnh ở cột nào đó.
@@ -715,13 +761,14 @@ function showComboPop(combo, pts) {
 function addScore(n) {
   score += n;
   document.getElementById('hud-score').textContent = score;
-  if (score > best) { best = score; saveData({ best }); saveLocal({ best }); }
+  if (score > best) { best = score; saveData({ best }); }   // localStorage best cập nhật qua saveGame
 }
 function updateBestHud() { document.getElementById('hud-best').textContent = best; }
 
 function gameOver() {
   if (over) return;
   over = true; running = false;
+  clearGameSave();               // thua → xoá ván dở, mở lại là ván mới
   AudioFX.over();
   const isNew = score > bestAtStart;
   document.getElementById('ov-title').textContent = isNew ? t('newBest') : t('gameOver');
@@ -744,7 +791,7 @@ function fitScores() {
   while (r.scrollWidth > max && fz > 14) { fz -= 1; vals.forEach(v => { v.style.fontSize = fz + 'px'; }); }
 }
 function newRun() {
-  grid.fill(0); flashes = []; ghost = null; drag = null; fallBlock = null; blastHold = 0; slowMo = 0;
+  grid.fill(0); flashes = []; ghost = null; drag = null; fallBlocks = []; blastHold = 0; slowMo = 0;
   score = 0; combo = 0; pendingMove = false; moveScored = false; over = false; bestAtStart = best;
   document.getElementById('hud-score').textContent = '0';
   updateBestHud();
@@ -752,6 +799,7 @@ function newRun() {
   hideDrag();
   newTray();
   running = true;
+  clearGameSave();               // ván mới → xoá snapshot cũ (lượt đầu tiên sẽ lưu lại)
   showHint();
 }
 
@@ -779,8 +827,7 @@ function draw() {
   }
   // (đã bỏ hẳn ghost vẽ ở đỉnh — không còn "cát rơi" mờ trên đầu sân khi kéo;
   //  khối đang kéo theo ngón tay đã cho biết cột thả)
-  if (fallBlock) {                            // (1) khối đang rơi vẽ bằng CÁT, MÀU theo từng ô
-    const fb = fallBlock;
+  for (const fb of fallBlocks) {              // (1) mọi khối đang rơi vẽ bằng CÁT, MÀU theo từng ô
     fb.cells.forEach(([bx, by], k) => {
       const c = RGB[fb.colors[k]], ox = fb.gx + bx * B, oy = fb.gy + by * B;
       for (let j = 0; j < B; j++) for (let i2 = 0; i2 < B; i2++) {
@@ -825,8 +872,7 @@ function drawGameOverLine() {
   const y = LINE_Y / GH * cv.height;
   ctx.save();
   ctx.strokeStyle = 'rgba(255,70,70,' + (0.85 * alpha).toFixed(3) + ')';
-  ctx.lineWidth = Math.max(1.5, cv.height / GH);
-  ctx.setLineDash([cv.width / 26, cv.width / 42]);
+  ctx.lineWidth = Math.max(2, cv.height / GH * 1.4);   // nét LIỀN, đậm hơn chút
   ctx.shadowColor = 'rgba(255,60,60,' + alpha.toFixed(3) + ')';
   ctx.shadowBlur = ctx.lineWidth * 2;
   ctx.beginPath();
@@ -907,7 +953,7 @@ const SAND_STEPS = 1;               // số bước sand mỗi frame → THẤY 
 function frame() {
   animTick++;
   if (running && !over) {
-    stepFallBlock();
+    stepFallBlocks();
     if (blastHold > 0) {
       blastHold--;                    // đang giữ nhịp blast → tạm dừng cát để thấy nổ + combo
     } else if (slowMo > 0) {
@@ -921,10 +967,11 @@ function frame() {
       let moved = false;
       for (let s = 0; s < SAND_STEPS; s++) { if (sandStep()) moved = true; }
       checkBlast();                   // nếu nổ → đặt lại blastHold, vòng sau lại giữ nhịp
-      if (!moved && flashes.length === 0 && !drag && !fallBlock && blastHold === 0) {
+      if (!moved && flashes.length === 0 && !drag && fallBlocks.length === 0 && blastHold === 0) {
         if (pendingMove) {              // lượt thả đã lắng xong
           if (!moveScored) combo = 0;   // không nổ được gì → đứt chuỗi combo
           pendingMove = false;
+          saveGame();                   // lưu ván dở vào localStorage để mở lại chơi tiếp
         }
         stableFrames++;
         if (stableFrames > 2 && (crossedLine() || !anyPlaceable())) gameOver();
@@ -941,7 +988,7 @@ function frame() {
  * ===================================================================== */
 document.querySelectorAll('#tray .slot').forEach(el => {
   el.addEventListener('pointerdown', (e) => {
-    if (!running || over || fallBlock || blastHold > 0) return;   // chờ khối rơi/nổ xong
+    if (!running || over || blastHold > 0) return;   // cho phép nhấc khối khác khi 1 khối đang rơi
     const i = +el.dataset.slot;
     if (!slots[i]) return;
     drag = { slot: i, piece: slots[i] };
@@ -996,7 +1043,7 @@ soundBtn.addEventListener('click', (e) => {
   AudioFX.setEnabled(!AudioFX.isEnabled());   // lưu vào localStorage + blip khi bật
   updateSoundBtn();
 });
-window.onAppPause = function () { running = false; };
+window.onAppPause = function () { if (!over) saveGame(); running = false; };   // lưu ván khi app nền
 window.onNextLevel = function () { /* game không level — no-op */ };
 window.onRetryLevel = function () { newRun(); };
 
@@ -1042,7 +1089,7 @@ function resize() {
   tray.style.maxWidth = w + 'px';                          // khay khớp bề rộng khung
   // KHÔNG ép topbar theo board (tránh tràn khi nội dung > board) — để CSS max-width
   // + full viewport như skydom/runic-blaze, nút luôn ở góc, không lệch/tràn.
-  const sc = Math.min(Math.max(w / 360, 1), 1.6);          // scale nút/HUD theo cỡ khung
+  const sc = Math.min(Math.max(w / 360, 1), 2.2);          // scale nút/HUD/popup theo cỡ khung (trần cao cho màn lớn)
   document.documentElement.style.setProperty('--sc', sc.toFixed(3));
   renderTray();
 }
@@ -1055,11 +1102,14 @@ function boot() {
   updateBestHud();
   updateSoundBtn();
   resize();
-  newRun();
+  if (!tryRestore()) newRun();    // có ván dở → chơi tiếp; không thì ván mới
   requestAnimationFrame(frame);
 }
 window.addEventListener('resize', resize);
 window.addEventListener('load', resize);   // chạy lại khi kích thước cửa sổ đã ổn định
+// Lưu ván khi tab/app bị ẩn hoặc đóng (browser không gọi onAppPause)
+window.addEventListener('pagehide', function () { if (running && !over) saveGame(); });
+document.addEventListener('visibilitychange', function () { if (document.hidden && running && !over) saveGame(); });
 
 (function waitForNativeInjection() {
   const start = Date.now();
