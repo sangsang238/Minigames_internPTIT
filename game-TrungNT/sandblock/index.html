@@ -176,8 +176,16 @@
     opacity: 0; z-index: 6;
     text-shadow: 0 2px 12px rgba(0,0,0,.65);
   }
-  .combo-pop .cmb { font-size: calc(30px * var(--sc)); font-weight: 900; color: var(--gold); letter-spacing: .5px; }
+  .combo-pop .praise { font-size: calc(36px * var(--sc)); font-weight: 900; letter-spacing: .5px; color: #ffd23f; }
+  .combo-pop .cmb { font-size: calc(24px * var(--sc)); font-weight: 900; color: var(--ink-soft); letter-spacing: .5px; }
   .combo-pop .pts { font-size: calc(22px * var(--sc)); font-weight: 800; color: #fff; }
+  /* màu praise theo bậc combo (càng cao càng "nóng") */
+  .combo-pop.tier1 .praise { color: #6fd3ff; }
+  .combo-pop.tier2 .praise { color: #5ce08a; }
+  .combo-pop.tier3 .praise { color: #ffd23f; }
+  .combo-pop.tier4 .praise { color: #ffb02e; }
+  .combo-pop.tier5 .praise { color: #ff7a3d; }
+  .combo-pop.tier6 .praise { color: #ff4d6d; }
   .combo-pop.show { animation: comboPop .62s ease-out forwards; }
   @keyframes comboPop {
     0%   { opacity: 0; transform: translate(-50%, -46%) scale(.5); }
@@ -283,8 +291,8 @@ const LATIN_LANGS = new Set([
   'en','vi','es','es-MX','es-AR','pt-BR','pt','fr','de','it','nl','pl','tr','id','fil',
 ]);
 const I18N = {
-  en: { score: 'Score', best: 'Best', playAgain: 'Play Again', gameOver: 'Game Over', newBest: 'New Best!', hint: 'Drag a block onto a column to pour it', combo: 'Combo' },
-  vi: { score: 'Điểm', best: 'Cao nhất', playAgain: 'Chơi lại', gameOver: 'Thua rồi', newBest: 'Kỷ lục mới!', hint: 'Kéo một khối vào cột để đổ cát xuống', combo: 'Combo' },
+  en: { score: 'Score', best: 'Best', playAgain: 'Play Again', gameOver: 'Game Over', newBest: 'New Best!', hint: 'Drag a block onto a column to pour it', combo: 'Combo', prNice: 'Nice!', prGreat: 'Great!', prAwesome: 'Awesome!', prAmazing: 'Amazing!', prFantastic: 'Fantastic!', prUnstoppable: 'Unstoppable!' },
+  vi: { score: 'Điểm', best: 'Cao nhất', playAgain: 'Chơi lại', gameOver: 'Thua rồi', newBest: 'Kỷ lục mới!', hint: 'Kéo một khối vào cột để đổ cát xuống', combo: 'Combo', prNice: 'Tuyệt!', prGreat: 'Giỏi lắm!', prAwesome: 'Xuất sắc!', prAmazing: 'Kinh ngạc!', prFantastic: 'Tuyệt đỉnh!', prUnstoppable: 'Bất bại!' },
   es: { score: 'Puntos', best: 'Récord', playAgain: 'Jugar de nuevo', gameOver: 'Fin del juego', newBest: '¡Nuevo récord!', hint: 'Arrastra un bloque a una columna para verterlo' },
   fr: { score: 'Score', best: 'Record', playAgain: 'Rejouer', gameOver: 'Partie terminée', newBest: 'Nouveau record !', hint: 'Glisse un bloc sur une colonne pour le verser' },
   de: { score: 'Punkte', best: 'Bestwert', playAgain: 'Nochmal', gameOver: 'Game Over', newBest: 'Neuer Rekord!', hint: 'Ziehe einen Block auf eine Spalte zum Ausgießen' },
@@ -362,7 +370,7 @@ const AudioFX = (() => {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return null;
       ac = new AC();
-      master = ac.createGain(); master.gain.value = 0.35; master.connect(ac.destination);
+      master = ac.createGain(); master.gain.value = 0.5; master.connect(ac.destination);
     }
     return ac;
   }
@@ -398,11 +406,21 @@ const AudioFX = (() => {
     pick()  { tone(540, 0.07, 'triangle', 0.22); },
     drop()  { tone(340, 0.13, 'sine', 0.24, 0, 190); },
     land()  { noise(0.20, 0.32, 1500); tone(150, 0.12, 'sine', 0.20, 0, 85); },
-    blast(combo) {                                   // combo càng cao → cao độ càng lên
-      const base = 440 * Math.pow(2, Math.min((combo || 1) - 1, 7) / 12);
-      tone(base, 0.13, 'square', 0.20, 0, base * 1.5);
-      tone(base * 1.5, 0.16, 'triangle', 0.16, 0.04, base * 2);
-      noise(0.16, 0.16, 3800);
+    blast(combo) {
+      // Cao độ leo theo THANG NGŨ CUNG (nghe như giai điệu đi lên, thuận tai — không
+      // chromatic gắt), kèm bồi âm TRẦM cho có thân → combo cao vẫn đầy, đã tai.
+      const PENTA = [0, 2, 4, 7, 9, 12, 14, 16];           // nửa cung, ~1 quãng 8
+      const c = Math.min((combo || 1) - 1, PENTA.length - 1);
+      const f = 523 * Math.pow(2, PENTA[c] / 12);          // nốt gốc (C5 trở lên)
+      const hi = f * 1.5;                                   // nốt 2: quãng 5 trên
+      // 2 TIẾNG mềm (triangle+sine), không square:
+      tone(f,     0.20, 'triangle', 0.30, 0);              // tiếng 1
+      tone(f,     0.20, 'sine',     0.24, 0);
+      tone(f / 2, 0.26, 'sine',     0.24, 0);              // bồi TRẦM (octave dưới) → thân/oomph
+      tone(hi,    0.26, 'triangle', 0.28, 0.13);           // tiếng 2 (cao hơn), trễ 0.13s
+      tone(hi,    0.26, 'sine',     0.22, 0.13);
+      if (c >= 4) tone(f * 2, 0.20, 'sine', 0.15, 0.05);   // combo cao → thêm lấp lánh trên
+      noise(0.05, 0.03, 1800);
     },
     over()  { tone(320, 0.5, 'sawtooth', 0.24, 0, 90); tone(160, 0.55, 'sine', 0.18, 0.06, 70); },
   };
@@ -437,9 +455,8 @@ function parseInitialBest() {
  *   Sân = lưới hạt cát GW×GH. Mỗi ô khối = B×B hạt.
  * ===================================================================== */
 const B = 8;                     // số hạt mỗi cạnh của 1 ô khối
-const BW = 8, BH = 11;           // sân rộng/cao (đơn vị ô) — ít ô hơn → KHỐI TO hơn so
-                                 // với khung, vẫn giữ khung đứng (aspect ~0.73)
-const GW = BW * B, GH = BH * B;  // = 64 × 88 hạt
+const BW = 10, BH = 15;          // sân rộng/cao (đơn vị ô) — khung đứng cao hơn (aspect ~0.67)
+const GW = BW * B, GH = BH * B;  // = 80 × 120 hạt
 const NG = GW * GH;
 const EMPTY = 0;
 const LINE_Y = B;                // vạch game over: cát dâng cao vượt vạch này (1 ô từ đỉnh) → thua
@@ -489,10 +506,12 @@ let ghost = null;                    // {cells,color,gx,valid} khi đang kéo
 let drag = null;                     // {slot, piece, offX, offY}
 let fallBlock = null;                // {cells,color,gx,gy} khối RẮN đang rơi (chưa vỡ)
 let score = 0, best = 0, bestAtStart = 0, combo = 0;
+let pendingMove = false, moveScored = false;   // combo = CHUỖI ăn điểm qua nhiều lượt:
+                                               // 1 lượt thả xong mà không nổ gì → reset
 let running = false, over = false;
 let flashes = [];                    // [{i,life,max,r,g,b}]
 let blastHold = 0;                   // frame còn giữ nhịp sau một lần nổ (blast chậm lại)
-const BLAST_HOLD = 24;               // ~0.4s: đủ chậm để đọc combo + điểm trước lần nổ kế
+const BLAST_HOLD = 36;               // ~0.6s: blast giữ/nháy lâu hơn, đọc combo + điểm rõ hơn
 
 const cv = document.getElementById('game');
 const ctx = cv.getContext('2d');
@@ -506,7 +525,7 @@ const dragCv = document.getElementById('drag');
  * 4. Khối / khay
  * ===================================================================== */
 const TWO_COLOR_SCORE = 2500;    // từ điểm này trở lên, khối CÓ THỂ có 2 màu (khó hơn)
-const TWO_COLOR_RATE = 0.30;     // tần suất khối 2 màu (30%), còn lại vẫn 1 màu
+const TWO_COLOR_RATE = 0.35;     // tần suất khối 2 màu (35%), còn lại vẫn 1 màu
 // Piece: { cells, colors } — colors[k] là màu của ô cells[k]. Khối 1 màu thì mọi ô cùng màu.
 function randPiece() {
   const cells = SHAPES[rnd(SHAPES.length)];
@@ -537,24 +556,29 @@ function fits(cells, gx, gy) {
   });
   return ok;
 }
-// Cột hợp lệ để đổ: căn giữa footprint tại clientX, đổ từ đỉnh (gy=0).
-function ghostFromPointer(cells, clientX) {
+// Vị trí thả: căn footprint quanh (clientX, clientY) → khối HIỆN NGAY tại chỗ thả.
+// Nếu chỗ đó vướng cát/tràn đáy thì dời LÊN tới ô trống gần nhất.
+function ghostFromPointer(cells, clientX, clientY) {
   const rect = cv.getBoundingClientRect();
   const px = (clientX - rect.left) / rect.width * GW;
-  const pw = pieceW(cells) * B;
+  const py = (clientY - rect.top) / rect.height * GH;
+  const pw = pieceW(cells) * B, ph = pieceH(cells) * B;
   let gx = Math.round(px - pw / 2);
   gx = Math.max(0, Math.min(GW - pw, gx));
-  return { gx, valid: fits(cells, gx, 0) };
+  let gy = Math.round(py - ph / 2);
+  gy = Math.max(0, Math.min(GH - ph, gy));
+  while (gy > 0 && !fits(cells, gx, gy)) gy--;   // vướng → dời lên
+  return { gx, gy, valid: fits(cells, gx, gy) };
 }
 // (1) Rigid→Granular: thả khối RẮN rơi thẳng theo cột từ đỉnh; giữ nguyên
 // hình khối gạch cho tới khi chạm đáy/bề mặt khác → mới vỡ thành cát.
 const FALL_SPEED = 1;                // số hạt khối rắn rơi mỗi BƯỚC
 const FALL_EVERY = 2;                // khối rơi 1 bước mỗi 2 frame → nhanh hơn một chút
 let fallTick = 0;
-function startFall(cells, colors, gx) {
-  fallBlock = { cells, colors, gx, gy: 0 };
+function startFall(cells, colors, gx, gy) {
+  fallBlock = { cells, colors, gx, gy: gy || 0 };   // hiện ngay tại chỗ thả (gy), rồi rơi/vỡ từ đó
   fallTick = 0;
-  combo = 0;
+  pendingMove = true; moveScored = false;           // lượt thả mới — combo GIỮ NGUYÊN, chỉ reset nếu lượt này không nổ
 }
 function stepFallBlock() {
   if (!fallBlock) return;
@@ -657,24 +681,30 @@ function checkBlast() {
     if (touchRight) { for (const ci of comp) toClear.push(ci); cleared += comp.length; }
   }
   if (cleared === 0) return;
+  moveScored = true;              // lượt này CÓ nổ → chuỗi combo tiếp tục
   combo++;
   const pts = Math.round(cleared * (1 + (combo - 1) * 0.5));
   addScore(pts);
   AudioFX.blast(combo);
   showComboPop(combo, pts);
   blastHold = BLAST_HOLD;               // giữ nhịp → mỗi lần nổ chậm lại, đọc được combo
+  slowMo = SLOWMO;                       // sau blast → cát sụp đổ ở SLOW MOTION
   for (const ci of toClear) {
     const c = grid[ci] - 1;
     grid[ci] = EMPTY;
     flashes.push({ i: ci, life: BLAST_HOLD, max: BLAST_HOLD, r: RGB[c][0], g: RGB[c][1], b: RGB[c][2] });
   }
 }
-// Popup combo + điểm cộng giữa sân (chạy lại animation mỗi lần nổ).
+// Lời khen theo bậc combo (combo càng cao lời khen càng "xịn").
+const PRAISE = ['prNice', 'prGreat', 'prAwesome', 'prAmazing', 'prFantastic', 'prUnstoppable'];
+function praiseFor(combo) { return t(PRAISE[Math.min(Math.max(combo, 1), PRAISE.length) - 1]); }
+// Popup praise + combo + điểm cộng giữa sân (chạy lại animation mỗi lần nổ).
 function showComboPop(combo, pts) {
   const el = document.getElementById('combo-pop');
-  el.innerHTML = (combo > 1 ? '<div class="cmb">' + t('combo').toUpperCase() + ' ×' + combo + '</div>' : '') +
+  el.className = 'combo-pop tier' + Math.min(combo, 6);   // đổi màu theo bậc
+  el.innerHTML = '<div class="praise">' + praiseFor(combo) + '</div>' +
+                 (combo > 1 ? '<div class="cmb">' + t('combo').toUpperCase() + ' ×' + combo + '</div>' : '') +
                  '<div class="pts">+' + pts + '</div>';
-  el.classList.remove('show');
   void el.offsetWidth;                  // reflow để restart animation
   el.classList.add('show');
 }
@@ -714,8 +744,8 @@ function fitScores() {
   while (r.scrollWidth > max && fz > 14) { fz -= 1; vals.forEach(v => { v.style.fontSize = fz + 'px'; }); }
 }
 function newRun() {
-  grid.fill(0); flashes = []; ghost = null; drag = null; fallBlock = null; blastHold = 0;
-  score = 0; combo = 0; over = false; bestAtStart = best;
+  grid.fill(0); flashes = []; ghost = null; drag = null; fallBlock = null; blastHold = 0; slowMo = 0;
+  score = 0; combo = 0; pendingMove = false; moveScored = false; over = false; bestAtStart = best;
   document.getElementById('hud-score').textContent = '0';
   updateBestHud();
   document.getElementById('overlay').classList.add('hidden');
@@ -738,8 +768,14 @@ function draw() {
     } else { DATA[p] = BG[0]; DATA[p + 1] = BG[1]; DATA[p + 2] = BG[2]; DATA[p + 3] = 255; }
   }
   for (const f of flashes) {
-    const p = f.i * 4, k = f.life / f.max;
-    DATA[p] = clamp(255 * k + f.r * (1 - k)); DATA[p + 1] = clamp(255 * k + f.g * (1 - k)); DATA[p + 2] = clamp(255 * k + f.b * (1 - k)); DATA[p + 3] = 255;
+    const p = f.i * 4;
+    // NHẤP NHÁY 2 lần rồi tắt: chớp sáng (màu cụm) on/off, độ sáng giảm dần.
+    const tt = 1 - f.life / f.max;                     // 0→1 theo vòng đời
+    const blink = Math.abs(Math.cos(tt * Math.PI * 2)); // 1→0→1→0→1 = 2 nhấp nháy
+    const k = blink * (f.life / f.max);                 // sáng khi chớp, mờ dần tổng thể
+    // trạng thái sáng = trắng pha màu cụm; trạng thái tối = nền
+    const br = (f.r + 255) / 2, bg = (f.g + 255) / 2, bb = (f.b + 255) / 2;
+    DATA[p] = clamp(br * k + BG[0] * (1 - k)); DATA[p + 1] = clamp(bg * k + BG[1] * (1 - k)); DATA[p + 2] = clamp(bb * k + BG[2] * (1 - k)); DATA[p + 3] = 255;
   }
   // (đã bỏ hẳn ghost vẽ ở đỉnh — không còn "cát rơi" mờ trên đầu sân khi kéo;
   //  khối đang kéo theo ngón tay đã cho biết cột thả)
@@ -758,20 +794,40 @@ function draw() {
       }
     });
   }
+  if (over && (animTick % 24) < 12) {         // THUA: nháy đỏ phần cát THỪA (trên vạch)
+    for (let y = 0; y < LINE_Y; y++) {
+      const row = y * GW;
+      for (let x = 0; x < GW; x++) {
+        const i = row + x;
+        if (grid[i] !== EMPTY) { const p = i * 4; DATA[p] = 255; DATA[p + 1] = 55; DATA[p + 2] = 55; DATA[p + 3] = 255; }
+      }
+    }
+  }
   octx.putImageData(img, 0, 0);
   ctx.imageSmoothingEnabled = false;
   ctx.clearRect(0, 0, cv.width, cv.height);
   ctx.drawImage(os, 0, 0, GW, GH, 0, 0, cv.width, cv.height);
   drawGameOverLine();
 }
-// Vạch game over: đường đứt đỏ ngang sân tại LINE_Y — cát vượt qua là thua.
+// Vạch game over: ẩn khi cát còn xa, RÕ DẦN khi cát càng gần vạch.
 function drawGameOverLine() {
+  let topSand = GH;                            // hàng cát cao nhất
+  for (let y = 0; y < GH; y++) {
+    const row = y * GW; let has = false;
+    for (let x = 0; x < GW; x++) if (grid[row + x] !== EMPTY) { has = true; break; }
+    if (has) { topSand = y; break; }
+  }
+  const warn = B * 5;                          // trong ~5 ô tới vạch thì bắt đầu hiện
+  let alpha = 1 - (topSand - LINE_Y) / warn;   // xa → 0 (ẩn), sát vạch → 1 (rõ)
+  if (over) alpha = 1;
+  alpha = alpha < 0 ? 0 : alpha > 1 ? 1 : alpha;
+  if (alpha <= 0.02) return;                   // đủ xa → ẩn hẳn
   const y = LINE_Y / GH * cv.height;
   ctx.save();
-  ctx.strokeStyle = 'rgba(255,70,70,.7)';
+  ctx.strokeStyle = 'rgba(255,70,70,' + (0.85 * alpha).toFixed(3) + ')';
   ctx.lineWidth = Math.max(1.5, cv.height / GH);
   ctx.setLineDash([cv.width / 26, cv.width / 42]);
-  ctx.shadowColor = 'rgba(255,60,60,.9)';
+  ctx.shadowColor = 'rgba(255,60,60,' + alpha.toFixed(3) + ')';
   ctx.shadowBlur = ctx.lineWidth * 2;
   ctx.beginPath();
   ctx.moveTo(0, y); ctx.lineTo(cv.width, y);
@@ -843,18 +899,33 @@ function hideDrag() { dragCv.style.display = 'none'; }
  * 10. Main loop
  * ===================================================================== */
 let stableFrames = 0;
+let animTick = 0;                   // đếm frame cho hoạt ảnh (nháy thua…), tăng cả khi over
+let slowMo = 0;                     // frame còn lại của SLOW MOTION sau blast
+const SLOWMO = 50;                  // ~0.8s slow-mo sau mỗi lần nổ
+const SLOWMO_EVERY = 3;             // trong slow-mo: 1 bước cát mỗi 3 frame
 const SAND_STEPS = 1;               // số bước sand mỗi frame → THẤY cát chảy (nhỏ = chảy chậm)
 function frame() {
+  animTick++;
   if (running && !over) {
     stepFallBlock();
     if (blastHold > 0) {
       blastHold--;                    // đang giữ nhịp blast → tạm dừng cát để thấy nổ + combo
+    } else if (slowMo > 0) {
+      // SLOW MOTION sau blast: cát sụp đổ chậm lại cho đã mắt.
+      slowMo--;
+      if (slowMo % SLOWMO_EVERY === 0 && !sandStep()) slowMo = 0;  // cát đứng yên → thoát sớm
+      checkBlast();                   // nổ dây chuyền → refresh blastHold/slowMo
+      stableFrames = 0;               // đang slow-mo → chưa xét ổn định/thua
     } else {
       // Hiệu ứng cát chảy: mỗi frame chỉ chạy vài bước sand để thấy cát trôi/lắng.
       let moved = false;
       for (let s = 0; s < SAND_STEPS; s++) { if (sandStep()) moved = true; }
       checkBlast();                   // nếu nổ → đặt lại blastHold, vòng sau lại giữ nhịp
       if (!moved && flashes.length === 0 && !drag && !fallBlock && blastHold === 0) {
+        if (pendingMove) {              // lượt thả đã lắng xong
+          if (!moveScored) combo = 0;   // không nổ được gì → đứt chuỗi combo
+          pendingMove = false;
+        }
         stableFrames++;
         if (stableFrames > 2 && (crossedLine() || !anyPlaceable())) gameOver();
       } else stableFrames = 0;
@@ -888,8 +959,8 @@ window.addEventListener('pointermove', (e) => {
   const rect = cv.getBoundingClientRect();
   const overBoard = e.clientY < rect.bottom + 10 && e.clientX > rect.left - 20 && e.clientX < rect.right + 20;
   if (overBoard) {
-    const g = ghostFromPointer(drag.piece.cells, e.clientX);
-    ghost = { cells: drag.piece.cells, gx: g.gx, valid: g.valid };
+    const g = ghostFromPointer(drag.piece.cells, e.clientX, e.clientY);
+    ghost = { cells: drag.piece.cells, gx: g.gx, gy: g.gy, valid: g.valid };
   } else ghost = null;
 });
 window.addEventListener('pointerup', () => {
@@ -898,7 +969,7 @@ window.addEventListener('pointerup', () => {
   hideDrag();
   document.querySelectorAll('#tray .slot').forEach(s => s.classList.remove('grabbing'));
   if (ghost && ghost.valid) {
-    startFall(d.piece.cells, d.piece.colors, ghost.gx);
+    startFall(d.piece.cells, d.piece.colors, ghost.gx, ghost.gy);
     AudioFX.drop();
     slots[d.slot] = null;
     if (slots.every(s => !s)) newTray(); else renderTray();
