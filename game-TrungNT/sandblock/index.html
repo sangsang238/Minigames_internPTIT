@@ -166,6 +166,14 @@
   .slot.used { opacity: .25; }
   .slot.grabbing { transform: scale(.92); background: rgba(120,160,255,.12); }
   .slot canvas { display: block; width: 82%; height: 82%; }
+  /* Animation SINH RA của khối trong khay: bật lên từ nhỏ + mờ, nảy nhẹ (overshoot) */
+  @keyframes blockSpawn {
+    0%   { transform: scale(.25) translateY(-10px); opacity: 0; }
+    55%  { transform: scale(1.10) translateY(0);    opacity: 1; }
+    75%  { transform: scale(.96); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .slot.spawn canvas { animation: blockSpawn .38s cubic-bezier(.34,1.56,.64,1) both; }
 
   /* Khối đang kéo (bay theo ngón tay) */
   #drag {
@@ -474,6 +482,8 @@ const AudioFX = (() => {
     isEnabled() { return enabled; },
     setEnabled(v) { enabled = v; try { localStorage.setItem(SFX_KEY, v ? '1' : '0'); } catch (e) {} if (v) tone(660, 0.09, 'triangle', 0.25); },
     pick()  { tone(540, 0.07, 'triangle', 0.22); },
+    // nạp khay mới: 1 tiếng "pop" gọn — blip đi lên nhanh + chút xì nhẹ cho có hơi
+    refill() { tone(300, 0.10, 'triangle', 0.20, 0, 640); noise(0.05, 0.05, 2600); },
     drop()  { tone(340, 0.13, 'sine', 0.24, 0, 190); },
     land()  { noise(0.20, 0.32, 1500); tone(150, 0.12, 'sine', 0.20, 0, 85); },
     blast(combo) {
@@ -609,7 +619,14 @@ function randPiece() {
   const c = rnd(NCOLORS);
   return { cells, colors: cells.map(() => c) };
 }
-function newTray() { slots = [randPiece(), randPiece(), randPiece()]; renderTray(); }
+let firstTray = true;
+function newTray() {
+  slots = [randPiece(), randPiece(), randPiece()];
+  prevFilled = [false, false, false];
+  renderTray();
+  if (!firstTray) AudioFX.refill();   // bỏ tiếng ở lần nạp ĐẦU lúc boot (autoplay chặn); về sau + play-again vẫn kêu
+  firstTray = false;
+}
 
 function forEachGrain(cells, gx, gy, cb) {
   for (const [bx, by] of cells) {
@@ -937,16 +954,24 @@ function drawSandPieceCanvas(canvas, cells, colors, cellPx) {
   g.clearRect(0, 0, w * cellPx, h * cellPx);
   g.drawImage(tmp, 0, 0, gw, gh, 0, 0, w * cellPx, h * cellPx);
 }
+let prevFilled = [false, false, false];   // slot nào đang có khối ở lần render trước → phát hiện khối MỚI sinh
 function renderTray() {
   const slotEls = document.querySelectorAll('#tray .slot');
   slots.forEach((p, i) => {
     const el = slotEls[i], canvas = el.querySelector('canvas');
     el.classList.toggle('used', !p);
     el.classList.remove('grabbing');
-    if (!p) { canvas.width = canvas.height = 0; return; }
+    if (!p) { canvas.width = canvas.height = 0; el.classList.remove('spawn'); prevFilled[i] = false; return; }
     const box = el.clientWidth * 0.82;
     const cellPx = box / SHAPE_UNIT;   // cùng cỡ ô cho mọi khối → đồng bộ tỉ lệ với khối thả
     drawSandPieceCanvas(canvas, p.cells, p.colors, cellPx);   // khay là "thanh cát" cho đồng bộ
+    if (!prevFilled[i]) {              // slot vừa TRỐNG → CÓ khối = khối mới sinh → chạy anim (stagger theo cột)
+      el.classList.remove('spawn');
+      canvas.style.animationDelay = (i * 0.06) + 's';
+      void el.offsetWidth;            // reflow để restart animation mỗi lần nạp khay mới
+      el.classList.add('spawn');
+    }
+    prevFilled[i] = true;
   });
 }
 function showDrag(p, clientX, clientY) {
