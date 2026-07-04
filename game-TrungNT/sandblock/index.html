@@ -61,34 +61,43 @@
 
   /* ── HUD trên cùng ────────────────────────────────────────────────── */
   .topbar {
-    width: 100%;
-    max-width: 620px;
+    width: 100%;                            /* trải HẾT bề ngang, nút sát 2 mép — như HUD absolute của reference */
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
-    padding: 0 14px 4px;
+    gap: 18px;                              /* nút ↔ ô điểm: bằng reference (12px lề + 18px gap) */
+    padding: 0 12px 4px;
   }
-  /* 2 ô điểm GIÃN ĐỀU lấp trọn hàng giữa Back↔Sound (giống reference hud-pill) */
-  .scoreboard { flex: 1 1 0; min-width: 0; display: flex; align-items: stretch; gap: calc(6px * var(--sc)); }
+  /* 2 ô điểm GIÃN ĐỀU lấp trọn hàng giữa Back↔Sound — port 1:1 .hud-pill của reference */
+  .scoreboard { flex: 1 1 0; min-width: 0; display: flex; align-items: stretch; gap: 6px; }
   /* mỗi loại điểm 1 khung riêng: icon GHIM sát mép trái + (nhãn / số) căn giữa */
   .stat {
     flex: 1 1 0; min-width: 0; overflow: hidden;
-    display: flex; flex-direction: row; align-items: center; justify-content: center; gap: calc(5px * var(--sc));
-    background: rgba(2,32,48,.55);
-    border: 2px solid rgba(255,255,255,.16);
-    border-radius: calc(14px * var(--sc));
-    padding: calc(6px * var(--sc)) calc(8px * var(--sc)) calc(8px * var(--sc)) calc(4px * var(--sc));
-    box-shadow: inset 0 2px 6px rgba(255,255,255,.08), 0 3px 8px rgba(0,0,0,.35);
+    display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 5px;
+    background: rgba(2, 32, 48, 0.55);
+    border: 2px solid rgba(255, 255, 255, 0.16);
+    border-radius: 14px;
+    padding: 7px 8px 9px 4px;
+    box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.08), 0 3px 8px rgba(0, 0, 0, 0.35);
   }
-  .stat-ico { width: calc(20px * var(--sc)); height: calc(20px * var(--sc)); fill: var(--gold); flex: 0 0 auto; display: block; filter: drop-shadow(0 1px 1px rgba(0,0,0,.4)); }
-  .stat-txt { display: flex; flex-direction: column; align-items: center; line-height: 1.05; min-width: 0; flex: 1 0 auto; }
+  .stat-ico {
+    flex: 0 0 auto; display: block;
+    width: clamp(16px, 4.8vw, 21px); height: clamp(16px, 4.8vw, 21px);
+    fill: var(--gold); filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));
+  }
+  .stat-txt { display: flex; flex-direction: column; align-items: center; min-width: 0; flex: 1 0 auto; }
   .stat .k {
-    font-family: system-ui, sans-serif;
-    font-size: calc(12px * var(--sc)); letter-spacing: .5px; font-weight: 700;
-    color: #8fd0ff; text-transform: uppercase; white-space: nowrap; line-height: 1.05;
+    font-size: clamp(10px, 3.2vw, 13px);
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-weight: 600; letter-spacing: 0.5px;
+    color: #8fd0ff; text-transform: uppercase; line-height: 1.05; white-space: nowrap;
   }
-  .stat .v { font-size: calc(24px * var(--sc)); color: #fff; white-space: nowrap; line-height: 1.1; text-shadow: 0 2px 2px rgba(0,0,0,.4); }
+  .stat .v {
+    font-size: clamp(16px, 5vw, 24px);
+    line-height: 1.1; color: #fff; white-space: nowrap;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-weight: 800; text-shadow: 0 2px 2px rgba(0, 0, 0, 0.4);
+  }
   .stat .v.best { color: #ffd86b; }
 
   .btn3d {
@@ -108,11 +117,10 @@
   .btn3d:active .btn3d-surface { transform: scale(.95); }
   /* nút icon PHẲNG đồng bộ theme (giống reference: xanh đặc + viền mảnh, không lip 3D) */
   .btn3d.btn-icon .btn3d-surface {
-    width: calc(46px * var(--sc)); height: calc(46px * var(--sc)); border-radius: calc(14px * var(--sc));
-    background-color: #1e4e7a; border: 2px solid #12344f; box-shadow: none;
+    width: var(--btn-size, 46px); height: var(--btn-size, 46px); border-radius: 16px;
+    background-color: #1e4e7a; border: 2px solid #12344f; box-shadow: none;   /* CHỈ khác reference ở màu (giữ tối) */
   }
-  #back-btn .btn3d-surface { border-radius: calc(16px * var(--sc)); }
-  #sound-btn .btn3d-surface { border-radius: calc(13px * var(--sc)); }
+  #sound-btn .btn3d-surface { border-radius: 13px; }
   .btn3d.btn-icon { flex: 0 0 auto; -webkit-user-select: none; user-select: none; }
   .back-ico { width: 52%; height: 52%; fill: currentColor; display: block; }
   .snd-ico { width: 58%; height: 58%; display: block; }
@@ -1114,8 +1122,14 @@ function resize() {
   tray.style.maxWidth = w + 'px';                          // khay khớp bề rộng khung
   // KHÔNG ép topbar theo board (tránh tràn khi nội dung > board) — để CSS max-width
   // + full viewport như skydom/runic-blaze, nút luôn ở góc, không lệch/tràn.
-  const sc = Math.min(Math.max(w / 360, 1), 2.2);          // scale nút/HUD/popup theo cỡ khung (trần cao cho màn lớn)
+  const sc = Math.min(Math.max(w / 360, 1), 2.2);          // scale HUD/popup theo cỡ khung (trần cao cho màn lớn)
   document.documentElement.style.setProperty('--sc', sc.toFixed(3));
+  // Nút Back/Sound cao ĐÚNG 0.92× chiều cao ô điểm (port cách relayout của reference)
+  const pill = document.querySelector('.stat');
+  if (pill) {
+    const ph = pill.getBoundingClientRect().height;
+    if (ph > 0) document.documentElement.style.setProperty('--btn-size', Math.round(ph * 0.92) + 'px');
+  }
   renderTray();
 }
 function boot() {
