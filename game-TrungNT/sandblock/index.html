@@ -755,7 +755,8 @@ function checkBlast() {
       const cx = stackX[sp], cy = stackY[sp]; sp--;
       comp.push(idx(cx, cy));
       if (cx === GW - 1) touchRight = true;
-      const nb = [[cx - 1, cy], [cx + 1, cy], [cx, cy - 1], [cx, cy + 1]];
+      const nb = [[cx - 1, cy], [cx + 1, cy], [cx, cy - 1], [cx, cy + 1],
+                  [cx - 1, cy - 1], [cx + 1, cy - 1], [cx - 1, cy + 1], [cx + 1, cy + 1]];
       for (const [nx, ny] of nb) {
         if (nx < 0 || nx >= GW || ny < 0 || ny >= GH) continue;
         const ni = idx(nx, ny);
