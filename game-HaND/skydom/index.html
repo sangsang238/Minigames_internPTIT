@@ -23,16 +23,17 @@
 
   :root {
     --ui-font: 'Google Sans Flex', system-ui, sans-serif;
-    /* Dark navy theme — khớp màu màn Game Over */
-    --bg-1: #1c2f63;
-    --bg-2: #0c1838;
-    --board-bg: #22386a;   /* bảng bàn cờ + thẻ điểm + nút */
-    --cell-bg: #2f4880;    /* ô lưới (navy sáng hơn để thấy lưới) */
-    --ink: #eaf1ff;
-    --ink-soft: #9fc0ff;
+    /* Candy Crush — nền sáng candyland, theme phẳng */
+    --bg-1: #37a8ff;       /* trời trên */
+    --bg-2: #9fdcff;       /* trời dưới */
+    --board-bg: #4a2e86;   /* khung bàn + thẻ điểm + nút (grape) */
+    --cell-bg: rgba(255,255,255,.10);  /* ô caro — tông tối */
+    --cell-b:  rgba(255,255,255,.22);  /* ô caro — tông sáng */
+    --ink: #2b2350;        /* chữ đậm trên panel sáng */
+    --ink-soft: #6a4bbd;   /* chữ phụ / icon (grape) */
     --royal: #3b5bdb;
     --gold: #ffd23f;
-    --green: #34e07a;
+    --green: #14b358;
     --danger: #ff5a5f;
     --cell: 40px; /* set bởi JS */
   }
@@ -86,7 +87,7 @@
   /* Btn3d — biến thể flat (shadow ẩn), icon vuông */
   .btn3d {
     --radius: 14px;
-    --surface-color: var(--board-bg);
+    --surface-color: #ffffff;
     --surface-text: var(--ink-soft);
     position: relative;
     display: inline-block;
@@ -139,13 +140,13 @@
     flex: 1 1 0;
     max-width: 150px;
     padding: 5px 12px 7px;
-    background: var(--board-bg);
+    background: rgba(255, 255, 255, .94);
     border-radius: 16px;
-    box-shadow: 0 4px 14px rgba(36, 48, 77, .12);
+    box-shadow: 0 4px 14px rgba(24, 20, 60, .18);
   }
   .sc-k {
     font-size: 10px; letter-spacing: 1.5px; font-weight: 800;
-    color: var(--ink-soft); text-transform: uppercase;
+    color: #e6467e; text-transform: uppercase;   /* nhãn hồng kẹo */
   }
   .sc-v { font-size: 26px; color: var(--ink); }
   .sc-v.best { color: var(--green); }
@@ -196,6 +197,22 @@
     position: absolute; z-index: 7; pointer-events: none; border-radius: 50%;
     background: radial-gradient(circle, rgba(255,255,255,.95), rgba(255,255,255,0) 70%);
   }
+  /* Tia sáng kẹo sọc (row/col) — lõi trắng, hào quang theo màu kẹo (currentColor) */
+  .fx-beam {
+    position: absolute; z-index: 6; pointer-events: none; border-radius: 999px;
+    background: linear-gradient(90deg, transparent, #fff 28%, #fff 72%, transparent);
+    box-shadow: 0 0 16px currentColor, 0 0 34px currentColor, 0 0 8px #fff;
+  }
+  .fx-beam.col {
+    background: linear-gradient(180deg, transparent, #fff 28%, #fff 72%, transparent);
+  }
+  /* Vòng nổ kẹo gói (bomb) — vành sáng lan ra theo màu kẹo */
+  .fx-ring {
+    position: absolute; z-index: 6; pointer-events: none; border-radius: 50%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, transparent 38%, currentColor 56%, transparent 72%);
+    box-shadow: 0 0 22px currentColor;
+  }
   /* Pháo hoa chúc mừng: tia tròn phát sáng + chớp trắng ở tâm nổ */
   .fw {
     position: absolute; z-index: 60; width: 8px; height: 8px; border-radius: 50%;
@@ -228,7 +245,8 @@
     border-radius: 14px;
     overflow: hidden;
   }
-  .grid-bg .slot { background: var(--cell-bg); outline: 2px solid var(--board-bg); }
+  .grid-bg .slot { background: var(--cell-bg); }
+  .grid-bg .slot.b { background: var(--cell-b); }   /* ô caro sáng */
   .board {
     position: relative;
   }
@@ -254,6 +272,8 @@
     justify-content: center;
     position: relative;
     transition: transform .12s ease, box-shadow .12s ease;
+    /* Đổ bóng mềm dưới viên kẹo (theo đúng hình) — chiều sâu kiểu Candy Crush */
+    filter: drop-shadow(0 3px 2px rgba(20, 12, 40, .38));
   }
   /* Khối CHÍNH LÀ hình (không nền vuông) — hình tô màu, gần đầy ô */
   .tile-face svg {
@@ -312,9 +332,9 @@
   .overlay.hidden .card { transform: scale(.9); }
   .card-title { color: #fff; font-size: 30px; font-weight: 900; margin-bottom: 14px; }
   .sb { display: flex; justify-content: center; gap: 30px; margin-bottom: 18px; }
-  .sb .k { font-size: 11px; letter-spacing: 2px; color: var(--ink-soft); font-weight: 800; }
+  .sb .k { font-size: 11px; letter-spacing: 2px; color: #8fb4ff; font-weight: 800; }
   .sb .v { font-size: 32px; color: #fff; font-weight: 900; }
-  .sb .v.best { color: var(--green); }
+  .sb .v.best { color: var(--gold); }
   .btn3d.play { --surface-color: #ffb02e; --surface-text: #3a2400; }
   .btn3d.play .btn3d-surface {
     height: 52px; padding: 0 34px; font-size: 17px; font-weight: 800; letter-spacing: .5px;
@@ -482,8 +502,8 @@ const COLORS = ['#ff4d6a', '#3aa0ff', '#2ed673', '#ffcf3a', '#b268ff', '#ff9838'
 // Khối CHÍNH LÀ hình — path lấp gần đầy viewBox, tô bằng màu khối (xem shapeSvg).
 // Bo góc nhẹ nhờ stroke cùng màu + linejoin round.
 const SHAPES = [
-  // 0 đỏ — trái tim (kẹo tim, bo mềm)
-  '<path d="M50 86 C14 60 14 26 40 26 C48 26 50 32 50 39 C50 32 52 26 60 26 C86 26 86 60 50 86 Z"/>',
+  // 0 đỏ — trái tim (kẹo tim, bo mềm) — 2 thùy tròn đều, đầy đặn, to hơn
+  '<path d="M50 30 C50 30 46 16 31 16 C12 16 12 40 12 40 C12 59 31 70 50 88 C70 70 88 59 88 40 C88 40 88 16 69 16 C54 16 50 30 50 30 Z"/>',
   // 1 xanh dương — giọt nước / oval đứng
   '<path d="M50 12 C58 34 80 46 80 60 A30 30 0 1 1 20 60 C20 46 42 34 50 12 Z"/>',
   // 2 xanh lá — tam giác mũi xuống, cạnh phình (béo)
@@ -495,7 +515,6 @@ const SHAPES = [
   // 5 cam — "gối" vuông cạnh phình (kẹo caramel/thạch, béo)
   '<path d="M20 28 Q50 22 80 28 Q86 50 80 72 Q50 78 20 72 Q14 50 20 28 Z"/>',
 ];
-const RAINBOW_STAR = '<path d="M50 10 L61 40 L92 41 L67 60 L76 90 L50 72 L24 90 L33 60 L8 41 L39 40 Z"/>';
 
 /* =====================================================================
  * 3. State
@@ -535,61 +554,78 @@ function lighten(hex, amt) {
   b = Math.round(b + (255 - b) * amt);
   return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
 }
+// Làm sẫm một hex về phía đen (amt 0..1) — dùng cho đáy gradient & viền đậm
+function darken(hex, amt) {
+  const n = parseInt(hex.slice(1), 16);
+  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  r = Math.round(r * (1 - amt));
+  g = Math.round(g * (1 - amt));
+  b = Math.round(b * (1 - amt));
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
 
-// SVG hình = khối; tô sheen dọc (sáng trên → màu dưới) cho bóng nhẹ; bo góc lớn bằng
-// stroke round; special vẽ chồng (clip theo hình).
+// SVG hình = khối kẹo 3D: gradient sáng→tối + highlight trắng + viền đậm hơn; bo góc
+// lớn bằng stroke round; special vẽ chồng (clip theo hình). Shadow mềm đặt ở CSS .tile-face.
 function shapeSvg(color, special, uid) {
   const ROUND = 15;   // độ dày stroke = độ bo góc
-  const pid = 'p' + uid, cid = 'c' + uid, hid = 'h' + uid;
-  // Vệt bóng (specular): đốm trắng ở góc trên-trái fade dần → cảm giác bóng loáng
-  const gloss = '<radialGradient id="' + hid + '" cx="0.36" cy="0.24" r="0.62">' +
-    '<stop offset="0" stop-color="#fff" stop-opacity=".78"/>' +
-    '<stop offset=".45" stop-color="#fff" stop-opacity=".16"/>' +
-    '<stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>';
+  const pid = 'p' + uid, cid = 'c' + uid;
   const clip = '<clipPath id="' + cid + '"><use href="#' + pid + '"/></clipPath>';
-  const glossRect = '<rect width="100" height="100" fill="url(#' + hid + ')" clip-path="url(#' + cid + ')"/>';
 
-  // Rainbow: hình sao tô gradient cầu vồng + bóng
+  // Color bomb (bom màu) kiểu CC: quả cầu sẫm phẳng + sprinkle cầu vồng
   if (special === 'rainbow') {
+    const SP = ['#ff4d6a', '#ffcf3a', '#2ed673', '#3aa0ff', '#b268ff', '#ff9838'];
+    const P = [[32,34],[50,26],[66,36],[26,52],[44,46],[60,52],[36,64],[54,64],[70,52],[44,72],[60,70]];
+    let dots = '';
+    for (let i = 0; i < P.length; i++) {
+      const x = P[i][0], y = P[i][1];
+      dots += '<rect x="' + (x - 5) + '" y="' + (y - 2.5) + '" width="10" height="5" rx="2.5" fill="' +
+        SP[i % SP.length] + '" transform="rotate(' + ((i * 53) % 180) + ' ' + x + ' ' + y + ')"/>';
+    }
     const rg = 'rg' + uid;
-    const bodyId = RAINBOW_STAR.replace('<path', '<path id="' + pid + '"');
-    return '<svg viewBox="0 0 100 100" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">' +
-      '<defs><linearGradient id="' + rg + '" x1="0" y1="0" x2="1" y2="1">' +
-      '<stop offset="0" stop-color="#ff4d6a"/><stop offset=".2" stop-color="#ffcf3a"/>' +
-      '<stop offset=".4" stop-color="#2ed673"/><stop offset=".6" stop-color="#3aa0ff"/>' +
-      '<stop offset=".8" stop-color="#b268ff"/><stop offset="1" stop-color="#ff9838"/>' +
-      '</linearGradient>' + gloss + clip + '</defs>' +
-      '<g fill="url(#' + rg + ')" stroke="url(#' + rg + ')" stroke-width="' + ROUND + '">' + bodyId + '</g>' +
-      glossRect + '</svg>';
+    return '<svg viewBox="0 0 100 100" aria-hidden="true"><defs>' +
+      '<radialGradient id="' + rg + '" cx="0.4" cy="0.3" r="0.75">' +
+      '<stop offset="0" stop-color="#4a4668"/><stop offset="1" stop-color="#1b1730"/>' +
+      '</radialGradient>' + clip + '</defs>' +
+      '<circle id="' + pid + '" cx="50" cy="50" r="37" fill="url(#' + rg + ')" stroke="#141024" stroke-width="3"/>' +
+      '<g clip-path="url(#' + cid + ')">' + dots +
+      '<ellipse cx="38" cy="32" rx="15" ry="9" fill="#fff" stroke="none" opacity=".22" transform="rotate(-22 38 32)"/>' +
+      '</g></svg>';
   }
 
   const col = COLORS[color];
   const gid = 'g' + uid;
-  // Sheen dọc: trên sáng (+38% về trắng) → dưới màu gốc
+  // Thân: gradient sáng (trên) → tối (dưới). Viền: đậm hơn màu chính ~20%.
   const grad = '<linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1">' +
-    '<stop offset="0" stop-color="' + lighten(col, 0.38) + '"/>' +
-    '<stop offset=".55" stop-color="' + col + '"/>' +
-    '<stop offset="1" stop-color="' + col + '"/></linearGradient>';
+    '<stop offset="0" stop-color="' + lighten(col, 0.22) + '"/>' +
+    '<stop offset=".5" stop-color="' + col + '"/>' +
+    '<stop offset="1" stop-color="' + darken(col, 0.18) + '"/></linearGradient>';
   const bodyId = SHAPES[color].replace(/<(path|circle|rect|ellipse)/, '<$1 id="' + pid + '"');
   const open = '<svg viewBox="0 0 100 100" fill="url(#' + gid + ')" stroke="url(#' + gid + ')" ' +
     'stroke-width="' + ROUND + '" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">';
 
-  // Rocket (row/col) & bomb: dấu hiệu trắng clip theo hình (trên lớp bóng)
+  // Rocket (row/col) & bomb: dấu hiệu trắng clip theo hình
   let marksG = '';
   if (special === 'row' || special === 'col' || special === 'bomb') {
     const marks = special === 'row'
-      // kẻ ngang chạy hết chiều rộng
-      ? '<rect x="0" y="30" width="100" height="6"/><rect x="0" y="47" width="100" height="6"/><rect x="0" y="64" width="100" height="6"/>'
+      // kẹo sọc: 2 vạch NGANG trắng dày (nổ cả hàng)
+      ? '<rect x="-6" y="31" width="112" height="10" rx="5"/><rect x="-6" y="59" width="112" height="10" rx="5"/>'
       : special === 'col'
-      // kẻ dọc chạy hết chiều cao
-      ? '<rect x="30" y="0" width="6" height="100"/><rect x="47" y="0" width="6" height="100"/><rect x="64" y="0" width="6" height="100"/>'
-      // bomb: tia lấp lánh (sparkle) thay cho vòng tròn trắng
-      : '<path d="M50 20 C53 44 56 47 80 50 C56 53 53 56 50 80 C47 56 44 53 20 50 C44 47 47 44 50 20 Z"/>';
-    marksG = '<g clip-path="url(#' + cid + ')" fill="#fff" stroke="none" opacity=".92">' + marks + '</g>';
+      // kẹo sọc: 2 vạch DỌC trắng dày (nổ cả cột)
+      ? '<rect x="31" y="-6" width="10" height="112" rx="5"/><rect x="59" y="-6" width="10" height="112" rx="5"/>'
+      // kẹo gói (wrapped): gói chéo hình chữ X
+      : '<rect x="43" y="-8" width="14" height="116" rx="7" transform="rotate(45 50 50)"/><rect x="43" y="-8" width="14" height="116" rx="7" transform="rotate(-45 50 50)"/>';
+    marksG = '<g clip-path="url(#' + cid + ')" fill="#fff" stroke="none" opacity=".9">' + marks + '</g>';
   }
 
-  return open + '<defs>' + grad + gloss + clip + '</defs>' +
-    bodyId + glossRect + marksG + '</svg>';
+  // Highlight trắng loáng (specular) — MỜ DẦN từ tâm ra ngoài (radial fade), góc trên-trái
+  const hlg = 'hl' + uid;
+  const hlGrad = '<radialGradient id="' + hlg + '" cx="0.5" cy="0.5" r="0.5">' +
+    '<stop offset="0" stop-color="#fff" stop-opacity=".6"/>' +
+    '<stop offset=".55" stop-color="#fff" stop-opacity=".22"/>' +
+    '<stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>';
+  const hl = '<ellipse cx="36" cy="30" rx="19" ry="12" fill="url(#' + hlg + ')" stroke="none" ' +
+    'transform="rotate(-22 36 30)" clip-path="url(#' + cid + ')"/>';
+  return open + '<defs>' + grad + hlGrad + clip + '</defs>' + bodyId + hl + marksG + '</svg>';
 }
 
 /* =====================================================================
@@ -787,7 +823,10 @@ function resize() {
   gridBgEl.style.gridTemplateRows = 'repeat(' + ROWS + ',1fr)';
   if (!gridBgEl.childElementCount) {
     for (let i = 0; i < ROWS * COLS; i++) {
-      const s = document.createElement('div'); s.className = 'slot'; gridBgEl.appendChild(s);
+      const s = document.createElement('div');
+      const r = (i / COLS) | 0, c = i % COLS;
+      s.className = 'slot' + ((r + c) % 2 ? ' b' : '');   // ô caro Candy Crush
+      gridBgEl.appendChild(s);
     }
   }
   layout();
@@ -990,33 +1029,21 @@ function comboClears(ta, a, tb, b) {
   // hai special thường (row/col/bomb)
   if (ta.special && tb.special) {
     const s1 = ta.special, s2 = tb.special, ctr = b;
-    const both = s1 + '+' + s2;
     const hasBomb = s1 === 'bomb' || s2 === 'bomb';
     const bothRocket = (s1 === 'row' || s1 === 'col') && (s2 === 'row' || s2 === 'col');
     if (s1 === 'bomb' && s2 === 'bomb') {
       for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++)
         if (inb(ctr.r + dr, ctr.c + dc)) clr.add(key(ctr.r + dr, ctr.c + dc));
     } else if (bothRocket) {
-      if (s1 === 'row' && s2 === 'row') {
-        // row + row → nổ đúng (các) HÀNG chứa 2 tên lửa
-        for (let cc = 0; cc < COLS; cc++) { clr.add(key(a.r, cc)); clr.add(key(b.r, cc)); }
-      } else if (s1 === 'col' && s2 === 'col') {
-        // col + col → nổ đúng (các) CỘT chứa 2 tên lửa
-        for (let rr = 0; rr < ROWS; rr++) { clr.add(key(rr, a.c)); clr.add(key(rr, b.c)); }
-      } else {
-        // row + col → chữ thập (1 hàng + 1 cột) tại ctr
-        for (let cc = 0; cc < COLS; cc++) clr.add(key(ctr.r, cc));
-        for (let rr = 0; rr < ROWS; rr++) clr.add(key(rr, ctr.c));
-      }
-    } else if (hasBomb) { // bomb + tên lửa → 3 HÀNG (nếu row) hoặc 3 CỘT (nếu col)
-      const rocketType = (s1 === 'bomb') ? s2 : s1;   // loại tên lửa quyết định hướng
-      if (rocketType === 'row') {
-        for (let dr = -1; dr <= 1; dr++) for (let cc = 0; cc < COLS; cc++)
-          if (inb(ctr.r + dr, cc)) clr.add(key(ctr.r + dr, cc));
-      } else {
-        for (let dc = -1; dc <= 1; dc++) for (let rr = 0; rr < ROWS; rr++)
-          if (inb(rr, ctr.c + dc)) clr.add(key(rr, ctr.c + dc));
-      }
+      // CC: sọc + sọc → LUÔN nổ 1 HÀNG + 1 CỘT (chữ thập) qua điểm đổi
+      for (let cc = 0; cc < COLS; cc++) clr.add(key(ctr.r, cc));
+      for (let rr = 0; rr < ROWS; rr++) clr.add(key(rr, ctr.c));
+    } else if (hasBomb) {
+      // CC: sọc + gói → nổ 3 HÀNG + 3 CỘT (dấu cộng dày) qua điểm đổi
+      for (let dr = -1; dr <= 1; dr++) for (let cc = 0; cc < COLS; cc++)
+        if (inb(ctr.r + dr, cc)) clr.add(key(ctr.r + dr, cc));
+      for (let dc = -1; dc <= 1; dc++) for (let rr = 0; rr < ROWS; rr++)
+        if (inb(rr, ctr.c + dc)) clr.add(key(rr, ctr.c + dc));
     }
     return clr;
   }
@@ -1107,6 +1134,7 @@ async function cascade(pending, swapCells) {
           if (d > maxDelay) maxDelay = d;
         }
         parts.push([cx, cy, COLORS[t.color], d]);
+        if (t.special) drawSpecialFx(r, c, t.special, t.color, d);   // tia/vòng nổ kiểu CC
         t.el.style.transitionDelay = d + 's';
         t.el.classList.add('clearing');
         t.el.style.transform = pos(r, c) + ' scale(1.6)';
@@ -1259,6 +1287,55 @@ function rainbowBurst(r, c) {
     { transform: 'translate(-50%,-50%) scale(.2)', opacity: .9 },
     { transform: 'translate(-50%,-50%) scale(1.9)', opacity: 0 },
   ], { duration: 380, easing: 'ease-out' }).onfinish = () => flash.remove();
+}
+
+// ── Hiệu ứng kích nổ kiểu Candy Crush: tia sáng (kẹo sọc) + vòng nổ (kẹo gói) ──
+function drawSpecialFx(r, c, type, color, delay) {
+  const col = COLORS[color] || '#fff';
+  if (type === 'row' || type === 'col') beamFx(r, c, type, col, delay);
+  else if (type === 'bomb') ringFx(r, c, col, delay);
+}
+function beamFx(r, c, type, col, delay) {
+  const el = document.createElement('div');
+  el.className = 'fx-beam ' + type;
+  el.style.color = col;
+  const dl = (delay || 0) * 1000;
+  if (type === 'row') {
+    el.style.left = '0px';
+    el.style.top = (r * cell + cell / 2) + 'px';
+    el.style.width = (cell * COLS) + 'px';
+    el.style.height = Math.max(6, cell * 0.62) + 'px';
+    boardEl.appendChild(el);
+    el.animate([
+      { transform: 'translateY(-50%) scaleX(0)', opacity: .35 },
+      { transform: 'translateY(-50%) scaleX(1)', opacity: 1, offset: .35 },
+      { transform: 'translateY(-50%) scaleX(1)', opacity: 0 },
+    ], { duration: 440, delay: dl, easing: 'ease-out', fill: 'backwards' }).onfinish = () => el.remove();
+  } else {
+    el.style.top = '0px';
+    el.style.left = (c * cell + cell / 2) + 'px';
+    el.style.height = (cell * ROWS) + 'px';
+    el.style.width = Math.max(6, cell * 0.62) + 'px';
+    boardEl.appendChild(el);
+    el.animate([
+      { transform: 'translateX(-50%) scaleY(0)', opacity: .35 },
+      { transform: 'translateX(-50%) scaleY(1)', opacity: 1, offset: .35 },
+      { transform: 'translateX(-50%) scaleY(1)', opacity: 0 },
+    ], { duration: 440, delay: dl, easing: 'ease-out', fill: 'backwards' }).onfinish = () => el.remove();
+  }
+}
+function ringFx(r, c, col, delay) {
+  const [cx, cy] = fxCenter(r, c);
+  const ring = document.createElement('div');
+  ring.className = 'fx-ring';
+  ring.style.color = col;
+  ring.style.left = cx + 'px'; ring.style.top = cy + 'px';
+  ring.style.width = ring.style.height = (cell * 2.6) + 'px';
+  boardEl.appendChild(ring);
+  ring.animate([
+    { transform: 'translate(-50%,-50%) scale(.2)', opacity: .95 },
+    { transform: 'translate(-50%,-50%) scale(1)', opacity: 0 },
+  ], { duration: 460, delay: (delay || 0) * 1000, easing: 'ease-out', fill: 'backwards' }).onfinish = () => ring.remove();
 }
 
 function randColor() { return (Math.random() * NCOLORS) | 0; }
