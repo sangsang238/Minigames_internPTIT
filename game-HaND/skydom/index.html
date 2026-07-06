@@ -205,17 +205,6 @@
     position: absolute; z-index: 60; width: 54px; height: 54px; border-radius: 50%;
     pointer-events: none; background: radial-gradient(circle, rgba(255,255,255,.95), rgba(255,255,255,0) 70%);
   }
-  /* Bảng xem hiệu ứng (debug ?fx=1) */
-  #fx-panel {
-    position: absolute; left: 0; right: 0; bottom: 0; z-index: 80;
-    display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
-    padding: 8px; background: rgba(10, 14, 30, .62);
-  }
-  #fx-panel button {
-    font: 700 13px/1 var(--ui-font); color: #fff; background: rgba(255, 255, 255, .14);
-    border: 1px solid rgba(255, 255, 255, .22); border-radius: 10px; padding: 8px 11px; cursor: pointer;
-  }
-  #fx-panel button:active { transform: scale(.94); }
 
   /* ── Bàn chơi ─────────────────────────────────────────────────────── */
   .stage {
@@ -416,7 +405,7 @@ const LATIN_LANGS = new Set([
 ]);
 
 const I18N = {
-  en: { moves: 'Moves', score: 'Score', best: 'Best', gameOver: 'Game Over', newBest: 'New Best!', playAgain: 'Play Again', shuffle: 'Shuffle!',
+  en: { moves: 'Moves', score: 'Score', best: 'Best', gameOver: 'Game Over', newBest: 'New Best!', playAgain: 'Play Again', shuffle: 'Shuffle!', combo: 'COMBO',
         praise: ['Nice!', 'Great!', 'Awesome!', 'Amazing!', 'Unstoppable!', 'Legendary!'] },
   vi: { moves: 'Lượt', score: 'Điểm', best: 'Cao nhất', gameOver: 'Thua rồi', newBest: 'Kỷ lục mới!', playAgain: 'Chơi lại', shuffle: 'Trộn lại!',
         praise: ['Tốt lắm!', 'Tuyệt vời!', 'Xuất sắc!', 'Đỉnh cao!', 'Không thể cản phá!', 'Huyền thoại!'] },
@@ -782,11 +771,12 @@ function resize() {
   const hud = document.querySelector('.hud');
   const usedTop = hud.offsetHeight;                      // chiều cao HUD (topbar + scorebar)
   // Chừa khoảng trống trên–dưới bằng nhau (2×usedTop) → lưới cân giữa màn hình
-  const availH = window.innerHeight - 2 * usedTop - 16;
+  const availH = Math.max(0, window.innerHeight - 2 * usedTop - 16);
   const availW = Math.min(window.innerWidth, 560) - 28;
-  let boardPx = Math.min(availW, availH);
-  cell = Math.floor(boardPx / COLS);
-  cell = Math.max(30, cell);
+  const boardPx = Math.min(availW, availH);
+  cell = Math.max(20, Math.floor(boardPx / COLS));       // sàn 20px cho dễ chạm
+  // Máy thấp / xoay ngang: nếu sàn làm bàn vượt không gian → co lại cho VỪA (không tràn)
+  if (cell * COLS > boardPx && boardPx >= COLS) cell = Math.floor(boardPx / COLS);
   const size = cell * COLS;
   document.documentElement.style.setProperty('--cell', cell + 'px');
   boardEl.style.width = size + 'px';
@@ -1271,44 +1261,6 @@ function rainbowBurst(r, c) {
   ], { duration: 380, easing: 'ease-out' }).onfinish = () => flash.remove();
 }
 
-/* ── Bảng xem hiệu ứng (debug) — bật bằng ?fx=1, KHÔNG ảnh hưởng bản chính ── */
-function fxDetonate(type) {                 // đặt 1 special ở giữa bàn rồi kích nổ
-  if (busy || ended) return;
-  const cr = ROWS >> 1, cc = COLS >> 1;
-  const t = board[cr][cc];
-  if (!t || t.bomb) return;
-  t.special = type; paintTile(t);
-  busy = true;
-  cascade(new Set([key(cr, cc)]), [{ r: cr, c: cc }]).then(() => { busy = false; resetIdle(); });
-}
-function fxCombo(other) {                    // 🌈 + special (other='row'/'col'/'bomb') ở giữa bàn
-  if (busy || ended) return;
-  const cr = ROWS >> 1, cc = COLS >> 1;
-  const a = board[cr][cc], b = board[cr][cc + 1];
-  if (!a || !b || a.bomb || b.bomb) return;
-  a.special = 'rainbow'; paintTile(a);
-  b.special = other; paintTile(b);
-  tryMove({ r: cr, c: cc }, { r: cr, c: cc + 1 });   // đổi chỗ 2 special → combo
-}
-function buildFxPanel() {
-  const bar = document.createElement('div');
-  bar.id = 'fx-panel';
-  const mk = (label, fn) => {
-    const b = document.createElement('button');
-    b.textContent = label;
-    b.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
-    bar.appendChild(b);
-  };
-  mk('🚀 hàng', () => fxDetonate('row'));
-  mk('🚀 cột', () => fxDetonate('col'));
-  mk('💥 bom', () => fxDetonate('bomb'));
-  mk('🌈 nổ', () => fxDetonate('rainbow'));
-  mk('✨ vòng', () => rainbowBurst(ROWS >> 1, COLS >> 1));
-  mk('🌈+🚀', () => fxCombo('row'));
-  mk('🌈+💥', () => fxCombo('bomb'));
-  document.getElementById('app').appendChild(bar);
-}
-
 function randColor() { return (Math.random() * NCOLORS) | 0; }
 
 /* =====================================================================
@@ -1386,7 +1338,7 @@ function explodeBomb(r, c) {
  * ===================================================================== */
 function addScore(n, chainMul) {
   score += n * 10 * chainMul;
-  if (score > best) { best = score; persistBest(); renderBest(); }  // best chạy live + lưu ngay
+  if (score > best) { best = score; persistBest(); }   // lưu ngay; HUD Best chỉ refresh khi hết màn/ván mới (§1.2)
   if (!recordHit && runRecord > 0 && score > runRecord) {           // vừa vượt kỷ lục cũ
     recordHit = true; confetti(); spawnRecordToast();
   }
@@ -1474,7 +1426,7 @@ function spawnParticles(list) {
 
 // Câu khen tăng dần theo cấp combo (chain 2 → phần tử đầu; cao hơn → mạnh hơn)
 function praiseWord(chain) {
-  const arr = I18N.vi.praise;   // câu khen luôn tiếng Việt
+  const arr = (I18N[LANG] && I18N[LANG].praise) || I18N.en.praise;   // theo ngôn ngữ, fallback en
   const i = Math.min(Math.max(chain - 2, 0), arr.length - 1);
   return arr[i];
 }
@@ -1489,7 +1441,7 @@ function spawnCombo(chainMul) {
   el.className = 'fx-combo combo-pop';
   el.style.setProperty('--cc', color);
   el.innerHTML = '<span class="fx-praise">' + praiseWord(chainMul) + '</span>' +
-                 '<span class="fx-mult">COMBO ×' + chainMul + '</span>';
+                 '<span class="fx-mult">' + t('combo') + ' ×' + chainMul + '</span>';
   boardEl.appendChild(el);
   // Flat: hiện nhanh (0.7→1.2→1.0) → giữ & bay lên nhẹ → mờ dần khi vẫn bay lên
   el.animate([
@@ -1781,6 +1733,7 @@ function gameOver() {
   document.getElementById('ov-title').textContent = isNew ? t('newBest') : t('gameOver');
   document.getElementById('ov-score').textContent = score;
   document.getElementById('ov-best').textContent = best;
+  renderBest();                 // refresh HUD Best khi hết màn (§1.2)
   fitScores();
   sendMessage('game_result');   // endless: result=null, showModal=false
   setTimeout(() => document.getElementById('overlay').classList.remove('hidden'), 550);
@@ -1908,7 +1861,6 @@ function boot() {
   loadPersist();
   renderSoundBtn();
   newRun();
-  buildFxPanel();   // bảng xem hiệu ứng (LUÔN hiện — nhớ tắt trước khi phát hành)
 }
 
 // Tính lại kích thước khi: đổi cỡ, xoay, tải xong, và khi FONT web nạp trễ
