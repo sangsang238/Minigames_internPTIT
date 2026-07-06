@@ -1,0 +1,24 @@
+{
+  "title": "Animal Connect",
+  "packageName": "com.falcon.animalconnect",
+  "engine": "HTML5",
+  "version": "1.0.0",
+  "category": "PUZZLE",
+  "tags": ["onet", "connect", "animal", "puzzle", "casual"],
+  "description": "Classic Onet puzzle with adorable animal tiles: tap two matching animals and link them with a path of up to two turns to clear the board. Boards grow and tiles slide in tricky directions as you climb through 10 timed levels.",
+  "controls": "Tap two identical animal tiles that can be connected by a path with at most two turns",
+  "aiContext": "",
+  "aiBuildLink": "",
+  "demoUrl": "",
+  "storeLinks": {
+    "googlePlay": { "url": "", "downloads": 0 },
+    "iosAppStore": { "url": "", "downloads": 0 },
+    "steam": { "url": "", "downloads": 0 }
+  },
+  "entry": "index.html",
+  "coverImages": {
+    "landscape16x9": "cover-landscape-1920x1080.png",
+    "portrait2x3": "cover-portrait-800x1200.png",
+    "square1x1": "cover-square-800x800.png"
+  }
+}

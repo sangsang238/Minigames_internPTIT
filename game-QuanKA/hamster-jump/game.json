@@ -1,0 +1,24 @@
+{
+  "title": "Hamster Jump",
+  "packageName": "com.falcon.hamsterjump",
+  "engine": "HTML5",
+  "version": "1.0.0",
+  "category": "ARCADE",
+  "tags": ["hamster", "cheese", "stack", "arcade", "casual"],
+  "description": "Help a hungry hamster build a wobbly cheese tower! Time your jump so each sliding cheese block slots in right under your feet — land off-center and the tower gets crooked, jump too early or too late and the cheese knocks you off.",
+  "controls": "Tap anywhere (or press Space) to make the hamster jump as the cheese slides in",
+  "aiContext": "",
+  "aiBuildLink": "",
+  "demoUrl": "",
+  "storeLinks": {
+    "googlePlay": { "url": "", "downloads": 0 },
+    "iosAppStore": { "url": "", "downloads": 0 },
+    "steam": { "url": "", "downloads": 0 }
+  },
+  "entry": "index.html",
+  "coverImages": {
+    "landscape16x9": "cover-landscape-1920x1080.png",
+    "portrait2x3": "cover-portrait-800x1200.png",
+    "square1x1": "cover-square-800x800.png"
+  }
+}

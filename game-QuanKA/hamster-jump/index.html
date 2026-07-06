@@ -1,0 +1,2181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#c3e4f2">
+<title>Hamster Jump</title>
+
+<!-- Google Sans Flex (game-common.md — UI font chung) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap" rel="stylesheet">
+
+<style>
+/* ── Reset chung (game-common.md — bắt buộc, đặt đầu stylesheet) ── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent; /* tắt ô xanh dương khi chạm */
+  -webkit-touch-callout: none;              /* tắt menu giữ-để-chọn */
+}
+
+:root {
+  --ui-font: 'Google Sans Flex', system-ui, sans-serif;
+  --sbh: 0px;                /* statusBarHeight (dp) — JS set lúc boot */
+  --text: #5a4326;
+  --glass-border: rgba(255, 255, 255, .6);
+}
+
+html, body {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: #c3e4f2;
+  font-family: var(--ui-font);
+  font-weight: 700;
+  color: var(--text);
+}
+
+#app { position: fixed; inset: 0; }
+
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ── Topbar: Back | Score | Best + Coins ─────────────────────── */
+#topbar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: calc(max(var(--sbh), env(safe-area-inset-top, 0px)) + 8px) 12px 0;
+  pointer-events: none;            /* chỉ nút bấm được, không chặn tap canvas */
+  z-index: 5;
+}
+#topbar .btn3d { pointer-events: auto; }
+
+#hud-mid {
+  text-align: center;
+  -webkit-user-select: none;
+  user-select: none;
+}
+#score-label {
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  color: rgba(90, 67, 38, .6);
+}
+#score-num {
+  font-size: 40px;
+  line-height: 1.05;
+  color: #5a4326;
+  text-shadow: 0 2px 0 rgba(255, 255, 255, .7);
+}
+
+/* chỉ báo chuỗi Perfect — hiện khi combo ≥ 2, pop mỗi lần tăng */
+#streak {
+  margin-top: 2px;
+  font-size: 15px;
+  color: #e8842c;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .85);
+  opacity: 1;
+  transition: opacity .25s;
+}
+#streak.hidden { opacity: 0; }
+#streak.pop { animation: streakPop .3s ease-out; }
+@keyframes streakPop {
+  0%   { transform: scale(1.45); }
+  100% { transform: scale(1); }
+}
+
+#hud-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 9px;
+}
+.chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 87px;
+  padding: 6px 15px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .5);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(8px);
+  -webkit-user-select: none;
+  user-select: none;
+}
+.chip .lbl {
+  font-size: 13px;
+  letter-spacing: 3px;
+  color: rgba(90, 67, 38, .6);
+}
+.chip .val { font-size: 25px; color: #b3541e; }
+
+#chip-coin {
+  flex-direction: row;
+  gap: 8px;
+  padding: 6px 15px;
+}
+#coin-ico { width: 22px; height: 22px; display: block; }
+#hud-coin { font-size: 21px; color: #c98a12; }
+
+/* ── btn3d (game-common §1.4 / popup-common §6) ───────────────── */
+.btn3d {
+  --radius: 12px;
+  --surface-color: rgba(255, 255, 255, .5);
+  --surface-text: var(--text);
+  --surface-height: 42px;
+  --surface-width: auto;
+  --surface-padding-x: 16px;
+  --surface-font-size: 18px;
+  position: relative;
+  display: inline-block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.btn3d-shadow { display: none; }
+.btn3d-surface {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: var(--surface-height);
+  width: var(--surface-width);
+  padding: 0 var(--surface-padding-x);
+  border-radius: var(--radius);
+  background: var(--surface-color);
+  border: 1px solid var(--glass-border);
+  color: var(--surface-text);
+  font-family: var(--ui-font);
+  font-size: var(--surface-font-size);
+  letter-spacing: .5px;
+  backdrop-filter: blur(8px);
+  transition: transform .09s ease-out, background .1s;
+}
+.btn3d:active { transform: scale(.94); }
+.btn3d:active .btn3d-surface { background: rgba(255, 255, 255, .75); }
+
+.btn3d.btn-icon {
+  --surface-height: 42px;
+  --surface-width: 42px;
+  --surface-padding-x: 0;
+}
+.back-ico { width: 52%; height: 52%; fill: currentColor; display: block; }
+
+/* ── Start hint (màn chờ — không phải popup kết quả) ──────────── */
+#start-hint {
+  position: absolute;
+  top: 20%;
+  left: 0; right: 0;
+  text-align: center;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 1;
+  transition: opacity .3s;
+}
+#start-hint.hidden { opacity: 0; }
+#start-title {
+  font-size: 40px;
+  line-height: 1.1;
+  color: #e8842c;
+  text-shadow: 0 3px 0 rgba(255, 255, 255, .85), 0 8px 18px rgba(190, 110, 30, .3);
+  padding: 0 24px;
+}
+#start-tap {
+  margin-top: 14px;
+  font-size: 18px;
+  color: rgba(90, 67, 38, .85);
+  animation: tapPulse 1.2s ease-in-out infinite;
+}
+@keyframes tapPulse {
+  0%, 100% { opacity: .55; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.06); }
+}
+
+/* ── Popup Game Over / New Best (popup-common.md) ─────────────── */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(3, 9, 24, .7);
+  opacity: 1;
+  transition: opacity .25s;
+}
+.overlay.hidden { opacity: 0; pointer-events: none; }
+
+.card {
+  width: min(82%, 360px);
+  padding: 26px;
+  text-align: center;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #4a3520, #241708);  /* gradient theme phô mai nướng — tông tối */
+  border: 2px solid rgba(255, 205, 120, .25);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .5);
+  transform: scale(1);
+  transition: transform .25s;
+}
+.overlay.hidden .card { transform: scale(.9); }
+
+.card-title { color: #fff; font-size: 30px; margin-bottom: 14px; }
+
+.sb { display: flex; justify-content: center; gap: 30px; margin-bottom: 18px; }
+.sb .k {
+  font-family: system-ui, sans-serif;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #8fb4ff;
+  font-weight: 800;
+}
+.sb .v { font-size: 32px; color: #fff; }
+.sb .v.best { color: #ffd23f; }
+
+.btn3d.play {
+  --surface-height: 52px;
+  --surface-padding-x: 34px;
+  --surface-color: #ffb02e;
+  --surface-text: #3a2400;
+  --surface-font-size: 17px;
+}
+.btn3d.play .btn3d-surface { border: 0; backdrop-filter: none; }
+/* popup-common §7: amber CTA là màu cố định — không cho :active glass đè */
+.btn3d.play:active .btn3d-surface { background: var(--surface-color); }
+
+/* Chữ Ả Rập là chữ nối liền — bỏ letter-spacing để không đứt nét */
+body.lang-ar #score-label,
+body.lang-ar .chip .lbl,
+body.lang-ar .sb .k,
+body.lang-ar .btn3d-surface { letter-spacing: 0; }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <canvas id="game-canvas"></canvas>
+
+  <!-- Topbar: Back (trái) | SCORE (giữa) | BEST + COINS (phải) -->
+  <div id="topbar">
+    <div class="btn3d btn-icon" id="back-btn" role="button" aria-label="Back" tabindex="0">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="back-ico" viewBox="0 0 447.243 447.243" aria-hidden="true">
+          <path fill="currentColor" d="M420.361 192.229a31.967 31.967 0 0 0-5.535-.41H99.305l6.88-3.2a63.998 63.998 0 0 0 18.08-12.8l88.48-88.48c11.653-11.124 13.611-29.019 4.64-42.4-10.441-14.259-30.464-17.355-44.724-6.914a32.018 32.018 0 0 0-3.276 2.754l-160 160c-12.504 12.49-12.515 32.751-.025 45.255l.025.025 160 160c12.514 12.479 32.775 12.451 45.255-.063a32.084 32.084 0 0 0 2.745-3.137c8.971-13.381 7.013-31.276-4.64-42.4l-88.32-88.64a64.002 64.002 0 0 0-16-11.68l-9.6-4.32h314.24c16.347.607 30.689-10.812 33.76-26.88 2.829-17.445-9.019-33.88-26.464-36.71z"/>
+        </svg>
+      </span>
+    </div>
+
+    <div id="hud-mid">
+      <div id="score-label">SCORE</div>
+      <div id="score-num">0</div>
+      <div id="streak" class="hidden">Perfect ×2</div>
+    </div>
+
+    <div id="hud-right">
+      <div class="chip">
+        <span class="lbl" id="lbl-best">BEST</span>
+        <span class="val" id="hud-best">0</span>
+      </div>
+      <div class="chip" id="chip-coin">
+        <svg id="coin-ico" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="11" fill="#f5c518"/>
+          <circle cx="12" cy="12" r="7.5" fill="#ffe27a"/>
+          <circle cx="10" cy="10" r="2.2" fill="#f5c518"/>
+          <circle cx="14.5" cy="13.5" r="1.6" fill="#f5c518"/>
+        </svg>
+        <span id="hud-coin">0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Màn chờ: tiêu đề + tap to start -->
+  <div id="start-hint">
+    <div id="start-title">HAMSTER JUMP</div>
+    <div id="start-tap">Tap to start</div>
+  </div>
+
+  <!-- Popup kết quả (popup-common.md — game điểm cao tự vẽ) -->
+  <div id="overlay" class="overlay hidden"><div class="card">
+    <div class="card-title" id="ov-title">Game Over</div>
+    <div class="sb">
+      <div><div class="k" id="ov-lbl-score">SCORE</div><div class="v"      id="ov-score">0</div></div>
+      <div><div class="k" id="ov-lbl-best">BEST</div> <div class="v best" id="ov-best">0</div></div>
+    </div>
+    <button class="btn3d play" id="ov-btn" type="button">
+      <span class="btn3d-shadow"></span><span class="btn3d-surface" id="ov-btn-text">Play Again</span>
+    </button>
+  </div></div>
+
+</div>
+
+<script>
+'use strict';
+
+/* ================================================================
+ * §0. i18n (game-common §5 — inline, fallback 'en')
+ * ================================================================ */
+const SUPPORTED_LANGS = [
+  'en','vi','zh-Hans','zh-Hant','ja','ko','es','es-MX','es-AR',
+  'pt-BR','pt','fr','de','it','nl','pl','ru','tr','ar','hi','th','id','fil',
+];
+const LATIN_LANGS = new Set([
+  'en','vi','es','es-MX','es-AR','pt-BR','pt','fr','de','it','nl','pl','tr','id','fil',
+]);
+const DEFAULT_LANG = 'en';
+
+const I18N = {
+  en: { title:'HAMSTER JUMP', score:'SCORE', best:'BEST', tapToStart:'Tap to start',
+        tapToResume:'Tap to resume', playAgain:'Play Again', gameOver:'Game Over',
+        newBest:'New Best!', perfect:'Perfect!', back:'Back' },
+  vi: { title:'HAMSTER JUMP', score:'ĐIỂM', best:'CAO NHẤT', tapToStart:'Chạm để bắt đầu',
+        tapToResume:'Chạm để chơi tiếp', playAgain:'Chơi lại', gameOver:'Thua rồi',
+        newBest:'Kỷ lục mới!', perfect:'Tuyệt hảo!', back:'Thoát' },
+  'zh-Hans': { title:'仓鼠跳跳', score:'分数', best:'最高', tapToStart:'点击开始',
+        tapToResume:'点击继续', playAgain:'再玩一次', gameOver:'游戏结束',
+        newBest:'新纪录！', perfect:'完美！', back:'返回' },
+  'zh-Hant': { title:'倉鼠跳跳', score:'分數', best:'最高', tapToStart:'點擊開始',
+        tapToResume:'點擊繼續', playAgain:'再玩一次', gameOver:'遊戲結束',
+        newBest:'新紀錄！', perfect:'完美！', back:'返回' },
+  ja: { title:'ハムスタージャンプ', score:'スコア', best:'ベスト', tapToStart:'タップでスタート',
+        tapToResume:'タップで再開', playAgain:'もう一度', gameOver:'ゲームオーバー',
+        newBest:'新記録！', perfect:'パーフェクト！', back:'戻る' },
+  ko: { title:'햄스터 점프', score:'점수', best:'최고', tapToStart:'탭하여 시작',
+        tapToResume:'탭하여 계속', playAgain:'다시하기', gameOver:'게임 오버',
+        newBest:'신기록!', perfect:'퍼펙트!', back:'뒤로' },
+  es: { title:'HAMSTER JUMP', score:'PUNTOS', best:'RÉCORD', tapToStart:'Toca para empezar',
+        tapToResume:'Toca para continuar', playAgain:'Jugar otra vez', gameOver:'Fin del juego',
+        newBest:'¡Nuevo récord!', perfect:'¡Perfecto!', back:'Atrás' },
+  'es-MX': { title:'HAMSTER JUMP', score:'PUNTOS', best:'RÉCORD', tapToStart:'Toca para empezar',
+        tapToResume:'Toca para continuar', playAgain:'Jugar otra vez', gameOver:'Fin del juego',
+        newBest:'¡Nuevo récord!', perfect:'¡Perfecto!', back:'Atrás' },
+  'es-AR': { title:'HAMSTER JUMP', score:'PUNTOS', best:'RÉCORD', tapToStart:'Tocá para empezar',
+        tapToResume:'Tocá para continuar', playAgain:'Jugar otra vez', gameOver:'Fin del juego',
+        newBest:'¡Nuevo récord!', perfect:'¡Perfecto!', back:'Atrás' },
+  'pt-BR': { title:'HAMSTER JUMP', score:'PONTOS', best:'RECORDE', tapToStart:'Toque para começar',
+        tapToResume:'Toque para continuar', playAgain:'Jogar de novo', gameOver:'Fim de jogo',
+        newBest:'Novo recorde!', perfect:'Perfeito!', back:'Voltar' },
+  pt: { title:'HAMSTER JUMP', score:'PONTOS', best:'RECORDE', tapToStart:'Toca para começar',
+        tapToResume:'Toca para continuar', playAgain:'Jogar novamente', gameOver:'Fim do jogo',
+        newBest:'Novo recorde!', perfect:'Perfeito!', back:'Voltar' },
+  fr: { title:'HAMSTER JUMP', score:'SCORE', best:'RECORD', tapToStart:'Touchez pour commencer',
+        tapToResume:'Touchez pour reprendre', playAgain:'Rejouer', gameOver:'Partie terminée',
+        newBest:'Nouveau record !', perfect:'Parfait !', back:'Retour' },
+  de: { title:'HAMSTER JUMP', score:'PUNKTE', best:'REKORD', tapToStart:'Zum Starten tippen',
+        tapToResume:'Zum Fortsetzen tippen', playAgain:'Nochmal spielen', gameOver:'Spiel vorbei',
+        newBest:'Neuer Rekord!', perfect:'Perfekt!', back:'Zurück' },
+  it: { title:'HAMSTER JUMP', score:'PUNTI', best:'RECORD', tapToStart:'Tocca per iniziare',
+        tapToResume:'Tocca per riprendere', playAgain:'Gioca ancora', gameOver:'Partita finita',
+        newBest:'Nuovo record!', perfect:'Perfetto!', back:'Indietro' },
+  nl: { title:'HAMSTER JUMP', score:'SCORE', best:'RECORD', tapToStart:'Tik om te starten',
+        tapToResume:'Tik om verder te gaan', playAgain:'Opnieuw spelen', gameOver:'Game over',
+        newBest:'Nieuw record!', perfect:'Perfect!', back:'Terug' },
+  pl: { title:'HAMSTER JUMP', score:'WYNIK', best:'REKORD', tapToStart:'Dotknij, aby zagrać',
+        tapToResume:'Dotknij, aby wznowić', playAgain:'Zagraj ponownie', gameOver:'Koniec gry',
+        newBest:'Nowy rekord!', perfect:'Idealnie!', back:'Wstecz' },
+  ru: { title:'ПРЫЖОК ХОМЯКА', score:'СЧЁТ', best:'РЕКОРД', tapToStart:'Нажмите, чтобы начать',
+        tapToResume:'Нажмите, чтобы продолжить', playAgain:'Играть снова', gameOver:'Игра окончена',
+        newBest:'Новый рекорд!', perfect:'Идеально!', back:'Назад' },
+  tr: { title:'HAMSTER JUMP', score:'SKOR', best:'REKOR', tapToStart:'Başlamak için dokun',
+        tapToResume:'Devam etmek için dokun', playAgain:'Tekrar Oyna', gameOver:'Oyun Bitti',
+        newBest:'Yeni Rekor!', perfect:'Mükemmel!', back:'Geri' },
+  ar: { title:'قفزة الهمستر', score:'النقاط', best:'الأفضل', tapToStart:'انقر للبدء',
+        tapToResume:'انقر للمتابعة', playAgain:'العب مجددًا', gameOver:'انتهت اللعبة',
+        /* ‏ (RLM) để dấu ! đứng đúng phía trong ngữ cảnh LTR (DOM + canvas) */
+        newBest:'رقم قياسي جديد!‏', perfect:'ممتاز!‏', back:'رجوع' },
+  hi: { title:'हैम्स्टर जंप', score:'स्कोर', best:'सर्वश्रेष्ठ', tapToStart:'शुरू करने के लिए टैप करें',
+        tapToResume:'जारी रखने के लिए टैप करें', playAgain:'फिर से खेलें', gameOver:'खेल समाप्त',
+        newBest:'नया रिकॉर्ड!', perfect:'एकदम सही!', back:'वापस' },
+  th: { title:'แฮมสเตอร์ จัมพ์', score:'คะแนน', best:'สูงสุด', tapToStart:'แตะเพื่อเริ่ม',
+        tapToResume:'แตะเพื่อเล่นต่อ', playAgain:'เล่นอีกครั้ง', gameOver:'จบเกม',
+        newBest:'สถิติใหม่!', perfect:'เพอร์เฟกต์!', back:'กลับ' },
+  id: { title:'HAMSTER JUMP', score:'SKOR', best:'TERBAIK', tapToStart:'Ketuk untuk mulai',
+        tapToResume:'Ketuk untuk lanjut', playAgain:'Main Lagi', gameOver:'Permainan Berakhir',
+        newBest:'Rekor Baru!', perfect:'Sempurna!', back:'Kembali' },
+  fil: { title:'HAMSTER JUMP', score:'ISKOR', best:'PINAKAMATAAS', tapToStart:'I-tap para magsimula',
+        tapToResume:'I-tap para magpatuloy', playAgain:'Maglaro Muli', gameOver:'Tapos ang Laro',
+        newBest:'Bagong Rekord!', perfect:'Perpekto!', back:'Bumalik' },
+};
+
+let LANG = DEFAULT_LANG;
+function t(key) {
+  return (I18N[LANG] && I18N[LANG][key]) || I18N.en[key] || key;
+}
+
+function getLanguage() {
+  const fromWin = typeof window.language === 'string' ? window.language : null;
+  const fromUrl = new URLSearchParams(window.location.search).get('language');
+  const raw = fromWin != null ? fromWin : fromUrl;
+  return SUPPORTED_LANGS.includes(raw) ? raw : DEFAULT_LANG;
+}
+
+function applyUiFont(lang) {
+  if (!LATIN_LANGS.has(lang)) {
+    document.documentElement.style.setProperty('--ui-font', 'system-ui, sans-serif');
+  }
+}
+
+/* Font cho chữ vẽ lên canvas (game-common §UI — canvas không đọc CSS) */
+let CANVAS_FONT_STACK = "'Google Sans Flex', system-ui, sans-serif";
+
+/* ================================================================
+ * §1. Native bridge (game-common §1 — game KHÔNG level)
+ * ================================================================ */
+function post(msg) {
+  try {
+    if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+      window.ReactNativeWebView.postMessage(JSON.stringify(msg));
+    } else {
+      console.log('[hamster-jump → native]', msg);
+    }
+  } catch (e) { /* ignore */ }
+}
+
+function sendMessage(type, opts) {
+  opts = opts || {};
+  post({
+    type,
+    level: null,                        // game không có level → luôn null
+    result: opts.result ?? null,
+    data: opts.data ?? null,
+    showModal: opts.showModal === true,
+  });
+}
+
+function saveData(payload) {
+  const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
+  sendMessage('save_data', { data });
+}
+
+/* ── localStorage (game-common §1.2 — chỉ data nhẹ) ───────────── */
+const LS_KEY = 'hamster_jump_v1';
+
+function saveLocal(payload) {
+  try {
+    const s = typeof payload === 'string' ? payload : JSON.stringify(payload);
+    localStorage.setItem(LS_KEY, s);
+  } catch (e) { /* private mode / quota */ }
+}
+function readLocal() {
+  try { return localStorage.getItem(LS_KEY) || ''; } catch (e) { return ''; }
+}
+
+/* ── statusBarHeight (game-common §2 — ưu tiên URL) ───────────── */
+function getStatusBarHeight() {
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = params.get('statusBarHeight');
+  const fromWin = typeof window.statusBarHeight !== 'undefined' ? window.statusBarHeight : null;
+  let h = Number(fromUrl != null ? fromUrl : fromWin);
+  if (Number.isNaN(h) || h < 0) h = 0;
+  return h;
+}
+
+/* ── data (game-common §4 — ưu tiên window) ───────────────────── */
+function getInitialData() {
+  const fromWin = typeof window.data === 'string' ? window.data : null;
+  const fromUrl = new URLSearchParams(window.location.search).get('data');
+  return fromWin != null ? fromWin : (fromUrl || '');
+}
+
+/** Đọc {best, coins} từ native (ưu tiên) + localStorage; lấy max để không mất dữ liệu. */
+function loadSaved() {
+  const out = { best: 0, coins: 0 };
+  const pick = raw => {
+    try {
+      const o = JSON.parse(raw || 'null');
+      if (o) {
+        if (Number.isFinite(+o.best)) out.best = Math.max(out.best, Math.floor(+o.best));
+        if (Number.isFinite(+o.coins)) out.coins = Math.max(out.coins, Math.floor(+o.coins));
+      }
+    } catch (e) { /* data bẩn → bỏ qua */ }
+  };
+  pick(getInitialData());
+  pick(readLocal());
+  return out;
+}
+
+/* ================================================================
+ * §2. Hằng số gameplay (theo cơ chế gốc: canh thời điểm NHẢY,
+ *     miếng phô mai KHÔNG bị cắt — chỉ đặt lệch)
+ * ================================================================ */
+const LW = 720;             // bề rộng logic cố định (camera lùi xa ×2), cao theo tỉ lệ màn
+const BLOCK_W = 132;        // bề rộng miếng phô mai
+const BLOCK_H = 92;         // chiều cao miếng phô mai
+const HAM_HALF = 26;        // nửa thân hamster (vùng bị xô ngã — khớp thân vẽ rx 27)
+const JUMP_DUR = 613;       // thời gian 1 cú nhảy (ms) — tăng 15% khớp độ cao mới
+const JUMP_H = 141;         // độ cao nhảy (px logic) — đủ qua miếng phô mai thoải mái
+const BASE_SPEED = 6.9;     // tốc độ trượt phô mai (px logic / frame @60fps) — nhanh ngay từ đầu
+const SPEED_INC = 0.07;     // tăng theo số tầng
+const MAX_SPEED = 10.5;     // trần tốc độ — khó nhưng không thành Dark Souls
+const SPEED_JITTER = 0.35;  // mỗi miếng ngẫu nhiên ×(0.85–1.20) để đánh lạc nhịp
+const PERFECT_EPS = 7;      // lệch ≤ 7px → Perfect (nới theo tốc độ lúc xét)
+const STUMBLE_EDGE = 30;    // đáp cách mép miếng < 30px → loạng choạng
+const STUMBLE_MS = 1000;    // thời gian loạng choạng (nghiêng người 1s)
+const MAX_OVERSHOOT = 0.45; // giới hạn kẹp vị trí miếng khi xô ngã hamster
+const BOUNCE_MS = 240;      // nhún của miếng phô mai khi hamster đáp xuống
+const WAIT_MS = 430;        // miếng đậu chờ trên ván trước khi trượt
+const BOARD_MS = 260;       // thời gian ván gỗ thò ra / rút về
+const ADS_EVERY = 3;        // mỗi 3 ván thua → xin app hiện quảng cáo
+
+/* Miếng phô mai đặc biệt */
+const MINI_W = 80;          // mini: bề rộng ~60% — khó đáp, điểm ×2
+const GOLD_SPEED = 1.45;    // vàng: chạy nhanh hơn hẳn, đáp được +8 xu
+const SPRING_MULT = 1.35;   // lò xo: cú nhảy KẾ TIẾP cao & lâu hơn 35%
+const MOLD_LIFT = 105;      // mốc: bay cao hơn mặt tháp — KHÔNG được nhảy
+const DOUBLE_FROM = 25;     // từ tầng 25: thi thoảng 2 miếng vào từ 2 phía
+
+/* Màu vẽ */
+const C = {
+  bgTop: '#a8d8ee', bgMid: '#c3e4f2', bgBot: '#f2d7e0',
+  doodle: 'rgba(110,165,200,.32)',
+  table: '#d59a58', tableEdge: '#b97f42',
+  mat: '#f2a7ba', matDot: '#f9c9d6',
+  plate: '#fdfdfd', plateShade: 'rgba(0,0,0,.08)',
+  cheese: '#f3e17f', cheeseTop: '#f9efad', cheeseDark: '#e0c968',
+  hole: '#d9bf5c', outline: 'rgba(160,125,55,.4)',
+  board: '#c8935a', boardEdge: '#a4713a',
+  gift: '#f25c7f', giftLid: '#ff8fa8', giftOutline: 'rgba(150,55,80,.5)', ribbon: '#fff3d6',
+  spring: '#9298a5', springHi: '#c8cdd8',
+  ham: '#fbf3e4', hamShade: '#efdec4', hamPatch: '#e8964e',
+  earIn: '#ffbfcf', blush: 'rgba(255,140,165,.55)',
+  coin: '#f5c518', coinIn: '#ffe27a',
+};
+
+/* Bảng màu theo LOẠI miếng (normal / vàng / băng / mốc — mini & lò xo dùng normal) */
+const BLOCK_SKINS = {
+  normal: { body: '#f3e17f', top: '#f9efad', hole: '#d9bf5c', holeTop: '#e9d67d',
+            line: 'rgba(160,125,55,.4)', fold: 'rgba(160,125,55,.22)' },
+  gold:   { body: '#ffd24d', top: '#ffe9a0', hole: '#e0a821', holeTop: '#f2cf6e',
+            line: 'rgba(170,120,20,.5)', fold: 'rgba(170,120,20,.25)' },
+  ice:    { body: '#cfe9f7', top: '#ecf7ff', hole: '#a9cfe4', holeTop: '#d4e9f5',
+            line: 'rgba(90,140,175,.5)', fold: 'rgba(90,140,175,.25)' },
+  mold:   { body: '#bcd47f', top: '#d6e6a6', hole: '#8fa653', holeTop: '#c2d489',
+            line: 'rgba(100,120,45,.55)', fold: 'rgba(100,120,45,.28)' },
+};
+BLOCK_SKINS.mini = BLOCK_SKINS.normal;
+BLOCK_SKINS.spring = BLOCK_SKINS.normal;
+
+/* ================================================================
+ * §3. Trạng thái game
+ * ================================================================ */
+let canvas, ctx;
+let cssW = 0, cssH = 0, scale = 1, LH = 0;
+
+let state = 'ready';        // 'ready' | 'playing' | 'over'
+let paused = false;
+
+/* tháp: mỗi tầng {cx, gift} — bề rộng không đổi; tầng i chiếm
+   worldY [-(i+1)*BLOCK_H, -i*BLOCK_H]; mặt trên tháp = -count*BLOCK_H */
+let tower = [];             // mỗi tầng: {cx, kind, w, seed}
+let sliders = [];           // các miếng đang vào: {cx, dir, speed, kind, w, seed,
+                            //   slideAt, yTopW, dead} — double trouble có 2 miếng
+let springArmed = false;    // đáp lên lò xo → cú nhảy kế tiếp cao & lâu hơn
+let boards = [];            // ván gỗ: {dir, yW, endX, extendT0, retractT0}
+let fallBlocks = [];        // miếng trượt hụt rơi khỏi tháp: {cx, yTop, vx, vy, rot, vr, gift, seed}
+let landBounceT0 = -1e9;    // thời điểm miếng trên cùng nhún (hamster vừa đáp)
+let coins = [];             // xu rơi: {x, y, vy, val}
+let floatTexts = [];        // {x, y, born, text, color}
+let rings = [];             // {x, y, born}
+let sparkles = [];          // {x, y, born}
+
+let ham = null;             // {x, state:'idle'|'jump'|'stumble'|'knock'|'chute', t0, knock:{}, chute:{}}
+let score = 0;
+let best = 0;               // kỷ lục (persist ngay khi đổi — game-common §1.2)
+let bestStart = 0;          // kỷ lục lúc bắt đầu ván (HUD + so popup)
+let coinsTotal = 0;         // xu tích lũy (persist)
+let combo = 0;              // chuỗi Perfect liên tiếp
+let runsEnded = 0;
+let overTimer = 0;          // timer hiện popup — phải clear khi vào ván mới
+
+let blocksSinceCoin = 0, nextCoinIn = 6;
+let blocksSinceGift = 0, nextGiftIn = 14;
+let rand01 = Math.random;   // gameplay được phép random
+
+let camOff = 0;             // screenY = worldY + camOff
+let camX = 0;               // screenX = worldX - camX
+let viewZoom = 1;           // zoom trình diễn (pan-out cuối ván), pivot giữa màn
+let zoomTarget = 1;
+let overOff = 0, overX = 0; // đích camera khi state 'over' (khung trọn tháp)
+let lastTs = 0;
+let timeMs = 0;             // đồng hồ animation (đứng yên khi pause)
+
+/* DOM refs */
+const $ = id => document.getElementById(id);
+let elScore, elBest, elCoin, elOverlay, elOvTitle, elOvScore, elOvBest;
+
+/* ================================================================
+ * §4. Canvas & camera
+ * ================================================================ */
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  const app = $('app');
+  cssW = app.clientWidth;
+  cssH = app.clientHeight;
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  canvas.style.width = cssW + 'px';
+  canvas.style.height = cssH + 'px';
+  scale = cssW / LW;
+  LH = cssH / scale;
+  ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+}
+
+function surfaceY() { return -tower.length * BLOCK_H; }   // mặt trên tháp (world)
+function topCx() { return tower[tower.length - 1].cx; }
+function camTargetOff() { return LH * 0.62 + tower.length * BLOCK_H; }
+function camTargetX() { return topCx() - LW / 2; }
+function sx(wx) { return wx - camX; }                      // world → screen X
+function sy(wy) { return wy + camOff; }                    // world → screen Y
+/* biên cull nới theo zoom (zoom < 1 nhìn thấy nhiều thế giới hơn) */
+function cullPad() { return LH / Math.max(viewZoom, 0.05); }
+
+/* ================================================================
+ * §5. Helpers vẽ
+ * ================================================================ */
+function seededRand(seed) {
+  let u = seed + 0x6D2B79F5;
+  u = Math.imul(u ^ (u >>> 15), u | 1);
+  u ^= u + Math.imul(u ^ (u >>> 7), u | 61);
+  return ((u ^ (u >>> 14)) >>> 0) / 4294967296;
+}
+
+function rr(x, y, w, h, r) {
+  const rad = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rad, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rad);
+  ctx.arcTo(x + w, y + h, x, y + h, rad);
+  ctx.arcTo(x, y + h, x, y, rad);
+  ctx.arcTo(x, y, x + w, y, rad);
+  ctx.closePath();
+}
+
+/* Mặt trước của khối 3D: góc TRÊN sắc (để nối liền với cạnh mặt trên),
+   góc dưới bo tròn */
+function frontFacePath(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + w, y);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.closePath();
+}
+
+/* ================================================================
+ * §6. Vẽ — bếp, bàn, phô mai, hamster, hiệu ứng
+ * ================================================================ */
+
+/* Nền wallpaper pastel theo art-style hamster: gradient kem + hoạ tiết mờ
+   (miếng phô mai, dấu chân, hạt hướng dương, trái tim) parallax nhẹ */
+function drawDoodleCheese() {
+  ctx.beginPath();
+  ctx.moveTo(-22, 14); ctx.lineTo(22, 14); ctx.lineTo(22, -2);
+  ctx.quadraticCurveTo(0, -18, -22, 14);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.5)';
+  ctx.beginPath(); ctx.arc(2, 4, 3.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(12, 9, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = C.doodle;
+}
+function drawDoodlePaw() {
+  ctx.beginPath(); ctx.ellipse(0, 6, 9, 7, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(-9, -4, 3.6, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(0, -7, 3.6, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(9, -4, 3.6, 0, Math.PI * 2); ctx.fill();
+}
+function drawDoodleSeed() {
+  ctx.beginPath(); ctx.ellipse(0, 0, 6, 12, 0.3, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.45)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(-2, -8); ctx.lineTo(2, 8); ctx.stroke();
+  ctx.strokeStyle = C.doodle;
+}
+function drawDoodleHeart() {
+  ctx.beginPath();
+  ctx.moveTo(0, 10);
+  ctx.bezierCurveTo(-14, -2, -7, -14, 0, -6);
+  ctx.bezierCurveTo(7, -14, 14, -2, 0, 10);
+  ctx.closePath(); ctx.fill();
+}
+
+function drawBackground() {
+  const g = ctx.createLinearGradient(0, 0, 0, LH);
+  g.addColorStop(0, C.bgTop);
+  g.addColorStop(0.55, C.bgMid);
+  g.addColorStop(1, C.bgBot);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, LW, LH);
+
+  const par = 0.35, bandH = 260;
+  /* screenY = par*(artY + camOff) → artY ở mép trên màn = -camOff */
+  const yTop = -camOff;
+  const first = Math.floor((yTop - bandH) / bandH);
+  const last = Math.ceil((yTop + LH / par) / bandH);
+  ctx.fillStyle = C.doodle;
+  ctx.strokeStyle = C.doodle;
+  for (let i = first; i <= last; i++) {
+    const by = i * bandH * par + camOff * par;
+    for (let k = 0; k < 5; k++) {
+      const r1 = seededRand(i * 131 + k * 37 + 7);
+      const r2 = seededRand(i * 89 + k * 53 + 3);
+      const dx = 40 + r1 * (LW - 80) - camX * 0.12;
+      const dy = by + r2 * bandH * par;
+      const kind = Math.floor(seededRand(i * 17 + k * 71) * 4);
+      const s2 = 0.9 + seededRand(i * 13 + k * 29) * 0.8;
+      ctx.save();
+      ctx.translate(dx, dy);
+      ctx.rotate((r1 - 0.5) * 0.9);
+      ctx.scale(s2, s2);
+      if (kind === 0) drawDoodleCheese();
+      else if (kind === 1) drawDoodlePaw();
+      else if (kind === 2) drawDoodleSeed();
+      else drawDoodleHeart();
+      ctx.restore();
+    }
+  }
+}
+
+/* Nĩa hoạt hình — 4 răng, vòm, cán bo tròn có vệt sáng */
+function drawForkAt(px2, py2, rot, s) {
+  ctx.save();
+  ctx.translate(px2, py2);
+  ctx.rotate(rot);
+  ctx.scale(s || 1, s || 1);
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = 'rgba(95,100,115,.5)';
+  ctx.fillStyle = '#dfe3ea';
+  for (let k = 0; k < 4; k++) {           // 4 răng
+    rr(-16.5 + k * 9, -56, 6, 26, 3);
+    ctx.fill(); ctx.stroke();
+  }
+  ctx.beginPath();                         // vòm đầu nĩa thu về cổ
+  ctx.moveTo(-17, -34);
+  ctx.lineTo(17, -34);
+  ctx.quadraticCurveTo(17, -14, 6, -10);
+  ctx.lineTo(6, -6);
+  ctx.lineTo(-6, -6);
+  ctx.lineTo(-6, -10);
+  ctx.quadraticCurveTo(-17, -14, -17, -34);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  rr(-5.5, -8, 11, 62, 5.5);               // cán
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,.55)';
+  rr(-2, -2, 3, 46, 1.5);                  // vệt sáng
+  ctx.fill();
+  ctx.restore();
+}
+
+/* Dao hoạt hình kiểu dao bếp cổ điển — sống dao thẳng, lưỡi cong về mũi,
+   cán gỗ có 2 đinh tán */
+function drawKnifeAt(px2, py2, rot, s) {
+  ctx.save();
+  ctx.translate(px2, py2);
+  ctx.rotate(rot);
+  ctx.scale(s || 1, s || 1);
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = 'rgba(95,100,115,.5)';
+  /* lưỡi dao */
+  ctx.fillStyle = '#e8ebf1';
+  ctx.beginPath();
+  ctx.moveTo(-9, -2);                          // gốc lưỡi (cạnh sống)
+  ctx.lineTo(-9, -48);                         // sống dao thẳng
+  ctx.quadraticCurveTo(-9, -60, 0, -63);       // bo về mũi dao
+  ctx.quadraticCurveTo(14, -52, 14, -28);      // cạnh cắt cong
+  ctx.quadraticCurveTo(14, -9, 10, -2);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+  /* ánh thép dọc sống dao */
+  ctx.fillStyle = 'rgba(255,255,255,.6)';
+  rr(-6.5, -52, 3, 44, 1.5);
+  ctx.fill();
+  /* viền cạnh cắt sáng */
+  ctx.strokeStyle = 'rgba(255,255,255,.7)';
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(1, -61);
+  ctx.quadraticCurveTo(12, -50, 12, -28);
+  ctx.stroke();
+  /* gờ chắn (bolster) */
+  ctx.fillStyle = '#c9ccd4';
+  rr(-8, -3, 17, 7, 3);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(95,100,115,.5)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  /* cán gỗ + 2 đinh tán */
+  ctx.fillStyle = '#b5762e';
+  rr(-6.5, 4, 14, 52, 7);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(120,75,25,.65)';
+  ctx.stroke();
+  ctx.fillStyle = '#e6c78f';
+  ctx.beginPath(); ctx.arc(0.5, 16, 2.4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(0.5, 42, 2.4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.3)';
+  rr(-3.5, 8, 3, 42, 1.5);
+  ctx.fill();
+  ctx.restore();
+}
+
+/* Bàn ăn + tấm lót (rug) + đĩa + dao nĩa. World y = 0 là ĐÁY miếng phô mai
+   gốc: tâm đĩa đặt py-2 (đáy phô mai thấp hơn tâm đĩa 2px) + bóng tiếp xúc
+   → miếng phô mai ĐẶT hẳn trên đĩa, không lơ lửng */
+function drawTable() {
+  const py = sy(0);
+  if (py - 120 > LH / 2 + cullPad()) return;
+  const mx = sx(LW / 2);
+  /* mặt bàn — mép sau cao hơn để chứa trọn rug */
+  ctx.fillStyle = C.table;
+  ctx.fillRect(-LW, py - 110, LW * 3, Math.max(0, LH / 2 + cullPad() - (py - 110)));
+  ctx.fillStyle = C.tableEdge;
+  ctx.fillRect(-LW, py - 110, LW * 3, 9);
+
+  /* rug: nền hồng + viền chỉ may + chấm bi xếp lưới so le (tâm = tâm đĩa) */
+  ctx.fillStyle = C.mat;
+  rr(mx - 235, py - 97, 470, 190, 26);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.75)';    // đường chỉ may
+  ctx.lineWidth = 4;
+  ctx.setLineDash([12, 8]);
+  rr(mx - 220, py - 82, 440, 160, 18);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = C.matDot;
+  for (let row = 0; row < 4; row++) {           // lưới chấm so le đều đặn
+    const yD = py - 68 + row * 44;
+    const off = (row % 2) * 27;
+    for (let col = 0; col < 8; col++) {
+      const xD = mx - 189 + off + col * 54;
+      if (Math.abs(xD - mx) < 150 && yD > py - 50 && yD < py + 45) continue; // chừa chỗ đĩa
+      ctx.beginPath();
+      ctx.arc(xD, yD, 7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  /* đĩa — tâm giữa rug, vành sau ló ra sau miếng phô mai */
+  ctx.fillStyle = C.plate;
+  ctx.beginPath();
+  ctx.ellipse(mx, py - 2, 165, 36, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = C.plateShade;
+  ctx.beginPath();
+  ctx.ellipse(mx, py + 2, 128, 22, 0, 0, Math.PI * 2);
+  ctx.fill();
+  /* bóng tiếp xúc dưới đáy tháp phô mai */
+  ctx.fillStyle = 'rgba(120,90,40,.18)';
+  ctx.beginPath();
+  ctx.ellipse(mx, py + 1, BLOCK_W * 0.56, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  /* nĩa (trái) + dao (phải) nằm gọn trên rug */
+  drawForkAt(mx - 198, py + 42, -0.15, 0.9);
+  drawKnifeAt(mx + 198, py + 40, 0.15, 0.9);
+}
+
+/* Miếng phô mai (hoặc hộp quà) — vẽ theo world coords */
+/* 5 vị trí lỗ cách xa nhau — chọn 3 theo seed nên lỗ KHÔNG bao giờ chồng nhau */
+const HOLE_SLOTS = [
+  [0.20, 0.30], [0.50, 0.56], [0.80, 0.28], [0.34, 0.76], [0.68, 0.80],
+];
+
+function drawBlock(cxW, topW, kind, seed, w) {
+  w = w || BLOCK_W;
+  const x = sx(cxW - w / 2), y = sy(topW);
+  if (y > LH / 2 + cullPad() || y < LH / 2 - cullPad() - BLOCK_H) return;
+  if (kind !== 'gift') {
+    const SK = BLOCK_SKINS[kind] || BLOCK_SKINS.normal;
+    const inset = Math.round(w * 0.1);
+    const kw = w / BLOCK_W;               // tỉ lệ co (mini)
+    /* MẶT TRÊN — hình thang lùi về sau; góc trước TRÙNG góc trên mặt trước */
+    ctx.fillStyle = SK.top;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + w, y);
+    ctx.lineTo(x + w - inset, y - 22);
+    ctx.lineTo(x + inset, y - 22);
+    ctx.closePath();
+    ctx.fill();
+    /* lỗ trên mặt trên (dẹt theo phối cảnh) */
+    ctx.fillStyle = SK.holeTop;
+    ctx.beginPath();
+    ctx.ellipse(x + w * 0.38, y - 10, 7 * kw, 3.2 * kw, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(x + w * 0.68, y - 14, 5 * kw, 2.4 * kw, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* MẶT TRƯỚC — góc trên sắc, góc dưới bo */
+    ctx.fillStyle = SK.body;
+    frontFacePath(x, y, w, BLOCK_H, 8);
+    ctx.fill();
+    /* lỗ phô mai — 3 lỗ từ 5 slot cố định (không chồng nhau), jitter nhẹ */
+    ctx.fillStyle = SK.hole;
+    const slot0 = Math.floor(seededRand(seed * 7 + 1) * 5);
+    for (let k = 0; k < 3; k++) {
+      const s2 = HOLE_SLOTS[(slot0 + k * 2) % 5];
+      const hx = x + (s2[0] + (seededRand(seed * 53 + k * 17) - 0.5) * 0.07) * w;
+      const hy = y + 16 + (s2[1] + (seededRand(seed * 29 + k * 41) - 0.5) * 0.09) * (BLOCK_H - 26);
+      const hr = (5.5 + seededRand(seed * 11 + k * 7) * 3.5) * kw;
+      ctx.beginPath(); ctx.ellipse(hx, hy, hr, hr * 0.85, 0, 0, Math.PI * 2); ctx.fill();
+    }
+
+    /* trang trí riêng từng loại */
+    if (kind === 'gold') {
+      /* ánh kim lấp lánh */
+      ctx.fillStyle = 'rgba(255,255,255,.9)';
+      const g1x = x + w * 0.24, g1y = y + 24, g2x = x + w * 0.74, g2y = y + 60;
+      rr(g1x - 7, g1y - 1.5, 14, 3, 1.5); ctx.fill();
+      rr(g1x - 1.5, g1y - 7, 3, 14, 1.5); ctx.fill();
+      rr(g2x - 5, g2y - 1.2, 10, 2.4, 1.2); ctx.fill();
+      rr(g2x - 1.2, g2y - 5, 2.4, 10, 1.2); ctx.fill();
+    } else if (kind === 'ice') {
+      /* vệt băng bóng loáng */
+      ctx.strokeStyle = 'rgba(255,255,255,.7)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x + 10, y + 30); ctx.lineTo(x + 30, y + 10);
+      ctx.moveTo(x + 20, y + 40); ctx.lineTo(x + 46, y + 14);
+      ctx.stroke();
+    } else if (kind === 'spring') {
+      /* 2 lò xo kim loại trên mặt trước */
+      ctx.strokeStyle = C.spring;
+      ctx.lineWidth = 3;
+      ctx.lineJoin = 'round';
+      for (const fx of [x + w * 0.24, x + w * 0.76]) {
+        ctx.beginPath();
+        ctx.moveTo(fx - 8, y + 20);
+        ctx.lineTo(fx + 8, y + 20);
+        let zy = y + 20;
+        for (let z = 0; z < 4; z++) {
+          ctx.lineTo(fx + (z % 2 ? 8 : -8), zy + 12);
+          zy += 12;
+        }
+        ctx.lineTo(fx + 8, zy + 4);
+        ctx.lineTo(fx - 8, zy + 4);
+        ctx.stroke();
+      }
+    } else if (kind === 'mold') {
+      /* đốm mốc + khói hôi bay lên */
+      ctx.fillStyle = 'rgba(98,124,54,.55)';
+      for (let k = 0; k < 3; k++) {
+        const mx2 = x + (0.2 + seededRand(seed * 19 + k * 23) * 0.6) * w;
+        const my2 = y + 24 + seededRand(seed * 37 + k * 13) * (BLOCK_H - 40);
+        ctx.beginPath(); ctx.arc(mx2, my2, 5 + seededRand(seed * 5 + k) * 3.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(mx2 + 8, my2 + 4, 2.5, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.strokeStyle = 'rgba(130,150,80,.6)';
+      ctx.lineWidth = 2.5;
+      for (const fx of [x + w * 0.35, x + w * 0.65]) {
+        const sway = Math.sin(timeMs * 0.004 + fx) * 3;
+        ctx.beginPath();
+        ctx.moveTo(fx, y - 24);
+        ctx.quadraticCurveTo(fx - 5 + sway, y - 34, fx + sway, y - 42);
+        ctx.stroke();
+      }
+    }
+
+    /* cạnh gấp giữa 2 mặt (B) — MỘT nét mảnh màu nhạt, nối đúng 2 góc */
+    ctx.strokeStyle = SK.fold;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x + 1, y);
+    ctx.lineTo(x + w - 1, y);
+    ctx.stroke();
+
+    /* viền ngoài TOÀN KHỐI một nét liền (A–E–sau–F–C–đáy) */
+    ctx.strokeStyle = SK.line;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + inset, y - 22);
+    ctx.lineTo(x + w - inset, y - 22);
+    ctx.lineTo(x + w, y);
+    ctx.lineTo(x + w, y + BLOCK_H - 8);
+    ctx.arcTo(x + w, y + BLOCK_H, x + w - 8, y + BLOCK_H, 8);
+    ctx.lineTo(x + 8, y + BLOCK_H);
+    ctx.arcTo(x, y + BLOCK_H, x, y + BLOCK_H - 8, 8);
+    ctx.closePath();
+    ctx.stroke();
+  } else {
+    /* hộp quà: thân + NẮP có mặt trên (cùng góc nhìn với phô mai) + nơ trên nắp */
+    const cxm = x + BLOCK_W / 2;
+    /* mặt trên của nắp — góc trước TRÙNG góc trên mặt trước nắp */
+    ctx.fillStyle = C.giftLid;
+    ctx.beginPath();
+    ctx.moveTo(x - 3, y + 8);
+    ctx.lineTo(x + BLOCK_W + 3, y + 8);
+    ctx.lineTo(x + BLOCK_W - 12, y - 13);
+    ctx.lineTo(x + 12, y - 13);
+    ctx.closePath();
+    ctx.fill();
+    /* ruy băng dọc chạy trên mặt nắp */
+    ctx.fillStyle = C.ribbon;
+    ctx.beginPath();
+    ctx.moveTo(cxm - 9, y + 8);
+    ctx.lineTo(cxm + 9, y + 8);
+    ctx.lineTo(cxm + 7, y - 13);
+    ctx.lineTo(cxm - 7, y - 13);
+    ctx.closePath();
+    ctx.fill();
+    /* thân hộp */
+    ctx.fillStyle = C.gift;
+    rr(x + 4, y + 26, BLOCK_W - 8, BLOCK_H - 26, 8);
+    ctx.fill();
+    ctx.strokeStyle = C.giftOutline;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    /* ruy băng dọc trên thân */
+    ctx.fillStyle = C.ribbon;
+    ctx.fillRect(cxm - 9, y + 26, 18, BLOCK_H - 26);
+    /* mặt trước nắp — góc trên sắc, rộng hơn thân */
+    ctx.fillStyle = C.giftLid;
+    frontFacePath(x - 3, y + 8, BLOCK_W + 6, 22, 6);
+    ctx.fill();
+    /* ruy băng ngang qua mặt trước nắp */
+    ctx.fillStyle = C.ribbon;
+    ctx.fillRect(cxm - 9, y + 8, 18, 22);
+    /* cạnh gấp nắp — nét mảnh nhạt */
+    ctx.strokeStyle = 'rgba(150,55,80,.25)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x - 2, y + 8);
+    ctx.lineTo(x + BLOCK_W + 2, y + 8);
+    ctx.stroke();
+    /* viền ngoài nắp một nét liền (mặt trên + mặt trước) */
+    ctx.strokeStyle = C.giftOutline;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x - 3, y + 8);
+    ctx.lineTo(x + 12, y - 13);
+    ctx.lineTo(x + BLOCK_W - 12, y - 13);
+    ctx.lineTo(x + BLOCK_W + 3, y + 8);
+    ctx.lineTo(x + BLOCK_W + 3, y + 24);
+    ctx.arcTo(x + BLOCK_W + 3, y + 30, x + BLOCK_W - 3, y + 30, 6);
+    ctx.lineTo(x + 3, y + 30);
+    ctx.arcTo(x - 3, y + 30, x - 3, y + 24, 6);
+    ctx.closePath();
+    ctx.stroke();
+    /* đuôi nơ rủ từ mặt trên xuống mặt trước nắp */
+    ctx.beginPath();
+    ctx.moveTo(cxm - 4, y + 9);
+    ctx.lineTo(cxm - 16, y + 25);
+    ctx.lineTo(cxm - 7, y + 25);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cxm + 4, y + 9);
+    ctx.lineTo(cxm + 16, y + 25);
+    ctx.lineTo(cxm + 7, y + 25);
+    ctx.closePath();
+    ctx.fill();
+    /* nơ: 2 vòng + nút giữa, đặt TRÊN mặt nắp */
+    ctx.strokeStyle = 'rgba(190,150,60,.55)';
+    ctx.lineWidth = 2;
+    ctx.fillStyle = C.ribbon;
+    ctx.beginPath(); ctx.ellipse(cxm - 13, y - 8, 12, 7.5, -0.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cxm + 13, y - 8, 12, 7.5, 0.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cxm, y - 6, 5.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  }
+}
+
+/* Ván gỗ đưa phô mai vào — thò ra / rút về mượt (world-anchored) */
+function drawBoards() {
+  for (const b of boards) {
+    let ext = Math.min(1, (timeMs - b.extendT0) / BOARD_MS);
+    ext = 1 - Math.pow(1 - ext, 3);                 // ease-out khi thò ra
+    if (b.retractT0) {
+      const r = Math.min(1, (timeMs - b.retractT0) / BOARD_MS);
+      ext *= 1 - r * r;                              // ease-in khi rút về
+    }
+    if (ext <= 0.01) continue;
+    const yv = sy(b.yW);
+    if (yv > LH / 2 + cullPad() || yv < LH / 2 - cullPad()) continue;
+    const fullLen = LW * 1.15;
+    const startX = b.endX - b.dir * fullLen;         // đầu phía "tường" (ngoài màn)
+    const curEnd = startX + b.dir * fullLen * ext;
+    const x1 = sx(Math.min(startX, curEnd));
+    const x2 = sx(Math.max(startX, curEnd));
+    ctx.fillStyle = C.board;
+    ctx.strokeStyle = C.boardEdge;
+    ctx.lineWidth = 2;
+    rr(x1, yv + 1, x2 - x1, 12, 5);
+    ctx.fill(); ctx.stroke();
+  }
+}
+
+/* Hamster — vẽ tại (cxW, feetW) world; opts điều khiển pose */
+function drawHam(cxW, feetW, opts) {
+  opts = opts || {};
+  const x = sx(cxW), y = sy(feetW);
+  const sq = opts.squash || 0;
+  ctx.save();
+  /* pivotX ≠ 0 → xoay quanh chân trụ thay vì giữa thân (loạng choạng) */
+  ctx.translate(x + (opts.pivotX || 0), y);
+  ctx.rotate(opts.rot || 0);
+  ctx.translate(-(opts.pivotX || 0), 0);
+  ctx.scale(1 + sq, 1 - sq);
+
+  const armUp = opts.armsUp;
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(150,110,80,.35)';
+
+  /* tai */
+  const earY = -52;
+  ctx.fillStyle = C.ham;
+  ctx.beginPath(); ctx.arc(-19, earY, 14, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = C.hamPatch;                    // tai phải màu cam
+  ctx.beginPath(); ctx.arc(19, earY, 14, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = C.earIn;
+  ctx.beginPath(); ctx.arc(-19, earY, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(19, earY, 8, 0, Math.PI * 2); ctx.fill();
+
+  /* thân */
+  ctx.fillStyle = C.ham;
+  ctx.beginPath(); ctx.ellipse(0, -26, 27, 26, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  /* mảng lông cam trên đầu (bên phải) */
+  ctx.save();
+  ctx.beginPath(); ctx.ellipse(0, -26, 27, 26, 0, 0, Math.PI * 2); ctx.clip();
+  ctx.fillStyle = C.hamPatch;
+  ctx.beginPath(); ctx.ellipse(16, -42, 15, 13, 0.4, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  /* mắt + má + mũi + miệng */
+  ctx.fillStyle = '#3a2a20';
+  ctx.beginPath(); ctx.arc(-9, -32, 2.7, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(9, -32, 2.7, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(-8.2, -32.9, 1, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(9.8, -32.9, 1, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = C.blush;
+  ctx.beginPath(); ctx.arc(-16, -26, 4.2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(16, -26, 4.2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#e8798f';
+  ctx.beginPath(); ctx.arc(0, -27, 1.9, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#c98a5a';
+  ctx.lineWidth = 1.3;
+  ctx.beginPath();
+  ctx.arc(-2.6, -24, 2.6, 0.15 * Math.PI, 0.85 * Math.PI);
+  ctx.arc(2.6, -24, 2.6, 0.15 * Math.PI, 0.85 * Math.PI);
+  ctx.stroke();
+
+  /* tay */
+  ctx.fillStyle = C.ham;
+  ctx.strokeStyle = 'rgba(150,110,80,.35)';
+  ctx.lineWidth = 1.5;
+  if (opts.flap) {
+    /* 2 tay vẫy nhanh khi loạng choạng */
+    const fa = Math.sin(timeMs * 0.045) * 9;
+    ctx.beginPath(); ctx.ellipse(-27, -34 + fa * 0.7, 6, 8, -0.9 + fa * 0.05, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(27, -34 - fa * 0.7, 6, 8, 0.9 - fa * 0.05, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  } else if (armUp) {
+    ctx.beginPath(); ctx.ellipse(-27, -40, 6, 8, -0.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(27, -40, 6, 8, 0.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  } else {
+    ctx.beginPath(); ctx.ellipse(-25, -20, 6, 7, 0.4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(25, -20, 6, 7, -0.4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  }
+
+  /* chân — lift = -1/1: chân bên đó nhấc lên quơ trong không khí */
+  ctx.fillStyle = C.hamShade;
+  const swing = Math.sin(timeMs * 0.02) * 5;
+  if (opts.lift === -1) {
+    ctx.beginPath(); ctx.ellipse(-12 - swing * 0.6, -12 - Math.abs(swing) * 0.8, 7, 4, -0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(10, -2, 7, 4, 0, 0, Math.PI * 2); ctx.fill();
+  } else if (opts.lift === 1) {
+    ctx.beginPath(); ctx.ellipse(-10, -2, 7, 4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(12 + swing * 0.6, -12 - Math.abs(swing) * 0.8, 7, 4, 0.3, 0, Math.PI * 2); ctx.fill();
+  } else {
+    ctx.beginPath(); ctx.ellipse(-10, -2, 7, 4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(10, -2, 7, 4, 0, 0, Math.PI * 2); ctx.fill();
+  }
+
+  /* giọt mồ hôi khi loạng choạng */
+  if (opts.sweat) {
+    ctx.fillStyle = 'rgba(120,190,255,.9)';
+    ctx.beginPath();
+    ctx.moveTo(26, -56);
+    ctx.quadraticCurveTo(31, -48, 26, -45);
+    ctx.quadraticCurveTo(21, -48, 26, -56);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  /* dấu chấm than đỏ khi bị xô ngã */
+  if (opts.bang) {
+    const bx = x, byv = y - 88;
+    ctx.fillStyle = '#e83a3a';
+    rr(bx - 4, byv - 20, 8, 16, 4);
+    ctx.fill();
+    ctx.beginPath(); ctx.arc(bx, byv + 3, 4.4, 0, Math.PI * 2); ctx.fill();
+  }
+
+  /* dù khi rơi xuống cuối ván */
+  if (opts.chute) {
+    ctx.save();
+    ctx.translate(x, y - 96);
+    ctx.rotate((opts.rot || 0) * 0.4);
+    for (let k = 0; k < 5; k++) {
+      ctx.fillStyle = k % 2 ? '#fff2dd' : '#ff9d4d';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      const a1 = Math.PI + (k / 5) * Math.PI;
+      const a2 = Math.PI + ((k + 1) / 5) * Math.PI;
+      ctx.arc(0, 0, 40, a1, a2);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.strokeStyle = 'rgba(150,110,80,.6)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-36, -8); ctx.lineTo(-13, 48);
+    ctx.moveTo(36, -8); ctx.lineTo(13, 48);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawCoin(c) {
+  const x = sx(c.x), y = sy(c.y);
+  ctx.fillStyle = C.coin;
+  ctx.beginPath(); ctx.arc(x, y, 14, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = C.coinIn;
+  ctx.beginPath(); ctx.arc(x, y, 9.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = C.coin;
+  ctx.beginPath(); ctx.arc(x - 2.5, y - 2.5, 3, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawFx() {
+  const now = timeMs;
+  /* vòng sáng Perfect */
+  for (const r of rings) {
+    const p = (now - r.born) / 450;
+    if (p >= 1) continue;
+    ctx.globalAlpha = 1 - p;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 4 * (1 - p);
+    ctx.beginPath();
+    ctx.ellipse(sx(r.x), sy(r.y), 56 + p * 84, 20 + p * 28, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  /* lấp lánh (dấu cộng xoay) */
+  for (const s of sparkles) {
+    const p = (now - s.born) / 500;
+    if (p >= 1) continue;
+    ctx.globalAlpha = 1 - p;
+    ctx.fillStyle = '#fff';
+    ctx.save();
+    ctx.translate(sx(s.x), sy(s.y) - p * 30);
+    ctx.rotate(p * 1.5);
+    const r2 = 8 * (1 - p * 0.5);
+    rr(-r2, -1.5, r2 * 2, 3, 1.5); ctx.fill();
+    rr(-1.5, -r2, 3, r2 * 2, 1.5); ctx.fill();
+    ctx.restore();
+  }
+  /* chữ nổi */
+  ctx.textAlign = 'center';
+  for (const f of floatTexts) {
+    const p = (now - f.born) / 800;
+    if (p >= 1) continue;
+    ctx.globalAlpha = 1 - p;
+    ctx.font = '800 ' + (f.size || 34) + 'px ' + CANVAS_FONT_STACK;
+    ctx.fillStyle = f.color || '#fff';
+    ctx.strokeStyle = 'rgba(120,80,30,.8)';
+    ctx.lineWidth = 5;
+    const y = sy(f.y) - p * 52;
+    ctx.strokeText(f.text, sx(f.x), y);
+    ctx.fillText(f.text, sx(f.x), y);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function render() {
+  drawBackground();
+
+  /* lớp thế giới — zoom trình diễn quanh tâm màn (pan-out cuối ván) */
+  ctx.save();
+  if (Math.abs(viewZoom - 1) > 0.001) {
+    ctx.translate(LW / 2, LH / 2);
+    ctx.scale(viewZoom, viewZoom);
+    ctx.translate(-LW / 2, -LH / 2);
+  }
+
+  drawTable();
+
+  /* nhún của miếng trên cùng khi hamster vừa đáp (impact) */
+  let bSq = 0;
+  const bp = (timeMs - landBounceT0) / BOUNCE_MS;
+  if (bp >= 0 && bp < 1) bSq = Math.sin(bp * Math.PI);
+
+  /* tháp phô mai (chỉ vẽ phần trong khung nhìn) */
+  for (let i = 0; i < tower.length; i++) {
+    const isTop = i === tower.length - 1;
+    if (isTop && bSq > 0) {
+      /* squash quanh mép DƯỚI của miếng: lún xuống rồi bật lại */
+      const bx = sx(tower[i].cx), byB = sy(-i * BLOCK_H);
+      ctx.save();
+      ctx.translate(bx, byB);
+      ctx.scale(1 + 0.10 * bSq, 1 - 0.12 * bSq);
+      ctx.translate(-bx, -byB);
+      drawBlock(tower[i].cx, -(i + 1) * BLOCK_H, tower[i].kind || 'normal',
+        tower[i].seed != null ? tower[i].seed : i, tower[i].w);
+      ctx.restore();
+    } else {
+      drawBlock(tower[i].cx, -(i + 1) * BLOCK_H, tower[i].kind || 'normal',
+        tower[i].seed != null ? tower[i].seed : i, tower[i].w);
+    }
+  }
+
+  /* miếng trượt hụt đang rơi khỏi tháp */
+  for (const fb of fallBlocks) {
+    const cxS = sx(fb.cx), cyS = sy(fb.yTop + BLOCK_H / 2);
+    ctx.save();
+    ctx.translate(cxS, cyS);
+    ctx.rotate(fb.rot);
+    ctx.translate(-cxS, -cyS);
+    drawBlock(fb.cx, fb.yTop, fb.kind || 'normal', fb.seed, fb.w);
+    ctx.restore();
+  }
+
+  drawBoards();
+  /* các miếng đang trượt vào (neo yTopW — miếng mốc ở làn cao) */
+  for (const s of sliders) {
+    drawBlock(s.cx, s.yTopW, s.kind, s.seed, s.w);
+  }
+
+  for (const c of coins) drawCoin(c);
+
+  /* hamster theo trạng thái */
+  if (ham) {
+    if (ham.state === 'jump') {
+      const p = Math.min(1, (timeMs - ham.t0) / (ham.jumpDur || JUMP_DUR));
+      const h = (ham.jumpH || JUMP_H) * Math.sin(p * Math.PI);
+      drawHam(ham.x, surfaceY() - 8 - h, { armsUp: true, squash: -0.1 * Math.sin(p * Math.PI) });
+    } else if (ham.state === 'stumble') {
+      /* nghiêng người về 1 phía quanh chân trụ, chân kia quơ, 2 tay vẫy */
+      const p = Math.min(1, (timeMs - ham.t0) / STUMBLE_MS);
+      const lean = ham.stumbleDir || -1;
+      const rot = lean * 0.24 * Math.sin(p * Math.PI) * (1 + 0.12 * Math.sin(p * 22));
+      /* chân PHÍA MÉP (đối diện hướng nghiêng) quơ trong không khí,
+         chân phía nghiêng làm trụ */
+      drawHam(ham.x, surfaceY() - 8 + BLOCK_H * 0.12 * bSq, {
+        rot, sweat: true, flap: true, lift: -lean, pivotX: lean * 10,
+      });
+    } else if (ham.state === 'drop') {
+      /* rơi tự do sau khi tháp sập */
+      drawHam(ham.x, ham.drop.y - 8, { armsUp: true, squash: -0.06 });
+    } else if (ham.state === 'knock') {
+      const k = ham.knock;
+      drawHam(k.x, k.y, { rot: k.rot, bang: true });
+    } else if (ham.state === 'chute') {
+      const c2 = ham.chute;
+      drawHam(c2.x, c2.y, { chute: true, rot: Math.sin(timeMs * 0.003) * 0.1, armsUp: true });
+    } else {
+      /* idle — thở nhẹ, lún theo nhún của miếng vừa đáp (đứng trên mặt trên) */
+      drawHam(ham.x, surfaceY() - 8 + BLOCK_H * 0.12 * bSq, {
+        squash: Math.sin(timeMs * 0.004) * 0.03 + 0.1 * bSq,
+      });
+    }
+
+    /* chỉ báo lò xo đã nạp — mũi tên xanh nhấp nhô trên đầu */
+    if (springArmed && (ham.state === 'idle' || ham.state === 'stumble')) {
+      const ax = sx(ham.x);
+      const ay = sy(surfaceY() - 8) - 100 + Math.sin(timeMs * 0.008) * 5;
+      ctx.fillStyle = 'rgba(120,200,255,.9)';
+      ctx.beginPath();
+      ctx.moveTo(ax, ay - 9);
+      ctx.lineTo(ax + 8, ay + 4);
+      ctx.lineTo(ax - 8, ay + 4);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  drawFx();
+  ctx.restore();                        // kết thúc lớp thế giới (zoom)
+
+  /* màn mờ khi pause */
+  if (paused && state === 'playing') {
+    ctx.fillStyle = 'rgba(20,10,30,.45)';
+    ctx.fillRect(0, 0, LW, LH);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff';
+    ctx.font = '700 34px ' + CANVAS_FONT_STACK;
+    ctx.fillText(t('tapToResume'), LW / 2, LH / 2);
+  }
+}
+
+/* ================================================================
+ * §7. Logic gameplay
+ * ================================================================ */
+/* Bắt đầu 1 lượt: ván gỗ thò ra + miếng phô mai đậu chờ ở mép, rồi mới trượt */
+/* Chọn loại miếng theo trọng số, mở khóa dần theo độ cao */
+function pickKind() {
+  const n = tower.length;
+  const pool = [['normal', 62]];
+  if (n >= 5) pool.push(['gold', 7]);
+  if (n >= 6) pool.push(['spring', 7]);
+  if (n >= 8) pool.push(['mini', 8]);
+  if (n >= 12) pool.push(['ice', 8]);
+  if (n >= 15) pool.push(['mold', 8]);
+  let total = 0;
+  for (const p of pool) total += p[1];
+  let r = rand01() * total;
+  for (const p of pool) {
+    r -= p[1];
+    if (r <= 0) return p[0];
+  }
+  return 'normal';
+}
+
+/* Sinh 1 miếng + ván gỗ của nó (mốc bay ở làn cao hơn) */
+function spawnOne(dir, kind, extraDelay) {
+  const w = kind === 'mini' ? MINI_W : BLOCK_W;
+  const lift = kind === 'mold' ? MOLD_LIFT : 0;
+  const gap = BLOCK_W * 0.62 + 10;
+  boards.push({
+    dir,
+    yW: surfaceY() - lift,
+    endX: topCx() - dir * gap,
+    extendT0: timeMs,
+    retractT0: 0,
+  });
+  const spdMul = kind === 'gold' ? GOLD_SPEED : 1;
+  const board = boards[boards.length - 1];   // ván của chính miếng này
+  sliders.push({
+    board,
+    cx: topCx() - dir * (LW * 0.5 + BLOCK_W * 0.75),
+    dir, kind, w,
+    /* tốc độ tăng theo tầng + jitter ngẫu nhiên từng miếng */
+    speed: Math.min(MAX_SPEED * spdMul,
+      (BASE_SPEED + tower.length * SPEED_INC) * (0.85 + rand01() * SPEED_JITTER) * spdMul),
+    seed: tower.length + (dir > 0 ? 0 : 137),  // seed cố định — đáp xuống KHÔNG đổi hình
+    slideAt: timeMs + WAIT_MS * (0.8 + rand01() * 0.6) + (extraDelay || 0),
+    yTopW: surfaceY() - BLOCK_H - lift,        // neo world — không nhảy tầng khi tháp cao lên
+    dead: false,
+    passed: false,
+  });
+}
+
+function scheduleCycle() {
+  /* giữ lại miếng "chết" (double trouble) cho nó trượt nốt rồi rơi */
+  sliders = sliders.filter(s => s.dead);
+  const dir = rand01() < 0.5 ? 1 : -1;
+  blocksSinceCoin += 1;
+  blocksSinceGift += 1;
+  let kind;
+  if (blocksSinceGift >= nextGiftIn) {
+    kind = 'gift';
+    blocksSinceGift = 0;
+    nextGiftIn = 12 + Math.floor(rand01() * 9);   // 12–20 tầng một hộp quà
+  } else {
+    kind = pickKind();
+  }
+  /* đang nạp lò xo → miếng kế vào TRỄ thêm 320ms: cú nhảy lò xo (828ms)
+     không bao giờ rơi vào thế "tap sớm là chết chắc" với miếng nhanh */
+  const springDelay = springArmed ? 320 : 0;
+  /* double trouble: 2 miếng thường vào từ 2 phía so le, chỉ đáp được 1 */
+  if (kind === 'normal' && tower.length >= DOUBLE_FROM && rand01() < 0.09) {
+    spawnOne(dir, 'normal', springDelay);
+    spawnOne(-dir, 'normal', springDelay + 380 + rand01() * 240);
+  } else {
+    spawnOne(dir, kind, springDelay);
+  }
+  /* thỉnh thoảng thả một đồng xu từ trên trời */
+  if (blocksSinceCoin >= nextCoinIn) {
+    blocksSinceCoin = 0;
+    nextCoinIn = 5 + Math.floor(rand01() * 5);    // 5–9 tầng một xu
+    coins.push({
+      x: topCx() + (rand01() - 0.5) * 70,
+      y: surfaceY() - LH * 0.55,
+      vy: 1.9 + rand01() * 0.7,
+      val: rand01() < 0.18 ? 3 : 1,
+    });
+  }
+}
+
+/* Rút mọi ván gỗ đang thò ra (gọi khi miếng đã đậu / thua) */
+function retractBoards() {
+  for (const b of boards) {
+    if (!b.retractT0) b.retractT0 = timeMs;
+  }
+}
+
+function updateScoreHud() { elScore.textContent = String(score); }
+function updateBestHud() { elBest.textContent = String(best); }
+function updateCoinHud() { elCoin.textContent = String(coinsTotal); }
+
+/* Chỉ báo "Perfect ×n" dưới điểm — hiện từ chuỗi 2, pop khi tăng */
+function updateStreakHud() {
+  const el = $('streak');
+  if (combo >= 2) {
+    el.textContent = t('perfect') + ' ×' + combo;
+    el.classList.remove('hidden');
+    el.classList.remove('pop');
+    void el.offsetWidth;               // reset animation để pop lại
+    el.classList.add('pop');
+  } else {
+    el.classList.add('hidden');
+  }
+}
+
+function persistSaved() {
+  const light = { best, coins: coinsTotal };
+  saveData(light);
+  saveLocal(light);
+}
+
+function addScore(n) {
+  score += n;
+  updateScoreHud();
+  if (score > best) {                 // best đổi → persist NGAY (game-common §1.2)
+    best = score;
+    persistSaved();
+  }
+}
+
+function addCoins(n, wx, wy) {
+  coinsTotal += n;
+  updateCoinHud();
+  persistSaved();
+  floatTexts.push({ x: wx, y: wy, born: timeMs, text: '+' + n, color: '#ffd23f', size: 20 });
+  sparkles.push({ x: wx, y: wy, born: timeMs });
+}
+
+/* Miếng phô mai dừng lại & thành tầng mới (hamster đáp lên nó) */
+function pinSlider(s) {
+  const prevTop = topCx();
+  const offset = s.cx - prevTop;
+  tower.push({ cx: s.cx, kind: s.kind, w: s.w, seed: s.seed });
+  /* miếng còn lại của round (double trouble) → "chết": trượt nốt rồi rơi, vô hại */
+  for (const o of sliders) {
+    if (o !== s) o.dead = true;
+  }
+  sliders = sliders.filter(x => x !== s);
+  /* chỉ rút ván KHÔNG còn miếng nào sở hữu — ván của miếng "chết" giữ lại
+     cho tới khi nó trượt qua hẳn (tránh phô mai lơ lửng giữa trời) */
+  for (const b of boards) {
+    if (!b.retractT0 && !sliders.some(o => o.board === b)) b.retractT0 = timeMs;
+  }
+
+  /* epsilon nới theo tốc độ để cửa sổ THỜI GIAN bấm Perfect (~55ms) không co lại
+     khi phô mai chạy nhanh */
+  const eps = PERFECT_EPS * Math.max(1, s.speed / BASE_SPEED);
+  const perfect = Math.abs(offset) <= eps;
+
+  if (perfect) combo += 1; else combo = 0;
+  /* Perfect: +5 điểm, mỗi Perfect liên tiếp cộng thêm 5 (5→10→15…); mini ×2 */
+  let gain = perfect ? 5 * combo : 1;
+  if (s.kind === 'mini') gain *= 2;
+  addScore(gain);
+  updateStreakHud();
+  floatTexts.push({
+    x: s.cx, y: surfaceY() - 14, born: timeMs,
+    text: '+' + gain, color: perfect ? '#ffd23f' : '#fff',
+  });
+  if (s.kind === 'gift') addCoins(3, s.cx, surfaceY() - 44);
+  if (s.kind === 'gold') addCoins(8, s.cx, surfaceY() - 44);
+  if (s.kind === 'spring') {
+    springArmed = true;                // cú nhảy KẾ TIẾP cao & lâu hơn
+    floatTexts.push({
+      x: s.cx, y: surfaceY() - 74, born: timeMs, text: '▲', color: '#9adcff', size: 28,
+    });
+  }
+  if (s.kind === 'ice') {
+    /* mặt băng trơn — hamster trượt theo đà của miếng */
+    ham.slideVx = s.dir * Math.max(2.2, s.speed * 0.5);
+  }
+
+  landBounceT0 = timeMs;               // miếng trên cùng nhún nhẹ khi đáp
+
+  if (perfect) {
+    rings.push({ x: s.cx, y: surfaceY(), born: timeMs });
+    floatTexts.push({
+      x: s.cx, y: surfaceY() - 46, born: timeMs,
+      text: combo >= 2 ? t('perfect') + ' ×' + combo : t('perfect'), color: '#fff',
+    });
+    if (combo >= 2) addCoins(1, s.cx, surfaceY() - 76);
+    ham.state = 'idle';
+  } else {
+    /* đáp sát mép miếng → loạng choạng NGHIÊNG về phía có chỗ đứng:
+       gần mép PHẢI → nghiêng TRÁI (chân trái trụ, chân phải quơ) */
+    const hamRel = ham.x - s.cx;
+    if (s.w / 2 - Math.abs(hamRel) < STUMBLE_EDGE) {
+      ham.state = 'stumble';
+      ham.t0 = timeMs;
+      ham.stumbleDir = hamRel > 0 ? -1 : 1;
+    } else {
+      ham.state = 'idle';
+    }
+  }
+  scheduleCycle();
+}
+
+/* Biến 1 miếng đang trượt thành miếng rơi tự do */
+function dropSlider(s) {
+  fallBlocks.push({
+    cx: s.cx, yTop: s.yTopW,
+    vx: s.dir * Math.max(2, s.speed) * 0.7, vy: 0.4,
+    rot: 0, vr: s.dir * 0.045,
+    kind: s.kind, w: s.w, seed: s.seed,
+  });
+}
+
+/* Dọn mọi miếng còn lại thành miếng rơi (khi thua) */
+function dropAllSliders() {
+  for (const s of sliders) dropSlider(s);
+  sliders = [];
+}
+
+/* Bị phô mai xô ngã → thua. fromY = vị trí chân hamster lúc bị tông
+   (đang bay lên mà bị tông thì knock bắt đầu đúng chỗ đó, không giật hình) */
+function failRun(s, dir, fromY) {
+  /* chốt vị trí knock TRƯỚC khi tháp cao thêm (tower.push làm surfaceY đổi) */
+  const fy = fromY != null ? fromY : surfaceY();
+  if (s.kind === 'mold') {
+    /* miếng mốc bay cao — không xếp vào tháp, văng ra rơi tự do */
+    sliders = sliders.filter(x => x !== s);
+    dropSlider(s);
+  } else {
+    /* miếng thường vẫn nằm lên tháp (như game gốc) */
+    const clampedCx = topCx() + Math.max(
+      -BLOCK_W * MAX_OVERSHOOT,
+      Math.min(BLOCK_W * MAX_OVERSHOOT, s.cx - topCx())
+    );
+    tower.push({ cx: clampedCx, kind: s.kind, w: s.w, seed: s.seed });
+    sliders = sliders.filter(x => x !== s);
+  }
+  dropAllSliders();
+  retractBoards();
+
+  ham.state = 'knock';
+  ham.knock = {
+    x: ham.x, y: fy,
+    vx: dir * 2.6, vy: -6.5, rot: 0, vr: dir * 0.14,
+  };
+  endRun();
+}
+
+/* Nhảy vọt qua miếng phô mai (không đáp được) → KHÔNG thua: miếng văng đi
+   kéo SẬP 5 tầng trên cùng của tháp (trừ 5 điểm), hamster rơi tự do xuống
+   đáp lên tầng thứ 6 (luôn chừa tầng gốc trên đĩa) */
+function missPenalty(dir) {
+  /* vị trí chân hiện tại (đang bay thì giữa trời) làm điểm bắt đầu rơi */
+  let fromY = surfaceY();
+  if (ham.state === 'jump') {
+    const p = Math.min(1, (timeMs - ham.t0) / (ham.jumpDur || JUMP_DUR));
+    fromY = surfaceY() - (ham.jumpH || JUMP_H) * Math.sin(p * Math.PI);
+  }
+
+  /* 5 tầng trên cùng đổ nhào theo miếng văng đi */
+  const drop = Math.min(5, tower.length - 1);
+  for (let i = 0; i < drop; i++) {
+    const b = tower.pop();
+    fallBlocks.push({
+      cx: b.cx,
+      yTop: -(tower.length + 1) * BLOCK_H,     // đúng vị trí cũ của tầng vừa rớt
+      vx: dir * (1.2 + rand01() * 1.6) * (i % 2 ? 0.6 : 1),
+      vy: -1.5 + i * 0.5,
+      rot: 0,
+      vr: dir * (0.03 + rand01() * 0.05),
+      kind: b.kind || 'normal', w: b.w || BLOCK_W, seed: b.seed || 0,
+    });
+  }
+
+  score = Math.max(0, score - 5);
+  updateScoreHud();
+  combo = 0;
+  updateStreakHud();
+  floatTexts.push({
+    x: topCx(), y: surfaceY() - BLOCK_H * 2, born: timeMs, text: '-5', color: '#ff6b6b',
+  });
+
+  /* hamster rơi tự do, vừa rơi vừa trôi về chỗ đứng được trên tầng mới */
+  ham.state = 'drop';
+  ham.drop = { y: fromY, vy: 0 };
+  ham.slideVx = 0;
+  scheduleCycle();
+}
+
+function endRun() {
+  state = 'over';
+  combo = 0;
+  updateStreakHud();
+  runsEnded += 1;
+  persistSaved();                      // chốt best + coins cuối ván
+
+  const isNew = score > bestStart;     // best đã persist live trong addScore
+  elOvTitle.textContent = isNew ? t('newBest') : t('gameOver');
+  elOvScore.textContent = String(score);
+  elOvBest.textContent = String(best);
+  fitScores();
+  updateBestHud();                     // HUD Best chỉ refresh khi hết màn
+
+  sendMessage('game_result');          // không level: result=null, showModal=false
+  if (runsEnded % ADS_EVERY === 0) sendMessage('ads');
+
+  /* camera pan-out: khung trọn tháp giữa màn hình */
+  const towerH = tower.length * BLOCK_H;
+  let mn = Infinity, mx = -Infinity;
+  for (const b of tower) {
+    mn = Math.min(mn, b.cx);
+    mx = Math.max(mx, b.cx);
+  }
+  zoomTarget = Math.min(1, (LH * 0.72) / (towerH + 340));
+  overOff = LH * 0.5 + towerH * 0.5;   // tâm tháp (world -towerH/2) → giữa màn
+  overX = (mn + mx) / 2 - LW / 2;
+
+  /* delay cho animation ngã chạy xong rồi mới hiện popup (popup-common §5).
+     Guard state: native có thể gọi onRetryLevel trong cửa sổ này */
+  clearTimeout(overTimer);
+  overTimer = setTimeout(() => {
+    if (state === 'over') elOverlay.classList.remove('hidden');
+  }, 700);
+}
+
+function resetWorld() {
+  tower = [{ cx: LW / 2, kind: 'normal', w: BLOCK_W, seed: 0 }];
+  boards = [];
+  fallBlocks = [];
+  landBounceT0 = -1e9;
+  viewZoom = 1;
+  zoomTarget = 1;
+  coins = [];
+  floatTexts = [];
+  rings = [];
+  sparkles = [];
+  score = 0;
+  combo = 0;
+  bestStart = best;
+  blocksSinceCoin = 0;
+  blocksSinceGift = 0;
+  ham = {
+    x: LW / 2, state: 'idle', t0: 0, knock: null, chute: null,
+    jumpH: JUMP_H, jumpDur: JUMP_DUR, slideVx: 0,
+  };
+  sliders = [];
+  springArmed = false;
+  camOff = camTargetOff();
+  camX = camTargetX();
+  updateScoreHud();
+  updateBestHud();
+  updateCoinHud();
+  updateStreakHud();
+}
+
+function startRun() {
+  $('start-hint').classList.add('hidden');
+  state = 'playing';
+  scheduleCycle();
+}
+
+function newRun() {
+  clearTimeout(overTimer);             // hủy popup đang chờ hiện của ván trước
+  elOverlay.classList.add('hidden');
+  resetWorld();
+  state = 'playing';
+  paused = false;
+  scheduleCycle();
+}
+
+/* ================================================================
+ * §8. Popup (popup-common.md §5/§5b)
+ * ================================================================ */
+function fitScores() {
+  var r = document.querySelector('.sb');
+  if (!r) return;
+  var card = r.closest('.card');
+  var vals = r.querySelectorAll('.v');
+  vals.forEach(function (v) { v.style.fontSize = ''; });
+  var pad = parseFloat(getComputedStyle(card).paddingLeft) || 26;
+  var max = card.clientWidth - 2 * pad;
+  var fz = parseFloat(getComputedStyle(vals[0]).fontSize) || 32;
+  while (r.scrollWidth > max && fz > 14) {
+    fz -= 1;
+    vals.forEach(function (v) { v.style.fontSize = fz + 'px'; });
+  }
+}
+
+/* ================================================================
+ * §9. Vòng lặp update
+ * ================================================================ */
+function hamFeetH() {
+  /* độ cao chân hamster so với mặt tháp khi đang nhảy (0 = đứng đất) */
+  if (!ham || ham.state !== 'jump') return 0;
+  const p = Math.min(1, (timeMs - ham.t0) / (ham.jumpDur || JUMP_DUR));
+  return (ham.jumpH || JUMP_H) * Math.sin(p * Math.PI);
+}
+
+function update(dt) {
+  if (paused) return;                  // pause đóng băng toàn bộ thế giới
+  const dtf = dt / 16.667;
+
+  if (state === 'playing') {
+    /* các miếng phô mai: đậu chờ trên ván → trượt vào */
+    const grounded0 = ham.state === 'idle' || ham.state === 'stumble';
+    for (const s of sliders) {
+      if (timeMs < s.slideAt) continue;
+      s.cx += s.dir * s.speed * dtf;
+
+      /* miếng mốc bay cao — đứng yên là an toàn, không xô đẩy khi grounded */
+      if (!s.dead && s.kind !== 'mold' && grounded0) {
+        /* nhảy trễ (hoặc không nhảy) → miếng CHỒNG LẤN thân hamster → xô ngã
+           (test overlap 2 mép: miếng đã trượt QUA hẳn thì không tính) */
+        const hit = s.cx + s.w / 2 >= ham.x - HAM_HALF &&
+                    s.cx - s.w / 2 <= ham.x + HAM_HALF;
+        if (hit) { failRun(s, s.dir); return; }
+      }
+
+      /* miếng trượt hết qua mép xa của tháp */
+      const trail = s.cx - s.dir * s.w / 2;
+      const farEdge = topCx() + s.dir * (BLOCK_W / 2 + 6);
+      if (s.dir === 1 ? trail > farEdge : trail < farEdge) s.passed = true;
+    }
+
+    /* xử lý các miếng đã trượt qua hẳn */
+    for (let i = sliders.length - 1; i >= 0; i--) {
+      const s = sliders[i];
+      if (!s.passed) continue;
+      sliders.splice(i, 1);
+      dropSlider(s);
+      /* rút ván của chính miếng này khi nó rời đi */
+      if (s.board && !s.board.retractT0) s.board.retractT0 = timeMs;
+      if (s.dead) continue;            // miếng thừa của double trouble — vô hại
+      if (s.kind === 'mold') {
+        /* NÉ ĐƯỢC phô mai mốc → thưởng, chơi tiếp */
+        addScore(2);
+        floatTexts.push({
+          x: topCx(), y: surfaceY() - 40, born: timeMs, text: '+2', color: '#bede76',
+        });
+        if (!sliders.some(x => !x.dead)) scheduleCycle();
+      } else if (!sliders.some(x => !x.dead)) {
+        /* NHẢY VỌT QUA miếng cuối của round → phạt: sập 5 tầng, chơi tiếp */
+        missPenalty(s.dir);
+      }
+    }
+
+    /* hamster đang nhảy — xét va chạm & tiếp đất */
+    if (ham.state === 'jump') {
+      const jDur = ham.jumpDur || JUMP_DUR;
+      const jH = ham.jumpH || JUMP_H;
+      const p = (timeMs - ham.t0) / jDur;
+      const h = jH * Math.sin(Math.min(1, p) * Math.PI);
+
+      for (const s of sliders) {
+        if (s.dead || timeMs < s.slideAt) continue;
+        const horiz = s.cx + s.w / 2 >= ham.x - HAM_HALF &&
+                      s.cx - s.w / 2 <= ham.x + HAM_HALF;
+        if (!horiz) continue;
+
+        if (s.kind === 'mold') {
+          /* ĐÂM ĐẦU vào phô mai mốc đang bay cao → thua */
+          const headTop = h + 74;              // đỉnh đầu (cả tai) so với mặt tháp
+          if (headTop > MOLD_LIFT + 4 && h < MOLD_LIFT + BLOCK_H) {
+            failRun(s, s.dir, surfaceY() - h);
+            return;
+          }
+        } else if (p < 0.5 && h < BLOCK_H - 6) {
+          /* nhảy QUÁ TRỄ: thân chưa vượt qua đỉnh miếng mà mép miếng đã tới */
+          failRun(s, s.dir, surfaceY() - h);
+          return;
+        }
+      }
+
+      if (p >= 0.5) {
+        /* đang rơi xuống: chạm mặt miếng phô mai nếu nó ở dưới chân */
+        for (const s of sliders) {
+          if (s.dead || s.kind === 'mold' || timeMs < s.slideAt) continue;
+          if (h <= BLOCK_H && Math.abs(ham.x - s.cx) < s.w / 2) {
+            pinSlider(s);              // đáp lên miếng mới → thành tầng
+            break;
+          }
+        }
+      }
+      if (ham.state === 'jump' && p >= 1) {
+        ham.state = 'idle';            // rơi lại mặt tháp cũ (nhảy quá sớm)
+      }
+    }
+
+    /* hamster rơi tự do xuống tầng mới sau khi tháp sập (miss penalty) */
+    if (ham.state === 'drop') {
+      const d = ham.drop;
+      d.vy += 0.55 * dtf;
+      d.y += d.vy * dtf;
+      /* trôi nhẹ về vùng đứng được trên tầng mới */
+      const tb = tower[tower.length - 1];
+      const half = (tb.w || BLOCK_W) / 2 - 20;
+      const clampX = Math.max(tb.cx - half, Math.min(tb.cx + half, ham.x));
+      ham.x += (clampX - ham.x) * (1 - Math.pow(0.9, dtf));
+      if (d.y >= surfaceY()) {
+        ham.state = 'idle';
+        ham.drop = null;
+        landBounceT0 = timeMs;
+      }
+    }
+
+    /* trượt trên mặt băng (phô mai băng) — trôi theo đà, tới mép thì loạng choạng */
+    if (ham.slideVx && (ham.state === 'idle' || ham.state === 'stumble')) {
+      ham.x += ham.slideVx * dtf;
+      ham.slideVx *= Math.pow(0.90, dtf);
+      const tb = tower[tower.length - 1];
+      const maxOff = (tb.w || BLOCK_W) / 2 - 16;
+      const rel = ham.x - tb.cx;
+      if (Math.abs(rel) > maxOff) {
+        ham.x = tb.cx + Math.sign(rel) * maxOff;
+        ham.slideVx = 0;
+        if (ham.state !== 'stumble') {
+          ham.state = 'stumble';
+          ham.t0 = timeMs;
+          ham.stumbleDir = rel > 0 ? -1 : 1;
+        }
+      }
+      if (Math.abs(ham.slideVx) < 0.05) ham.slideVx = 0;
+    }
+
+    /* hamster loạng choạng xong → đứng lại (đứng NGUYÊN chỗ đáp, không tự nhích) */
+    if (ham.state === 'stumble' && timeMs - ham.t0 > STUMBLE_MS) ham.state = 'idle';
+
+    /* xu rơi + nhặt xu */
+    const hamCy = surfaceY() - hamFeetH() - 30;   // tâm thân hamster (world)
+    for (const c of coins) {
+      c.y += c.vy * dtf;
+      const dx = c.x - ham.x, dy = c.y - hamCy;
+      if (dx * dx + dy * dy < 46 * 46) {
+        c.hit = true;
+        addCoins(c.val, c.x, c.y);
+      }
+    }
+    coins = coins.filter(c => !c.hit && c.y < surfaceY() + 6);
+  }
+
+  /* miếng phô mai trượt hụt đang rơi */
+  for (const fb of fallBlocks) {
+    fb.vy += 0.55 * dtf;
+    fb.cx += fb.vx * dtf;
+    fb.yTop += fb.vy * dtf;
+    fb.rot += fb.vr * dtf;
+  }
+  fallBlocks = fallBlocks.filter(fb => sy(fb.yTop) < LH / 2 + cullPad() + 220);
+
+  /* dọn ván gỗ đã rút xong */
+  boards = boards.filter(b => !b.retractT0 || timeMs - b.retractT0 < BOARD_MS + 40);
+
+  /* hamster bị xô ngã → bay ra rồi bung dù */
+  if (ham && ham.state === 'knock') {
+    const k = ham.knock;
+    k.vy += 0.5 * dtf;
+    k.x += k.vx * dtf;
+    k.y += k.vy * dtf;
+    k.rot += k.vr * dtf;
+    if (k.vy > 2.2) {                  // qua đỉnh và bắt đầu rơi nhanh → bung dù
+      ham.state = 'chute';
+      /* dù mở NGAY TẠI vị trí đang bay, giữ nguyên vận tốc → không giật hình */
+      ham.chute = { x: k.x, y: k.y, vx: k.vx, vy: k.vy };
+    }
+  }
+  if (ham && ham.state === 'chute') {
+    const c2 = ham.chute;
+    c2.vy += (1.15 - c2.vy) * (1 - Math.pow(0.93, dtf));   // dù hãm rơi từ từ
+    c2.vx *= Math.pow(0.95, dtf);                          // trôi ngang tắt dần
+    c2.x += c2.vx * dtf + Math.sin(timeMs * 0.003) * 0.5 * dtf;
+    c2.y += c2.vy * dtf;
+  }
+
+  /* camera: chơi → đuổi theo đỉnh tháp; thua → pan-out khung trọn tháp */
+  const k2 = 1 - Math.pow(0.88, dtf);
+  if (state === 'over') {
+    const k3 = 1 - Math.pow(0.9, dtf);
+    camOff += (overOff - camOff) * k3;
+    camX += (overX - camX) * k3;
+    viewZoom += (zoomTarget - viewZoom) * k3;
+  } else {
+    camOff += (camTargetOff() - camOff) * k2;
+    camX += (camTargetX() - camX) * k2;
+    viewZoom += (1 - viewZoom) * k2;
+  }
+
+  /* dọn FX hết hạn */
+  floatTexts = floatTexts.filter(f => timeMs - f.born < 800);
+  rings = rings.filter(r => timeMs - r.born < 450);
+  sparkles = sparkles.filter(s => timeMs - s.born < 500);
+}
+
+function loop(ts) {
+  if (!lastTs) lastTs = ts;
+  let dt = ts - lastTs;
+  lastTs = ts;
+  if (dt > 100) dt = 100;              // tab ngủ / khựng dài → kẹp lại
+  if (!paused) timeMs += dt;
+  update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+
+/* ================================================================
+ * §10. Input
+ * ================================================================ */
+function onTap() {
+  if (state === 'ready') { startRun(); return; }
+  if (state === 'playing') {
+    if (paused) { paused = false; return; }   // tap đầu chỉ resume, không nhảy
+    if (ham.state === 'idle' || ham.state === 'stumble') {
+      ham.state = 'jump';
+      ham.t0 = timeMs;
+      ham.slideVx = 0;
+      if (springArmed) {
+        /* tiêu lò xo: cú nhảy này cao & lâu hơn */
+        springArmed = false;
+        ham.jumpH = JUMP_H * SPRING_MULT;
+        ham.jumpDur = JUMP_DUR * SPRING_MULT;
+      } else {
+        ham.jumpH = JUMP_H;
+        ham.jumpDur = JUMP_DUR;
+      }
+    }
+    /* đang bay / bị ngã → tap không làm gì */
+  }
+}
+
+/* ================================================================
+ * §11. Callback native → game (game-common §1.3 — định nghĩa sớm)
+ * ================================================================ */
+window.onAppPause = function () {
+  if (state === 'playing') paused = true;
+};
+window.onNextLevel = function () { /* game không level — no-op */ };
+window.onRetryLevel = function () {
+  if (state === 'over' || state === 'playing') newRun();
+};
+
+/* ================================================================
+ * §12. Boot (game-common §3 — đợi native inject, fallback 200ms)
+ * ================================================================ */
+function localizeDom() {
+  document.title = 'Hamster Jump';
+  $('start-title').textContent = t('title');
+  $('start-tap').textContent = t('tapToStart');
+  $('score-label').textContent = t('score');
+  $('lbl-best').textContent = t('best');
+  $('ov-lbl-score').textContent = t('score');
+  $('ov-lbl-best').textContent = t('best');
+  $('ov-btn-text').textContent = t('playAgain');
+  $('back-btn').setAttribute('aria-label', t('back'));
+}
+
+function boot() {
+  LANG = getLanguage();
+  applyUiFont(LANG);
+  document.documentElement.lang = LANG;
+  if (LANG === 'ar') document.body.classList.add('lang-ar');
+  if (!LATIN_LANGS.has(LANG)) CANVAS_FONT_STACK = 'system-ui, sans-serif';
+  /* nạp sớm font cho chữ vẽ canvas (Perfect!) — lỗi thì rơi về fallback */
+  if (document.fonts && document.fonts.load) {
+    try { document.fonts.load("800 22px 'Google Sans Flex'"); } catch (e) { /* ignore */ }
+  }
+
+  canvas = $('game-canvas');
+  ctx = canvas.getContext('2d');
+  elScore = $('score-num');
+  elBest = $('hud-best');
+  elCoin = $('hud-coin');
+  elOverlay = $('overlay');
+  elOvTitle = $('ov-title');
+  elOvScore = $('ov-score');
+  elOvBest = $('ov-best');
+
+  /* statusBarHeight → CSS var (max với env(safe-area-inset-top) làm trong CSS) */
+  document.documentElement.style.setProperty('--sbh', getStatusBarHeight() + 'px');
+
+  /* tiện chơi thử: ?reset=1 xoá kỷ lục + xu đã lưu (native không bao giờ gửi) */
+  if (new URLSearchParams(window.location.search).get('reset') === '1') {
+    try { localStorage.removeItem(LS_KEY); } catch (e) { /* ignore */ }
+    saveData({ best: 0, coins: 0 });
+  }
+
+  const saved = loadSaved();
+  best = saved.best;
+  coinsTotal = saved.coins;
+  bestStart = best;
+
+  localizeDom();
+  resize();
+  window.addEventListener('resize', resize);
+  resetWorld();
+  state = 'ready';
+
+  /* input */
+  canvas.addEventListener('pointerdown', function (e) { e.preventDefault(); onTap(); });
+  window.addEventListener('keydown', function (e) {
+    if (e.code !== 'Space' && e.code !== 'Enter') return;
+    if (state === 'over') return;                     // để nút Play Again nhận phím
+    if (e.target && e.target.closest && e.target.closest('.btn3d')) return;
+    e.preventDefault();
+    onTap();
+  });
+  $('back-btn').addEventListener('click', function (e) {
+    e.stopPropagation();
+    sendMessage('quit');
+  });
+  $('back-btn').addEventListener('keydown', function (e) {
+    if (e.code === 'Enter' || e.code === 'Space') {
+      e.preventDefault();
+      sendMessage('quit');
+    }
+  });
+  $('ov-btn').addEventListener('click', function () {
+    sendMessage('retry_level');        // game tự xử lý chơi lại (game-common §1.3)
+    newRun();
+  });
+
+  /* app chuyển nền khi chạy trong browser thường → cũng pause */
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) window.onAppPause();
+  });
+
+  requestAnimationFrame(loop);
+}
+
+(function waitForNativeInjection() {
+  const start = Date.now();
+  (function check() {
+    const injected = typeof window.language === 'string' || typeof window.data === 'string';
+    if (injected || Date.now() - start > 200) {
+      boot();
+    } else {
+      setTimeout(check, 10);
+    }
+  })();
+})();
+</script>
+</body>
+</html>
