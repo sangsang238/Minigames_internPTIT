@@ -1,0 +1,24 @@
+{
+  "title": "Find The Cow",
+  "packageName": "com.falcon.findthecow",
+  "engine": "HTML5",
+  "version": "1.0.0",
+  "category": "PUZZLE",
+  "tags": ["logic", "puzzle", "deduction", "brain", "grid"],
+  "description": "A cozy logic puzzle. Place one cow in every row, every column and every colored region so that no two cows ever touch, not even diagonally. Every level has a single solution you can deduce step by step: mark the cells you can rule out, then place each cow exactly right. You have 3 lives and the grid grows from a gentle 5x5 up to a brain-bending 10x10.",
+  "controls": "Tap a cell to toggle an X (hold and drag to mark several); double-tap to place a cow, which locks in place.",
+  "aiContext": "",
+  "aiBuildLink": "",
+  "demoUrl": "",
+  "storeLinks": {
+    "googlePlay": { "url": "", "downloads": 0 },
+    "iosAppStore": { "url": "", "downloads": 0 },
+    "steam": { "url": "", "downloads": 0 }
+  },
+  "entry": "index.html",
+  "coverImages": {
+    "landscape16x9": "cover-landscape-1920x1080.png",
+    "portrait2x3": "cover-portrait-800x1200.png",
+    "square1x1": "cover-square-800x800.png"
+  }
+}
