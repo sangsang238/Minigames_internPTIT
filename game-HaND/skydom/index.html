@@ -23,16 +23,17 @@
 
   :root {
     --ui-font: 'Google Sans Flex', system-ui, sans-serif;
-    /* Dark navy theme — khớp màu màn Game Over */
-    --bg-1: #1c2f63;
-    --bg-2: #0c1838;
-    --board-bg: #22386a;   /* bảng bàn cờ + thẻ điểm + nút */
-    --cell-bg: #2f4880;    /* ô lưới (navy sáng hơn để thấy lưới) */
-    --ink: #eaf1ff;
-    --ink-soft: #9fc0ff;
+    /* Candy Crush — nền sáng candyland, theme phẳng */
+    --bg-1: #37a8ff;       /* trời trên */
+    --bg-2: #9fdcff;       /* trời dưới */
+    --board-bg: #4a2e86;   /* khung bàn + thẻ điểm + nút (grape) */
+    --cell-bg: rgba(255,255,255,.10);  /* ô caro — tông tối */
+    --cell-b:  rgba(255,255,255,.22);  /* ô caro — tông sáng */
+    --ink: #2b2350;        /* chữ đậm trên panel sáng */
+    --ink-soft: #6a4bbd;   /* chữ phụ / icon (grape) */
     --royal: #3b5bdb;
     --gold: #ffd23f;
-    --green: #34e07a;
+    --green: #14b358;
     --danger: #ff5a5f;
     --cell: 40px; /* set bởi JS */
   }
@@ -86,7 +87,7 @@
   /* Btn3d — biến thể flat (shadow ẩn), icon vuông */
   .btn3d {
     --radius: 14px;
-    --surface-color: var(--board-bg);
+    --surface-color: #ffffff;
     --surface-text: var(--ink-soft);
     position: relative;
     display: inline-block;
@@ -139,13 +140,13 @@
     flex: 1 1 0;
     max-width: 150px;
     padding: 5px 12px 7px;
-    background: var(--board-bg);
+    background: rgba(255, 255, 255, .94);
     border-radius: 16px;
-    box-shadow: 0 4px 14px rgba(36, 48, 77, .12);
+    box-shadow: 0 4px 14px rgba(24, 20, 60, .18);
   }
   .sc-k {
     font-size: 10px; letter-spacing: 1.5px; font-weight: 800;
-    color: var(--ink-soft); text-transform: uppercase;
+    color: #e6467e; text-transform: uppercase;   /* nhãn hồng kẹo */
   }
   .sc-v { font-size: 26px; color: var(--ink); }
   .sc-v.best { color: var(--green); }
@@ -167,26 +168,60 @@
     text-shadow: 0 3px 10px rgba(20, 30, 90, .7); transform: translate(-50%, -50%);
     display: flex; flex-direction: column; align-items: center; gap: 2px;
   }
+  /* Flat design: chữ đậm màu theo cấp combo (--cc), đặt trên chip tối mờ để luôn nổi rõ */
   .fx-praise {
-    font-size: 36px; color: var(--gold);
-    -webkit-text-stroke: 1px rgba(255,255,255,.35);
-    text-shadow: 0 0 14px rgba(255,210,63,.65), 0 3px 10px rgba(0,0,0,.55);
+    font-size: 36px; color: var(--cc, #3ee87f);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, .55);
   }
-  /* Màu câu khen tăng dần theo cấp combo (nóng dần) */
-  .fx-combo.t1 .fx-praise { color: #ffb02e; text-shadow: 0 0 14px rgba(255,176,46,.7), 0 3px 10px rgba(0,0,0,.55); }
-  .fx-combo.t2 .fx-praise { color: #ff7a59; text-shadow: 0 0 16px rgba(255,122,89,.75), 0 3px 10px rgba(0,0,0,.55); }
-  .fx-combo.t3 .fx-praise { color: #ff5a94; text-shadow: 0 0 18px rgba(255,90,148,.8), 0 3px 10px rgba(0,0,0,.55); }
-  .fx-combo.t4 .fx-praise { color: #c07bff; text-shadow: 0 0 22px rgba(178,104,255,.85), 0 3px 12px rgba(0,0,0,.55); }
-  .fx-mult { font-size: 17px; letter-spacing: 1.5px; color: #fff; }
-  /* Tia sao bắn ra quanh câu khen */
-  .fx-spark {
+  .fx-mult { font-size: 15px; font-weight: 800; letter-spacing: 2px; color: rgba(255,255,255,.95);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .5); }
+  /* Chip nền tối bo tròn phía sau câu khen → chữ màu nào cũng dễ đọc (chỉ popup combo) */
+  .fx-combo.combo-pop {
+    padding: 8px 24px; border-radius: 16px;
+    background: rgba(14, 20, 42, .58);
+    box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .1);
+  }
+  /* Hạt phẳng tỏa quanh câu khen (tròn/vuông bo/dấu cộng/thoi) — hình & màu đặt trong JS */
+  .fx-particle {
     position: absolute; z-index: 7; pointer-events: none;
-    width: 14px; height: 14px; transform: translate(-50%, -50%);
-    background: var(--gold);
-    clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
-    filter: drop-shadow(0 0 3px rgba(255,210,63,.85));
+    transform: translate(-50%, -50%);
   }
-  .confetti { position: absolute; z-index: 60; width: 11px; height: 14px; pointer-events: none; }
+  /* Hiệu ứng riêng khi cầu vồng nổ: vòng cầu vồng (conic gradient khoét lỗ) + chớp trắng */
+  .fx-rainbow {
+    position: absolute; z-index: 7; pointer-events: none; border-radius: 50%;
+    background: conic-gradient(from 0deg, #ff4d6a, #ff9838, #ffcf3a, #2ed673, #3aa0ff, #b268ff, #ff4d6a);
+    -webkit-mask: radial-gradient(circle, transparent 52%, #000 55%);
+            mask: radial-gradient(circle, transparent 52%, #000 55%);
+  }
+  .fx-rainbow-flash {
+    position: absolute; z-index: 7; pointer-events: none; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,.95), rgba(255,255,255,0) 70%);
+  }
+  /* Tia sáng kẹo sọc (row/col) — lõi trắng, hào quang theo màu kẹo (currentColor) */
+  .fx-beam {
+    position: absolute; z-index: 6; pointer-events: none; border-radius: 999px;
+    background: linear-gradient(90deg, transparent, #fff 28%, #fff 72%, transparent);
+    box-shadow: 0 0 16px currentColor, 0 0 34px currentColor, 0 0 8px #fff;
+  }
+  .fx-beam.col {
+    background: linear-gradient(180deg, transparent, #fff 28%, #fff 72%, transparent);
+  }
+  /* Vòng nổ kẹo gói (bomb) — vành sáng lan ra theo màu kẹo */
+  .fx-ring {
+    position: absolute; z-index: 6; pointer-events: none; border-radius: 50%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, transparent 38%, currentColor 56%, transparent 72%);
+    box-shadow: 0 0 22px currentColor;
+  }
+  /* Pháo hoa chúc mừng: tia tròn phát sáng + chớp trắng ở tâm nổ */
+  .fw {
+    position: absolute; z-index: 60; width: 8px; height: 8px; border-radius: 50%;
+    pointer-events: none; box-shadow: 0 0 7px currentColor, 0 0 3px #fff;
+  }
+  .fw-flash {
+    position: absolute; z-index: 60; width: 54px; height: 54px; border-radius: 50%;
+    pointer-events: none; background: radial-gradient(circle, rgba(255,255,255,.95), rgba(255,255,255,0) 70%);
+  }
 
   /* ── Bàn chơi ─────────────────────────────────────────────────────── */
   .stage {
@@ -210,7 +245,8 @@
     border-radius: 14px;
     overflow: hidden;
   }
-  .grid-bg .slot { background: var(--cell-bg); outline: 2px solid var(--board-bg); }
+  .grid-bg .slot { background: var(--cell-bg); }
+  .grid-bg .slot.b { background: var(--cell-b); }   /* ô caro sáng */
   .board {
     position: relative;
   }
@@ -236,11 +272,12 @@
     justify-content: center;
     position: relative;
     transition: transform .12s ease, box-shadow .12s ease;
+    /* Đổ bóng mềm dưới viên kẹo (theo đúng hình) — chiều sâu kiểu Candy Crush */
+    filter: drop-shadow(0 3px 2px rgba(20, 12, 40, .38));
   }
-  /* Khối CHÍNH LÀ hình (không nền vuông) — hình tô màu, gần đầy ô, có bóng nhẹ */
+  /* Khối CHÍNH LÀ hình (không nền vuông) — hình tô màu, gần đầy ô */
   .tile-face svg {
     width: 100%; height: 100%; display: block;
-    filter: drop-shadow(0 2px 2px rgba(36, 48, 77, .32));
   }
   .tile.sel .tile-face { transform: scale(1.16); }
   .tile.sel .tile-face svg {
@@ -295,9 +332,9 @@
   .overlay.hidden .card { transform: scale(.9); }
   .card-title { color: #fff; font-size: 30px; font-weight: 900; margin-bottom: 14px; }
   .sb { display: flex; justify-content: center; gap: 30px; margin-bottom: 18px; }
-  .sb .k { font-size: 11px; letter-spacing: 2px; color: var(--ink-soft); font-weight: 800; }
+  .sb .k { font-size: 11px; letter-spacing: 2px; color: #8fb4ff; font-weight: 800; }
   .sb .v { font-size: 32px; color: #fff; font-weight: 900; }
-  .sb .v.best { color: var(--green); }
+  .sb .v.best { color: var(--gold); }
   .btn3d.play { --surface-color: #ffb02e; --surface-text: #3a2400; }
   .btn3d.play .btn3d-surface {
     height: 52px; padding: 0 34px; font-size: 17px; font-weight: 800; letter-spacing: .5px;
@@ -388,10 +425,10 @@ const LATIN_LANGS = new Set([
 ]);
 
 const I18N = {
-  en: { moves: 'Moves', score: 'Score', best: 'Best', gameOver: 'Game Over', newBest: 'New Best!', playAgain: 'Play Again', shuffle: 'Shuffle!',
+  en: { moves: 'Moves', score: 'Score', best: 'Best', gameOver: 'Game Over', newBest: 'New Best!', playAgain: 'Play Again', shuffle: 'Shuffle!', combo: 'COMBO',
         praise: ['Nice!', 'Great!', 'Awesome!', 'Amazing!', 'Unstoppable!', 'Legendary!'] },
   vi: { moves: 'Lượt', score: 'Điểm', best: 'Cao nhất', gameOver: 'Thua rồi', newBest: 'Kỷ lục mới!', playAgain: 'Chơi lại', shuffle: 'Trộn lại!',
-        praise: ['Tốt!', 'Tuyệt!', 'Xuất sắc!', 'Đỉnh!', 'Không cản nổi!', 'Huyền thoại!'] },
+        praise: ['Tốt lắm!', 'Tuyệt vời!', 'Xuất sắc!', 'Đỉnh cao!', 'Không thể cản phá!', 'Huyền thoại!'] },
   es: { level: 'Nivel', moves: 'Mov.', win: '¡Nivel completo!', lose: 'Sin movimientos', victory: '¡Ganaste!', next: 'Siguiente', retry: 'Reintentar' },
   fr: { level: 'Niveau', moves: 'Coups', win: 'Niveau terminé !', lose: 'Plus de coups', victory: 'Vous avez gagné !', next: 'Suivant', retry: 'Réessayer' },
   de: { level: 'Level', moves: 'Züge', win: 'Level geschafft!', lose: 'Keine Züge', victory: 'Gewonnen!', next: 'Weiter', retry: 'Nochmal' },
@@ -457,7 +494,7 @@ function getStatusBarHeight() {
  * 2. Cấu hình ván (score-attack, KHÔNG level)
  * Colors: 0 red · 1 blue · 2 green · 3 yellow · 4 purple · 5 orange
  * ===================================================================== */
-const COLS = 8, ROWS = 8, NCOLORS = 6;
+const COLS = 8, ROWS = 8, NCOLORS = 5;
 // Endless: KHÔNG giới hạn lượt. Điểm: mỗi tile clear = 10đ × hệ số chuỗi cascade (1,2,3…).
 
 const COLORS = ['#ff4d6a', '#3aa0ff', '#2ed673', '#ffcf3a', '#b268ff', '#ff9838'];
@@ -465,8 +502,8 @@ const COLORS = ['#ff4d6a', '#3aa0ff', '#2ed673', '#ffcf3a', '#b268ff', '#ff9838'
 // Khối CHÍNH LÀ hình — path lấp gần đầy viewBox, tô bằng màu khối (xem shapeSvg).
 // Bo góc nhẹ nhờ stroke cùng màu + linejoin round.
 const SHAPES = [
-  // 0 đỏ — trái tim (kẹo tim, bo mềm)
-  '<path d="M50 86 C14 60 14 26 40 26 C48 26 50 32 50 39 C50 32 52 26 60 26 C86 26 86 60 50 86 Z"/>',
+  // 0 đỏ — trái tim (kẹo tim, bo mềm) — 2 thùy tròn đều, đầy đặn, to hơn
+  '<path d="M50 30 C50 30 46 16 31 16 C12 16 12 40 12 40 C12 59 31 70 50 88 C70 70 88 59 88 40 C88 40 88 16 69 16 C54 16 50 30 50 30 Z"/>',
   // 1 xanh dương — giọt nước / oval đứng
   '<path d="M50 12 C58 34 80 46 80 60 A30 30 0 1 1 20 60 C20 46 42 34 50 12 Z"/>',
   // 2 xanh lá — tam giác mũi xuống, cạnh phình (béo)
@@ -478,7 +515,6 @@ const SHAPES = [
   // 5 cam — "gối" vuông cạnh phình (kẹo caramel/thạch, béo)
   '<path d="M20 28 Q50 22 80 28 Q86 50 80 72 Q50 78 20 72 Q14 50 20 28 Z"/>',
 ];
-const RAINBOW_STAR = '<path d="M50 10 L61 40 L92 41 L67 60 L76 90 L50 72 L24 90 L33 60 L8 41 L39 40 Z"/>';
 
 /* =====================================================================
  * 3. State
@@ -494,11 +530,12 @@ let ended = false;
 let sel = null;          // {r,c} đang chọn
 let idc = 0;
 let moves = 0;           // số lượt đã đi (mốc đếm ngược & spawn bom)
+let comboQueue = null;   // [[tile,...], ...] — combo 🌈+special: nổ theo từng đợt, giữa đợt rơi đầy lại
 
 // Bom đếm ngược: cứ SPAWN_EVERY lượt sinh 1 bom, đếm BOMB_START → 0 thì NỔ & thua.
 // Gỡ bom = cho nổ trúng 1 ô kề (trên/dưới/trái/phải) hoặc chính ô bom.
-const BOMB_START = 9;
-const SPAWN_EVERY = 8;
+const BOMB_START = 12;
+const SPAWN_EVERY = 10;
 
 const boardEl = document.getElementById('board');
 const wrapEl = document.getElementById('board-wrap');
@@ -517,66 +554,86 @@ function lighten(hex, amt) {
   b = Math.round(b + (255 - b) * amt);
   return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
 }
+// Làm sẫm một hex về phía đen (amt 0..1) — dùng cho đáy gradient & viền đậm
+function darken(hex, amt) {
+  const n = parseInt(hex.slice(1), 16);
+  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  r = Math.round(r * (1 - amt));
+  g = Math.round(g * (1 - amt));
+  b = Math.round(b * (1 - amt));
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
 
-// SVG hình = khối; tô sheen dọc (sáng trên → màu dưới) cho bóng nhẹ; bo góc lớn bằng
-// stroke round; special vẽ chồng (clip theo hình).
+// SVG hình = khối kẹo 3D: gradient sáng→tối + highlight trắng + viền đậm hơn; bo góc
+// lớn bằng stroke round; special vẽ chồng (clip theo hình). Shadow mềm đặt ở CSS .tile-face.
 function shapeSvg(color, special, uid) {
   const ROUND = 15;   // độ dày stroke = độ bo góc
-  const pid = 'p' + uid, cid = 'c' + uid, hid = 'h' + uid;
-  // Vệt bóng (specular): đốm trắng ở góc trên-trái fade dần → cảm giác bóng loáng
-  const gloss = '<radialGradient id="' + hid + '" cx="0.36" cy="0.24" r="0.62">' +
-    '<stop offset="0" stop-color="#fff" stop-opacity=".78"/>' +
-    '<stop offset=".45" stop-color="#fff" stop-opacity=".16"/>' +
-    '<stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>';
+  const pid = 'p' + uid, cid = 'c' + uid;
   const clip = '<clipPath id="' + cid + '"><use href="#' + pid + '"/></clipPath>';
-  const glossRect = '<rect width="100" height="100" fill="url(#' + hid + ')" clip-path="url(#' + cid + ')"/>';
 
-  // Rainbow: hình sao tô gradient cầu vồng + bóng
+  // Color bomb (bom màu) kiểu CC: quả cầu sẫm phẳng + sprinkle cầu vồng
   if (special === 'rainbow') {
+    const SP = ['#ff4d6a', '#ffcf3a', '#2ed673', '#3aa0ff', '#b268ff', '#ff9838'];
+    const P = [[32,34],[50,26],[66,36],[26,52],[44,46],[60,52],[36,64],[54,64],[70,52],[44,72],[60,70]];
+    let dots = '';
+    for (let i = 0; i < P.length; i++) {
+      const x = P[i][0], y = P[i][1];
+      dots += '<rect x="' + (x - 5) + '" y="' + (y - 2.5) + '" width="10" height="5" rx="2.5" fill="' +
+        SP[i % SP.length] + '" transform="rotate(' + ((i * 53) % 180) + ' ' + x + ' ' + y + ')"/>';
+    }
     const rg = 'rg' + uid;
-    const bodyId = RAINBOW_STAR.replace('<path', '<path id="' + pid + '"');
-    return '<svg viewBox="0 0 100 100" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">' +
-      '<defs><linearGradient id="' + rg + '" x1="0" y1="0" x2="1" y2="1">' +
-      '<stop offset="0" stop-color="#ff4d6a"/><stop offset=".2" stop-color="#ffcf3a"/>' +
-      '<stop offset=".4" stop-color="#2ed673"/><stop offset=".6" stop-color="#3aa0ff"/>' +
-      '<stop offset=".8" stop-color="#b268ff"/><stop offset="1" stop-color="#ff9838"/>' +
-      '</linearGradient>' + gloss + clip + '</defs>' +
-      '<g fill="url(#' + rg + ')" stroke="url(#' + rg + ')" stroke-width="' + ROUND + '">' + bodyId + '</g>' +
-      glossRect + '</svg>';
+    return '<svg viewBox="0 0 100 100" aria-hidden="true"><defs>' +
+      '<radialGradient id="' + rg + '" cx="0.4" cy="0.3" r="0.75">' +
+      '<stop offset="0" stop-color="#4a4668"/><stop offset="1" stop-color="#1b1730"/>' +
+      '</radialGradient>' + clip + '</defs>' +
+      '<circle id="' + pid + '" cx="50" cy="50" r="37" fill="url(#' + rg + ')" stroke="#141024" stroke-width="3"/>' +
+      '<g clip-path="url(#' + cid + ')">' + dots +
+      '<ellipse cx="38" cy="32" rx="15" ry="9" fill="#fff" stroke="none" opacity=".22" transform="rotate(-22 38 32)"/>' +
+      '</g></svg>';
   }
 
   const col = COLORS[color];
   const gid = 'g' + uid;
-  // Sheen dọc: trên sáng (+38% về trắng) → dưới màu gốc
+  // Thân: gradient sáng (trên) → tối (dưới). Viền: đậm hơn màu chính ~20%.
   const grad = '<linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1">' +
-    '<stop offset="0" stop-color="' + lighten(col, 0.38) + '"/>' +
-    '<stop offset=".55" stop-color="' + col + '"/>' +
-    '<stop offset="1" stop-color="' + col + '"/></linearGradient>';
+    '<stop offset="0" stop-color="' + lighten(col, 0.22) + '"/>' +
+    '<stop offset=".5" stop-color="' + col + '"/>' +
+    '<stop offset="1" stop-color="' + darken(col, 0.18) + '"/></linearGradient>';
   const bodyId = SHAPES[color].replace(/<(path|circle|rect|ellipse)/, '<$1 id="' + pid + '"');
   const open = '<svg viewBox="0 0 100 100" fill="url(#' + gid + ')" stroke="url(#' + gid + ')" ' +
     'stroke-width="' + ROUND + '" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">';
 
-  // Rocket (row/col) & bomb: dấu hiệu trắng clip theo hình (trên lớp bóng)
+  // Rocket (row/col) & bomb: dấu hiệu trắng clip theo hình
   let marksG = '';
   if (special === 'row' || special === 'col' || special === 'bomb') {
     const marks = special === 'row'
-      ? '<rect x="0" y="40" width="100" height="7"/><rect x="0" y="56" width="100" height="7"/>'
+      // kẹo sọc: 2 vạch NGANG trắng dày (nổ cả hàng)
+      ? '<rect x="-6" y="31" width="112" height="10" rx="5"/><rect x="-6" y="59" width="112" height="10" rx="5"/>'
       : special === 'col'
-      ? '<rect x="40" y="0" width="7" height="100"/><rect x="56" y="0" width="7" height="100"/>'
-      : '<circle cx="50" cy="50" r="14" fill="none" stroke="#fff" stroke-width="7"/>';
-    marksG = '<g clip-path="url(#' + cid + ')" fill="#fff" stroke="none" opacity=".92">' + marks + '</g>';
+      // kẹo sọc: 2 vạch DỌC trắng dày (nổ cả cột)
+      ? '<rect x="31" y="-6" width="10" height="112" rx="5"/><rect x="59" y="-6" width="10" height="112" rx="5"/>'
+      // kẹo gói (wrapped): gói chéo hình chữ X
+      : '<rect x="43" y="-8" width="14" height="116" rx="7" transform="rotate(45 50 50)"/><rect x="43" y="-8" width="14" height="116" rx="7" transform="rotate(-45 50 50)"/>';
+    marksG = '<g clip-path="url(#' + cid + ')" fill="#fff" stroke="none" opacity=".9">' + marks + '</g>';
   }
 
-  return open + '<defs>' + grad + gloss + clip + '</defs>' +
-    bodyId + glossRect + marksG + '</svg>';
+  // Highlight trắng loáng (specular) — MỜ DẦN từ tâm ra ngoài (radial fade), góc trên-trái
+  const hlg = 'hl' + uid;
+  const hlGrad = '<radialGradient id="' + hlg + '" cx="0.5" cy="0.5" r="0.5">' +
+    '<stop offset="0" stop-color="#fff" stop-opacity=".6"/>' +
+    '<stop offset=".55" stop-color="#fff" stop-opacity=".22"/>' +
+    '<stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>';
+  const hl = '<ellipse cx="36" cy="30" rx="19" ry="12" fill="url(#' + hlg + ')" stroke="none" ' +
+    'transform="rotate(-22 36 30)" clip-path="url(#' + cid + ')"/>';
+  return open + '<defs>' + grad + hlGrad + clip + '</defs>' + bodyId + hl + marksG + '</svg>';
 }
 
 /* =====================================================================
  * 3c. Âm thanh vui nhộn (Web Audio tổng hợp — KHÔNG file rời, giữ single-file)
  * ===================================================================== */
 const Sound = (function () {
-  let ctx = null, master = null, muted = false;
-  const VOL = 0.6;
+  let ctx = null, master = null, musicGain = null, muted = false;
+  const VOL = 0.92;
   const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
   function ensure() {
@@ -590,6 +647,10 @@ const Sound = (function () {
       comp.threshold.value = -10; comp.knee.value = 22; comp.ratio.value = 5;
       comp.attack.value = 0.003; comp.release.value = 0.25;
       master.connect(comp); comp.connect(ctx.destination);
+      musicGain = ctx.createGain(); musicGain.gain.value = 0.42;  // nhạc nền nhỏ, nhường tiếng nổ
+      const musicLP = ctx.createBiquadFilter();                  // lọc bớt tần cao → ấm, mượt dịu
+      musicLP.type = 'lowpass'; musicLP.frequency.value = 2600; musicLP.Q.value = 0.4;
+      musicGain.connect(musicLP); musicLP.connect(master);       // qua master → nút tắt tiếng cũng tắt nhạc
     } catch (e) { ctx = null; }
   }
   function resume() { if (ctx && ctx.state === 'suspended') ctx.resume(); }
@@ -632,75 +693,67 @@ const Sound = (function () {
     src.connect(lp); lp.connect(g); g.connect(master);
     src.start(t0); src.stop(t0 + dur);
   }
-  // Thang trưởng ngũ cung (pentatonic) cho combo — luôn "vui tai"
-  const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
+  // ── Nhạc nền vui nhộn (tổng hợp, lặp vô hạn; đi qua master nên nút tắt tiếng cũng tắt) ──
+  const BPM = 116;
+  const STEP = 60 / BPM / 2;                   // độ dài 1 nốt móc đơn
+  // Giai điệu sáng, nảy (MIDI; null = nghỉ) — 32 bước ≈ 7.6s/lặp
+  const MELODY = [
+    72, 76, 79, 76,  81, 79, 76, 74,   72, 74, 76, 79,  76, 72, 69, null,
+    74, 77, 81, 79,  77, 74, 72, 74,   76, 72, 74, 76,  72, 69, 67, null,
+  ];
+  const BASS = [
+    48, null, null, null, 43, null, null, null, 45, null, null, null, 43, null, null, null,
+    50, null, null, null, 43, null, null, null, 48, null, null, null, 43, null, null, null,
+  ];
+  let bgmOn = false, bgmTimer = null, bgmStep = 0, nextTime = 0;
+
+  function bgmNote(midi, time, o) {
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.type = o.type || 'square';
+    osc.frequency.setValueAtTime(mtof(midi), time);
+    const dur = o.dur || STEP * 0.9;
+    g.gain.setValueAtTime(0.0001, time);
+    g.gain.linearRampToValueAtTime(o.gain != null ? o.gain : 0.11, time + (o.atk || 0.05));  // vào êm
+    g.gain.exponentialRampToValueAtTime(0.0001, time + dur);                                   // tắt mượt
+    let node = osc;
+    if (o.lp) { const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = o.lp; osc.connect(f); node = f; }
+    node.connect(g); g.connect(musicGain);
+    osc.start(time); osc.stop(time + dur + 0.05);
+  }
+  function bgmSchedule() {                       // lookahead scheduler
+    if (!ctx || !bgmOn) return;
+    if (nextTime < ctx.currentTime) nextTime = ctx.currentTime + 0.05;   // tránh dồn nốt sau khi resume
+    while (nextTime < ctx.currentTime + 0.2) {
+      const i = bgmStep % MELODY.length;
+      const m = MELODY[i];
+      if (m != null) bgmNote(m, nextTime, { type: 'triangle', gain: 0.1, dur: STEP * 1.25, lp: 2000, atk: 0.06 });
+      const b = BASS[i];
+      if (b != null) bgmNote(b, nextTime, { type: 'sine', gain: 0.2, dur: STEP * 1.95, lp: 800, atk: 0.05 });
+      bgmStep++;
+      nextTime += STEP;
+    }
+  }
+  function startMusic() {
+    ensure();
+    if (!ctx || bgmOn) return;
+    bgmOn = true; bgmStep = 0; nextTime = ctx.currentTime + 0.12;
+    bgmSchedule();
+    bgmTimer = setInterval(bgmSchedule, 60);
+  }
+  function stopMusic() {
+    bgmOn = false;
+    if (bgmTimer) { clearInterval(bgmTimer); bgmTimer = null; }
+  }
 
   return {
-    ensure, resume, suspend, setMuted, isMuted,
-    // Đổi chỗ — "bíp" tươi đi lên
-    swap() { ensure(); tone({ freq: 520, freqTo: 720, dur: 0.08, type: 'square', gain: 0.14 }); },
-    // Sai — "bonk" trầm hài
-    invalid() { ensure(); tone({ freq: 300, freqTo: 150, dur: 0.16, type: 'triangle', gain: 0.16, slide: 'lin' }); },
-    // Ăn tile — nốt pentatonic tăng dần theo combo (leo thang vui tai)
-    clear(chain) {
-      ensure();
-      const note = 64 + PENTA[Math.min((chain || 1) - 1, PENTA.length - 1)];
-      const f = mtof(note);
-      tone({ freq: f, dur: 0.12, type: 'square', gain: 0.16, lp: 3000 });
-      tone({ freq: f * 2, dur: 0.08, type: 'triangle', gain: 0.06, delay: 0.005 });
-    },
-    // Tạo special — lấp lánh đi lên
-    special() {
-      ensure();
-      tone({ freq: 880, freqTo: 1760, dur: 0.16, type: 'triangle', gain: 0.16 });
-      tone({ freq: 1320, dur: 0.12, type: 'square', gain: 0.06, delay: 0.06, lp: 4000 });
-    },
-    // Nổ special — "pow" nảy, cao độ & lực tăng theo combo
+    ensure, resume, suspend, setMuted, isMuted, startMusic, stopMusic,
+    // ÂM THANH DUY NHẤT: tiếng nổ khi ăn khối (hợp âm rải trưởng vui, cao độ tăng theo chuỗi)
     blast(chain, count) {
       ensure();
-      const n = Math.min((chain || 1) - 1, 12), semi = Math.pow(2, n / 12);
-      const boost = Math.min(0.85 + (count || 1) * 0.04, 1.3);
-      tone({ freq: 200 * semi, freqTo: 70 * semi, dur: 0.22, type: 'square', gain: 0.2 * boost, lp: 2200, slide: 'lin' });
-      tone({ freq: 400 * semi, freqTo: 150 * semi, dur: 0.16, type: 'triangle', gain: 0.1 * boost });
-      noise({ dur: 0.2, gain: 0.16 * boost, lp: 2600, lpTo: 500 });
-    },
-    // Câu khen combo — hợp âm rải trưởng vui theo cấp
-    combo(tier) {
-      ensure();
+      const tier = Math.min(Math.max((chain || 1) - 1, 0), 5);
       [0, 4, 7, 12].forEach((iv, i) =>
-        tone({ freq: mtof(67 + tier + iv), dur: 0.2, type: 'triangle', gain: 0.13, delay: i * 0.055, lp: 4500 }));
+        tone({ freq: mtof(67 + tier + iv), dur: 0.26, type: 'sine', gain: 0.22, delay: i * 0.055, lp: 2600, attack: 0.02 }));
     },
-    // Gỡ bom — "ting-ting" tích cực
-    defuse() {
-      ensure();
-      tone({ freq: mtof(76), dur: 0.12, type: 'square', gain: 0.14, lp: 4000 });
-      tone({ freq: mtof(83), dur: 0.16, type: 'square', gain: 0.14, delay: 0.09, lp: 4000 });
-    },
-    // Sinh bom — cảnh báo ngộ nghĩnh
-    spawnbomb() {
-      ensure();
-      tone({ freq: 440, freqTo: 660, dur: 0.1, type: 'square', gain: 0.12, slide: 'lin' });
-      tone({ freq: 660, freqTo: 440, dur: 0.1, type: 'square', gain: 0.12, delay: 0.1, slide: 'lin' });
-    },
-    // Phá kỷ lục — fanfare trưởng
-    record() {
-      ensure();
-      [0, 4, 7, 12, 16].forEach((iv, i) =>
-        tone({ freq: mtof(67 + iv), dur: 0.26, type: 'square', gain: 0.16, delay: i * 0.1, lp: 5000 }));
-    },
-    // Bom nổ / thua — "trombone" tụt hài hước
-    explode() {
-      ensure();
-      tone({ freq: 300, freqTo: 90, dur: 0.6, type: 'sawtooth', gain: 0.2, lp: 1400, slide: 'lin' });
-      noise({ dur: 0.4, gain: 0.16, lp: 1400, lpTo: 300 });
-    },
-    // Xáo bài — riffle nhanh vui
-    shuffle() {
-      ensure();
-      for (let i = 0; i < 6; i++) tone({ freq: 500 + i * 90, dur: 0.05, type: 'square', gain: 0.08, delay: i * 0.035 });
-    },
-    // Nhấn nút
-    click() { ensure(); tone({ freq: 660, dur: 0.05, type: 'square', gain: 0.1 }); },
   };
 })();
 
@@ -754,11 +807,12 @@ function resize() {
   const hud = document.querySelector('.hud');
   const usedTop = hud.offsetHeight;                      // chiều cao HUD (topbar + scorebar)
   // Chừa khoảng trống trên–dưới bằng nhau (2×usedTop) → lưới cân giữa màn hình
-  const availH = window.innerHeight - 2 * usedTop - 16;
+  const availH = Math.max(0, window.innerHeight - 2 * usedTop - 16);
   const availW = Math.min(window.innerWidth, 560) - 28;
-  let boardPx = Math.min(availW, availH);
-  cell = Math.floor(boardPx / COLS);
-  cell = Math.max(30, cell);
+  const boardPx = Math.min(availW, availH);
+  cell = Math.max(20, Math.floor(boardPx / COLS));       // sàn 20px cho dễ chạm
+  // Máy thấp / xoay ngang: nếu sàn làm bàn vượt không gian → co lại cho VỪA (không tràn)
+  if (cell * COLS > boardPx && boardPx >= COLS) cell = Math.floor(boardPx / COLS);
   const size = cell * COLS;
   document.documentElement.style.setProperty('--cell', cell + 'px');
   boardEl.style.width = size + 'px';
@@ -769,7 +823,10 @@ function resize() {
   gridBgEl.style.gridTemplateRows = 'repeat(' + ROWS + ',1fr)';
   if (!gridBgEl.childElementCount) {
     for (let i = 0; i < ROWS * COLS; i++) {
-      const s = document.createElement('div'); s.className = 'slot'; gridBgEl.appendChild(s);
+      const s = document.createElement('div');
+      const r = (i / COLS) | 0, c = i % COLS;
+      s.className = 'slot' + ((r + c) % 2 ? ' b' : '');   // ô caro Candy Crush
+      gridBgEl.appendChild(s);
     }
   }
   layout();
@@ -785,9 +842,9 @@ function computeRunLens() {
     let c = 0;
     while (c < COLS) {
       const t0 = board[r][c];
-      if (!t0 || t0.bomb) { c++; continue; }     // bom/ô trống chặn run
+      if (!t0 || t0.bomb || t0.wave) { c++; continue; }     // bom/ô trống/đang chờ-nổ chặn run
       let j = c;
-      while (j < COLS && board[r][j] && !board[r][j].bomb && board[r][j].color === t0.color) j++;
+      while (j < COLS && board[r][j] && !board[r][j].bomb && !board[r][j].wave && board[r][j].color === t0.color) j++;
       const len = j - c;
       if (len >= 3) for (let k = c; k < j; k++) H[r][k] = len;
       c = j;
@@ -797,9 +854,9 @@ function computeRunLens() {
     let r = 0;
     while (r < ROWS) {
       const t0 = board[r][c];
-      if (!t0 || t0.bomb) { r++; continue; }
+      if (!t0 || t0.bomb || t0.wave) { r++; continue; }
       let j = r;
-      while (j < ROWS && board[j][c] && !board[j][c].bomb && board[j][c].color === t0.color) j++;
+      while (j < ROWS && board[j][c] && !board[j][c].bomb && !board[j][c].wave && board[j][c].color === t0.color) j++;
       const len = j - r;
       if (len >= 3) for (let k = r; k < j; k++) V[k][c] = len;
       r = j;
@@ -883,6 +940,7 @@ function specialBlast(r, c, type, color) {
 
 /* Kích hoạt dây chuyền: mọi special trong clr sẽ nổ, kéo theo special khác */
 function expandActivations(clr) {
+  const rainbows = [];                 // vị trí các cầu vồng phát nổ → thêm hiệu ứng riêng
   const stack = [];
   for (const k of clr) {
     const [r, c] = k.split(',').map(Number);
@@ -897,13 +955,16 @@ function expandActivations(clr) {
     const t = board[r][c];
     if (!t || !t.special) continue;
     done.add(k);
+    if (t.special === 'rainbow') rainbows.push([r, c]);
     for (const b of specialBlast(r, c, t.special, t.color)) {
-      if (!clr.has(b)) clr.add(b);
       const [br, bc] = b.split(',').map(Number);
       const bt = board[br][bc];
+      if (bt && bt.wave) continue;          // special đang chờ đợt sau → không nổ/không xóa lúc này
+      if (!clr.has(b)) clr.add(b);
       if (bt && bt.special && !done.has(b)) stack.push(b);
     }
   }
+  return rainbows;
 }
 
 /* =====================================================================
@@ -913,6 +974,11 @@ function swapModel(a, b) {
   const t = board[a.r][a.c];
   board[a.r][a.c] = board[b.r][b.c];
   board[b.r][b.c] = t;
+}
+// Tìm vị trí hiện tại của 1 tile (dùng cho combo theo đợt — tile có thể đã rơi)
+function findTilePos(tile) {
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (board[r][c] === tile) return { r, c };
+  return null;
 }
 
 async function animateSwap() { layout(); await sleep(150); }
@@ -928,7 +994,29 @@ function comboClears(ta, a, tb, b) {
       const other = ta.special === 'rainbow' ? tb : ta;
       const oPos = ta.special === 'rainbow' ? b : a;
       if (other.special) {
-        for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) clr.add(key(r, c));
+        // 🌈 + Special: biến MỌI viên cùng màu với special đó thành cùng loại
+        //   🚀 (row/col) → ngẫu nhiên row hoặc col · 💥 bom → bom
+        //   (viên nào đã là special thì giữ nguyên), rồi nổ hết các viên cùng màu
+        //   → các special vừa tạo kích nổ dây chuyền (expandActivations).
+        const col = other.color;
+        const toBomb = other.special === 'bomb';
+        const cells = [];
+        for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+          const t = board[r][c];
+          if (!t || t.bomb || t.color !== col) continue;   // chỉ viên cùng màu (bỏ bom đếm ngược)
+          if (!t.special) {                                 // chưa là special → biến đổi + vẽ lại
+            t.special = toBomb ? 'bomb' : (Math.random() < 0.5 ? 'row' : 'col');
+            paintTile(t);
+          }
+          t.wave = true;                                    // chờ nổ theo đợt (chặn match sớm)
+          cells.push({ tile: t, d: Math.hypot(r - oPos.r, c - oPos.c) });
+        }
+        // Nổ theo ĐỢT từ điểm gộp ra ngoài; giữa các đợt bàn rơi đầy lại (không nổ vào ô trống)
+        cells.sort((p, q) => p.d - q.d);
+        comboQueue = cells.map(x => [x.tile]);   // mỗi special 1 đợt → nổ từng viên một (từ gần ra xa)
+        const raTile = board[ra.r][ra.c];
+        if (raTile) raTile.special = null;   // cầu vồng chỉ biến mất, không nổ theo màu riêng
+        clr.add(key(ra.r, ra.c));
       } else {
         for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++)
           if (board[r][c] && board[r][c].color === other.color) clr.add(key(r, c));
@@ -941,16 +1029,17 @@ function comboClears(ta, a, tb, b) {
   // hai special thường (row/col/bomb)
   if (ta.special && tb.special) {
     const s1 = ta.special, s2 = tb.special, ctr = b;
-    const both = s1 + '+' + s2;
     const hasBomb = s1 === 'bomb' || s2 === 'bomb';
     const bothRocket = (s1 === 'row' || s1 === 'col') && (s2 === 'row' || s2 === 'col');
     if (s1 === 'bomb' && s2 === 'bomb') {
       for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++)
         if (inb(ctr.r + dr, ctr.c + dc)) clr.add(key(ctr.r + dr, ctr.c + dc));
     } else if (bothRocket) {
+      // CC: sọc + sọc → LUÔN nổ 1 HÀNG + 1 CỘT (chữ thập) qua điểm đổi
       for (let cc = 0; cc < COLS; cc++) clr.add(key(ctr.r, cc));
       for (let rr = 0; rr < ROWS; rr++) clr.add(key(rr, ctr.c));
-    } else if (hasBomb) { // bomb + rocket → 3 hàng + 3 cột
+    } else if (hasBomb) {
+      // CC: sọc + gói → nổ 3 HÀNG + 3 CỘT (dấu cộng dày) qua điểm đổi
       for (let dr = -1; dr <= 1; dr++) for (let cc = 0; cc < COLS; cc++)
         if (inb(ctr.r + dr, cc)) clr.add(key(ctr.r + dr, cc));
       for (let dc = -1; dc <= 1; dc++) for (let rr = 0; rr < ROWS; rr++)
@@ -958,9 +1047,9 @@ function comboClears(ta, a, tb, b) {
     }
     return clr;
   }
-  // 1 special thường + 1 thường → special nổ tại chỗ
-  if (ta.special) clr.add(key(a.r, a.c));
-  if (tb.special) clr.add(key(b.r, b.c));
+  // 1 special thường + 1 thường → KHÔNG tự nổ khi đổi chỗ.
+  // Special (row/col/bomb) chỉ nổ khi được MATCH cùng màu như khối thường:
+  // findMatches sẽ bắt run cùng màu (special vẫn mang màu) → expandActivations kích nổ.
   return clr;
 }
 
@@ -975,7 +1064,6 @@ async function tryMove(a, b) {
   clearHint();
   clearSelection();
   swapModel(a, b);
-  Sound.swap();
   await animateSwap();
 
   const pending = comboClears(tileAt(a.r, a.c), a, tileAt(b.r, b.c), b);
@@ -984,7 +1072,6 @@ async function tryMove(a, b) {
 
   if (!valid) {
     swapModel(a, b);           // hoàn tác
-    Sound.invalid();
     await animateSwap();
     busy = false;
     resetIdle();
@@ -1005,13 +1092,29 @@ async function cascade(pending, swapCells) {
     const { clearCells, specialPlans } = findMatches(first ? swapCells : []);
     const clr = new Set(clearCells);
     if (first && pending) for (const k of pending) clr.add(k);
+    // Combo 🌈: mỗi vòng lặp nổ 1 ĐỢT special; giữa các đợt bàn đã rơi đầy lại (không nổ vào ô trống)
+    let pulledCombo = false;
+    if (comboQueue && comboQueue.length) {
+      pulledCombo = true;
+      const wave = comboQueue.shift();
+      for (const tile of wave) { tile.wave = false; const p = findTilePos(tile); if (p) clr.add(key(p.r, p.c)); }
+    }
 
-    expandActivations(clr);
+    const rbHits = expandActivations(clr);     // vị trí cầu vồng phát nổ (để thêm hiệu ứng riêng)
     for (const p of specialPlans) clr.delete(key(p.r, p.c));
+    if (first && pending) for (const k of pending) clr.add(k);   // combo: nổ hết ô đã định, không giữ lại làm special mới
 
-    if (clr.size === 0 && specialPlans.length === 0) break;
+    if (clr.size === 0 && specialPlans.length === 0) {
+      if (comboQueue && comboQueue.length) { first = false; continue; }   // còn đợt → sang đợt sau
+      break;
+    }
 
     // Tính điểm + hiệu ứng + đánh dấu clear
+    // Nổ ĐẶC BIỆT "từ từ": viên gần tâm special biến mất trước, xa hơn theo sau → sóng lan ra
+    const origins = [];
+    for (const k of clr) { const [r, c] = k.split(',').map(Number); const t = board[r][c]; if (t && t.special) origins.push([r, c]); }
+    const staggered = origins.length > 0 && !pulledCombo;   // combo: nổ gọn từng đợt, không rải sóng
+    let maxDelay = 0;
     let cleared = 0, sx = 0, sy = 0;
     const spTypes = new Set();          // loại special phát nổ ở bước này → chọn tiếng
     const parts = [];
@@ -1022,7 +1125,17 @@ async function cascade(pending, swapCells) {
         cleared++;
         if (t.special) spTypes.add(t.special);
         const [cx, cy] = fxCenter(r, c);
-        sx += cx; sy += cy; parts.push([cx, cy, COLORS[t.color]]);
+        sx += cx; sy += cy;
+        let d = 0;
+        if (staggered) {                                   // trễ theo khoảng cách tới tâm nổ gần nhất
+          let best = 1e9;
+          for (const [or, oc] of origins) { const dd = Math.hypot(r - or, c - oc); if (dd < best) best = dd; }
+          d = Math.min(best * 0.05, 0.6);                  // 0.05s/ô, tối đa 0.6s
+          if (d > maxDelay) maxDelay = d;
+        }
+        parts.push([cx, cy, COLORS[t.color], d]);
+        if (t.special) drawSpecialFx(r, c, t.special, t.color, d);   // tia/vòng nổ kiểu CC
+        t.el.style.transitionDelay = d + 's';
         t.el.classList.add('clearing');
         t.el.style.transform = pos(r, c) + ' scale(1.6)';
       }
@@ -1032,12 +1145,13 @@ async function cascade(pending, swapCells) {
       addScore(cleared, chain);
       spawnPop(sx / cleared, sy / cleared, '+' + pts);
       spawnParticles(parts);
-      if (spTypes.size) Sound.blast(chain, cleared); else Sound.clear(chain);
+      for (const [rr, rc] of rbHits) rainbowBurst(rr, rc);   // hiệu ứng riêng khi cầu vồng phát nổ
+      // Mọi lần nổ — match 3/4 thường lẫn special (hàng/cột/bom/cầu vồng) — đều dùng "tiếng combo"
+      Sound.blast(chain, cleared);
       if (chain >= 2) spawnCombo(chain);
       if (cleared >= 8 || chain >= 3) shake();
     }
     if (cleared >= 4) shockwave(clr);   // chỉ nổ ≥4 viên mới hất các khối kề (bỏ qua match 3 thường)
-    if (specialPlans.length) Sound.special();
     // Tạo special (nâng cấp tile tại chỗ) + pop
     for (const p of specialPlans) {
       const t = board[p.r][p.c];
@@ -1051,7 +1165,7 @@ async function cascade(pending, swapCells) {
       }
     }
 
-    await sleep(clr.size ? 420 : 90);
+    await sleep(clr.size ? (pulledCombo ? 300 : (420 + maxDelay * 1000)) : 90);   // combo: mỗi đợt nhanh gọn
 
     defuseBombs(clr);   // bom có ô kề (hoặc chính nó) bị xoá → gỡ an toàn
 
@@ -1063,10 +1177,11 @@ async function cascade(pending, swapCells) {
     }
 
     gravityAndRefill();
-    await sleep(380);
+    await sleep(pulledCombo ? 230 : 380);   // combo: rơi đầy nhanh rồi sang viên kế
     first = false;
     chain++;
   }
+  comboQueue = null;   // dọn hàng đợi combo (nếu còn)
 }
 
 function gravityAndRefill() {
@@ -1151,6 +1266,78 @@ function shockwave(clr) {
   }
 }
 
+// Hiệu ứng RIÊNG khi cầu vồng phát nổ: vòng cầu vồng lan ra (xoay) + chớp sáng trung tâm
+function rainbowBurst(r, c) {
+  const [cx, cy] = fxCenter(r, c);
+  const ring = document.createElement('div');
+  ring.className = 'fx-rainbow';
+  ring.style.width = ring.style.height = (cell * 1.4) + 'px';
+  ring.style.left = cx + 'px'; ring.style.top = cy + 'px';
+  boardEl.appendChild(ring);
+  ring.animate([
+    { transform: 'translate(-50%,-50%) scale(.25) rotate(0deg)', opacity: .95 },
+    { transform: 'translate(-50%,-50%) scale(2.7) rotate(150deg)', opacity: 0 },
+  ], { duration: 660, easing: 'cubic-bezier(.2,.7,.3,1)' }).onfinish = () => ring.remove();
+  const flash = document.createElement('div');
+  flash.className = 'fx-rainbow-flash';
+  flash.style.width = flash.style.height = (cell * 1.2) + 'px';
+  flash.style.left = cx + 'px'; flash.style.top = cy + 'px';
+  boardEl.appendChild(flash);
+  flash.animate([
+    { transform: 'translate(-50%,-50%) scale(.2)', opacity: .9 },
+    { transform: 'translate(-50%,-50%) scale(1.9)', opacity: 0 },
+  ], { duration: 380, easing: 'ease-out' }).onfinish = () => flash.remove();
+}
+
+// ── Hiệu ứng kích nổ kiểu Candy Crush: tia sáng (kẹo sọc) + vòng nổ (kẹo gói) ──
+function drawSpecialFx(r, c, type, color, delay) {
+  const col = COLORS[color] || '#fff';
+  if (type === 'row' || type === 'col') beamFx(r, c, type, col, delay);
+  else if (type === 'bomb') ringFx(r, c, col, delay);
+}
+function beamFx(r, c, type, col, delay) {
+  const el = document.createElement('div');
+  el.className = 'fx-beam ' + type;
+  el.style.color = col;
+  const dl = (delay || 0) * 1000;
+  if (type === 'row') {
+    el.style.left = '0px';
+    el.style.top = (r * cell + cell / 2) + 'px';
+    el.style.width = (cell * COLS) + 'px';
+    el.style.height = Math.max(6, cell * 0.62) + 'px';
+    boardEl.appendChild(el);
+    el.animate([
+      { transform: 'translateY(-50%) scaleX(0)', opacity: .35 },
+      { transform: 'translateY(-50%) scaleX(1)', opacity: 1, offset: .35 },
+      { transform: 'translateY(-50%) scaleX(1)', opacity: 0 },
+    ], { duration: 440, delay: dl, easing: 'ease-out', fill: 'backwards' }).onfinish = () => el.remove();
+  } else {
+    el.style.top = '0px';
+    el.style.left = (c * cell + cell / 2) + 'px';
+    el.style.height = (cell * ROWS) + 'px';
+    el.style.width = Math.max(6, cell * 0.62) + 'px';
+    boardEl.appendChild(el);
+    el.animate([
+      { transform: 'translateX(-50%) scaleY(0)', opacity: .35 },
+      { transform: 'translateX(-50%) scaleY(1)', opacity: 1, offset: .35 },
+      { transform: 'translateX(-50%) scaleY(1)', opacity: 0 },
+    ], { duration: 440, delay: dl, easing: 'ease-out', fill: 'backwards' }).onfinish = () => el.remove();
+  }
+}
+function ringFx(r, c, col, delay) {
+  const [cx, cy] = fxCenter(r, c);
+  const ring = document.createElement('div');
+  ring.className = 'fx-ring';
+  ring.style.color = col;
+  ring.style.left = cx + 'px'; ring.style.top = cy + 'px';
+  ring.style.width = ring.style.height = (cell * 2.6) + 'px';
+  boardEl.appendChild(ring);
+  ring.animate([
+    { transform: 'translate(-50%,-50%) scale(.2)', opacity: .95 },
+    { transform: 'translate(-50%,-50%) scale(1)', opacity: 0 },
+  ], { duration: 460, delay: (delay || 0) * 1000, easing: 'ease-out', fill: 'backwards' }).onfinish = () => ring.remove();
+}
+
 function randColor() { return (Math.random() * NCOLORS) | 0; }
 
 /* =====================================================================
@@ -1168,7 +1355,6 @@ function defuseBombs(clr) {
     spawnParticles([[cx, cy, '#22c55e'], [cx, cy, '#7CFFB0']]);
     spawnPop(cx, cy, '+50');
     addScore(5, 1);                    // thưởng gỡ bom = 50 điểm
-    Sound.defuse();
     t.el.remove(); board[r][c] = null; // gỡ xong biến mất (gravity sẽ lấp)
   }
 }
@@ -1209,7 +1395,6 @@ function spawnBomb() {
     { transform: p + ' scale(1.2)', opacity: 1, offset: .6 },
     { transform: p },
   ], { duration: 360, easing: 'ease-out' });
-  Sound.spawnbomb();
   if (!hasAnyMove()) reshuffle(true);  // phòng khi bom chặn hết nước đi (kèm toast + anim)
 }
 
@@ -1221,7 +1406,6 @@ function explodeBomb(r, c) {
   for (let i = 0; i < 16; i++) parts.push([cx, cy, i % 2 ? '#ff5a5f' : '#ffb02e']);
   spawnParticles(parts);
   shake();
-  Sound.explode();
   if (t) { t.el.remove(); board[r][c] = null; }
   gameOver();
 }
@@ -1231,9 +1415,9 @@ function explodeBomb(r, c) {
  * ===================================================================== */
 function addScore(n, chainMul) {
   score += n * 10 * chainMul;
-  if (score > best) { best = score; persistBest(); renderBest(); }  // best chạy live + lưu ngay
+  if (score > best) { best = score; persistBest(); }   // lưu ngay; HUD Best chỉ refresh khi hết màn/ván mới (§1.2)
   if (!recordHit && runRecord > 0 && score > runRecord) {           // vừa vượt kỷ lục cũ
-    recordHit = true; confetti(); spawnRecordToast(); Sound.record();
+    recordHit = true; confetti(); spawnRecordToast();
   }
   renderScore();
 }
@@ -1293,7 +1477,7 @@ function spawnParticles(list) {
   const cap = Math.min(list.length, 26);
   const step = Math.max(1, Math.floor(list.length / cap));
   for (let i = 0; i < list.length; i += step) {
-    const [x, y, color] = list[i];
+    const [x, y, color, delay] = list[i];
     for (let k = 0; k < 3; k++) {   // nhiều mảnh hơn → nổ "đầy" hơn
       const p = document.createElement('div');
       p.className = 'fx-particle';
@@ -1312,54 +1496,68 @@ function spawnParticles(list) {
         { transform: 'translate(-50%,-50%) rotate(0deg) scale(1.35)', opacity: 1, offset: 0 },
         { transform: 'translate(calc(-50% + ' + (dx * 0.55) + 'px), calc(-50% - ' + up + 'px)) rotate(' + (rot * 0.5) + 'deg) scale(1.05)', opacity: 1, offset: .42 },
         { transform: 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + fall + 'px)) rotate(' + rot + 'deg) scale(.2)', opacity: 0, offset: 1 },
-      ], { duration: 1250 + Math.random() * 450, easing: 'cubic-bezier(.3,.5,.55,1)' }).onfinish = () => p.remove();
+      ], { duration: 1250 + Math.random() * 450, delay: (delay || 0) * 1000, fill: 'backwards', easing: 'cubic-bezier(.3,.5,.55,1)' }).onfinish = () => p.remove();
     }
   }
 }
 
 // Câu khen tăng dần theo cấp combo (chain 2 → phần tử đầu; cao hơn → mạnh hơn)
 function praiseWord(chain) {
-  const arr = (I18N[LANG] && I18N[LANG].praise) || I18N.en.praise;
+  const arr = (I18N[LANG] && I18N[LANG].praise) || I18N.en.praise;   // theo ngôn ngữ, fallback en
   const i = Math.min(Math.max(chain - 2, 0), arr.length - 1);
   return arr[i];
 }
+// Màu câu khen theo cấp: ×2 lá · ×3 dương · ×4 tím · ×5 cam · ×6 đỏ cam · ×7+ vàng
+// (sáng hơn để nổi rõ trên chip nền tối)
+const COMBO_COLORS = ['#3ee87f', '#5bb8ff', '#c795ff', '#ffab54', '#ff7a5c', '#ffe066'];
 function spawnCombo(chainMul) {
-  const tier = Math.min(Math.max(chainMul - 2, 0), 4);   // 0..4
-  Sound.combo(tier);
-  const sc = 1 + tier * 0.13;                             // combo cao → chữ to hơn
+  const tier = Math.min(Math.max(chainMul - 2, 0), 5);   // 0..5 → ×2..×7+
+  const color = COMBO_COLORS[tier];
+  const sc = 1 + tier * 0.08;                            // combo cao → chữ to hơn (nhẹ)
   const el = document.createElement('div');
-  el.className = 'fx-combo t' + tier;
+  el.className = 'fx-combo combo-pop';
+  el.style.setProperty('--cc', color);
   el.innerHTML = '<span class="fx-praise">' + praiseWord(chainMul) + '</span>' +
-                 '<span class="fx-mult">COMBO ×' + chainMul + '</span>';
+                 '<span class="fx-mult">' + t('combo') + ' ×' + chainMul + '</span>';
   boardEl.appendChild(el);
-  // Pop nảy overshoot + lắc nhẹ + trôi lên rồi tan
+  // Flat: hiện nhanh (0.7→1.2→1.0) → giữ & bay lên nhẹ → mờ dần khi vẫn bay lên
   el.animate([
-    { transform: 'translate(-50%,-50%) scale(.3) rotate(-9deg)', opacity: 0 },
-    { transform: 'translate(-50%,-50%) scale(' + (sc * 1.28) + ') rotate(6deg)', opacity: 1, offset: .26 },
-    { transform: 'translate(-50%,-50%) scale(' + (sc * 0.9) + ') rotate(-4deg)', opacity: 1, offset: .42 },
-    { transform: 'translate(-50%,-50%) scale(' + (sc * 1.05) + ') rotate(2deg)', opacity: 1, offset: .56 },
-    { transform: 'translate(-50%,-52%) scale(' + sc + ') rotate(0deg)', opacity: 1, offset: .72 },
-    { transform: 'translate(-50%,-66%) scale(' + sc + ') rotate(0deg)', opacity: 0 },
-  ], { duration: 980, easing: 'cubic-bezier(.2,.9,.3,1)' }).onfinish = () => el.remove();
-  comboSparks(tier);
+    { transform: 'translate(-50%,-50%) scale(.7)', opacity: 0, offset: 0 },
+    { transform: 'translate(-50%,-50%) scale(1.2)', opacity: 1, offset: .2 },
+    { transform: 'translate(-50%,-50%) scale(' + sc + ')', opacity: 1, offset: .32 },
+    { transform: 'translate(-50%,calc(-50% - 20px)) scale(' + sc + ')', opacity: 1, offset: .6 },
+    { transform: 'translate(-50%,calc(-50% - 42px)) scale(' + sc + ')', opacity: 0, offset: 1 },
+  ], { duration: 1000, easing: 'ease-out' }).onfinish = () => el.remove();
+  comboParticles(tier, color);
+  if (tier >= 5) confetti();     // ×7+ : thêm confetti đơn giản
 }
-// Tia sao gold bắn tỏa ra quanh câu khen (nhiều & xa hơn khi combo cao)
-function comboSparks(tier) {
+// Hạt phẳng tỏa quanh câu khen: tròn · vuông bo góc · dấu cộng · thoi. Nhiều hơn khi combo cao.
+function comboParticles(tier, color) {
   const cx = (cell * COLS) / 2, cy = (cell * ROWS) * 0.4;
-  const n = 7 + tier * 3;
+  const n = 6 + tier * 4;
   for (let i = 0; i < n; i++) {
-    const s = document.createElement('div');
-    s.className = 'fx-spark';
-    s.style.left = cx + 'px'; s.style.top = cy + 'px';
-    boardEl.appendChild(s);
-    const a = (i / n) * Math.PI * 2 + Math.random() * 0.6;
-    const dist = cell * (1.1 + Math.random() * 1.3 + tier * 0.25);
-    const dx = Math.cos(a) * dist, dy = Math.sin(a) * dist;
-    s.animate([
-      { transform: 'translate(-50%,-50%) scale(0) rotate(0deg)', opacity: 1 },
-      { transform: 'translate(calc(-50% + ' + (dx * 0.5) + 'px), calc(-50% + ' + (dy * 0.5) + 'px)) scale(1) rotate(130deg)', opacity: 1, offset: .4 },
-      { transform: 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px)) scale(.2) rotate(240deg)', opacity: 0 },
-    ], { duration: 680 + Math.random() * 280, easing: 'cubic-bezier(.2,.7,.3,1)' }).onfinish = () => s.remove();
+    const p = document.createElement('div');
+    p.className = 'fx-particle';
+    const size = 7 + Math.random() * 5;
+    p.style.width = p.style.height = size + 'px';
+    p.style.left = cx + 'px'; p.style.top = cy + 'px';
+    p.style.background = color;
+    const shape = i % 4;
+    if (shape === 0) p.style.borderRadius = '50%';                             // tròn
+    else if (shape === 1) p.style.borderRadius = '3px';                        // vuông bo góc
+    else if (shape === 2) p.style.clipPath =                                   // dấu cộng
+      'polygon(38% 0,62% 0,62% 38%,100% 38%,100% 62%,62% 62%,62% 100%,38% 100%,38% 62%,0 62%,0 38%,38% 38%)';
+    else p.style.clipPath = 'polygon(50% 0,100% 50%,50% 100%,0 50%)';          // thoi
+    boardEl.appendChild(p);
+    const a = (i / n) * Math.PI * 2 + Math.random() * 0.5;
+    const dist = cell * (0.8 + Math.random() * 1.0 + tier * 0.18);
+    const dx = Math.cos(a) * dist;
+    const dy = Math.sin(a) * dist - cell * 0.35;    // hơi thiên lên trên
+    p.animate([
+      { transform: 'translate(-50%,-50%) scale(0)', opacity: 1 },
+      { transform: 'translate(calc(-50% + ' + (dx * 0.6) + 'px),calc(-50% + ' + (dy * 0.6) + 'px)) scale(1)', opacity: 1, offset: .35 },
+      { transform: 'translate(calc(-50% + ' + dx + 'px),calc(-50% + ' + dy + 'px)) scale(.3)', opacity: 0 },
+    ], { duration: 620 + Math.random() * 260, easing: 'cubic-bezier(.2,.7,.3,1)' }).onfinish = () => p.remove();
   }
 }
 
@@ -1395,24 +1593,45 @@ function spawnRecordToast() {
   ], { duration: 1100, easing: 'ease-out' }).onfinish = () => el.remove();
 }
 
+// Pháo hoa chúc mừng: nhiều quả nổ bung ở các điểm khác nhau, lệch thời gian
 function confetti() {
   const app = document.getElementById('app');
   const W = window.innerWidth, H = window.innerHeight;
-  for (let i = 0; i < 46; i++) {
+  const shells = 6;
+  for (let s = 0; s < shells; s++) {
+    const bx = W * (0.15 + Math.random() * 0.7);      // điểm nổ ngang
+    const by = H * (0.18 + Math.random() * 0.34);     // độ cao nổ
+    fireworkBurst(app, bx, by, s * 240 + Math.random() * 140);
+  }
+}
+function fireworkBurst(app, bx, by, delay) {
+  const color = COLORS[(Math.random() * COLORS.length) | 0];
+  const n = 22, R = 90 + Math.random() * 90;
+  // Chớp sáng tại tâm nổ
+  const flash = document.createElement('div');
+  flash.className = 'fw-flash';
+  flash.style.left = bx + 'px'; flash.style.top = by + 'px';
+  app.appendChild(flash);
+  flash.animate([
+    { transform: 'translate(-50%,-50%) scale(.2)', opacity: .95 },
+    { transform: 'translate(-50%,-50%) scale(2.4)', opacity: 0 },
+  ], { duration: 360, delay, easing: 'ease-out', fill: 'backwards' }).onfinish = () => flash.remove();
+  // Tia bắn toả tròn rồi rơi xuống + mờ dần
+  for (let i = 0; i < n; i++) {
     const p = document.createElement('div');
-    p.className = 'confetti';
-    p.style.background = COLORS[(Math.random() * COLORS.length) | 0];
-    p.style.left = (Math.random() * W) + 'px';
-    p.style.top = '-20px';
-    p.style.borderRadius = Math.random() < .5 ? '50%' : '2px';
+    p.className = 'fw';
+    p.style.background = color; p.style.color = color;   // color → box-shadow glow
+    p.style.left = bx + 'px'; p.style.top = by + 'px';
     app.appendChild(p);
-    const dx = (Math.random() - .5) * 160;
-    const rot = Math.random() * 720 - 360;
+    const ang = (i / n) * Math.PI * 2 + Math.random() * 0.25;
+    const dist = R * (0.6 + Math.random() * 0.5);
+    const dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist;
+    const fall = 70 + Math.random() * 90;
     p.animate([
-      { transform: 'translate(0,0) rotate(0deg)', opacity: 1 },
-      { transform: 'translate(' + dx + 'px,' + (H + 40) + 'px) rotate(' + rot + 'deg)', opacity: 1, offset: .85 },
-      { transform: 'translate(' + dx + 'px,' + (H + 40) + 'px) rotate(' + rot + 'deg)', opacity: 0 },
-    ], { duration: 1300 + Math.random() * 700, easing: 'ease-in' }).onfinish = () => p.remove();
+      { transform: 'translate(-50%,-50%) scale(1.25)', opacity: 1, offset: 0 },
+      { transform: 'translate(calc(-50% + ' + dx + 'px),calc(-50% + ' + dy + 'px)) scale(.95)', opacity: 1, offset: .55 },
+      { transform: 'translate(calc(-50% + ' + dx + 'px),calc(-50% + ' + (dy + fall) + 'px)) scale(.15)', opacity: 0, offset: 1 },
+    ], { duration: 950 + Math.random() * 450, delay, easing: 'cubic-bezier(.15,.6,.4,1)', fill: 'backwards' }).onfinish = () => p.remove();
   }
 }
 
@@ -1477,7 +1696,6 @@ function shuffleFx() {
     ], { duration: 520, easing: 'ease-in-out', delay: ((r + c) % 6) * 35 });
   }
   spawnToast(t('shuffle'));
-  Sound.shuffle();
 }
 function spawnToast(text) {
   const el = document.createElement('div');
@@ -1592,6 +1810,7 @@ function gameOver() {
   document.getElementById('ov-title').textContent = isNew ? t('newBest') : t('gameOver');
   document.getElementById('ov-score').textContent = score;
   document.getElementById('ov-best').textContent = best;
+  renderBest();                 // refresh HUD Best khi hết màn (§1.2)
   fitScores();
   sendMessage('game_result');   // endless: result=null, showModal=false
   setTimeout(() => document.getElementById('overlay').classList.remove('hidden'), 550);
@@ -1664,14 +1883,13 @@ window.addEventListener('pointerup', (e) => {
  * 12. HUD buttons + native callbacks
  * ===================================================================== */
 document.getElementById('back-btn').addEventListener('click', (e) => {
-  e.stopPropagation(); Sound.click(); sendMessage('quit');
+  e.stopPropagation(); sendMessage('quit');
 });
 document.getElementById('restart-btn').addEventListener('click', (e) => {
-  e.stopPropagation(); Sound.click(); newRun();  // ván mới: score về 0, giữ best (không bắn event)
+  e.stopPropagation(); newRun();  // ván mới: score về 0, giữ best (không bắn event)
 });
 document.getElementById('ov-btn').addEventListener('click', (e) => {
   e.stopPropagation();
-  Sound.click();
   sendMessage('retry_level');     // game điểm-cao tự lo Play Again (game-common §1.1)
   newRun();
 });
@@ -1684,12 +1902,11 @@ soundBtn.addEventListener('click', (e) => {
   Sound.ensure(); Sound.resume();
   Sound.setMuted(!Sound.isMuted());
   renderSoundBtn();
-  if (!Sound.isMuted()) Sound.click();   // phản hồi khi bật lại
   persistBest();                          // lưu lựa chọn tắt/bật tiếng
 });
 
 // Mở khoá AudioContext ở lần chạm đầu (chính sách autoplay mobile); thường trực để resume sau pause
-function unlockAudio() { Sound.ensure(); Sound.resume(); }
+function unlockAudio() { Sound.ensure(); Sound.resume(); Sound.startMusic(); }
 window.addEventListener('pointerdown', unlockAudio);
 window.addEventListener('touchstart', unlockAudio, { passive: true });
 
