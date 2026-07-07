@@ -246,6 +246,48 @@
     font-family: var(--ui-font); font-size: calc(17px * var(--sc)); letter-spacing: .6px;
     box-shadow: 0 6px 16px rgba(255,176,46,.35);
   }
+
+  /* ── Tutorial TƯƠNG TÁC trên bàn chơi (coach: bàn tay + vòng đích) ── */
+  .tut-coach { position: fixed; inset: 0; z-index: 44; pointer-events: none; }
+  .tut-coach.hidden { display: none; }
+  /* Banner hướng dẫn — pin dưới HUD (top đặt bằng JS) */
+  .tut-banner {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    max-width: 88%; text-align: center; padding: 10px 16px; border-radius: 14px;
+    background: rgba(8, 14, 28, .92); color: #eaf1ff;
+    font-family: system-ui, sans-serif; font-weight: 700;
+    font-size: calc(13px * var(--sc)); line-height: 1.4;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .5); border: 1px solid rgba(120, 160, 255, .28);
+    pointer-events: none; opacity: 0; transition: opacity .25s;
+  }
+  .tut-banner.show { opacity: 1; }
+  /* Vòng đích nhấp nháy — đặt left/top bằng JS, scale bằng animation */
+  .tut-ring {
+    position: fixed; left: -100px; top: -100px; margin: -23px 0 0 -23px;
+    width: 46px; height: 46px; border-radius: 50%;
+    border: 3px dashed rgba(255, 210, 63, .95);
+    box-shadow: 0 0 14px rgba(255, 210, 63, .5); pointer-events: none;
+    animation: tutRing 1.2s ease-in-out infinite;
+  }
+  .tut-ring.off { display: none; }
+  @keyframes tutRing {
+    0%, 100% { transform: scale(1); opacity: .95; }
+    50%      { transform: scale(1.2); opacity: .5; }
+  }
+  /* Bóng ngón tay ảo — di chuyển bằng transform (Web Animations API) */
+  .tut-finger {
+    position: fixed; left: 0; top: 0; margin: -6px 0 0 -18px;
+    width: 46px; height: 46px; font-size: 40px; line-height: 46px; text-align: center;
+    pointer-events: none; will-change: transform;
+    filter: drop-shadow(0 5px 7px rgba(0, 0, 0, .65)) drop-shadow(0 0 3px rgba(0, 0, 0, .5));
+  }
+  .tut-finger.off { display: none; }
+  /* Ô khay đang được chỉ định — viền vàng nhấp nháy */
+  .slot.tut-highlight { border-color: rgba(255, 210, 63, .95); animation: tutPulse 1.15s ease-in-out infinite; }
+  @keyframes tutPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 210, 63, .55); }
+    50%      { box-shadow: 0 0 0 7px rgba(255, 210, 63, 0); }
+  }
 </style>
 
 <div class="app" id="app">
@@ -295,6 +337,12 @@
 
   <canvas id="drag"></canvas>
 
+  <div class="tut-coach hidden" id="tut-coach">
+    <div class="tut-banner" id="tut-banner"></div>
+    <div class="tut-ring off" id="tut-ring"></div>
+    <div class="tut-finger off" id="tut-finger"></div>
+  </div>
+
   <div id="overlay" class="overlay hidden">
     <div class="card">
       <div class="card-title" id="ov-title">Game Over</div>
@@ -322,8 +370,8 @@ const LATIN_LANGS = new Set([
   'en','vi','es','es-MX','es-AR','pt-BR','pt','fr','de','it','nl','pl','tr','id','fil',
 ]);
 const I18N = {
-  en: { score: 'Score', best: 'Best', playAgain: 'Play Again', gameOver: 'Game Over', newBest: 'New Best!', hint: 'Drag a block onto a column to pour it', combo: 'Combo', prNice: 'Nice!', prGreat: 'Great!', prAwesome: 'Awesome!', prAmazing: 'Amazing!', prFantastic: 'Fantastic!', prUnstoppable: 'Unstoppable!' },
-  vi: { score: 'Điểm', best: 'Cao nhất', playAgain: 'Chơi lại', gameOver: 'Thua rồi', newBest: 'Kỷ lục mới!', hint: 'Kéo một khối vào cột để đổ cát xuống', combo: 'Combo', prNice: 'Tuyệt!', prGreat: 'Giỏi lắm!', prAwesome: 'Xuất sắc!', prAmazing: 'Kinh ngạc!', prFantastic: 'Tuyệt đỉnh!', prUnstoppable: 'Bất bại!' },
+  en: { score: 'Score', best: 'Best', playAgain: 'Play Again', gameOver: 'Game Over', newBest: 'New Best!', hint: 'Drag a block onto a column to pour it', combo: 'Combo', prNice: 'Nice!', prGreat: 'Great!', prAwesome: 'Awesome!', prAmazing: 'Amazing!', prFantastic: 'Fantastic!', prUnstoppable: 'Unstoppable!', tut1: 'Drag the block onto the board to pour sand', tut2: 'Drop the red square on the right to reach the right wall — same color across both walls blasts!', tutDone: 'Great! Same-color sand touching both walls blasts for points.' },
+  vi: { score: 'Điểm', best: 'Cao nhất', playAgain: 'Chơi lại', gameOver: 'Thua rồi', newBest: 'Kỷ lục mới!', hint: 'Kéo một khối vào cột để đổ cát xuống', combo: 'Combo', prNice: 'Tuyệt!', prGreat: 'Giỏi lắm!', prAwesome: 'Xuất sắc!', prAmazing: 'Kinh ngạc!', prFantastic: 'Tuyệt đỉnh!', prUnstoppable: 'Bất bại!', tut1: 'Kéo khối thả vào sân để đổ cát', tut2: 'Thả khối vuông đỏ vào bên phải để chạm tường phải — cùng màu nối 2 tường sẽ nổ!', tutDone: 'Tuyệt! Cát cùng màu chạm cả 2 tường sẽ nổ và ăn điểm.' },
   es: { score: 'Puntos', best: 'Récord', playAgain: 'Jugar de nuevo', gameOver: 'Fin del juego', newBest: '¡Nuevo récord!', hint: 'Arrastra un bloque a una columna para verterlo' },
   fr: { score: 'Score', best: 'Record', playAgain: 'Rejouer', gameOver: 'Partie terminée', newBest: 'Nouveau record !', hint: 'Glisse un bloc sur une colonne pour le verser' },
   de: { score: 'Punkte', best: 'Bestwert', playAgain: 'Nochmal', gameOver: 'Game Over', newBest: 'Neuer Rekord!', hint: 'Ziehe einen Block auf eine Spalte zum Ausgießen' },
@@ -401,6 +449,7 @@ function decodeGrid(b64) {
 function saveGame() {                            // ghi cả best (nhẹ) + snapshot ván (nặng)
   const snap = {
     best: best,
+    tutorialSeen: tutorialSeen,
     game: {
       grid: encodeGrid(),
       slots: slots.map(function (s) { return s ? { cells: s.cells, colors: s.colors } : null; }),
@@ -410,7 +459,7 @@ function saveGame() {                            // ghi cả best (nhẹ) + snap
   try { localStorage.setItem(LS_KEY, JSON.stringify(snap)); } catch (e) {}
 }
 function clearGameSave() {                       // xoá snapshot ván (giữ best) — khi thua / ván mới
-  try { localStorage.setItem(LS_KEY, JSON.stringify({ best: best })); } catch (e) {}
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ best: best, tutorialSeen: tutorialSeen })); } catch (e) {}
 }
 function tryRestore() {                          // khôi phục ván dở lúc boot; true nếu có ván để tiếp
   let obj = null;
@@ -529,6 +578,15 @@ function parseInitialBest() {
   const lb = l && typeof l.best === 'number' ? l.best : 0;
   return Math.max(nb, lb, 0);
 }
+// Đã xem hướng dẫn chưa? True nếu native HOẶC localStorage có cờ tutorialSeen.
+function parseTutorialSeen() {
+  let n = null, l = null;
+  const raw = getInitialData();
+  if (raw) { try { n = JSON.parse(raw); } catch (e) {} }
+  const lraw = readLocal();
+  if (lraw) { try { l = JSON.parse(lraw); } catch (e) {} }
+  return !!((n && n.tutorialSeen) || (l && l.tutorialSeen));
+}
 
 /* =====================================================================
  * 2. Grid + hằng số
@@ -589,6 +647,17 @@ let score = 0, best = 0, bestAtStart = 0, combo = 0;
 let pendingMove = false, moveScored = false;   // combo = CHUỖI ăn điểm qua nhiều lượt:
                                                // 1 lượt thả xong mà không nổ gì → reset
 let running = false, over = false;
+let tutorialSeen = false;            // cờ đã xem hướng dẫn lần đầu (lưu native + localStorage)
+// ── Tutorial TƯƠNG TÁC (coach trên bàn chơi) ──────────────────────────
+let tutMode = false;                 // đang trong tutorial?
+let tutPhase = 'drag';               // 'drag' → 'score' → 'done'
+let tutSlot = 0;                     // ô khay được phép kéo
+let tutGapGX = -1;                   // cột đích (grain x) cho bước ăn điểm; -1 = tự do
+let tutTX = 0, tutTY = 0;            // toạ độ grain của đích (cho vòng + ngón tay)
+let tutPlaced = false;               // đã thả khối trong bước hiện tại chưa
+let tutBlastFired = false;           // bước ăn điểm đã nổ chưa
+let tutFreeze = false;               // đóng băng cát khi chờ người chơi (giữ "thế" sạch)
+let tutFingerAnim = null;            // Web Animations handle của ngón tay
 let flashes = [];                    // [{i,life,max,r,g,b}]
 let blastHold = 0;                   // frame còn giữ nhịp sau một lần nổ (blast chậm lại)
 const BLAST_HOLD = 26;               // FREEZE ~0.43s ≈ đúng thời lượng blast SFX (hết tiếng thì hết freeze)
@@ -766,6 +835,7 @@ function checkBlast() {
     if (touchRight) { for (const ci of comp) toClear.push(ci); cleared += comp.length; }
   }
   if (cleared === 0) return;
+  if (tutMode) tutBlastFired = true;   // tutorial bước ăn điểm: đã nổ
   moveScored = true;              // lượt này CÓ nổ → chuỗi combo tiếp tục
   combo++;
   const pts = Math.round(cleared * (1 + (combo - 1) * 0.5));
@@ -799,7 +869,7 @@ function showComboPop(combo, pts) {
 function addScore(n) {
   score += n;
   document.getElementById('hud-score').textContent = score;
-  if (score > best) { best = score; saveData({ best }); }   // localStorage best cập nhật qua saveGame
+  if (score > best) best = score;   // best cập nhật trong RAM; ghi native 1 lần ở gameOver, localStorage qua saveGame mỗi nước
 }
 function updateBestHud() { document.getElementById('hud-best').textContent = best; }
 
@@ -809,6 +879,7 @@ function gameOver() {
   clearGameSave();               // thua → xoá ván dở, mở lại là ván mới
   AudioFX.over();
   const isNew = score > bestAtStart;
+  if (isNew) saveData({ best });   // KỶ LỤC MỚI → ghi native ĐÚNG 1 LẦN (thay vì mỗi lần nổ)
   document.getElementById('ov-title').textContent = isNew ? t('newBest') : t('gameOver');
   document.getElementById('ov-score').textContent = score;
   document.getElementById('ov-best').textContent = best;
@@ -838,7 +909,7 @@ function newRun() {
   newTray();
   running = true;
   clearGameSave();               // ván mới → xoá snapshot cũ (lượt đầu tiên sẽ lưu lại)
-  showHint();
+  showDragHand();                // đã chơi tutorial → chỉ nhắc bằng bàn tay ảo kéo-thả
 }
 
 /* =====================================================================
@@ -1005,7 +1076,7 @@ const TICK_MS = 1000 / 60;
 let lastTime = 0, acc = 0, renderAlpha = 0;
 function tick() {                   // 1 bước simulation cố định (16.67ms)
   animTick++;
-  if (running && !over) {
+  if (running && !over && !tutFreeze) {   // tutFreeze: giữ nguyên "thế ăn điểm" tới khi người chơi thả
     stepFallBlocks();
     if (blastHold > 0) {
       blastHold--;                    // FREEZE sau blast: đóng băng cát, chỉ nháy — đọc combo/điểm
@@ -1020,10 +1091,11 @@ function tick() {                   // 1 bước simulation cố định (16.67m
           if (pendingMove) {            // không nổ nữa → lượt lắng xong
             if (!moveScored) combo = 0; // không nổ được gì → đứt chuỗi combo
             pendingMove = false;
-            saveGame();                 // lưu ván dở vào localStorage
+            if (!tutMode) saveGame();   // lưu ván dở (tutorial thì không ghi đè)
           }
           stableFrames++;
-          if (stableFrames > 2 && (crossedLine() || !anyPlaceable())) gameOver();
+          if (tutMode) tutTick();       // tutorial: xét chuyển bước / kết thúc
+          else if (stableFrames > 2 && (crossedLine() || !anyPlaceable())) gameOver();
         }
       }
     }
@@ -1050,11 +1122,13 @@ document.querySelectorAll('#tray .slot').forEach(el => {
     if (!running || over || blastHold > 0) return;   // cho phép nhấc khối khác khi 1 khối đang rơi
     const i = +el.dataset.slot;
     if (!slots[i]) return;
+    if (tutMode && (tutPhase === 'done' || i !== tutSlot)) return;   // tutorial: chỉ khối được chỉ định
     drag = { slot: i, piece: slots[i] };
     el.classList.add('grabbing');
     showDrag(slots[i], e.clientX, e.clientY);
     ghost = null;
-    hideHint();
+    hideHint(); hideDragHand();          // chạm khối → tắt nhắc (text + bàn tay)
+    if (tutMode) hideFinger();          // đang tự kéo → ẩn ngón tay ảo (giữ vòng đích + banner)
     AudioFX.resume(); AudioFX.pick();   // cần gesture để bật audio (mobile)
     e.preventDefault();
   });
@@ -1065,8 +1139,12 @@ window.addEventListener('pointermove', (e) => {
   const rect = cv.getBoundingClientRect();
   const overBoard = e.clientY < rect.bottom + 10 && e.clientX > rect.left - 20 && e.clientX < rect.right + 20;
   if (overBoard) {
-    const g = ghostFromPointer(drag.piece.cells, e.clientX, e.clientY);
-    ghost = { cells: drag.piece.cells, gx: g.gx, gy: g.gy, valid: g.valid };
+    if (tutMode && tutPhase === 'score') {
+      ghost = tutScoreGhost();          // bước ăn điểm → luôn hít vào khe đích
+    } else {
+      const g = ghostFromPointer(drag.piece.cells, e.clientX, e.clientY);
+      ghost = { cells: drag.piece.cells, gx: g.gx, gy: g.gy, valid: g.valid };
+    }
   } else ghost = null;
 });
 window.addEventListener('pointerup', () => {
@@ -1078,8 +1156,11 @@ window.addEventListener('pointerup', () => {
     startFall(d.piece.cells, d.piece.colors, ghost.gx, ghost.gy);
     AudioFX.drop();
     slots[d.slot] = null;
-    if (slots.every(s => !s)) newTray(); else renderTray();
+    if (tutMode) { renderTray(); tutPlaced = true; tutFreeze = false; hideCoach(); }   // thả xong → tan băng cho cát chảy
+    else if (slots.every(s => !s)) newTray(); else renderTray();
     stableFrames = 0;
+  } else if (tutMode && tutPhase !== 'done') {
+    showCoach();                        // thả hụt → hiện lại hướng dẫn để làm lại
   }
   ghost = null;
 });
@@ -1116,6 +1197,190 @@ function showHint() {
   clearTimeout(hintTimer); hintTimer = setTimeout(hideHint, 3800);
 }
 function hideHint() { document.getElementById('hint').classList.add('gone'); }
+
+// ── Nhắc cho người ĐÃ chơi tutorial: CHỈ bàn tay ảo diễn kéo-thả (không banner/
+// vòng/khoá input) — tự ẩn khi người chơi cầm khối, hoặc sau ít giây nếu chưa chơi.
+let handHintOn = false, handFingerAnim = null, handHintTimer = 0;
+function showDragHand() {
+  if (tutMode || !slots[0]) return;              // đang tutorial thật, hoặc không có khối để "cầm" → thôi
+  handHintOn = true;
+  const s = slotCenter(0), e = boardPoint(GW / 2, GH * 0.4);   // ô khay đầu → giữa sân
+  document.getElementById('tut-coach').classList.remove('hidden');   // banner/vòng vẫn ẩn → chỉ thấy ngón tay
+  const f = document.getElementById('tut-finger');
+  f.textContent = '👆'; f.classList.remove('off');
+  if (handFingerAnim) handFingerAnim.cancel();
+  handFingerAnim = f.animate([
+    { transform: 'translate(' + s.x + 'px,' + s.y + 'px) scale(1)', opacity: 0 },
+    { transform: 'translate(' + s.x + 'px,' + s.y + 'px) scale(1)', opacity: 1, offset: 0.10 },
+    { transform: 'translate(' + s.x + 'px,' + s.y + 'px) scale(.8)', opacity: 1, offset: 0.20 },
+    { transform: 'translate(' + e.x + 'px,' + e.y + 'px) scale(.8)', opacity: 1, offset: 0.62 },
+    { transform: 'translate(' + e.x + 'px,' + e.y + 'px) scale(1)', opacity: 1, offset: 0.74 },
+    { transform: 'translate(' + e.x + 'px,' + e.y + 'px) scale(1)', opacity: 1, offset: 0.86 },
+    { transform: 'translate(' + e.x + 'px,' + e.y + 'px) scale(1)', opacity: 0 },
+  ], { duration: 2300, iterations: Infinity, easing: 'cubic-bezier(.4,0,.2,1)' });
+  clearTimeout(handHintTimer); handHintTimer = setTimeout(hideDragHand, 9000);   // tự tắt nếu để lâu
+}
+function hideDragHand() {
+  if (!handHintOn) return;
+  handHintOn = false; clearTimeout(handHintTimer);
+  if (handFingerAnim) { handFingerAnim.cancel(); handFingerAnim = null; }
+  document.getElementById('tut-finger').classList.add('off');
+  if (!tutMode) document.getElementById('tut-coach').classList.add('hidden');
+}
+
+/* =====================================================================
+ * Tutorial TƯƠNG TÁC — người chơi tự làm theo trên bàn thật
+ *   Bước 1 (drag): bàn trống, 1 khối trong khay → tự kéo thả vào sân.
+ *   Bước 2 (score): dựng sẵn "thế ăn điểm" (dải cát xanh nối gần hết bề
+ *   ngang, chừa 1 khe) → kéo khối xanh vào khe để nối 2 tường → NỔ.
+ * ===================================================================== */
+// Đánh dấu ĐÃ xem — persist native (nhẹ) + localStorage (giữ ván dở nếu có).
+function persistTutorialSeen() {
+  tutorialSeen = true;
+  saveData({ best: best, tutorialSeen: true });
+  try {
+    let obj = {}; const raw = readLocal();
+    if (raw) { try { obj = JSON.parse(raw) || {}; } catch (e) {} }
+    obj.best = best; obj.tutorialSeen = true;
+    localStorage.setItem(LS_KEY, JSON.stringify(obj));
+  } catch (e) {}
+}
+function fillRect(x0, x1, y0, y1, colorIdx) {          // tô 1 vùng grain 1 màu vào grid
+  const v = colorIdx + 1;
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) grid[idx(x, y)] = v;
+}
+// Khối 1 màu tiện dụng cho tutorial.
+function mkPiece(cells, colorIdx) { return { cells: cells, colors: cells.map(() => colorIdx) }; }
+
+function startTutorial() {
+  tutMode = true; over = false; running = true;
+  score = 0; combo = 0; best = best || 0; bestAtStart = best;
+  document.getElementById('overlay').classList.add('hidden');
+  hideHint();
+  setupDragPhase();
+  requestAnimationFrame(frame);
+}
+function setupDragPhase() {
+  grid.fill(0); fallBlocks = []; flashes = []; ghost = null; drag = null;
+  combo = 0; blastHold = 0; pendingMove = false; moveScored = false; stableFrames = 0;
+  tutPhase = 'drag'; tutPlaced = false; tutGapGX = -1; tutFreeze = false;
+  slots = [mkPiece(SHAPES[1], 2), null, null];   // 1 khối ngang-3 (xanh lá) trong ô 0
+  prevFilled = [false, false, false]; renderTray();
+  document.getElementById('hud-score').textContent = '0';
+  tutTX = GW / 2; tutTY = GH * 0.34;             // đích minh hoạ: giữa sân, hơi trên
+  showBanner(t('tut1')); showCoach();
+}
+function setupScorePhase() {
+  grid.fill(0); fallBlocks = []; flashes = []; ghost = null; drag = null;
+  combo = 0; blastHold = 0; pendingMove = false; moveScored = false; stableFrames = 0;
+  tutPhase = 'score'; tutPlaced = false; tutBlastFired = false; tutFreeze = true;
+  // Thế "bé": ĐÚNG 2 đụm cát ĐỎ (như 2 cục vuông đã rơi & chảy ra) — một ở góc
+  // TRÁI (chạm tường trái), một ở GIỮA (vươn tới sát khe); sườn dốc ~45%, KHÔNG
+  // lớp nền dày → nhìn rõ 2 mô cát. Cát đỏ nối liền tường TRÁI → sát khe phải;
+  // CHỪA 2 ô sát tường phải làm khe. Bé thả khối VUÔNG ĐỎ vào khe → nối tới
+  // tường phải → đỏ chạm cả 2 tường → NỔ.
+  const emptyX0 = (BW - 2) * B;                   // khe trống 2 ô sát tường phải (x = 64..79)
+  const PEAKS = [{ cx: 16, h: 20 }, { cx: 44, h: 20 }];  // đụm trái (chạm tường) + đụm giữa (chạm mép khe)
+  for (let x = 0; x < emptyX0; x++) {
+    let h = 0;                                    // độ cao cột cát tại x = đỉnh đụm gần nhất (dốc 1:1)
+    for (const p of PEAKS) { const hh = p.h - Math.abs(x - p.cx); if (hh > h) h = hh; }
+    if (h > 0) fillRect(x, x, GH - h, GH - 1, 0); // cột cát đỏ cao h grain (đỏ = màu 0)
+  }
+  tutGapGX = emptyX0;                            // khối vuông thả vào khe sát tường phải
+  slots = [mkPiece(SHAPES[4], 0), null, null];   // khối VUÔNG 2×2 (đỏ)
+  prevFilled = [false, false, false]; renderTray();
+  tutTX = emptyX0 + B; tutTY = GH - 3 * B;        // đích: vùng trống bên phải
+  showBanner(t('tut2')); showCoach();
+}
+// Ghost cố định cho bước ăn điểm — luôn "hít" vào khe dù thả hơi lệch.
+function tutScoreGhost() {
+  const cells = slots[tutSlot].cells;
+  let gy = 0; while (gy < GH && fits(cells, tutGapGX, gy + 1)) gy++;
+  return { cells: cells, gx: tutGapGX, gy: 0, valid: fits(cells, tutGapGX, 0) };
+}
+function tutTick() {                              // gọi mỗi khi cát đã lắng ổn định
+  if (tutPhase === 'drag' && tutPlaced && fallBlocks.length === 0 && flashes.length === 0 && stableFrames > 1) {
+    setTimeout(setupScorePhase, 260);            // đã kéo thả xong → dựng thế ăn điểm
+    tutPlaced = false;
+  } else if (tutPhase === 'score' && tutPlaced && tutBlastFired && fallBlocks.length === 0 && flashes.length === 0 && stableFrames > 1) {
+    tutFinish();
+    tutPlaced = false;
+  }
+}
+function tutFinish() {
+  tutPhase = 'done';
+  showBanner(t('tutDone'));
+  hideFinger(); hideRing(); updateTutHighlight();
+  persistTutorialSeen();
+  setTimeout(function () {                        // để đọc lời khen rồi vào ván thật
+    tutMode = false; tutFreeze = false;
+    hideCoach();
+    newRun();                                     // bắt đầu endless bình thường (tray ngẫu nhiên)
+  }, 1500);
+}
+
+/* ── Lớp coach: banner + vòng đích + ngón tay ────────────────────────── */
+function boardPoint(grainX, grainY) {            // grain(sân) → toạ độ client (px)
+  const r = cv.getBoundingClientRect();
+  return { x: r.left + grainX / GW * r.width, y: r.top + grainY / GH * r.height };
+}
+function slotCenter(i) {
+  const el = document.querySelectorAll('#tray .slot')[i];
+  const r = el.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+}
+function showBanner(txt) {
+  const b = document.getElementById('tut-banner');
+  b.textContent = txt;
+  positionCoachChrome();               // đặt lại top của banner
+  b.classList.add('show');
+}
+// Ghim banner ngay dưới HUD.
+function positionCoachChrome() {
+  const tb = document.getElementById('topbar').getBoundingClientRect().bottom;
+  document.getElementById('tut-banner').style.top = (tb + 46) + 'px';
+}
+function updateTutHighlight() {
+  document.querySelectorAll('#tray .slot').forEach((el, i) =>
+    el.classList.toggle('tut-highlight', tutMode && tutPhase !== 'done' && i === tutSlot));
+}
+function hideFinger() { const f = document.getElementById('tut-finger'); f.classList.add('off'); if (tutFingerAnim) { tutFingerAnim.cancel(); tutFingerAnim = null; } }
+function hideRing() { document.getElementById('tut-ring').classList.add('off'); }
+function hideCoach() {
+  document.getElementById('tut-coach').classList.add('hidden');
+  document.getElementById('tut-banner').classList.remove('show');
+  hideFinger(); hideRing();
+  document.querySelectorAll('#tray .slot').forEach(el => el.classList.remove('tut-highlight'));
+}
+// Bố trí lại coach theo layout hiện tại (gọi lúc show + mỗi lần resize).
+function tutLayout() {
+  if (!tutMode || tutPhase === 'done') return;
+  positionCoachChrome();
+  const s = slotCenter(tutSlot), e = boardPoint(tutTX, tutTY);
+  // Vòng đích (chỉ bước ăn điểm mới ghim rõ 1 khe; bước drag để mềm ở giữa)
+  const ring = document.getElementById('tut-ring');
+  ring.classList.remove('off');
+  ring.style.left = e.x + 'px'; ring.style.top = e.y + 'px';
+  // Ngón tay: đi từ ô khay → đích, nhấn xuống, kéo tới, nhả, lặp lại.
+  const f = document.getElementById('tut-finger');
+  f.textContent = '👆';               // 👆 bóng ngón tay
+  f.classList.remove('off');
+  if (tutFingerAnim) tutFingerAnim.cancel();
+  tutFingerAnim = f.animate([
+    { transform: 'translate(' + s.x + 'px,' + s.y + 'px) scale(1)', opacity: 0 },
+    { transform: 'translate(' + s.x + 'px,' + s.y + 'px) scale(1)', opacity: 1, offset: 0.10 },
+    { transform: 'translate(' + s.x + 'px,' + s.y + 'px) scale(.8)', opacity: 1, offset: 0.20 },
+    { transform: 'translate(' + e.x + 'px,' + e.y + 'px) scale(.8)', opacity: 1, offset: 0.62 },
+    { transform: 'translate(' + e.x + 'px,' + e.y + 'px) scale(1)', opacity: 1, offset: 0.74 },
+    { transform: 'translate(' + e.x + 'px,' + e.y + 'px) scale(1)', opacity: 1, offset: 0.86 },
+    { transform: 'translate(' + e.x + 'px,' + e.y + 'px) scale(1)', opacity: 0 },
+  ], { duration: 2300, iterations: Infinity, easing: 'cubic-bezier(.4,0,.2,1)' });
+}
+function showCoach() {
+  document.getElementById('tut-coach').classList.remove('hidden');
+  updateTutHighlight();
+  tutLayout();
+}
 
 function applyStatusBarPad() {
   const sb = getStatusBarHeight();
@@ -1157,6 +1422,8 @@ function resize() {
     if (ph > 0) document.documentElement.style.setProperty('--btn-size', Math.round(ph * 0.92) + 'px');
   }
   renderTray();
+  if (tutMode) { updateTutHighlight(); tutLayout(); }   // coach bám theo layout mới
+  else if (handHintOn) showDragHand();                  // bàn tay nhắc bám layout mới
 }
 function boot() {
   LANG = getLanguage();
@@ -1164,11 +1431,16 @@ function boot() {
   applyStatusBarPad();
   applyStaticI18n();
   best = parseInitialBest();
+  tutorialSeen = parseTutorialSeen();
   updateBestHud();
   updateSoundBtn();
   resize();
-  if (!tryRestore()) newRun();    // có ván dở → chơi tiếp; không thì ván mới
-  requestAnimationFrame(frame);
+  if (!tutorialSeen) {
+    startTutorial();              // lần đầu vào → tutorial TƯƠNG TÁC (tự chạy vòng lặp)
+  } else {
+    if (!tryRestore()) newRun();  // có ván dở → chơi tiếp; không thì ván mới
+    requestAnimationFrame(frame);
+  }
 }
 window.addEventListener('resize', resize);
 window.addEventListener('load', resize);   // chạy lại khi kích thước cửa sổ đã ổn định
