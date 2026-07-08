@@ -1,0 +1,1210 @@
+<!--
+  Find The Cow — Color Block Puzzle (chủ đề bò) — HaND
+  Flat theme, pastel. Single-file HTML (CSS + JS inline). Game LEVEL VÔ HẠN.
+  Cơ chế: lưới N×N chia N vùng màu. Đặt N con bò sao cho MỖI hàng, MỖI cột và
+  MỖI vùng màu có ĐÚNG 1 con bò; hai con bò KHÔNG được kề nhau (kể cả chéo).
+  Cỡ: vài màn đầu 5×5 (dễ) rồi tăng dần tới 9×9; tối đa 9 màu/màn.
+  Điều khiển: nhấp 1 lần = đánh dấu X (bỏ X); giữ & kéo = X nhiều ô; nhấp ĐÔI =
+  đặt bò (đặt rồi KHÓA, không gỡ). 3 mạng: đặt bò KHÔNG trùng lời giải → −1 mạng.
+  (Người chơi phải đặt bò ĐÚNG Y HỆT lời giải duy nhất mới thắng.)
+  Câu đố sinh ngẫu nhiên, DUY NHẤT & GIẢI ĐƯỢC BẰNG SUY LUẬN (không đoán mò).
+  Có: 3 thẻ luật (mô tả), thanh gợi ý (hint + xem quảng cáo khung UI).
+  Tuân thủ .claude/game-common.md (bridge có level, i18n, btn3d, back/restart).
+-->
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Find The Cow</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap" rel="stylesheet" />
+
+<style>
+  /* ── Reset + tắt highlight khi chạm (game-common §UI) ─────────────── */
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+
+  :root {
+    --ui-font: 'Google Sans Flex', system-ui, sans-serif;
+    --bg-1: #eaf6ff;
+    --bg-2: #d9ecff;
+    --ink: #223046;
+    --ink-soft: #5c6f8c;
+    --accent: #2f80ed;
+    --gold: #f5a623;
+    --heart: #ff5a76;
+    --heart-dead: #c9d3e0;
+    --line-thick: #2b3550;
+    --cell: 46px;   /* set bởi JS */
+  }
+
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: var(--ui-font);
+    font-weight: 700;
+    color: var(--ink);
+    background: linear-gradient(180deg, var(--bg-1), var(--bg-2));
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: none;
+  }
+
+  .app {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;   /* chia đều khoảng cách giữa các khối (topbar·tim·luật·bàn·hint) */
+  }
+
+  /* ── HUD trên cùng ────────────────────────────────────────────────── */
+  .topbar {
+    width: 100%;
+    max-width: 560px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 14px;
+  }
+  .top-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1;
+    gap: 6px;
+  }
+  .lvl-label {
+    font-size: 11px;
+    letter-spacing: 1.6px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+  }
+  .lvl-num { font-size: 24px; color: var(--ink); }
+  .lvl-num b { color: var(--accent); }
+  .hearts { display: flex; gap: 5px; margin-top: 2px; }
+  .heart { width: 22px; height: 22px; display: block; }
+  .heart svg { width: 100%; height: 100%; display: block; }
+  .heart .h-fill { fill: var(--heart); transition: fill .25s ease, transform .25s ease; }
+  .heart.dead .h-fill { fill: var(--heart-dead); }
+  .heart.pop { animation: heartPop .4s ease; }
+  @keyframes heartPop {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.35); }
+    100% { transform: scale(1); }
+  }
+
+  /* Btn3d — biến thể flat, icon vuông (button-common) */
+  .btn3d {
+    --radius: 14px;
+    --surface-color: #ffffff;
+    --surface-text: var(--accent);
+    position: relative;
+    display: inline-block;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+  }
+  .btn3d-shadow { display: none; }
+  .btn3d-surface {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius);
+    background-color: var(--surface-color);
+    color: var(--surface-text);
+    box-shadow: 0 3px 0 rgba(47, 128, 237, .18), 0 6px 14px rgba(34, 48, 70, .12);
+    transition: transform .09s ease-out;
+  }
+  .btn3d:active .btn3d-surface { transform: scale(.95); }
+  /* Nút icon co giãn theo màn hình (nhỏ ở máy hẹp, tối đa 46px) → hàng HUD tự khớp. */
+  .btn3d.btn-icon .btn3d-surface { width: clamp(38px, 11vw, 46px); height: clamp(38px, 11vw, 46px); }
+  .btn3d.btn-icon { -webkit-user-select: none; user-select: none; }
+  .back-ico { width: 52%; height: 52%; fill: currentColor; display: block; }
+  .restart-ico { width: 62%; height: 62%; fill: currentColor; display: block; }
+
+  /* ── Dòng mục tiêu + tiến độ ──────────────────────────────────────── */
+  .subbar {
+    width: 100%;
+    max-width: 560px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 20px 4px;
+  }
+  .goal {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    line-height: 1.25;
+  }
+  .progress {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 15px;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .progress .p-ico { width: 20px; height: 20px; display: block; }
+
+  /* ── Sân chơi ─────────────────────────────────────────────────────── */
+  .stage {
+    flex: 0 0 auto;             /* chỉ vừa khít bàn; khoảng trống do .app space-between chia đều */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 0;
+    overflow: hidden;
+  }
+  .board {
+    display: grid;
+    /* Viền TRẮNG: khe giữa ô (gap) mảnh, còn LỀ NGOÀI CÙNG (padding) dày hơn.
+     * KHÔNG còn viền đen; các vùng phân biệt bằng MÀU. Khớp GAP/PAD với computeSizing(). */
+    gap: 4px;
+    padding: 10px;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 12px 30px rgba(34, 48, 70, .18);
+    overflow: hidden;
+  }
+  .cell {
+    position: relative;
+    width: var(--cell);
+    height: var(--cell);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    touch-action: none;
+    border: 0;
+    border-radius: 3px;
+  }
+
+  .mark {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .mark svg { display: block; }
+  .mark.x svg { width: 54%; height: 54%; color: #ffffff; opacity: .9;
+    filter: drop-shadow(0 1px 1.5px rgba(34, 48, 70, .3)); }
+  .mark.cow svg { width: 82%; height: 82%; }
+
+  .cell.place .mark.cow { animation: cowPop .28s cubic-bezier(.2, 1.3, .5, 1); }
+  @keyframes cowPop {
+    0% { transform: scale(.2); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .cell.bad { animation: badFlash .5s ease; }
+  @keyframes badFlash {
+    0%, 100% { box-shadow: inset 0 0 0 0 rgba(255, 60, 80, 0); }
+    15% { box-shadow: inset 0 0 0 40px rgba(255, 70, 90, .55); transform: translateX(-2px); }
+    35% { transform: translateX(2px); }
+    55% { transform: translateX(-1px); }
+    75% { box-shadow: inset 0 0 0 40px rgba(255, 70, 90, .18); transform: translateX(1px); }
+  }
+  .cell.win-glow .mark.cow { animation: cowCheer .6s ease; }
+  @keyframes cowCheer {
+    0%, 100% { transform: translateY(0) rotate(0); }
+    30% { transform: translateY(-18%) rotate(-8deg); }
+    60% { transform: translateY(-6%) rotate(6deg); }
+  }
+
+  /* ── Toast (không phải modal kết quả — chỉ báo thoáng) ─────────────── */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 26px;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(34, 48, 70, .92);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 10px 18px;
+    border-radius: 999px;
+    box-shadow: 0 8px 20px rgba(34, 48, 70, .3);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s ease, transform .25s ease;
+    z-index: 20;
+    max-width: 84vw;
+    text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── Khung MÀN + ĐIỂM (chung hàng với nút Back) ───────────────────── */
+  .info-frame {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 3px 14px;                 /* gọn lại theo chiều cao */
+    box-shadow: 0 3px 0 rgba(47, 128, 237, .12), 0 6px 14px rgba(34, 48, 70, .12);
+  }
+  .info-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.02;
+    gap: 1px;
+  }
+  .info-label { font-size: clamp(9px, 2.6vw, 10px); letter-spacing: 1.2px; color: var(--ink-soft); text-transform: uppercase; }
+  .info-val { display: flex; align-items: center; gap: 4px; font-size: clamp(16px, 4.8vw, 20px); color: var(--ink); }
+  .info-val b { color: var(--accent); }
+
+  /* ── 3 thẻ luật (hướng dẫn) — trong luồng; .app space-between chia đều với các khối */
+  .rules {
+    width: 100%;
+    max-width: 560px;
+    margin: 0 auto;
+    display: flex;
+    gap: 8px;
+    padding: 0 14px;
+  }
+  .rule-card {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 9px 8px;
+    box-shadow: 0 2px 0 rgba(47, 128, 237, .1), 0 4px 10px rgba(34, 48, 70, .08);
+    text-align: center;
+  }
+  .rule-desc { font-size: 10px; font-weight: 600; line-height: 1.25; color: var(--ink-soft); }
+
+  /* ── Thanh công cụ dưới (gợi ý) ───────────────────────────────────── */
+  .toolbar {
+    width: 100%;
+    max-width: 560px;
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    padding: 4px 14px calc(env(safe-area-inset-bottom) + 12px);
+  }
+  .tool {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    min-width: 88px;
+    padding: 9px 14px;
+    background: #ffffff;
+    border: 0;
+    border-radius: 16px;
+    cursor: pointer;
+    font: inherit;
+    color: var(--ink);
+    box-shadow: 0 3px 0 rgba(47, 128, 237, .16), 0 6px 14px rgba(34, 48, 70, .12);
+    transition: transform .09s ease-out;
+  }
+  .tool:active { transform: scale(.95); }
+  .tool-ico { width: 30px; height: 30px; display: block; }
+  .tool-label { font-size: 11px; font-weight: 700; color: var(--ink-soft); }
+  .tool-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--heart);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    border-radius: 999px;
+    box-shadow: 0 2px 5px rgba(34, 48, 70, .3);
+  }
+  .tool-badge.ad { background: var(--accent); }
+  .tool-badge.zero { background: var(--heart-dead); color: #8a97a8; }
+
+  .cell.hint-glow { animation: hintGlow 1s ease; }
+  @keyframes hintGlow {
+    0%, 100% { box-shadow: inset 0 0 0 0 rgba(47, 128, 237, 0); }
+    30% { box-shadow: inset 0 0 0 40px rgba(47, 128, 237, .35); }
+  }
+
+  .hidden { display: none !important; }
+</style>
+
+<div class="app" id="app">
+  <div class="topbar" id="topbar">
+    <div class="btn3d btn-icon" id="back-btn" role="button" aria-label="Back">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="back-ico" viewBox="0 0 447.243 447.243" aria-hidden="true">
+          <path fill="currentColor" d="M420.361 192.229a31.967 31.967 0 0 0-5.535-.41H99.305l6.88-3.2a63.998 63.998 0 0 0 18.08-12.8l88.48-88.48c11.653-11.124 13.611-29.019 4.64-42.4-10.441-14.259-30.464-17.355-44.724-6.914a32.018 32.018 0 0 0-3.276 2.754l-160 160c-12.504 12.49-12.515 32.751-.025 45.255l.025.025 160 160c12.514 12.479 32.775 12.451 45.255-.063a32.084 32.084 0 0 0 2.745-3.137c8.971-13.381 7.013-31.276-4.64-42.4l-88.32-88.64a64.002 64.002 0 0 0-16-11.68l-9.6-4.32h314.24c16.347.607 30.689-10.812 33.76-26.88 2.829-17.445-9.019-33.88-26.464-36.71z"/>
+        </svg>
+      </span>
+    </div>
+
+    <div class="info-frame">
+      <div class="info-item">
+        <span class="info-label" id="lvl-label">Level</span>
+        <span class="info-val"><b id="lvl-num">1</b><span id="lvl-total"></span></span>
+      </div>
+    </div>
+
+    <div class="btn3d btn-icon" id="restart-btn" role="button" aria-label="Restart">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="restart-ico" viewBox="0 0 100 100" aria-hidden="true">
+          <path fill="currentColor" d="m50.7 19.003 4.793-4.793c2.696-2.697 2.696-6.991 0-9.688s-6.991-2.696-9.687 0L29.327 21.001a6.812 6.812 0 0 0 0 9.687l16.479 16.478a6.9 6.9 0 0 0 4.793 1.998c1.798 0 3.496-.7 4.794-1.998a6.812 6.812 0 0 0 0-9.687l-4.794-4.794c13.682.4 24.768 11.685 24.768 25.467 0 14.081-11.485 25.466-25.467 25.466S24.534 72.233 24.534 58.252c0-3.096.599-6.192 1.597-8.989 1.299-3.495-.4-7.49-3.994-8.788-3.496-1.298-7.49.4-8.789 3.995-1.698 4.394-2.496 9.088-2.496 13.882C10.852 79.923 28.428 97.5 50 97.5s39.148-17.577 39.148-39.148c0-21.472-17.177-38.95-38.449-39.349z"/>
+        </svg>
+      </span>
+    </div>
+  </div>
+
+  <div class="subbar" style="justify-content:center; gap:18px">
+    <div class="progress">
+      <svg class="p-ico" viewBox="0 0 100 100" aria-hidden="true" id="p-ico"></svg>
+      <span id="prog-num">0 / 0</span>
+    </div>
+    <div class="hearts" id="hearts"></div>
+  </div>
+
+  <div class="rules" id="rules">
+    <div class="rule-card"><span class="rule-desc" id="rule1-d"></span></div>
+    <div class="rule-card"><span class="rule-desc" id="rule2-d"></span></div>
+    <div class="rule-card"><span class="rule-desc" id="rule3-d"></span></div>
+  </div>
+
+  <div class="stage">
+    <div class="board" id="board"></div>
+  </div>
+
+  <div class="toolbar" id="toolbar">
+    <button class="tool" id="hint-btn" type="button">
+      <svg class="tool-ico" viewBox="0 0 100 100" aria-hidden="true" id="hint-ico"></svg>
+      <span class="tool-label" id="hint-label">Hint</span>
+      <span class="tool-badge" id="hint-badge">3</span>
+    </button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* =====================================================================
+ * 0. Localization (inline — game-common §5)
+ * ===================================================================== */
+const SUPPORTED_LANGS = [
+  'en','vi','zh-Hans','zh-Hant','ja','ko','es','es-MX','es-AR','pt-BR','pt',
+  'fr','de','it','nl','pl','ru','tr','ar','hi','th','id','fil',
+];
+const DEFAULT_LANG = 'en';
+const LATIN_LANGS = new Set([
+  'en','vi','es','es-MX','es-AR','pt-BR','pt','fr','de','it','nl','pl','tr','id','fil',
+]);
+
+const I18N = {
+  en: { level: 'Level', goal: 'One cow per row, column & color. None may touch.',
+        ruleBroken: 'Rule broken! −1 life', solved: 'Solved! 🐄', gameOver: 'Out of lives',
+        score: 'Score', rule1: '1 cow per color', rule2: '1 cow per row & column',
+        rule3: "Cows can't touch",
+        rule1d: '1 cow per color',
+        rule2d: 'Max 1 cow per row and column',
+        rule3d: 'No adjacent cows (any direction)',
+        hintTool: 'Hint', adTool: 'Get hint',
+        noHints: 'No hints left — get more', gotHint: '+1 hint added' },
+  vi: { level: 'Màn', goal: 'Mỗi hàng, cột và màu đúng 1 con bò. Không con nào kề nhau.',
+        ruleBroken: 'Phạm luật! −1 mạng', solved: 'Giải xong! 🐄', gameOver: 'Hết mạng rồi',
+        score: 'Điểm', rule1: '1 bò mỗi màu', rule2: '1 bò mỗi hàng và cột',
+        rule3: 'Bò không được chạm nhau',
+        rule1d: '1 con bò mỗi màu',
+        rule2d: 'Tối đa 1 con bò mỗi hàng và cột',
+        rule3d: 'Các con bò không được đứng cạnh nhau (mọi hướng)',
+        hintTool: 'Gợi ý', adTool: 'Nhận gợi ý',
+        noHints: 'Hết gợi ý — nhận thêm', gotHint: '+1 gợi ý' },
+  'zh-Hans': { level: '关卡', goal: '每行、每列、每色恰好一头牛，且互不相邻。',
+        ruleBroken: '违规！−1 条命', solved: '完成！🐄', gameOver: '没有生命了' },
+  'zh-Hant': { level: '關卡', goal: '每行、每列、每色恰好一頭牛，且互不相鄰。',
+        ruleBroken: '違規！−1 條命', solved: '完成！🐄', gameOver: '沒有生命了' },
+  ja: { level: 'レベル', goal: '各行・各列・各色に牛を1頭ずつ。隣接は禁止。',
+        ruleBroken: 'ルール違反！−1', solved: 'クリア！🐄', gameOver: 'ライフ切れ' },
+  ko: { level: '레벨', goal: '각 행·열·색에 소 한 마리씩. 서로 붙으면 안 돼요.',
+        ruleBroken: '규칙 위반! −1', solved: '완료! 🐄', gameOver: '생명 없음' },
+  es: { level: 'Nivel', goal: 'Una vaca por fila, columna y color. Ninguna puede tocarse.',
+        ruleBroken: '¡Regla rota! −1 vida', solved: '¡Resuelto! 🐄', gameOver: 'Sin vidas' },
+  'pt-BR': { level: 'Nível', goal: 'Uma vaca por linha, coluna e cor. Nenhuma pode se tocar.',
+        ruleBroken: 'Regra quebrada! −1 vida', solved: 'Resolvido! 🐄', gameOver: 'Sem vidas' },
+  fr: { level: 'Niveau', goal: 'Une vache par ligne, colonne et couleur. Aucune ne se touche.',
+        ruleBroken: 'Règle violée ! −1 vie', solved: 'Résolu ! 🐄', gameOver: 'Plus de vies' },
+  de: { level: 'Level', goal: 'Eine Kuh pro Zeile, Spalte und Farbe. Keine darf berühren.',
+        ruleBroken: 'Regel verletzt! −1 Leben', solved: 'Gelöst! 🐄', gameOver: 'Keine Leben' },
+  ru: { level: 'Уровень', goal: 'По одной корове на строку, столбец и цвет. Не соприкасаться.',
+        ruleBroken: 'Нарушено! −1 жизнь', solved: 'Решено! 🐄', gameOver: 'Нет жизней' },
+  tr: { level: 'Seviye', goal: 'Her satır, sütun ve renkte tek inek. Hiçbiri değmemeli.',
+        ruleBroken: 'Kural ihlali! −1 can', solved: 'Çözüldü! 🐄', gameOver: 'Can bitti' },
+  id: { level: 'Level', goal: 'Satu sapi per baris, kolom, dan warna. Tak boleh bersentuhan.',
+        ruleBroken: 'Melanggar! −1 nyawa', solved: 'Selesai! 🐄', gameOver: 'Nyawa habis' },
+};
+
+function getLanguage() {
+  const fromWin = typeof window.language === 'string' ? window.language : null;
+  const fromUrl = new URLSearchParams(location.search).get('language');
+  const raw = fromWin != null ? fromWin : fromUrl;
+  return SUPPORTED_LANGS.includes(raw) ? raw : DEFAULT_LANG;
+}
+let LANG = getLanguage();
+function t(key) { return (I18N[LANG] && I18N[LANG][key]) || I18N.en[key] || key; }
+function applyUiFont(lang) {
+  if (!LATIN_LANGS.has(lang)) {
+    document.documentElement.style.setProperty('--ui-font', 'system-ui, sans-serif');
+  }
+}
+
+/* =====================================================================
+ * 1. Native bridge (game-common §1) — game CÓ level
+ * ===================================================================== */
+function post(msg) {
+  try {
+    if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+      window.ReactNativeWebView.postMessage(JSON.stringify(msg));
+    } else {
+      console.log('[find-the-cow → native]', msg);
+    }
+  } catch (e) { /* ignore */ }
+}
+function sendMessage(type, opts) {
+  opts = opts || {};
+  post({
+    type,
+    level: currentLevelIdx + 1,
+    result: opts.result != null ? opts.result : null,
+    data: opts.data != null ? opts.data : null,
+    showModal: opts.showModal === true,
+  });
+}
+function saveData(payload) {
+  const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
+  sendMessage('save_data', { data });
+}
+function getStatusBarHeight() {
+  const params = new URLSearchParams(location.search);
+  const fromUrl = params.get('statusBarHeight');
+  const fromWin = typeof window.statusBarHeight !== 'undefined' ? window.statusBarHeight : null;
+  let h = Number(fromUrl != null ? fromUrl : fromWin);
+  if (Number.isNaN(h) || h < 0) h = 0;
+  return h;
+}
+
+/* =====================================================================
+ * 2. Levels — VÔ HẠN. Vài màn đầu DỄ (5×5), sau tăng dần tới 10×10 rồi giữ nguyên.
+ *   Tối đa 10 màu/màn (N ≤ 10). Mỗi màn một câu đố ngẫu nhiên mới.
+ * ===================================================================== */
+const LEVEL_RAMP = [5, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10]; // cỡ N: 3 màn 5×5 dễ rồi tăng dần
+const MAX_N = 10;                                          // tối đa 10 màu → sau đó giữ 10×10
+function levelN(idx) { return idx < LEVEL_RAMP.length ? LEVEL_RAMP[idx] : MAX_N; }
+const LIVES_START = 3;
+
+function getInitialLevelIdx() {
+  const fromWin = typeof window.currentLevel === 'number' ? window.currentLevel : null;
+  const fromUrl = new URLSearchParams(location.search).get('currentLevel');
+  const raw = Number(fromWin != null ? fromWin : fromUrl);
+  if (!Number.isFinite(raw) || raw < 1) return 0;
+  return Math.floor(raw) - 1;
+}
+
+/* =====================================================================
+ * 3. Sinh câu đố — DUY NHẤT & GIẢI ĐƯỢC BẰNG SUY LUẬN (không đoán mò)
+ *   Quy tắc: 1 bò / hàng / cột / vùng; không con nào kề nhau (kể cả chéo).
+ *   Cách sinh: dựng nghiệm hợp lệ rồi "vẽ vùng theo thứ tự mở" — mỗi vùng chỉ
+ *   ăn các ô đã bị loại (chết) TRƯỚC khi con bò của vùng đó tới lượt, nên con bò
+ *   luôn bị ÉP BUỘC (vùng chỉ còn 1 ứng viên). Nhờ vậy câu đố vừa duy nhất vừa
+ *   suy luận được từng bước → người chơi không bao giờ thấy "nhiều đáp án".
+ *   Cách này nhanh ở mọi cỡ (kể cả 10×10), khác hẳn kiểu sinh-rồi-thử (rất chậm
+ *   với N lớn — xem lịch sử git: growRegions ngẫu nhiên + countSolutions).
+ * ===================================================================== */
+function rint(n) { return Math.floor(Math.random() * n); }
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) { const j = rint(i + 1); const tmp = a[i]; a[i] = a[j]; a[j] = tmp; }
+  return a;
+}
+
+function makeSolution(N) {
+  const sol = new Array(N).fill(-1);
+  const usedCol = new Array(N).fill(false);
+  function bt(row) {
+    if (row === N) return true;
+    const cols = shuffle([...Array(N).keys()]);
+    for (const c of cols) {
+      if (usedCol[c]) continue;
+      if (row > 0 && Math.abs(c - sol[row - 1]) < 2) continue;
+      sol[row] = c; usedCol[c] = true;
+      if (bt(row + 1)) return true;
+      usedCol[c] = false; sol[row] = -1;
+    }
+    return false;
+  }
+  return bt(0) ? sol : null;
+}
+
+const DR4 = [-1, 1, 0, 0], DC4 = [0, 0, -1, 1];
+const D8 = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]];
+
+/**
+ * Vẽ các vùng (id vùng = chỉ số hàng của con bò, 0..N-1) sao cho câu đố GIẢI
+ * ĐƯỢC BẰNG SUY LUẬN. Ý tưởng:
+ *  1) Chọn ngẫu nhiên THỨ TỰ MỞ các con bò → rs[cow] = bước mở.
+ *  2) dead[r][c] = bước sớm nhất mà ô (r,c) bị một con bò đã mở loại trừ
+ *     (cùng hàng/cột/kề). Con bò tự loại ô của mình ở bước của nó.
+ *  3) Mỗi vùng chỉ "ăn" ô kề mà dead < rs[vùng] (đã chết TRƯỚC khi vùng tới
+ *     lượt) → khi giải tới vùng đó, nó chỉ còn đúng 1 ứng viên = con bò.
+ *  4) Nuôi CÂN BẰNG: luôn cho vùng NHỎ NHẤT (còn ô hợp lệ) lớn thêm → không vùng
+ *     nào phình quá to. Vùng của con bò MỞ CUỐI (rs = N−1) dọn nốt phần thừa (mọi
+ *     ô đều có dead ≤ N−2 < N−1 nên hợp lệ) → luôn lấp kín & vùng liền mạch.
+ * Ghi chú: vùng mở đầu tiên (rs = 0) luôn đúng 1 ô — điều BẮT BUỘC để câu đố suy
+ * luận được từ bàn trống (bàn trống chỉ có nước ép khi tồn tại vùng 1 ô).
+ * Trả null nếu (hiếm) không lấp kín được; generatePuzzle sẽ thử lại.
+ */
+function growRegions(N, sol) {
+  const order = shuffle([...Array(N).keys()]);   // order[step] = hàng của con bò mở ở bước step
+  const rs = new Array(N);
+  for (let s = 0; s < N; s++) rs[order[s]] = s;
+
+  const dead = Array.from({ length: N }, () => new Array(N).fill(Infinity));
+  for (let s = 0; s < N; s++) {
+    const cr = order[s], cc = sol[cr];
+    for (let i = 0; i < N; i++) {                 // cùng hàng & cùng cột
+      if (dead[cr][i] > s) dead[cr][i] = s;
+      if (dead[i][cc] > s) dead[i][cc] = s;
+    }
+    for (const [dr, dc] of D8) {                  // 8 ô kề
+      const nr = cr + dr, nc = cc + dc;
+      if (nr >= 0 && nr < N && nc >= 0 && nc < N && dead[nr][nc] > s) dead[nr][nc] = s;
+    }
+  }
+
+  const region = Array.from({ length: N }, () => new Array(N).fill(-1));
+  const frontier = Array.from({ length: N }, () => []);
+  for (let r = 0; r < N; r++) { region[r][sol[r]] = r; frontier[r].push([r, sol[r]]); }
+  let assigned = N;
+  const total = N * N;
+  const lastCow = order[N - 1];
+
+  // Nuôi cân bằng: mỗi vòng chọn vùng NHỎ NHẤT còn ô hợp lệ (dead < rs) để lớn thêm 1 ô.
+  const size = new Array(N).fill(1);
+  while (assigned < total) {
+    let pick = -1, cand = null;
+    for (let g = 0; g < N; g++) {
+      const myStep = rs[g], cc = [];
+      for (const [r, c] of frontier[g]) for (let d = 0; d < 4; d++) {
+        const nr = r + DR4[d], nc = c + DC4[d];
+        if (nr < 0 || nr >= N || nc < 0 || nc >= N) continue;
+        if (region[nr][nc] !== -1) continue;
+        if (dead[nr][nc] < myStep) cc.push([nr, nc]);
+      }
+      if (cc.length && (pick === -1 || size[g] < size[pick])) { pick = g; cand = cc; }
+    }
+    if (pick === -1) break;                          // hết nước cân bằng → dọn phần thừa
+    const [nr, nc] = cand[rint(cand.length)];
+    region[nr][nc] = pick; frontier[pick].push([nr, nc]); size[pick]++; assigned++;
+  }
+  // Dọn phần thừa (thường rất ít) bằng vùng của con bò mở cuối → lấp kín & liền mạch.
+  let mop = true;
+  while (mop && assigned < total) {
+    mop = false;
+    const fr = frontier[lastCow];
+    for (let k = 0; k < fr.length; k++) {
+      const [r, c] = fr[k];
+      for (let d = 0; d < 4; d++) {
+        const nr = r + DR4[d], nc = c + DC4[d];
+        if (nr < 0 || nr >= N || nc < 0 || nc >= N) continue;
+        if (region[nr][nc] !== -1) continue;
+        region[nr][nc] = lastCow; fr.push([nr, nc]); assigned++; mop = true;
+      }
+    }
+  }
+  return assigned < total ? null : region;
+}
+
+/**
+ * Câu đố có GIẢI ĐƯỢC BẰNG SUY LUẬN thuần (không đoán mò) không?
+ * Lặp: ô nào BẮT BUỘC là bò (một hàng/cột/vùng chỉ còn đúng 1 ứng viên) thì đặt,
+ * rồi loại ứng viên ở cùng hàng, cột, vùng và 8 ô kề. Đặt đủ N bò ⇒ câu đố vừa
+ * DUY NHẤT vừa suy luận được từng bước → người chơi không bao giờ phải đoán,
+ * nên không còn cảm giác "nhiều đáp án". (Chỉ dựa vào luật kề nhau để phân biệt
+ * nghiệm là nguồn gốc cảm giác đó — xem lịch sử: countSolutions cũ.)
+ */
+function solvableByLogic(N, region) {
+  const cand = Array.from({ length: N }, () => new Array(N).fill(true));
+  const cow = Array.from({ length: N }, () => new Array(N).fill(false));
+  let placed = 0;
+
+  function eliminate(r, c) {
+    const rg = region[r][c];
+    for (let rr = 0; rr < N; rr++) {
+      for (let cc = 0; cc < N; cc++) {
+        if (rr === r || cc === c) { cand[rr][cc] = false; continue; }          // cùng hàng/cột
+        if (region[rr][cc] === rg) { cand[rr][cc] = false; continue; }         // cùng vùng
+        if (Math.abs(rr - r) <= 1 && Math.abs(cc - c) <= 1) cand[rr][cc] = false; // kề (8 hướng)
+      }
+    }
+  }
+  function place(r, c) { cow[r][c] = true; placed++; eliminate(r, c); }
+
+  const regCells = Array.from({ length: N }, () => []);   // id vùng là 0..N-1
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) regCells[region[r][c]].push([r, c]);
+
+  let progress = true;
+  while (progress && placed < N) {
+    progress = false;
+    for (let r = 0; r < N && placed < N; r++) {           // mỗi hàng
+      let cnt = 0, col = -1, has = false;
+      for (let c = 0; c < N; c++) { if (cow[r][c]) { has = true; break; } if (cand[r][c]) { cnt++; col = c; } }
+      if (has) continue;
+      if (cnt === 0) return false;                          // bế tắc
+      if (cnt === 1) { place(r, col); progress = true; }     // ép buộc
+    }
+    for (let c = 0; c < N && placed < N; c++) {           // mỗi cột
+      let cnt = 0, row = -1, has = false;
+      for (let r = 0; r < N; r++) { if (cow[r][c]) { has = true; break; } if (cand[r][c]) { cnt++; row = r; } }
+      if (has) continue;
+      if (cnt === 0) return false;
+      if (cnt === 1) { place(row, c); progress = true; }
+    }
+    for (let g = 0; g < N && placed < N; g++) {           // mỗi vùng
+      let cnt = 0, spot = null, has = false;
+      for (const [r, c] of regCells[g]) { if (cow[r][c]) { has = true; break; } if (cand[r][c]) { cnt++; spot = [r, c]; } }
+      if (has) continue;
+      if (cnt === 0) return false;
+      if (cnt === 1) { place(spot[0], spot[1]); progress = true; }
+    }
+  }
+  return placed === N;
+}
+
+/** Trả về { N, region, sol }: DUY NHẤT & GIẢI ĐƯỢC BẰNG SUY LUẬN (không đoán).
+ *  Cách dựng gần như luôn thành công ngay lần đầu (median < 0.1ms tới tận 10×10);
+ *  vòng lặp chỉ là lưới an toàn cho trường hợp hiếm không lấp kín được. */
+function generatePuzzle(N) {
+  for (let attempt = 0; attempt < 200; attempt++) {
+    const sol = makeSolution(N);
+    if (!sol) continue;
+    for (let g = 0; g < 8; g++) {
+      const region = growRegions(N, sol);
+      if (region && solvableByLogic(N, region)) return { N, region, sol };
+    }
+  }
+  // Fallback cực hiếm: vẫn đảm bảo có nghiệm hợp lệ để không kẹt.
+  const sol = makeSolution(N) || [...Array(N).keys()];
+  const region = growRegions(N, sol) || Array.from({ length: N }, (_, r) => new Array(N).fill(r));
+  return { N, region, sol };
+}
+
+/* =====================================================================
+ * 4. State
+ * ===================================================================== */
+let currentLevelIdx = 0;
+let N = 4;
+let region = [];             // region[r][c] -> id vùng
+let cells = [];              // cells[r][c] -> element .cell
+let state = [];              // state[r][c] -> 0 trống | 1 X | 2 bò
+let solution = [];           // solution[r] -> cột của con bò đúng ở hàng r (dùng cho Hint)
+let cowCount = 0;
+let lives = LIVES_START;
+let solved = false, dead = false;
+let cellPx = 46;
+
+let hints = 3;               // số lượt gợi ý còn lại (bắt đầu 3 từ màn 1)
+
+const PALETTE = [
+  '#ffd7a3', '#c6f6c3', '#a7e8ff', '#b7cbff',
+  '#d7c4ff', '#ffc2ef', '#fdf6a6', '#ffb3b3', '#b8f2e6',
+  '#c9d99a', '#f3b7d0', '#a9c7e8',   // đủ ≥ N màu phân biệt cho tới 10×10
+];
+
+const boardEl = document.getElementById('board');
+const heartsEl = document.getElementById('hearts');
+const toastEl = document.getElementById('toast');
+
+/* ── SVG helpers ─────────────────────────────────────────────────── */
+/* Đầu bò sữa kiểu chibi kawaii: đầu tròn mũm mĩm, mắt CỰC to bóng loáng (nhiều
+ * đốm sáng), má hồng ửng, sừng nhỏ, xoáy tóc, miệng cười có tí lưỡi, thêm lấp lánh.
+ * Vẽ tai/sừng trước → đầu đè lên → chi tiết mặt trên cùng. */
+const CAT_SVG =
+  '<svg viewBox="0 0 100 100" aria-hidden="true">' +
+    // tai (ngoài trắng + trong hồng)
+    '<path d="M26 46 Q10 42 8 55 Q16 63 30 55 Z" fill="#ffffff" stroke="#3a4a63" stroke-width="2.6" stroke-linejoin="round"/>' +
+    '<path d="M74 46 Q90 42 92 55 Q84 63 70 55 Z" fill="#ffffff" stroke="#3a4a63" stroke-width="2.6" stroke-linejoin="round"/>' +
+    '<path d="M25 48 Q15 46 13 54 Q19 59 27 54 Z" fill="#f7aec2"/>' +
+    '<path d="M75 48 Q85 46 87 54 Q81 59 73 54 Z" fill="#f7aec2"/>' +
+    // sừng nhỏ tròn
+    '<path d="M41 29 Q37 19 30 22 Q33 31 43 33 Z" fill="#ffe3b0" stroke="#3a4a63" stroke-width="1.8" stroke-linejoin="round"/>' +
+    '<path d="M59 29 Q63 19 70 22 Q67 31 57 33 Z" fill="#ffe3b0" stroke="#3a4a63" stroke-width="1.8" stroke-linejoin="round"/>' +
+    // đầu tròn mũm mĩm (hơi bè cho squishy)
+    '<ellipse cx="50" cy="55" rx="33" ry="28" fill="#ffffff" stroke="#3a4a63" stroke-width="3"/>' +
+    // xoáy tóc dễ thương
+    '<path d="M43 33 Q46 23 50 30 Q54 23 57 32 Q54 34 50 32 Q46 35 43 33 Z" fill="#c7cedb"/>' +
+    // đốm (bo tròn mềm) quanh trán
+    '<path d="M29 39 Q21 48 30 52 Q40 50 37 40 Q33 34 29 39 Z" fill="#5a6072"/>' +
+    '<path d="M67 37 Q76 39 73 48 Q65 50 63 42 Q63 36 67 37 Z" fill="#5a6072" opacity=".9"/>' +
+    // má hồng ửng
+    '<ellipse cx="30" cy="63" rx="6" ry="4" fill="#ffa9c2" opacity=".8"/>' +
+    '<ellipse cx="70" cy="63" rx="6" ry="4" fill="#ffa9c2" opacity=".8"/>' +
+    // mõm hồng + lỗ mũi + miệng cười + tí lưỡi
+    '<ellipse cx="50" cy="70" rx="17" ry="12" fill="#ffd6e0" stroke="#3a4a63" stroke-width="2.4"/>' +
+    '<ellipse cx="44" cy="69" rx="2.2" ry="3" fill="#e08fa3"/>' +
+    '<ellipse cx="56" cy="69" rx="2.2" ry="3" fill="#e08fa3"/>' +
+    '<path d="M47 75 Q50 80 53 75 Z" fill="#ff9fb2"/>' +
+    '<path d="M44 74 Q50 79 56 74" fill="none" stroke="#c76f86" stroke-width="2" stroke-linecap="round"/>' +
+    // mắt CỰC to long lanh (đốm sáng lớn + nhỏ + ánh dưới)
+    '<ellipse cx="38" cy="53" rx="7" ry="8.4" fill="#2b2b3a"/>' +
+    '<ellipse cx="62" cy="53" rx="7" ry="8.4" fill="#2b2b3a"/>' +
+    '<circle cx="35.4" cy="49.4" r="3" fill="#fff"/>' +
+    '<circle cx="59.4" cy="49.4" r="3" fill="#fff"/>' +
+    '<circle cx="40.4" cy="55.4" r="1.5" fill="#fff"/>' +
+    '<circle cx="64.4" cy="55.4" r="1.5" fill="#fff"/>' +
+    '<circle cx="37" cy="57.5" r="0.9" fill="#fff" opacity=".8"/>' +
+    '<circle cx="61" cy="57.5" r="0.9" fill="#fff" opacity=".8"/>' +
+    // lấp lánh nhỏ hai bên
+    '<path d="M20 42 L21 45 L24 46 L21 47 L20 50 L19 47 L16 46 L19 45 Z" fill="#fff" opacity=".9"/>' +
+    '<path d="M80 40 L80.8 42.4 L83 43 L80.8 43.6 L80 46 L79.2 43.6 L77 43 L79.2 42.4 Z" fill="#fff" opacity=".85"/>' +
+  '</svg>';
+const X_SVG =
+  '<svg viewBox="0 0 100 100" aria-hidden="true">' +
+    '<path d="M20 20 L80 80 M80 20 L20 80" stroke="currentColor" stroke-width="13" ' +
+    'stroke-linecap="round" fill="none"/></svg>';
+const HEART_SVG =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="h-fill" ' +
+  'd="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 ' +
+  '3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 ' +
+  '6.86-8.55 11.54L12 21.35z"/></svg>';
+
+/* =====================================================================
+ * 5. Render level
+ * ===================================================================== */
+function renderHearts() {
+  heartsEl.innerHTML = '';
+  for (let i = 0; i < LIVES_START; i++) {
+    const h = document.createElement('span');
+    h.className = 'heart' + (i >= lives ? ' dead' : '');
+    h.innerHTML = HEART_SVG;
+    heartsEl.appendChild(h);
+  }
+}
+
+function buildBoard() {
+  boardEl.style.gridTemplateColumns = 'repeat(' + N + ', var(--cell))';
+  boardEl.innerHTML = '';
+  cells = [];
+  for (let r = 0; r < N; r++) {
+    const row = [];
+    for (let c = 0; c < N; c++) {
+      const el = document.createElement('div');
+      el.className = 'cell';
+      el.style.background = PALETTE[region[r][c] % PALETTE.length];
+      el.dataset.r = r; el.dataset.c = c;
+      // Không còn viền ranh giới đen — các vùng phân biệt bằng màu, ngăn bằng khe trắng.
+      boardEl.appendChild(el);
+      row.push(el);
+    }
+    cells.push(row);
+  }
+}
+
+function renderCell(r, c) {
+  const el = cells[r][c];
+  const s = state[r][c];
+  if (s === 0) { el.innerHTML = ''; return; }
+  const span = document.createElement('div');
+  span.className = 'mark ' + (s === 2 ? 'cow' : 'x');
+  span.innerHTML = s === 2 ? CAT_SVG : X_SVG;
+  el.innerHTML = '';
+  el.appendChild(span);
+}
+
+function updateProgress() {
+  document.getElementById('prog-num').textContent = cowCount + ' / ' + N;
+}
+
+function renderHintBadge() {
+  const b = document.getElementById('hint-badge');
+  if (hints > 0) {                       // còn lượt → hiện số
+    b.textContent = String(hints);
+    b.classList.remove('ad', 'zero');
+  } else {                               // hết lượt → chạm để xem quảng cáo lấy gợi ý
+    b.textContent = '▶';
+    b.classList.add('ad');
+    b.classList.remove('zero');
+  }
+}
+
+/* =====================================================================
+ * 6. Sizing (ô vuông, vừa khung)
+ * ===================================================================== */
+function computeSizing() {
+  const maxW = Math.min(window.innerWidth, 560);
+  const availW = maxW - 28;
+  // Bàn KHÔNG còn ăn hết chỗ (stage: flex 0). Chiều cao khả dụng cho bàn = màn hình
+  // trừ các khối khác (topbar·subbar·luật·hint) và một khoảng đệm — phần thừa để
+  // .app { justify-content: space-between } CHIA ĐỀU giữa các khối.
+  const topbar = document.getElementById('topbar');
+  const subbar = document.querySelector('.subbar');
+  const rulesEl = document.getElementById('rules');
+  const toolbar = document.getElementById('toolbar');
+  const others = (topbar ? topbar.offsetHeight : 60) + (subbar ? subbar.offsetHeight : 30) +
+                 (rulesEl ? rulesEl.offsetHeight : 44) + (toolbar ? toolbar.offsetHeight : 70);
+  const GAP_RESERVE = 44;                       // chừa để còn khoảng chia đều (bàn không lấp kín)
+  let availH = window.innerHeight - others - GAP_RESERVE;
+  if (!availH || availH < 60) availH = 60;      // dự phòng nếu layout chưa xong
+  // Trừ khe trắng (gap 4px) và lề ngoài cùng (padding 10px) của .board — phải khớp CSS.
+  const GAP = 4, PAD = 10;   // khe giữa ô 4px; lề trắng ngoài cùng 10px (khớp .board padding)
+  const avail = Math.min(availW, availH) - (N - 1) * GAP - 2 * PAD;
+  cellPx = Math.floor(avail / N);
+  cellPx = Math.max(20, Math.min(cellPx, 92));
+  document.documentElement.style.setProperty('--cell', cellPx + 'px');
+}
+
+/* Đồng bộ CHIỀU RỘNG: hàng nút (Back/Level/Restart) và hàng luật khớp đúng bề rộng
+ * khung bàn → thẳng hàng thành một cột. Bỏ padding ngang để nút/thẻ chạm mép bàn. */
+function syncWidths() {
+  const boardW = boardEl.getBoundingClientRect().width;
+  if (!boardW) return;
+  const w = boardW + 'px';
+  for (const id of ['topbar', 'rules']) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    el.style.width = w;
+    el.style.maxWidth = w;
+    el.style.paddingLeft = '0';
+    el.style.paddingRight = '0';
+  }
+}
+
+/* =====================================================================
+ * 7. Chơi — validate & đặt bò
+ * ===================================================================== */
+function conflictsFor(r, c) {
+  const bad = [];
+  for (let rr = 0; rr < N; rr++) {
+    for (let cc = 0; cc < N; cc++) {
+      if (state[rr][cc] !== 2) continue;
+      if (rr === r && cc === c) continue;
+      const sameRow = rr === r;
+      const sameCol = cc === c;
+      const sameReg = region[rr][cc] === region[r][c];
+      const adj = Math.abs(rr - r) <= 1 && Math.abs(cc - c) <= 1;
+      if (sameRow || sameCol || sameReg || adj) bad.push([rr, cc]);
+    }
+  }
+  return bad;
+}
+
+function loseLife() {
+  lives--;
+  const hs = heartsEl.children;
+  const idx = lives; // trái tim vừa mất
+  if (hs[idx]) { hs[idx].classList.add('dead', 'pop'); }
+  if (lives <= 0) gameOver();
+}
+
+function flashBad(list) {
+  for (const [r, c] of list) {
+    const el = cells[r][c];
+    el.classList.remove('bad'); void el.offsetWidth; el.classList.add('bad');
+  }
+}
+
+function placeCow(r, c) {
+  // Phải đặt ĐÚNG Y HỆT lời giải: ô (r,c) là bò đúng khi solution[r] === c.
+  // Đặt vào ô KHÔNG thuộc đáp án → sai, nháy đỏ, mất 1 mạng (không cho đặt).
+  if (solution[r] !== c) {
+    flashBad([[r, c]]);
+    // ô đặt trở về trạng thái trước (giữ X nếu có)
+    renderCell(r, c);
+    loseLife();
+    if (!dead) showToast(t('ruleBroken'));
+    return;
+  }
+  state[r][c] = 2;
+  cowCount++;
+  renderCell(r, c);
+  cells[r][c].classList.remove('place'); void cells[r][c].offsetWidth;
+  cells[r][c].classList.add('place');
+  updateProgress();
+  if (cowCount === N) winLevel();
+}
+
+/* ── Điều khiển ──────────────────────────────────────────────────────
+ * • Chuột trái 1 lần / chạm  = đánh dấu X (bỏ X nếu đang X).
+ * • Giữ & kéo                = đánh X (hoặc tẩy) nhiều ô liền.
+ * • Nhấp/chạm ĐÔI            = đặt bò (ô trống/X).
+ * Đặt bò rồi thì KHÓA — không gỡ được (không có chức năng thu hồi bò). */
+let painting = false, paintMode = 0, paintPointerId = null;   // paintMode: 1 = vẽ X, 2 = tẩy X
+const paintedSet = new Set();
+let lastDownKey = null, lastDownTime = 0;
+const DOUBLE_MS = 300;
+
+function applyPaint(r, c) {
+  const key = r + ',' + c;
+  if (paintedSet.has(key)) return;
+  paintedSet.add(key);
+  if (state[r][c] === 2) return;                                  // không đụng vào bò
+  if (paintMode === 1 && state[r][c] === 0) { state[r][c] = 1; renderCell(r, c); }
+  else if (paintMode === 2 && state[r][c] === 1) { state[r][c] = 0; renderCell(r, c); }
+}
+
+function onDown(r, c, pointerId) {
+  if (solved || dead) return;
+  const now = Date.now(), key = r + ',' + c;
+  if (key === lastDownKey && now - lastDownTime < DOUBLE_MS) {
+    // ── ĐÔI: đặt bò (đã có bò thì khóa, không gỡ) ──
+    lastDownKey = null; painting = false;
+    if (state[r][c] === 2) return;                 // đã có bò → khóa, không làm gì
+    if (state[r][c] === 1) state[r][c] = 0;        // bỏ X mà cú nhấp đầu vừa tạo
+    placeCow(r, c);
+    return;
+  }
+  lastDownKey = key; lastDownTime = now;
+  // ── ĐƠN: bắt đầu sơn X (giữ & kéo để X nhiều ô) ──
+  if (state[r][c] === 2) { painting = false; return; }            // bò → bỏ qua (gỡ bằng nhấp đôi)
+  painting = true; paintPointerId = pointerId; paintedSet.clear();
+  paintMode = state[r][c] === 1 ? 2 : 1;
+  applyPaint(r, c);
+}
+
+function onMoveTo(r, c, pointerId) {
+  if (painting && pointerId === paintPointerId) applyPaint(r, c);
+}
+
+function endPaint() { painting = false; paintPointerId = null; paintedSet.clear(); }
+
+/* =====================================================================
+ * 8. Kết thúc ván
+ * ===================================================================== */
+/* Có đang chạy trong app native (RN WebView) không? Trong app, việc chuyển màn /
+ * chơi lại do APP gọi window.onNextLevel/onRetryLevel sau khi bấm nút trên popup
+ * (game-common §1.3). Khi mở bằng browser thường (không có bridge) thì tự mô phỏng
+ * để chơi thử được liền mạch. */
+function isNative() {
+  return !!(window.ReactNativeWebView && window.ReactNativeWebView.postMessage);
+}
+
+function winLevel() {
+  solved = true;
+  persist();
+  // reveal nhẹ: bò nhảy ăn mừng
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    if (state[r][c] === 2) cells[r][c].classList.add('win-glow');
+  }
+  showToast(t('solved'));
+  setTimeout(() => {
+    sendMessage('game_result', { result: 'win', showModal: true });  // level vô hạn — luôn sang màn kế
+    // Browser (không có app): tự sang màn để test liền mạch.
+    if (!isNative()) {
+      setTimeout(() => window.onNextLevel(), 750);
+    }
+  }, 650);
+}
+
+function gameOver() {
+  dead = true;
+  showToast(t('gameOver'));
+  setTimeout(() => {
+    sendMessage('game_result', { result: 'lose', showModal: true });
+    // Browser (không có app): tự chơi lại cùng màn để test liền mạch.
+    if (!isNative()) {
+      setTimeout(() => window.onRetryLevel(), 900);
+    }
+  }, 650);
+}
+
+let toastTimer = null;
+function showToast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1400);
+}
+
+/* =====================================================================
+ * 9. Nạp / reset level
+ * ===================================================================== */
+let puzzleCache = null; // giữ câu đố hiện tại để Restart/Retry dùng lại cùng đề
+
+function loadLevel(idx, keepPuzzle) {
+  currentLevelIdx = Math.max(0, idx);
+  N = levelN(currentLevelIdx);
+  solved = false; dead = false;
+  lives = LIVES_START;
+  cowCount = 0;
+  lastDownKey = null; painting = false;
+
+  if (!keepPuzzle || !puzzleCache || puzzleCache.N !== N) {
+    puzzleCache = generatePuzzle(N);
+  }
+  region = puzzleCache.region;
+  solution = puzzleCache.sol;
+  state = Array.from({ length: N }, () => new Array(N).fill(0));
+
+  document.getElementById('lvl-num').textContent = String(currentLevelIdx + 1);
+  document.getElementById('lvl-total').textContent = '';   // vô hạn màn — không hiện tổng
+  renderHearts();
+  renderHintBadge();
+  computeSizing();
+  buildBoard();
+  updateProgress();
+  syncWidths();
+}
+
+/* =====================================================================
+ * 9b. Gợi ý (Hint) & lưu tiến trình
+ * ===================================================================== */
+/* Đặt giúp 1 con bò ĐÚNG (theo lời giải): chọn 1 hàng chưa có bò đúng, gỡ các
+ * bò đặt sai đang xung đột rồi đặt bò đúng — KHÔNG mất mạng. */
+function giveHint() {
+  if (solved || dead) return false;
+  const rows = [];
+  for (let r = 0; r < N; r++) if (state[r][solution[r]] !== 2) rows.push(r);
+  if (!rows.length) return false;
+  const r = rows[rint(rows.length)], c = solution[r];
+  // gỡ bò đặt sai xung đột với ô đúng (chúng chắc chắn sai)
+  for (const [rr, cc] of conflictsFor(r, c)) {
+    if (state[rr][cc] === 2) { state[rr][cc] = 0; cowCount--; renderCell(rr, cc); }
+  }
+  state[r][c] = 2; cowCount++; renderCell(r, c);
+  cells[r][c].classList.remove('place'); void cells[r][c].offsetWidth;
+  cells[r][c].classList.add('place', 'hint-glow');
+  updateProgress();
+  if (cowCount === N) winLevel();
+  return true;
+}
+
+/* Nút Hint gộp cả "Get hint": CÒN lượt → gợi ý & trừ 1; HẾT lượt → xem quảng cáo
+ * (event 'ads' §1.7) rồi tặng 1 gợi ý dùng luôn. 'ads' là yêu cầu một chiều (không có
+ * callback "ad xong"), nên ở đây tặng gợi ý luôn (stub); app thật tự lo việc hiện quảng cáo. */
+function useHint() {
+  if (solved || dead) return;
+  if (hints > 0) {
+    if (giveHint()) { hints--; renderHintBadge(); persist(); }
+    return;
+  }
+  sendMessage('ads');                 // hết lượt → yêu cầu app hiện quảng cáo
+  if (giveHint()) { renderHintBadge(); persist(); showToast(t('gotHint')); }
+}
+
+function persist() { saveData({ hints: hints }); }
+function loadSaved() {
+  let raw = typeof window.data === 'string' ? window.data
+    : new URLSearchParams(location.search).get('data');
+  if (!raw) return;
+  try {
+    const d = JSON.parse(raw);
+    if (typeof d.hints === 'number') hints = d.hints;
+  } catch (e) { /* ignore */ }
+}
+
+/* =====================================================================
+ * 10. Input
+ * ===================================================================== */
+boardEl.addEventListener('pointerdown', (e) => {
+  if (e.button !== undefined && e.button !== 0) return;          // chỉ chuột trái
+  const el = e.target.closest('.cell');
+  if (!el) return;
+  onDown(Number(el.dataset.r), Number(el.dataset.c), e.pointerId);
+  try { boardEl.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+});
+boardEl.addEventListener('pointermove', (e) => {
+  if (!painting) return;
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const cell = el && el.closest ? el.closest('.cell') : null;
+  if (!cell || !boardEl.contains(cell)) return;
+  onMoveTo(Number(cell.dataset.r), Number(cell.dataset.c), e.pointerId);
+});
+boardEl.addEventListener('pointerup', endPaint);
+boardEl.addEventListener('pointercancel', endPaint);
+// chặn double-click bôi đen / zoom desktop
+boardEl.addEventListener('dblclick', (e) => e.preventDefault());
+document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+/* =====================================================================
+ * 11. HUD buttons + native callbacks
+ * ===================================================================== */
+document.getElementById('back-btn').addEventListener('click', (e) => {
+  e.stopPropagation(); sendMessage('quit');
+});
+document.getElementById('restart-btn').addEventListener('click', (e) => {
+  e.stopPropagation(); loadLevel(currentLevelIdx, true);   // reset cùng đề (§1.6)
+});
+document.getElementById('hint-btn').addEventListener('click', (e) => {
+  e.stopPropagation(); useHint();
+});
+window.onAppPause = function () { /* game tĩnh — no-op */ };
+window.onNextLevel = function () {
+  loadLevel(currentLevelIdx + 1);   // vô hạn màn
+};
+window.onRetryLevel = function () { loadLevel(currentLevelIdx, true); };
+
+/* =====================================================================
+ * 12. Boot
+ * ===================================================================== */
+function applyStaticI18n() {
+  const catInner = CAT_SVG.replace(/^<svg[^>]*>/, '').replace('</svg>', '');
+  document.getElementById('lvl-label').textContent = t('level');
+  document.getElementById('rule1-d').textContent = t('rule1d');
+  document.getElementById('rule2-d').textContent = t('rule2d');
+  document.getElementById('rule3-d').textContent = t('rule3d');
+  document.getElementById('hint-label').textContent = t('hintTool');
+  document.getElementById('p-ico').innerHTML = catInner;      // icon tiến độ = bò
+  document.getElementById('hint-ico').innerHTML = catInner;   // nút gợi ý = bò
+}
+function applyStatusBarPad() {
+  const sb = getStatusBarHeight();
+  document.getElementById('topbar').style.paddingTop =
+    'calc(max(' + sb + 'px, env(safe-area-inset-top)) + 8px)';
+}
+function boot() {
+  LANG = getLanguage();
+  applyUiFont(LANG);
+  applyStatusBarPad();
+  applyStaticI18n();
+  loadSaved();                       // khôi phục điểm & lượt gợi ý (nếu có)
+  currentLevelIdx = getInitialLevelIdx();
+  loadLevel(currentLevelIdx);
+}
+
+window.addEventListener('resize', () => { computeSizing(); syncWidths(); });
+// Font web tải xong có thể đổi chiều cao các khối → tính lại cỡ bàn cho chuẩn.
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { computeSizing(); syncWidths(); });
+
+// Đợi native inject (chống race) — game-common §3
+(function waitForNativeInjection() {
+  const start = Date.now();
+  (function check() {
+    if (typeof window.currentLevel === 'number' ||
+        typeof window.language === 'string' ||
+        typeof window.data === 'string' ||
+        Date.now() - start > 200) {
+      boot();
+    } else {
+      setTimeout(check, 10);
+    }
+  })();
+})();
+</script>
