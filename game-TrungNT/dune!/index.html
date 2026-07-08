@@ -1,0 +1,568 @@
+<!--
+  Dune! (clone) — TrungNT. MỘT FILE tự chứa, VẼ HẾT bằng canvas (không texture,
+  không file ảnh/âm) → chạy thẳng file:// & trong WebView, không cần server.
+  Bóng lăn cồn cát: GIỮ để dive lấy đà xuống dốc → bật bay vượt VẠCH TRẮNG ăn điểm
+  (càng cao càng nhiều, tới mặt trăng). Đáp mượt sườn kế → COMBO; đâm vách dốc ngược
+  → CRASH; hết đà → thua. Bóng TRẮNG, không xu. Endless / điểm cao (KHÔNG level).
+  Tuân thủ .claude/game-common.md (bridge · i18n inline · font · reset · nút Back).
+-->
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Dune!</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap" rel="stylesheet" />
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+  :root { --ui-font: 'Google Sans Flex', system-ui, sans-serif; --ink: #fff2e0; --gold: #ffd23f; --sc: 1; }
+  html, body { height: 100%; overflow: hidden; }
+  body { font-family: var(--ui-font); font-weight: 700; color: var(--ink); background: #17102b; -webkit-user-select: none; user-select: none; touch-action: none; }
+  .app { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; }
+
+  .topbar { position: absolute; top: 0; left: 0; right: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 0 12px 4px; }
+  .scoreboard { flex: 1 1 0; min-width: 0; display: flex; align-items: stretch; gap: 6px; }
+  .stat { flex: 1 1 0; min-width: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 5px; background: rgba(28,12,40,.5); border: 2px solid rgba(255,255,255,.14); border-radius: 14px; padding: 7px 8px 9px 4px; box-shadow: inset 0 2px 6px rgba(255,255,255,.06), 0 3px 8px rgba(0,0,0,.35); backdrop-filter: blur(3px); }
+  .stat-ico { flex: 0 0 auto; display: block; width: clamp(16px,4.8vw,21px); height: clamp(16px,4.8vw,21px); fill: var(--gold); filter: drop-shadow(0 1px 1px rgba(0,0,0,.4)); }
+  .stat-txt { display: flex; flex-direction: column; align-items: center; min-width: 0; flex: 1 0 auto; }
+  .stat .k { font-size: clamp(10px,3.2vw,13px); font-family: system-ui,-apple-system,'Segoe UI',sans-serif; font-weight: 600; letter-spacing: .5px; color: #ffcaa0; text-transform: uppercase; line-height: 1.05; white-space: nowrap; }
+  .stat .v { font-size: clamp(16px,5vw,24px); line-height: 1.1; color: #fff; white-space: nowrap; font-family: system-ui,-apple-system,'Segoe UI',sans-serif; font-weight: 800; text-shadow: 0 2px 2px rgba(0,0,0,.4); }
+  .stat .v.best { color: var(--gold); }
+
+  .btn3d { --radius: 14px; position: relative; display: inline-block; padding: 0; border: 0; background: transparent; cursor: pointer; font: inherit; color: inherit; }
+  .btn3d-shadow { display: none; }
+  .btn3d-surface { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; border-radius: var(--radius); background-color: #b0532a; color: #fff; box-shadow: 0 3px 0 rgba(0,0,0,.4), 0 6px 14px rgba(0,0,0,.35); transition: transform .09s ease-out; }
+  .btn3d:active .btn3d-surface { transform: scale(.95); }
+  .btn3d.btn-icon .btn3d-surface { width: var(--btn-size,46px); height: var(--btn-size,46px); border-radius: 16px; background-color: #7a3b1c; border: 2px solid #4d2410; box-shadow: none; }
+  #sound-btn .btn3d-surface { border-radius: 13px; }
+  .btn3d.btn-icon { flex: 0 0 auto; -webkit-user-select: none; user-select: none; }
+  .back-ico { width: 52%; height: 52%; fill: currentColor; display: block; }
+  .snd-ico { width: 58%; height: 58%; display: block; }
+  #sound-btn .snd-slash { display: none; }
+  #sound-btn.muted .snd-wave { display: none; }
+  #sound-btn.muted .snd-slash { display: block; }
+  #sound-btn.muted .snd-ico { opacity: .75; }
+
+  .stage { flex: 1; width: 100%; position: relative; }
+  #game { display: block; width: 100%; height: 100%; touch-action: none; }
+
+  .hint { position: absolute; left: 50%; top: 58%; transform: translate(-50%,-50%); background: rgba(20,10,30,.55); color: #ffe6cf; padding: 10px 18px; border-radius: 14px; font-size: clamp(12px,3.6vw,16px); letter-spacing: .3px; white-space: nowrap; pointer-events: none; opacity: 1; transition: opacity .5s; box-shadow: 0 6px 18px rgba(0,0,0,.4); display: flex; align-items: center; gap: 9px; }
+  .hint.gone { opacity: 0; }
+  .hint svg { width: 20px; height: 20px; fill: #ffb46b; animation: tapPulse 1.1s ease-in-out infinite; }
+  @keyframes tapPulse { 0%,100% { transform: translateY(0); opacity: .7; } 50% { transform: translateY(4px); opacity: 1; } }
+
+  .combo-ind { position: absolute; left: 50%; top: 15%; transform: translate(-50%,0) scale(1); pointer-events: none; z-index: 6; text-align: center; font-weight: 900; letter-spacing: .5px; color: #ffd23f; font-size: calc(30px * var(--sc)); text-shadow: 0 2px 12px rgba(0,0,0,.7); opacity: 0; transition: opacity .2s; }
+  .combo-ind.on { opacity: 1; }
+  .combo-ind.bump { animation: comboBump .32s ease-out; }
+  @keyframes comboBump { 0% { transform: translate(-50%,0) scale(1); } 40% { transform: translate(-50%,0) scale(1.35); } 100% { transform: translate(-50%,0) scale(1); } }
+  .combo-ind .cl { display: block; font-size: calc(12px * var(--sc)); color: #ffcaa0; letter-spacing: 2px; }
+
+  .boost-pop { position: absolute; left: 50%; top: 30%; transform: translate(-50%,-50%) scale(.5); text-align: center; pointer-events: none; opacity: 0; z-index: 6; font-weight: 900; letter-spacing: .5px; white-space: nowrap; font-size: calc(30px * var(--sc)); text-shadow: 0 2px 14px rgba(0,0,0,.7); }
+  .boost-pop.show { animation: boostPop 1s ease-out forwards; }
+  @keyframes boostPop { 0% { opacity: 0; transform: translate(-50%,-42%) scale(.5); } 18% { opacity: 1; transform: translate(-50%,-56%) scale(1.15); } 75% { opacity: 1; transform: translate(-50%,-60%) scale(1); } 100% { opacity: 0; transform: translate(-50%,-74%) scale(1); } }
+
+  .overlay { position: absolute; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; background: rgba(10,4,20,.7); opacity: 1; transition: opacity .25s; }
+  .overlay.hidden { opacity: 0; pointer-events: none; }
+  .card { width: min(82%, calc(360px * var(--sc))); padding: calc(26px * var(--sc)); text-align: center; border-radius: calc(22px * var(--sc)); background: linear-gradient(180deg,#3d2a52,#180f2a); border: 2px solid rgba(255,180,120,.22); box-shadow: 0 18px 50px rgba(0,0,0,.5); transform: scale(1); transition: transform .25s; }
+  .overlay.hidden .card { transform: scale(.9); }
+  .card-title { color: #fff; font-size: calc(30px * var(--sc)); margin-bottom: calc(14px * var(--sc)); }
+  .sb { display: flex; justify-content: center; gap: calc(30px * var(--sc)); margin-bottom: calc(18px * var(--sc)); }
+  .sb .k { font-family: system-ui,sans-serif; font-size: calc(11px * var(--sc)); letter-spacing: 2px; color: #8fb4ff; font-weight: 800; }
+  .sb .v { font-size: calc(32px * var(--sc)); color: #fff; }
+  .sb .v.best { color: var(--gold); }
+  .btn3d.play { --radius: calc(14px * var(--sc)); }
+  .btn3d.play .btn3d-surface { height: calc(52px * var(--sc)); padding: 0 calc(34px * var(--sc)); background-color: #ffb02e; color: #3a2400; font-family: var(--ui-font); font-size: calc(17px * var(--sc)); letter-spacing: .6px; box-shadow: 0 6px 16px rgba(255,176,46,.35); }
+</style>
+
+<div class="app" id="app">
+  <div class="stage" id="stage">
+    <canvas id="game"></canvas>
+    <div class="combo-ind" id="combo-ind"></div>
+    <div class="boost-pop" id="boost-pop"></div>
+    <div class="hint" id="hint"></div>
+  </div>
+
+  <div class="topbar" id="topbar">
+    <div class="btn3d btn-icon" id="back-btn" role="button" aria-label="Back">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="back-ico" viewBox="0 0 447.243 447.243" aria-hidden="true">
+          <path fill="currentColor" d="M420.361 192.229a31.967 31.967 0 0 0-5.535-.41H99.305l6.88-3.2a63.998 63.998 0 0 0 18.08-12.8l88.48-88.48c11.653-11.124 13.611-29.019 4.64-42.4-10.441-14.259-30.464-17.355-44.724-6.914a32.018 32.018 0 0 0-3.276 2.754l-160 160c-12.504 12.49-12.515 32.751-.025 45.255l.025.025 160 160c12.514 12.479 32.775 12.451 45.255-.063a32.084 32.084 0 0 0 2.745-3.137c8.971-13.381 7.013-31.276-4.64-42.4l-88.32-88.64a64.002 64.002 0 0 0-16-11.68l-9.6-4.32h314.24c16.347.607 30.689-10.812 33.76-26.88 2.829-17.445-9.019-33.88-26.464-36.71z"/>
+        </svg>
+      </span>
+    </div>
+    <div class="scoreboard">
+      <div class="stat">
+        <svg class="stat-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C7 2 3 6 3 11c0 6 9 11 9 11s9-5 9-11c0-5-4-9-9-9zm0 4a5 5 0 1 1 0 10 5 5 0 0 1 0-10z"/></svg>
+        <div class="stat-txt"><div class="k" id="lbl-score">SCORE</div><div class="v" id="hud-score">0</div></div>
+      </div>
+      <div class="stat">
+        <svg class="stat-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4V2h10v2h4v3a4 4 0 0 1-4 4h-.4A5.5 5.5 0 0 1 13 15.9V18h3v2H8v-2h3v-2.1A5.5 5.5 0 0 1 7.4 11H7a4 4 0 0 1-4-4V4h4zm0 2H5v1a2 2 0 0 0 2 2V6zm12 0v3a2 2 0 0 0 2-2V6h-2z"/></svg>
+        <div class="stat-txt"><div class="k" id="lbl-best">BEST</div><div class="v best" id="hud-best">0</div></div>
+      </div>
+    </div>
+    <div class="btn3d btn-icon" id="sound-btn" role="button" aria-label="Sound">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="snd-ico" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" d="M4 9v6h4l5 4V5L8 9H4z"/>
+          <path class="snd-wave" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M15.8 9.2a3.6 3.6 0 0 1 0 5.6 M18.4 6.6a7.6 7.6 0 0 1 0 10.8"/>
+          <line class="snd-slash" x1="4" y1="4" x2="20" y2="20" stroke="#ff6b6b" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+      </span>
+    </div>
+  </div>
+
+  <div id="overlay" class="overlay hidden">
+    <div class="card">
+      <div class="card-title" id="ov-title">Game Over</div>
+      <div class="sb">
+        <div><div class="k" id="ov-k-score">SCORE</div><div class="v" id="ov-score">0</div></div>
+        <div><div class="k" id="ov-k-best">BEST</div><div class="v best" id="ov-best">0</div></div>
+      </div>
+      <button class="btn3d play" id="ov-btn" type="button">
+        <span class="btn3d-shadow"></span><span class="btn3d-surface" id="ov-btn-txt">Play Again</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+ * 0. BRIDGE + I18N (INLINE — game-common §1 & §5)
+ * ===================================================================== */
+const SUPPORTED_LANGS = ['en','vi','zh-Hans','zh-Hant','ja','ko','es','es-MX','es-AR','pt-BR','pt','fr','de','it','nl','pl','ru','tr','ar','hi','th','id','fil'];
+const DEFAULT_LANG = 'en';
+const LATIN_LANGS = new Set(['en','vi','es','es-MX','es-AR','pt-BR','pt','fr','de','it','nl','pl','tr','id','fil']);
+const I18N = {
+  en: { score: 'Score', best: 'Best', playAgain: 'Play Again', gameOver: 'Game Over', newBest: 'New Best!', hint: 'Hold to dive · fly over the line', combo: 'Combo', moon: 'TO THE MOON!', smooth: 'SMOOTH', perfect: 'PERFECT!' },
+  vi: { score: 'Điểm', best: 'Cao nhất', playAgain: 'Chơi lại', gameOver: 'Thua rồi', newBest: 'Kỷ lục mới!', hint: 'Giữ để lao xuống · bay vượt vạch', combo: 'Combo', moon: 'LÊN MẶT TRĂNG!', smooth: 'MƯỢT', perfect: 'HOÀN HẢO!' },
+  es: { score: 'Puntos', best: 'Récord', playAgain: 'Jugar de nuevo', gameOver: 'Fin del juego', newBest: '¡Nuevo récord!', hint: 'Mantén para caer · vuela sobre la línea', combo: 'Combo', moon: '¡A LA LUNA!', smooth: 'SUAVE', perfect: '¡PERFECTO!' },
+  fr: { score: 'Score', best: 'Record', playAgain: 'Rejouer', gameOver: 'Partie terminée', newBest: 'Nouveau record !', hint: 'Maintiens pour plonger · dépasse la ligne', combo: 'Combo', moon: 'VERS LA LUNE !', smooth: 'FLUIDE', perfect: 'PARFAIT !' },
+  de: { score: 'Punkte', best: 'Bestwert', playAgain: 'Nochmal', gameOver: 'Game Over', newBest: 'Neuer Rekord!', hint: 'Halten zum Sinken · über die Linie fliegen', combo: 'Combo', moon: 'ZUM MOND!', smooth: 'SANFT', perfect: 'PERFEKT!' },
+  'pt-BR': { score: 'Pontos', best: 'Recorde', playAgain: 'Jogar de novo', gameOver: 'Fim de jogo', newBest: 'Novo recorde!', hint: 'Segure para mergulhar · voe acima da linha', combo: 'Combo', moon: 'ATÉ A LUA!', smooth: 'SUAVE', perfect: 'PERFEITO!' },
+  pt: { score: 'Pontos', best: 'Recorde', playAgain: 'Jogar de novo', gameOver: 'Fim de jogo', newBest: 'Novo recorde!', hint: 'Segure para mergulhar · voe acima da linha', combo: 'Combo', moon: 'ATÉ A LUA!', smooth: 'SUAVE', perfect: 'PERFEITO!' },
+  it: { score: 'Punti', best: 'Record', playAgain: 'Rigioca', gameOver: 'Game Over', newBest: 'Nuovo record!', hint: 'Tieni premuto per tuffarti · vola oltre la linea', combo: 'Combo', moon: 'FINO ALLA LUNA!', smooth: 'MORBIDO', perfect: 'PERFETTO!' },
+  nl: { score: 'Score', best: 'Beste', playAgain: 'Opnieuw', gameOver: 'Game Over', newBest: 'Nieuw record!', hint: 'Houd vast om te duiken · vlieg over de lijn', combo: 'Combo', moon: 'NAAR DE MAAN!', smooth: 'SOEPEL', perfect: 'PERFECT!' },
+  pl: { score: 'Wynik', best: 'Rekord', playAgain: 'Zagraj znów', gameOver: 'Koniec gry', newBest: 'Nowy rekord!', hint: 'Przytrzymaj, by zanurkować · leć nad linią', combo: 'Combo', moon: 'NA KSIĘŻYC!', smooth: 'GŁADKO', perfect: 'IDEALNIE!' },
+  tr: { score: 'Skor', best: 'En iyi', playAgain: 'Tekrar oyna', gameOver: 'Oyun bitti', newBest: 'Yeni rekor!', hint: 'Dalmak için basılı tut · çizginin üstünden uç', combo: 'Kombo', moon: "AY'A!", smooth: 'PÜRÜZSÜZ', perfect: 'MÜKEMMEL!' },
+  id: { score: 'Skor', best: 'Terbaik', playAgain: 'Main lagi', gameOver: 'Game Over', newBest: 'Rekor baru!', hint: 'Tahan untuk menyelam · terbang di atas garis', combo: 'Kombo', moon: 'KE BULAN!', smooth: 'MULUS', perfect: 'SEMPURNA!' },
+  fil: { score: 'Puntos', best: 'Pinakamahusay', playAgain: 'Ulitin', gameOver: 'Tapos na', newBest: 'Bagong rekord!', hint: 'Pindutin nang matagal · lumipad sa itaas ng linya', combo: 'Combo', moon: 'SA BUWAN!', smooth: 'MAKINIS', perfect: 'PERPEKTO!' },
+  ja: { score: 'スコア', best: 'ベスト', playAgain: 'もう一度', gameOver: 'ゲームオーバー', newBest: '新記録！', hint: '長押しで急降下・ラインを越えて飛べ', combo: 'コンボ', moon: '月まで！', smooth: 'スムーズ', perfect: 'パーフェクト！' },
+  ko: { score: '점수', best: '최고', playAgain: '다시하기', gameOver: '게임 오버', newBest: '신기록!', hint: '길게 눌러 낙하 · 라인 위로 날아라', combo: '콤보', moon: '달까지!', smooth: '부드럽게', perfect: '완벽!' },
+  'zh-Hans': { score: '分数', best: '最高', playAgain: '再玩一次', gameOver: '游戏结束', newBest: '新纪录！', hint: '按住下潜 · 飞越白线', combo: '连击', moon: '飞向月球！', smooth: '顺滑', perfect: '完美！' },
+  'zh-Hant': { score: '分數', best: '最高', playAgain: '再玩一次', gameOver: '遊戲結束', newBest: '新紀錄！', hint: '按住下潛 · 飛越白線', combo: '連擊', moon: '飛向月球！', smooth: '順滑', perfect: '完美！' },
+  ru: { score: 'Счёт', best: 'Рекорд', playAgain: 'Играть снова', gameOver: 'Игра окончена', newBest: 'Новый рекорд!', hint: 'Держите для рывка · летите над линией', combo: 'Комбо', moon: 'НА ЛУНУ!', smooth: 'ПЛАВНО', perfect: 'ИДЕАЛЬНО!' },
+  ar: { score: 'النقاط', best: 'الأفضل', playAgain: 'العب مجددًا', gameOver: 'انتهت اللعبة', newBest: 'رقم قياسي!', hint: 'اضغط مطولًا للغطس · حلّق فوق الخط', combo: 'كومبو', moon: 'إلى القمر!', smooth: 'سلس', perfect: 'مثالي!' },
+  hi: { score: 'स्कोर', best: 'सर्वश्रेष्ठ', playAgain: 'फिर खेलें', gameOver: 'खेल समाप्त', newBest: 'नया रिकॉर्ड!', hint: 'गोता लगाने के लिए दबाए रखें · रेखा के ऊपर उड़ें', combo: 'कॉम्बो', moon: 'चाँद तक!', smooth: 'सहज', perfect: 'बढ़िया!' },
+  th: { score: 'คะแนน', best: 'สูงสุด', playAgain: 'เล่นอีกครั้ง', gameOver: 'เกมจบแล้ว', newBest: 'สถิติใหม่!', hint: 'กดค้างเพื่อพุ่งลง · บินข้ามเส้น', combo: 'คอมโบ', moon: 'ไปดวงจันทร์!', smooth: 'ลื่นไหล', perfect: 'สมบูรณ์แบบ!' },
+};
+function getLanguage() {
+  const fromWin = typeof window.language === 'string' ? window.language : null;
+  const fromUrl = new URLSearchParams(location.search).get('language');
+  const raw = fromWin != null ? fromWin : fromUrl;
+  return SUPPORTED_LANGS.includes(raw) ? raw : DEFAULT_LANG;
+}
+let LANG = getLanguage();
+function t(key) { return (I18N[LANG] && I18N[LANG][key]) || I18N.en[key] || key; }
+function applyUiFont(lang) { if (!LATIN_LANGS.has(lang)) document.documentElement.style.setProperty('--ui-font', 'system-ui, sans-serif'); }
+
+function post(msg) { try { if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) window.ReactNativeWebView.postMessage(JSON.stringify(msg)); else console.log('[dune → native]', msg); } catch (e) {} }
+function sendMessage(type, opts) { opts = opts || {}; post({ type, level: null, result: opts.result != null ? opts.result : null, data: opts.data != null ? opts.data : null, showModal: opts.showModal === true }); }
+function saveData(payload) { sendMessage('save_data', { data: typeof payload === 'string' ? payload : JSON.stringify(payload) }); }
+const LS_KEY = 'dune_save';
+function readLocal() { try { return localStorage.getItem(LS_KEY) || ''; } catch (e) { return ''; } }
+function getStatusBarHeight() { const p = new URLSearchParams(location.search); const fromUrl = p.get('statusBarHeight'); const fromWin = typeof window.statusBarHeight !== 'undefined' ? window.statusBarHeight : null; let h = Number(fromUrl != null ? fromUrl : fromWin); if (Number.isNaN(h) || h < 0) h = 0; return h; }
+function getInitialData() { const fromWin = typeof window.data === 'string' ? window.data : null; const fromUrl = new URLSearchParams(location.search).get('data'); return fromWin != null ? fromWin : (fromUrl || ''); }
+
+/* =====================================================================
+ * 1. ENGINE — VẼ HẾT bằng canvas (không texture)
+ * ===================================================================== */
+const TAU = Math.PI * 2;
+const cv = document.getElementById('game');
+const ctx = cv.getContext('2d');
+let W = 360, H = 640, DPR = 1;
+
+/* ── SFX (Web Audio, tổng hợp — không file âm) ── */
+const SFX_KEY = 'dune_sfx';
+const AudioFX = (() => {
+  let ac = null, master = null, enabled = true;
+  try { enabled = localStorage.getItem(SFX_KEY) !== '0'; } catch (e) {}
+  function actx() { if (!ac) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null; ac = new AC(); master = ac.createGain(); master.gain.value = 0.5; master.connect(ac.destination); } return ac; }
+  function resume() { const c = actx(); if (c && c.state === 'suspended') c.resume(); }
+  function tone(freq, dur, type, gain, delay, to) { if (!enabled) return; const c = actx(); if (!c) return; const t0 = c.currentTime + (delay || 0), o = c.createOscillator(), g = c.createGain(); o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t0); if (to) o.frequency.exponentialRampToValueAtTime(to, t0 + dur); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(gain || 0.3, t0 + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur); o.connect(g); g.connect(master); o.start(t0); o.stop(t0 + dur + 0.03); }
+  function noise(dur, gain, cutoff) { if (!enabled) return; const c = actx(); if (!c) return; const t0 = c.currentTime, len = Math.floor(c.sampleRate * dur), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len); const src = c.createBufferSource(); src.buffer = buf; const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = cutoff || 2000; const g = c.createGain(); g.gain.value = gain || 0.3; src.connect(f); f.connect(g); g.connect(master); src.start(t0); }
+  return {
+    resume, isEnabled() { return enabled; },
+    setEnabled(v) { enabled = v; try { localStorage.setItem(SFX_KEY, v ? '1' : '0'); } catch (e) {} if (v) tone(660, 0.09, 'triangle', 0.25); },
+    jump() { tone(300, 0.16, 'sine', 0.16, 0, 700); noise(0.06, 0.05, 3000); },
+    land(p) { p = Math.min(Math.max(p, 0), 1); noise(0.08 + p * 0.08, 0.08 + p * 0.16, 1300 + p * 800); tone(140 + p * 40, 0.09, 'sine', 0.12, 0, 80); },
+    score(combo) { const P = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21], c = Math.min((combo || 1) - 1, P.length - 1), f = 523 * Math.pow(2, P[c] / 12); tone(f, 0.18, 'triangle', 0.26, 0); tone(f * 1.5, 0.20, 'sine', 0.18, 0.09); tone(f / 2, 0.24, 'sine', 0.16, 0); },
+    crash() { noise(0.35, 0.5, 900); tone(200, 0.4, 'sawtooth', 0.3, 0, 60); tone(90, 0.5, 'sine', 0.22, 0.04, 50); },
+  };
+})();
+
+/* ── ĐỊA HÌNH — cồn bướu ĐƠN bất đối xứng (sin(n/20)·n), rộng-thoải, tất định vô tận ── */
+function BASE() { return H * 0.58; }
+const SEED = 41.7;                                                                          // đổi số này → sinh map KHÁC hẳn (layout cồn/nhọn khác)
+function thash(i) { const h = Math.sin((i + SEED + 97.13) * 127.1) * 43758.5453; return h - Math.floor(h); }
+function diffAt(x) { return 1 + Math.min(Math.max(x, 0) / (6000 * (W / 800)), 0.6); }
+// ── ĐỊA HÌNH copy Y HỆT dune.html: XEN KẼ đỉnh/đáy, biên độ CỐ ĐỊNH + microNoise, bề rộng 150–450, quadratic qua trung điểm ──
+// tổng-tích-luỹ có nhớ ⇒ mỗi khoảng cách = 150..450px độc lập (như cameraX random của dune.html) nhưng TẤT ĐỊNH & vô tận
+const _cx = {};
+function cumX(name, i, wfn) {
+  const c = _cx[name] || (_cx[name] = { 0: 0 });
+  if (c[i] !== undefined) return c[i];
+  if (i > 0) { let j = i; while (c[j - 1] === undefined) j--; let x = c[j - 1]; for (let k = j - 1; k < i; k++) { x += wfn(k); c[k + 1] = x; } }
+  else { let j = i; while (c[j + 1] === undefined) j++; let x = c[j + 1]; for (let k = j + 1; k > i; k--) { x -= wfn(k - 1); c[k - 1] = x; } }
+  return c[i];
+}
+const W_RMIN = 200, W_RMAX = 300, W_SMIN = 150, W_SMAX = 160;                              // bề rộng: cồn TRÒN 200..300 · cồn NHỌN 150..160 (tune)
+function segW(k) { const peak = (k & 1) ? k : k + 1; return isSharp(peak) ? W_SMIN + thash(k) * (W_SMAX - W_SMIN) : W_RMIN + thash(k) * (W_RMAX - W_RMIN); }
+function cpx(i) { return cumX('fg', i, segW); }
+const HR_MIN = 0.25, HR_MAX = 0.3;                                                         // cao ĐỈNH TRÒN biến thiên trong [min,max] (tune)
+function cpy(i) {                                                                          // ĐÁY=base · ĐỈNH TRÒN [HR_MIN,HR_MAX] · ĐỈNH NHỌN 0.16H · microNoise ±0.025H
+  const nz = (thash(i * 13 + 5) - 0.5) * 0.05 * H;
+  if (!(i & 1)) return BASE() + nz;
+  if (isSharp(i)) return BASE() - 0.16 * H + nz;
+  const amp = HR_MIN + thash(i * 29 + 7) * (HR_MAX - HR_MIN);
+  return BASE() - amp * H + nz;
+}
+// quadraticCurveTo qua TRUNG ĐIỂM, điều khiển = đỉnh/đáy (như dune.html) — giải t theo x ⇒ hàm tất định (physics dùng chung)
+function bezMid(x, px, py, guess) {
+  let i = Math.floor(guess), g = 0;
+  while ((px(i - 1) + px(i)) / 2 > x && g++ < 200) i--;
+  g = 0; while ((px(i) + px(i + 1)) / 2 <= x && g++ < 200) i++;
+  const Ax = (px(i - 1) + px(i)) / 2, Ay = (py(i - 1) + py(i)) / 2;     // đầu = trung điểm trước
+  const Cx = px(i), Cy = py(i), Bx = (px(i) + px(i + 1)) / 2, By = (py(i) + py(i + 1)) / 2;  // điều khiển = đỉnh · cuối = trung điểm sau
+  const a = Ax - 2 * Cx + Bx, b = 2 * (Cx - Ax), c = Ax - x;           // x(t)=a t²+b t+c → giải t∈[0,1]
+  let t;
+  if (Math.abs(a) < 1e-6) t = -c / b;
+  else { const d = Math.sqrt(Math.max(0, b * b - 4 * a * c)); t = (-b + d) / (2 * a); if (t < 0 || t > 1) t = (-b - d) / (2 * a); }
+  t = Math.min(1, Math.max(0, t));
+  return (1 - t) * (1 - t) * Ay + 2 * (1 - t) * t * Cy + t * t * By;    // y(t) của bezier bậc 2
+}
+function flatEnd() { return W * 1.2; }
+const SHARP_FRAC = 0.35, SHARP_P = 0.84;                                                   // ~35% ĐỈNH nhọn · p<1 càng nhỏ càng nhọn (tune)
+function isSharp(i) { return (i & 1) === 1 && thash(i * 5 + 2) < SHARP_FRAC; }             // chỉ đỉnh (i lẻ) mới có thể nhọn
+function terrainY(x) {
+  const fe = flatEnd(), flatY = BASE() - 0.06 * H;                                        // vùng phẳng THẤP hơn đỉnh cồn đầu (đỉnh=−0.3125H) → cồn nhô lên phía trước
+  if (!isFinite(x)) return flatY;                                                          // chặn NaN/Infinity → tránh treo vòng lặp cumX
+  if (x <= fe) return flatY;
+  let i = Math.floor(x / 220), g = 0;                                                      // tìm đỉnh/đáy i mà x thuộc ô [mid(i-1,i)..mid(i,i+1)] (đoán theo bề rộng TB)
+  while ((cpx(i - 1) + cpx(i)) / 2 > x && g++ < 400) i--;
+  g = 0; while ((cpx(i) + cpx(i + 1)) / 2 <= x && g++ < 400) i++;
+  const Ax = (cpx(i - 1) + cpx(i)) / 2, Ay = (cpy(i - 1) + cpy(i)) / 2;
+  const Cx = cpx(i), Cy = cpy(i), Bx = (cpx(i) + cpx(i + 1)) / 2, By = (cpy(i) + cpy(i + 1)) / 2;
+  let raw;
+  if (isSharp(i)) {                                                                        // CỒN NHỌN: chạm thẳng đỉnh Cy, sườn hơi cong (cusp)
+    if (x <= Cx) { const u = (x - Ax) / (Cx - Ax); raw = Ay + (Cy - Ay) * (1 - Math.pow(1 - u, SHARP_P)); }
+    else { const u = (x - Cx) / (Bx - Cx); raw = Cy + (By - Cy) * Math.pow(u, SHARP_P); }
+  } else {                                                                                 // CỒN TRÒN: quadratic bezier qua trung điểm (mềm, không chạm đỉnh)
+    const a = Ax - 2 * Cx + Bx, b = 2 * (Cx - Ax), c = Ax - x;
+    let t; if (Math.abs(a) < 1e-6) t = -c / b; else { const d = Math.sqrt(Math.max(0, b * b - 4 * a * c)); t = (-b + d) / (2 * a); if (t < 0 || t > 1) t = (-b - d) / (2 * a); }
+    t = Math.min(1, Math.max(0, t));
+    raw = (1 - t) * (1 - t) * Ay + 2 * (1 - t) * t * Cy + t * t * By;
+  }
+  if (x < fe + 250) { const k = (x - fe) / 250, kk = k * k * (3 - 2 * k); raw = flatY + (raw - flatY) * kk; }   // blend NGẮN từ vùng phẳng (đỉnh đầu không bị tụt)
+  return raw;
+}
+function slopeAt(x) { return (terrainY(x + 1.5) - terrainY(x - 1.5)) / 3; }
+// cồn NỀN parallax (2 lớp) — copy y hệt layer 0 & 1 dune.html: XA(amp100,rộng150–300) · GẦN(amp150,rộng200–400)
+function ridgeY(x, layer) {
+  const far = layer === 2, minW = far ? 150 : 200, rng = far ? 150 : 200;                 // fg=layer chính; layer2=xa nhất, layer1=giữa
+  const amp = (far ? 0.125 : 0.1875) * H, base = BASE() - (far ? 0.25 : 0.15) * H;        // amp 100/150(=0.125/0.1875H), lệch nền theo dune.html
+  const rx = k => cumX('r' + layer, k, kk => minW + thash(kk * 7 + layer * 31) * rng);
+  const ry = k => (k & 1) ? base - amp : base;
+  return bezMid(x, rx, ry, x / (minW + rng / 2));
+}
+
+const LINE1 = 0.25;                                                                        // MỘT vạch ăn điểm duy nhất (tune)
+function lineWorldY() { return BASE() - LINE1 * W; }
+function linesCrossed(minBy) { return (BASE() - minBy) / W >= LINE1 ? 1 : 0; }             // qua vạch = 1 · chưa = 0
+function moonWorldY() { return BASE() - W * 0.9; }                                          // mặt trăng — cần cú bay BOOST combo cao mới chạm (thưởng ×2)
+
+/* ── VẬT LÝ ── */
+function S() { return W / 800; }
+function BALL_R() { return 12 * S(); }
+const ANCHOR = 0.2;                                  // neo bóng SÁT TRÁI (thấy nhiều đường phía trước)
+const CRASH_UPSLOPE = -0.28, COMBO_MAX = 15, SPACE_START = 0.3, SPACE_FULL = 0.8;   // đáp dốc-lên gắt hơn mức này + đâm mạnh → crash (chặt hơn) · bay >0.3W bắt đầu tối, 0.8W = vũ trụ đen
+const CRASH_IMPACT = 0.32, CRASH_SLAM = 0.7;                                        // ngưỡng đâm để crash trên sườn-lên · đâm THẲNG quá mạnh (mọi sườn) → crash
+const BOOST_COMBO = 3, BOOST_STEP = 55, BOOST_LIFT_STEP = 0.13, BOOST_CAP_MAX = 900;    // combo ≥ 3 → BOOST tăng DẦN: mỗi combo thêm trần tốc & lực bật · trần bay TỐI ĐA 900
+function boostLvl() { return combo >= BOOST_COMBO ? combo - BOOST_COMBO + 1 : 0; }      // combo 3→lvl1, 4→2, …
+function boostCapV() { return Math.min(BOOST_CAP_MAX, 750 + boostLvl() * BOOST_STEP); } // trần tốc trên không theo combo
+
+let bx = 0, by = 0, vx = 0, vy = 0, angle = 0;
+let grounded = true, wasGround = true, flightMinBy = 1e9;
+let camWX = 0, camWY = 0, Z = 1;
+let startX = 0, score = 0, best = 0, bestAtStart = 0, combo = 1;
+let running = false, over = false, paused = false, diving = false, started = false;
+let boostGlow = 0, shake = 0, spaceF = 0, stallT = 0, diveRamp = 0, boostFlight = false;
+const trail = [], particles = [], STARS = [];
+for (let i = 0; i < 70; i++) STARS.push({ fx: (i * 0.6180339887) % 1, fy: ((i * 0.7548776662) % 1) * 0.72, r: 0.5 + ((i * 13) % 5) * 0.28 });
+
+const el = (id) => document.getElementById(id);
+function setScoreHud() { el('hud-score').textContent = score; }
+function updateBestHud() { el('hud-best').textContent = best; }
+function saveBestLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify({ best })); } catch (e) {} }
+function parseInitialBest() { let n = null, l = null; const raw = getInitialData(); if (raw) { try { n = JSON.parse(raw); } catch (e) {} } const lraw = readLocal(); if (lraw) { try { l = JSON.parse(lraw); } catch (e) {} } return Math.max(n && typeof n.best === 'number' ? n.best : 0, l && typeof l.best === 'number' ? l.best : 0, 0); }
+
+function newRun() {
+  startX = W * 0.5; bx = startX; by = terrainY(bx) - BALL_R();
+  vx = 0; vy = 0; angle = 0;
+  grounded = true; wasGround = true; flightMinBy = 1e9;
+  score = 0; combo = 1; bestAtStart = best;
+  running = true; over = false; paused = false; diving = false; started = false;
+  boostGlow = 0; shake = 0; spaceF = 0; stallT = 0; diveRamp = 0; boostFlight = false;
+  trail.length = 0; particles.length = 0;
+  camWX = bx - W * ANCHOR; camWY = by - H * 0.60; Z = 1;
+  setScoreHud(); updateBestHud(); updateComboInd();
+  el('overlay').classList.add('hidden'); showHint();
+}
+function endGame(hard) {
+  if (over) return;
+  over = true; running = false; diving = false;
+  shake = 0; if (hard) AudioFX.crash(); else AudioFX.land(0.5);   // KHÔNG rung màn hình khi game over
+  saveBestLocal();
+  const isNew = score > bestAtStart;
+  el('ov-title').textContent = isNew ? t('newBest') : t('gameOver');
+  el('ov-score').textContent = score; el('ov-best').textContent = best;
+  updateBestHud();
+  sendMessage('game_result');
+  setTimeout(() => el('overlay').classList.remove('hidden'), 700);
+}
+function crash() { endGame(true); }
+function addScore(n) { score += n; setScoreHud(); if (score > best) { best = score; saveData({ best }); saveBestLocal(); } }
+
+function spawnSand(n, power) { const gy = terrainY(bx); for (let k = 0; k < n; k++) { const a = -Math.PI * (0.15 + Math.random() * 0.7), sp = (0.2 + Math.random() * 0.6) * W * (0.4 + power); particles.push({ x: bx, y: gy, vx: Math.cos(a) * sp * 0.6 + vx * 0.2, vy: Math.sin(a) * sp, life: 0.5 + Math.random() * 0.4, max: 0.9 }); } }
+function onLand(m, impact) {
+  spawnSand(6, 0.4);
+  // CRASH: đáp SƯỜN DỐC LÊN khi đâm mạnh, HOẶC đâm thẳng xuống quá mạnh (mọi sườn) → thua
+  if ((m < CRASH_UPSLOPE && impact > CRASH_IMPACT * W) || impact > CRASH_SLAM * W) { spawnSand(16, 1); crash(); return; }
+  const tiers = linesCrossed(flightMinBy), reachedMoon = flightMinBy <= moonWorldY() + BALL_R() * 4, basePts = tiers > 0 ? Math.pow(2, tiers - 1) : 0;
+  if (basePts <= 0) { AudioFX.land(0.3); return; }    // CHƯA qua vạch (hop vặt khi dive…) → KHÔNG đụng combo
+  const good = m > -0.2;                              // đáp sườn-xuống/bằng → nối combo; sườn-lên → đứt combo
+  if (good) {
+    const perfect = impact < 0.35 * W;
+    const pts = basePts * combo * (reachedMoon ? 2 : 1); addScore(pts); showScorePop(pts, combo, perfect ? t('perfect') : t('smooth'), reachedMoon); AudioFX.score(combo); boostGlow = 0.5;
+    combo = Math.min(combo + 1, COMBO_MAX);
+  } else { addScore(basePts); showScorePop(basePts, 1, '', false); combo = 1; AudioFX.land(0.6); }
+  updateComboInd();
+}
+function stepPhysics(dt) {
+  const s = S(), G = 600;                            // trọng lực (tune)
+  // DIVE RAMP: giữ tay → lực dive tăng dần 0→1 trong ~0.32s (chúc xuống mượt, không giật); thả → tụt nhanh
+  if (diving) diveRamp = Math.min(1, diveRamp + dt / 0.5); else diveRamp = Math.max(0, diveRamp - dt / 0.18);
+  if (grounded) {
+    // ── BÁM MẶT CỒN: trọng lực theo dốc + ma sát + GIỮ đẩy tiến ──
+    const m = slopeAt(bx);
+    vx += G * s * (m / Math.hypot(1, m)) * dt;      // xuống dốc nhanh, lên dốc chậm
+    vx *= 0.99;                                      // MA SÁT: không nhấn → chậm dần → thua
+    if (diving) vx += 18 * s * diveRamp;              // GIỮ: đẩy tiến (ramp mượt)
+    if (vx > 750 * s) vx = 750 * s; if (vx < 0) vx = 0;    // trần tốc (CAP tune)
+    bx += vx * dt;
+    const ny = terrainY(bx) - BALL_R(); vy = (ny - by) / dt; by = ny;   // bám sát mặt (mượt, KHÔNG nảy facet)
+    angle += vx / (8000 * s);
+    // BAY: chỉ khi qua đỉnh đủ nhanh (vx²·độ_cong > g·3) → hết nảy vặt
+    const dd = 6 * s, curv = (terrainY(bx + dd) + terrainY(bx - dd) - 2 * terrainY(bx)) / (dd * dd);
+    if (curv > 0 && vx * vx * curv > G * s * 2.5) {
+      grounded = false;
+      const rampVy = vx * slopeAt(bx - dd);                          // hướng bay theo mặt dốc VỪA LEO (sau lưng), không lấy tại đỉnh (cusp bị trung bình = 0)
+      vy = Math.min(vy, rampVy);                                     // giữ hướng LÊN mạnh hơn → CỒN NHỌN/ramp bật hẳn
+      if (diving && vx > 0) { vx *= 1.03; vy *= 1.03; }             // rời đất khi GIỮ: boost
+      const lvl = boostLvl(); boostFlight = lvl > 0;                 // COMBO ≥ 3 → BOOST, mạnh dần theo combo
+      if (boostFlight) vy *= 1 + lvl * BOOST_LIFT_STEP;             // lực bật TĂNG theo combo (không phải 1 phát max)
+      const maxUp = (boostFlight ? 7 : 3) * vx; if (vy < -maxUp) vy = -maxUp;   // chặn dựng đứng (boost cho phép cao hơn nhiều)
+      if (vy < -0.05 * W) { AudioFX.jump(); if (boostFlight) boostGlow = 0.6; } flightMinBy = by;
+    }
+  } else {
+    // ── TRÊN KHÔNG: đạn đạo + GIỮ ép xuống ──
+    vy += G * s * dt; if (vy > 1000 * s) vy = 1000 * s;
+    if (diving && vy < 1400 * s) { vy += 60 * s * diveRamp; vy += (Math.max(0, vx) / 50) * diveRamp; }   // ép xuống RAMP → chúc mũi xuống TỪ TỪ
+    const capV = (boostFlight ? boostCapV() : 750) * s;                                     // BOOST: trần tốc trên không tăng theo combo → càng combo càng cao
+    const mag = Math.hypot(vx, vy); if (mag > capV) { const k = capV / mag; vx *= k; vy *= k; }
+    bx += vx * dt; by += vy * dt; angle += vx / (8000 * s);
+    if (by < flightMinBy) flightMinBy = by;
+    const groundY = terrainY(bx) - BALL_R();
+    if (by >= groundY) {
+      by = groundY;
+      const m = slopeAt(bx), L = Math.hypot(1, m), nx = m / L, ny = -1 / L, vn = vx * nx + vy * ny;
+      const impact = Math.max(0, -vn);                 // đâm vào mặt mạnh cỡ nào (thành phần pháp tuyến)
+      if (vn < 0) { vx -= vn * nx; vy -= vn * ny; }      // KHỬ pháp tuyến: đáp cứng mất tốc, đáp mượt (trượt khớp) giữ tốc
+      onLand(m, impact); if (over) return; flightMinBy = 1e9; grounded = true; boostFlight = false;
+    }
+  }
+  wasGround = grounded;
+  if (started && grounded && Math.hypot(vx, vy) < 0.07 * W) { stallT += dt; if (stallT > 0.5) { endGame(false); return; } } else stallT = 0;   // hết đà nhanh hơn → thua sớm (chặt hơn)
+  // ── CAMERA giống dune-tune: zoom sao cho ĐẤT (cách bóng hAbove) luôn ≤ 0.9H, min-zoom 0.30 ──
+  const hAbove = Math.max(0, BASE() - by), tHigh = Math.min(1, hAbove / (2.0 * W));
+  const ballSY = (0.60 - 0.34 * tHigh) * H;                         // bóng cao → dịch lên trên màn
+  let targetZ = hAbove > 1 ? (0.9 * H - ballSY) / hAbove : 1;
+  targetZ = Math.max(0.30, Math.min(1, targetZ)); Z += (targetZ - Z) * Math.min(1, 4 * dt);
+  camWX += ((bx - (W * ANCHOR) / Z) - camWX) * Math.min(1, 9 * dt);
+  camWY += ((by - ballSY / Z) - camWY) * Math.min(1, 6 * dt);
+  spaceF = Math.min(1, Math.max(0, (hAbove / W - SPACE_START) / (SPACE_FULL - SPACE_START)));
+  for (let i = particles.length - 1; i >= 0; i--) { const p = particles[i]; p.vy += 800 * s * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; if (p.life <= 0) particles.splice(i, 1); }
+  if (boostGlow > 0) boostGlow -= dt;
+  trail.push({ x: bx, y: by }); if (trail.length > (boostFlight ? 24 : 16)) trail.shift();
+}
+
+/* ── RENDER ── */
+function sx(wx) { return (wx - camWX) * Z; }
+function sy(wy) { return (wy - camWY) * Z; }
+function mix(a, b, f) { const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16), r = Math.round((pa >> 16 & 255) * (1 - f) + (pb >> 16 & 255) * f), g = Math.round((pa >> 8 & 255) * (1 - f) + (pb >> 8 & 255) * f), c = Math.round((pa & 255) * (1 - f) + (pb & 255) * f); return 'rgb(' + r + ',' + g + ',' + c + ')'; }
+function draw() {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  let ox = 0, oy = 0;
+  if (shake > 0.01) { ox = (Math.random() - 0.5) * 16 * shake; oy = (Math.random() - 0.5) * 16 * shake; shake *= 0.88; }
+  ctx.clearRect(0, 0, W, H); ctx.save(); ctx.translate(ox, oy);
+  const sf = spaceF, sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, mix('#2ecab6', '#05060f', sf)); sky.addColorStop(0.5, mix('#a4e6ce', '#0a0a1e', sf)); sky.addColorStop(1, mix('#f6e6b4', '#1a1230', sf));
+  ctx.fillStyle = sky; ctx.fillRect(-30, -30, W + 60, H + 60);
+  if (sf > 0.02) drawStars(sf);
+  drawMoon();
+  drawRidge(2, mix('#80c4ad', '#0d0b24', sf), 0.30);
+  drawRidge(1, mix('#d5bc72', '#140f2c', sf), 0.55);
+  drawScoreLines(); drawTerrain(); drawTrail(); drawBall();
+  ctx.restore();
+}
+function drawMoon() {
+  const mx = sx(camWX + (W * 0.55) / Z), my = sy(moonWorldY());
+  if (my > H + 80) return;
+  ctx.save(); ctx.globalAlpha = Math.min(1, 0.15 + spaceF * 1.2);                            // mặt trăng HIỆN RÕ DẦN khi càng lên vũ trụ
+  const r = Math.max(10, BALL_R() * 2.2 * Z + W * 0.06 * Z);
+  const gl = ctx.createRadialGradient(mx, my, r * 0.4, mx, my, r * 2.2); gl.addColorStop(0, 'rgba(240,240,255,0.5)'); gl.addColorStop(1, 'rgba(200,210,255,0)');
+  ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(mx, my, r * 2.2, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#eef0ff'; ctx.beginPath(); ctx.arc(mx, my, r, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'rgba(190,195,225,0.55)'; ctx.beginPath(); ctx.arc(mx - r * 0.3, my - r * 0.2, r * 0.18, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(mx + r * 0.25, my + r * 0.28, r * 0.13, 0, TAU); ctx.fill();
+  ctx.restore();
+}
+function drawStars(sf) { ctx.save(); const ox = -(camWX * 0.05) % W; for (const s of STARS) { let px = (s.fx * W + ox) % W; if (px < 0) px += W; const py = s.fy * H; ctx.globalAlpha = sf * (0.5 + 0.5 * s.r); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(px, py, s.r, 0, TAU); ctx.fill(); } ctx.globalAlpha = 1; ctx.restore(); }
+function drawScoreLines() {
+  const y = sy(lineWorldY()); if (y < -60 || y > H + 60) return;
+  ctx.save();
+  // ── MÂY trôi ngang trên vạch (như drawTheLine của dune.html) ──
+  ctx.fillStyle = 'rgba(255,255,255,0.30)';
+  const cw = 200 * Z, ch = 30 * Z, wrap = 2000 * Z, drift = ((camWX * 0.5 * Z) % wrap + wrap) % wrap;
+  for (let i = 0; i < 6; i++) {
+    let cx = (i * 450 * Z - drift) % wrap; if (cx < -cw) cx += wrap;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(cx, y - ch / 2, cw, ch, ch / 2); else ctx.rect(cx, y - ch / 2, cw, ch);
+    ctx.fill();
+  }
+  // ── VẠCH ĂN ĐIỂM duy nhất ──
+  ctx.setLineDash([10, 9]); ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 2; ctx.shadowColor = 'rgba(255,255,255,0.5)'; ctx.shadowBlur = 5;
+  ctx.beginPath(); ctx.moveTo(-20, y); ctx.lineTo(W + 20, y); ctx.stroke();
+  ctx.restore();
+}
+function drawRidge(layer, color, parallax) { ctx.beginPath(); ctx.moveTo(-40, H + 40); for (let sxp = -40; sxp <= W + 40; sxp += 8) ctx.lineTo(sxp, sy(ridgeY(camWX * parallax + sxp / Z, layer))); ctx.lineTo(W + 40, H + 40); ctx.closePath(); ctx.fillStyle = color; ctx.fill(); }
+function terrainPath() {
+  ctx.beginPath(); ctx.moveTo(-40, H + 40); const pts = [];
+  for (let sxp = -40; sxp <= W + 40; sxp += 4) { const wx = camWX + sxp / Z, yy = sy(terrainY(wx)); pts.push([sxp, yy]); ctx.lineTo(sxp, yy); }
+  ctx.lineTo(W + 40, H + 40); ctx.closePath();
+  return pts;
+}
+function drawTerrain() {
+  const pts = terrainPath();
+  // thân cát (gradient) + VIỀN TRẮNG DÀY ở mép trên — như foreground dune.html
+  const sand = ctx.createLinearGradient(0, H * 0.28, 0, H); sand.addColorStop(0, '#ffe268'); sand.addColorStop(0.5, '#eab54a'); sand.addColorStop(1, '#c98f43');
+  ctx.fillStyle = sand; ctx.fill();
+  ctx.beginPath(); for (let i = 0; i < pts.length; i++) { const p = pts[i]; i === 0 ? ctx.moveTo(p[0], p[1]) : ctx.lineTo(p[0], p[1]); }
+  ctx.strokeStyle = 'rgba(255,255,255,0.92)'; ctx.lineWidth = Math.max(4, 6 * Z); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
+}
+function drawTrail() {
+  if (boostFlight && trail.length > 1) {
+    // ── ĐUÔI LỬA COMET khi BOOST (rực hơn theo combo) ──
+    const lvl = Math.max(1, boostLvl()), intf = Math.min(1.6, 0.7 + lvl * 0.13);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < trail.length; i++) {
+      const p = trail[i], f = i / trail.length, px = sx(p.x), py = sy(p.y);
+      const r = BALL_R() * Z * (0.35 + 1.3 * f) * intf;                                      // to dần về phía bóng
+      const g = ctx.createRadialGradient(px, py, 0, px, py, r);
+      g.addColorStop(0, 'rgba(255,255,225,' + (0.55 * f * intf).toFixed(3) + ')');           // lõi trắng nóng
+      g.addColorStop(0.4, 'rgba(255,' + Math.floor(110 + 130 * f) + ',40,' + (0.42 * f * intf).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(255,50,15,0)');                                                // đuôi đỏ tan
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(px, py, r, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+  } else {
+    for (let i = 0; i < trail.length; i++) { const p = trail[i], f = i / trail.length, r = BALL_R() * Z * (0.25 + 0.6 * f); ctx.fillStyle = boostGlow > 0 ? 'rgba(255,' + Math.floor(150 + 80 * f) + ',60,' + (0.28 * f).toFixed(3) + ')' : 'rgba(120,90,60,' + (0.16 * f).toFixed(3) + ')'; ctx.beginPath(); ctx.arc(sx(p.x), sy(p.y), r, 0, TAU); ctx.fill(); }
+  }
+  ctx.fillStyle = '#f2c078';
+  for (const p of particles) { const a = Math.max(0, p.life / p.max); ctx.globalAlpha = a; const s = (2 + a * 2) * Z; ctx.fillRect(sx(p.x) - s / 2, sy(p.y) - s / 2, s, s); }
+  ctx.globalAlpha = 1;
+}
+function drawBall() {
+  const r = BALL_R() * Z, px = sx(bx), py = sy(by);
+  if (boostGlow > 0) { const g = ctx.createRadialGradient(px, py, r * 0.3, px, py, r * 2.6); g.addColorStop(0, 'rgba(255,180,80,' + (0.6 * boostGlow / 0.5).toFixed(3) + ')'); g.addColorStop(1, 'rgba(255,120,40,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(px, py, r * 2.6, 0, TAU); ctx.fill(); }
+  const bg = ctx.createRadialGradient(px - r * 0.35, py - r * 0.4, r * 0.15, px, py, r); bg.addColorStop(0, '#ffffff'); bg.addColorStop(1, '#dfe3ea');
+  ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(px, py, r, 0, TAU); ctx.fill();
+  ctx.strokeStyle = 'rgba(120,120,140,0.35)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(px, py, r - 0.7, 0, TAU); ctx.stroke();
+  ctx.fillStyle = 'rgba(150,160,180,0.5)';
+  for (let k = 0; k < 2; k++) { const a = angle + k * Math.PI; ctx.beginPath(); ctx.arc(px + Math.cos(a) * r * 0.45, py + Math.sin(a) * r * 0.45, r * 0.13, 0, TAU); ctx.fill(); }
+}
+
+function showScorePop(pts, mult, label, moon) {
+  const e = el('boost-pop'); e.style.color = moon ? '#bfe0ff' : (mult >= 4 ? '#ffd23f' : mult >= 2 ? '#7fe3a0' : '#fff');
+  const top = moon ? t('moon') : label;
+  e.innerHTML = (top ? '<div style="font-size:.62em">' + top + '</div>' : '') + '+' + pts + (mult > 1 ? ' <span style="opacity:.9">×' + mult + '</span>' : '');
+  e.classList.remove('show'); void e.offsetWidth; e.classList.add('show');
+}
+function updateComboInd() {
+  const e = el('combo-ind');
+  if (combo > 1) { e.innerHTML = (combo >= BOOST_COMBO ? '🚀 ' : '') + '<span class="cl">' + t('combo').toUpperCase() + '</span>×' + combo; e.classList.add('on', 'bump'); setTimeout(() => e.classList.remove('bump'), 320); }
+  else e.classList.remove('on');
+}
+
+const TICK_MS = 1000 / 60, DT = 1 / 60, SLOWMO = 0.8;                                      // slow-mo TOÀN CỤC ngay từ đầu: sim chạy 0.8× thời gian thật
+let lastTime = 0, acc = 0;
+function frame(now) {
+  if (!lastTime) lastTime = now;
+  let dt = now - lastTime; lastTime = now; if (dt > 250) dt = 250; acc += dt;
+  let n = 0; while (acc >= TICK_MS && n < 8) { if (running && !over && !paused && started) stepPhysics(DT * SLOWMO); acc -= TICK_MS; n++; }
+  draw(); requestAnimationFrame(frame);
+}
+
+const stage = el('stage');
+stage.addEventListener('pointerdown', (e) => {
+  if (over) return; AudioFX.resume();
+  if (paused) { paused = false; lastTime = 0; }
+  if (!started) { started = true; vx = 0.18 * W; }
+  diving = true; hideHint(); e.preventDefault();
+});
+window.addEventListener('pointerup', () => { diving = false; });
+window.addEventListener('pointercancel', () => { diving = false; });
+
+el('back-btn').addEventListener('click', (e) => { e.stopPropagation(); sendMessage('quit'); });
+el('ov-btn').addEventListener('click', (e) => { e.stopPropagation(); AudioFX.resume(); sendMessage('retry_level'); newRun(); });
+const soundBtn = el('sound-btn');
+function updateSoundBtn() { soundBtn.classList.toggle('muted', !AudioFX.isEnabled()); }
+soundBtn.addEventListener('click', (e) => { e.stopPropagation(); AudioFX.resume(); AudioFX.setEnabled(!AudioFX.isEnabled()); updateSoundBtn(); });
+window.onAppPause = function () { paused = true; diving = false; };
+window.onNextLevel = function () {};
+window.onRetryLevel = function () { newRun(); };
+
+let hintTimer = null;
+function showHint() { const h = el('hint'); h.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a2 2 0 0 1 2 2v7h1V7a2 2 0 0 1 4 0v8.5c0 3.6-2.6 6.5-6.2 6.5H11c-2 0-3.3-.9-4.4-2.6l-2.3-3.7a2 2 0 0 1 3.1-2.5l1 1.1V6a2 2 0 0 1 2-2z"/></svg>' + t('hint'); h.classList.remove('gone'); clearTimeout(hintTimer); hintTimer = setTimeout(hideHint, 3600); }
+function hideHint() { el('hint').classList.add('gone'); }
+function applyStatusBarPad() { el('topbar').style.paddingTop = 'calc(max(' + getStatusBarHeight() + 'px, env(safe-area-inset-top)) + 8px)'; }
+function applyStaticI18n() { el('lbl-score').textContent = t('score').toUpperCase(); el('lbl-best').textContent = t('best').toUpperCase(); el('ov-k-score').textContent = t('score').toUpperCase(); el('ov-k-best').textContent = t('best').toUpperCase(); el('ov-btn-txt').textContent = t('playAgain'); }
+function resize() {
+  const wasGrounded = grounded;
+  W = stage.clientWidth || window.innerWidth; H = stage.clientHeight || window.innerHeight;
+  DPR = Math.min(window.devicePixelRatio || 1, 2); cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  const sc = Math.min(Math.max(W / 360, 1), 2.2); document.documentElement.style.setProperty('--sc', sc.toFixed(3));
+  const pill = document.querySelector('.stat'); if (pill) { const ph = pill.getBoundingClientRect().height; if (ph > 0) document.documentElement.style.setProperty('--btn-size', Math.round(ph * 0.92) + 'px'); }
+  if (wasGrounded && running) by = terrainY(bx) - BALL_R();
+}
+function boot() {
+  LANG = getLanguage(); applyUiFont(LANG); applyStatusBarPad(); applyStaticI18n();
+  best = parseInitialBest(); updateBestHud(); updateSoundBtn();
+  resize(); newRun(); requestAnimationFrame(frame);
+}
+window.addEventListener('resize', resize);
+window.addEventListener('load', resize);
+document.addEventListener('visibilitychange', function () { if (document.hidden) { paused = true; diving = false; } else if (!over) { paused = false; lastTime = 0; } });
+(function waitForNativeInjection() { const start = Date.now(); (function check() { if (typeof window.language === 'string' || typeof window.data === 'string' || Date.now() - start > 200) boot(); else setTimeout(check, 10); })(); })();
+</script>

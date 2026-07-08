@@ -1,0 +1,24 @@
+{
+  "title": "Dune!",
+  "packageName": "com.falcon.dune",
+  "engine": "HTML5",
+  "version": "1.0.0",
+  "category": "ARCADE",
+  "tags": ["dune", "ball", "physics", "jump", "endless", "arcade"],
+  "description": "Roll a ball across endless sand dunes. Hold to press it down and build speed on the downhills, then release near a peak to launch into the air. Score by flying above the line — the higher you soar the more points, all the way up to space and the moon. Land smoothly on the next slope to chain combo multipliers; smash into a reverse slope or run out of momentum and it's game over.",
+  "controls": "Hold to dive and build speed on downhills; release near a peak to fly. Time your hold to land smoothly on the next downhill and chain combos",
+  "aiContext": "",
+  "aiBuildLink": "",
+  "demoUrl": "",
+  "storeLinks": {
+    "googlePlay": { "url": "", "downloads": 0 },
+    "iosAppStore": { "url": "", "downloads": 0 },
+    "steam": { "url": "", "downloads": 0 }
+  },
+  "entry": "index.html",
+  "coverImages": {
+    "landscape16x9": "cover-landscape-1920x1080.png",
+    "portrait2x3": "cover-portrait-800x1200.png",
+    "square1x1": "cover-square-800x800.png"
+  }
+}
