@@ -182,16 +182,6 @@
     filter: drop-shadow(0 8px 14px rgba(0,0,0,.5));
   }
 
-  .hint {
-    position: absolute;
-    left: 50%; bottom: 14px; transform: translateX(-50%);
-    background: rgba(8,14,28,.72); color: #cfe0ff;
-    padding: 8px 14px; border-radius: 12px;
-    font-size: 12px; letter-spacing: .3px; white-space: nowrap;
-    pointer-events: none; opacity: 1; transition: opacity .5s;
-    box-shadow: 0 6px 18px rgba(0,0,0,.4);
-  }
-  .hint.gone { opacity: 0; }
 
   /* ── Popup Combo + điểm mỗi lần nổ ────────────────────────────────── */
   .combo-pop {
@@ -316,7 +306,6 @@
     <div class="board-wrap" id="board-wrap">
       <canvas id="game"></canvas>
       <div class="combo-pop" id="combo-pop"></div>
-      <div class="hint" id="hint"></div>
     </div>
     <div class="tray" id="tray">
       <div class="slot" data-slot="0"><canvas></canvas></div>
@@ -468,7 +457,6 @@ function tryRestore() {                          // khôi phục ván dở lúc 
     document.getElementById('overlay').classList.add('hidden');
     hideDrag(); renderTray();
     running = true;
-    showHint();                    // mở lại vẫn hiện hướng dẫn ở dưới như ván mới
     return true;
   } catch (e) { return false; }
 }
@@ -887,7 +875,7 @@ function fitScores() {
   let fz = parseFloat(getComputedStyle(vals[0]).fontSize) || 32;
   while (r.scrollWidth > max && fz > 14) { fz -= 1; vals.forEach(v => { v.style.fontSize = fz + 'px'; }); }
 }
-function newRun() {
+function newRun(guide) {          // guide=false → KHÔNG hiện bàn tay (dùng NGAY sau tutorial lần đầu)
   grid.fill(0); flashes = []; ghost = null; drag = null; fallBlocks = []; blastHold = 0;
   score = 0; combo = 0; pendingMove = false; moveScored = false; over = false; bestAtStart = best;
   document.getElementById('hud-score').textContent = '0';
@@ -897,7 +885,7 @@ function newRun() {
   newTray();
   running = true;
   clearGameSave();               // ván mới → xoá snapshot cũ (lượt đầu tiên sẽ lưu lại)
-  showDragHand();                // đã chơi tutorial → chỉ nhắc bằng bàn tay ảo kéo-thả
+  if (guide !== false) showDragHand();   // play-again / phiên mới → nhắc bàn tay; ngay sau tutorial lần đầu thì KHÔNG
 }
 
 /* =====================================================================
@@ -1115,7 +1103,7 @@ document.querySelectorAll('#tray .slot').forEach(el => {
     el.classList.add('grabbing');
     showDrag(slots[i], e.clientX, e.clientY);
     ghost = null;
-    hideHint(); hideDragHand();          // chạm khối → tắt nhắc (text + bàn tay)
+    hideDragHand();                      // chạm khối → tắt nhắc bàn tay
     if (tutMode) hideFinger();          // đang tự kéo → ẩn ngón tay ảo (giữ vòng đích + banner)
     AudioFX.resume(); AudioFX.pick();   // cần gesture để bật audio (mobile)
     e.preventDefault();
@@ -1138,20 +1126,27 @@ window.addEventListener('pointerup', () => {
   const d = drag; drag = null;
   hideDrag();
   document.querySelectorAll('#tray .slot').forEach(s => s.classList.remove('grabbing'));
-  if (ghost && ghost.valid) {
-    let gx = ghost.gx, gy = ghost.gy;
-    // Tutorial: thả ĐÚNG (lệch <= dung sai) → rơi ngay chỗ thả; thả LỆCH → nắn về cột cố định.
-    if (tutMode && tutPhase !== 'done' && Math.abs(ghost.gx - TUT_GX[d.slot]) > TUT_TOL) {
-      gx = TUT_GX[d.slot]; gy = 0;
+  // Tutorial: chỉ nhận khi thả TRONG KHOẢNG cho phép (gần cột đích) — KHÔNG fix cứng, khối
+  // rơi ngay tại chỗ thả; thả NGOÀI khoảng → không đặt, trả khối về khay và nhắc lại.
+  if (tutMode && tutPhase !== 'done') {
+    if (ghost && ghost.valid && Math.abs(ghost.gx - TUT_GX[d.slot]) <= TUT_TOL) {
+      startFall(d.piece.cells, d.piece.colors, ghost.gx, ghost.gy);   // rơi ngay chỗ thả (không nắn cột)
+      AudioFX.drop();
+      slots[d.slot] = null;
+      renderTray(); tutPlaced = true; tutFreeze = false; hideCoach();
+      stableFrames = 0;
+    } else {
+      showCoach();                      // thả sai vị trí → giữ khối, hiện lại hướng dẫn
     }
-    startFall(d.piece.cells, d.piece.colors, gx, gy);
+    ghost = null;
+    return;
+  }
+  if (ghost && ghost.valid) {
+    startFall(d.piece.cells, d.piece.colors, ghost.gx, ghost.gy);
     AudioFX.drop();
     slots[d.slot] = null;
-    if (tutMode) { renderTray(); tutPlaced = true; tutFreeze = false; hideCoach(); }   // thả xong → tan băng cho cát chảy
-    else if (slots.every(s => !s)) newTray(); else renderTray();
+    if (slots.every(s => !s)) newTray(); else renderTray();
     stableFrames = 0;
-  } else if (tutMode && tutPhase !== 'done') {
-    showCoach();                        // thả hụt → hiện lại hướng dẫn để làm lại
   }
   ghost = null;
 });
@@ -1181,13 +1176,6 @@ window.onRetryLevel = function () { newRun(); };
 /* =====================================================================
  * 13. Hint + boot
  * ===================================================================== */
-let hintTimer = null;
-function showHint() {
-  const h = document.getElementById('hint');
-  h.textContent = t('hint'); h.classList.remove('gone');
-  clearTimeout(hintTimer); hintTimer = setTimeout(hideHint, 3800);
-}
-function hideHint() { document.getElementById('hint').classList.add('gone'); }
 
 // ── Nhắc cho người ĐÃ chơi tutorial: CHỈ bàn tay ảo diễn kéo-thả (không banner/
 // vòng/khoá input) — tự ẩn khi người chơi cầm khối, hoặc sau ít giây nếu chưa chơi.
@@ -1243,13 +1231,12 @@ function mkPiece(cells, colorIdx) { return { cells: cells, colors: cells.map(() 
 const TUT_SHAPES = [SHAPES[1], SHAPES[8], SHAPES[9]];   // ngang-3 · chữ T · chữ S (3 hình khác)
 const TUT_GX = [0, 28, 56];                             // grain trái của khối khi thả (trái/giữa/phải)
 const TUT_TX = [12, 40, 68];                            // tâm x (grain) cho vòng đích + ngón tay
-const TUT_TOL = 4;                                      // dung sai (grain): lệch <= 4 coi như THẢ ĐÚNG
+const TUT_TOL = 4;                                      // KHOẢNG cho phép thả (grain): trong khoảng này mới nhận (đủ để luôn NỔ); ngoài → không thả được
 
 function startTutorial() {
   tutMode = true; over = false; running = true;
   score = 0; combo = 0; best = best || 0; bestAtStart = best;
   document.getElementById('overlay').classList.add('hidden');
-  hideHint();
   clearGameSave();               // xoá mọi snapshot cũ → reload giữa chừng luôn chạy lại tutorial từ đầu
   setupTutorial();
   requestAnimationFrame(frame);
@@ -1288,7 +1275,7 @@ function tutFinish() {
     tutMode = false; tutFreeze = false;
     hideCoach();
     persistTutorialSeen();                        // CHỈ đánh dấu ĐÃ XEM khi tutorial thật sự xong → vào ván thật
-    newRun();                                     // bắt đầu endless bình thường (tray ngẫu nhiên)
+    newRun(false);                                // NGAY sau tutorial lần đầu → vào ván thật, KHÔNG hiện bàn tay
   }, 900);
 }
 
