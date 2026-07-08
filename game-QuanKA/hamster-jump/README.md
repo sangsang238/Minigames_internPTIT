@@ -11,6 +11,9 @@
 
 ## Cách chơi
 
+- **Menu**: nút Play + Tutorial; icon hình thoi-trong-tròn (góc phải) mở panel
+  tóm tắt luật & các loại phô mai. **Lần đầu mở game** bấm Play sẽ vào tutorial
+  3 lần đáp có gợi ý (không thua, không tính điểm; cờ `tut` lưu trong save_data).
 - Miếng phô mai **trượt vào trên ván gỗ** ở đúng tầm mặt tháp (hướng, tốc độ và
   nhịp chờ ngẫu nhiên; nhanh dần theo độ cao, trần 10.5px/frame).
 - **Tap / Space** → hamster nhảy thẳng lên (~0.61s); miếng trượt qua bên dưới và

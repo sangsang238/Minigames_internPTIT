@@ -448,6 +448,239 @@ body {
 
 .back-ico    { width: 52%; height: 52%; fill: currentColor; display: block; }
 .restart-ico { width: 62%; height: 62%; fill: currentColor; display: block; }
+.home-ico    { width: 56%; height: 56%; fill: currentColor; display: block; }
+
+#topbar-right { display: flex; gap: 8px; }
+
+/* ── Confirm box (về menu) ────────────────────────────────────── */
+#confirm-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 290;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(23,60,44,.55);
+  opacity: 1;
+  transition: opacity .2s;
+}
+#confirm-panel.hidden { opacity: 0; pointer-events: none; }
+
+.confirm-card {
+  width: min(78%, 300px);
+  border-radius: 18px;
+  background: linear-gradient(170deg, #fffdf6, #f0fbe8);
+  box-shadow: 0 16px 44px rgba(9,40,26,.4);
+  padding: 20px 18px 16px;
+  text-align: center;
+  transform: scale(1);
+  transition: transform .2s;
+}
+#confirm-panel.hidden .confirm-card { transform: scale(.92); }
+
+#confirm-text { font-size: 16px; color: var(--text); margin-bottom: 16px; line-height: 1.35; }
+.confirm-btns { display: flex; gap: 12px; justify-content: center; }
+.confirm-btns .btn3d { --surface-width: 76px; --surface-height: 44px; --surface-font-size: 20px; }
+#confirm-yes { --surface-color: #ffb02e; --surface-text: #3a2400; }
+#confirm-yes:active .btn3d-surface { background: #ffb02e; }
+#confirm-no  { --surface-color: rgba(46,107,79,.12); }
+
+/* ── Responsive HUD — co giãn theo bề ngang, gọn lại khi màn thấp ─ */
+#hud-center { min-width: 0; }
+#hud-center > div {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+#game-title { font-size: clamp(8px, 2.4vw, 10px); }
+#level-num  { font-size: clamp(14px, 4.4vw, 18px); }
+.hud-chip     { min-width: clamp(44px, 13vw, 56px); padding: 4px clamp(6px, 2.4vw, 12px); }
+.hud-chip .val { font-size: clamp(13px, 4vw, 17px); }
+#time-wrap  { min-width: 56px; }
+#bottombar .btn3d, #bottombar .btn3d-surface { min-width: 0; }
+#hint-label, #shuffle-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-height: 640px) {
+  #topbar .btn3d.btn-icon { --surface-height: 36px; --surface-width: 36px; }
+  #hud-strip { padding-top: 4px; }
+  #bottombar { padding: 0 12px 8px; }
+  #bottombar .btn3d { --surface-height: 36px; --surface-font-size: 14px; }
+  #tut-banner { bottom: 12px; padding: 9px 12px; }
+}
+@media (max-height: 480px) {
+  #game-title { display: none; }
+  #time-bar-bg { height: 8px; }
+  #menu-screen { gap: 8px; }
+  .menu-mascots { display: none; }
+}
+
+/* ── Main menu ────────────────────────────────────────────────── */
+#menu-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 260;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background:
+    radial-gradient(ellipse 90% 55% at 50% -12%, rgba(255,255,220,.55), transparent),
+    linear-gradient(170deg, var(--bg-a) 0%, var(--bg-b) 55%, var(--bg-c) 100%);
+  transition: opacity .25s;
+}
+#menu-screen.hidden { opacity: 0; pointer-events: none; }
+#menu-screen { overflow: auto; }   /* màn hình quá lùn vẫn cuộn tới nút được */
+
+#menu-corner {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 12px;
+  /* padding-top cộng thêm statusBarHeight qua JS */
+}
+
+.menu-mascots { display: flex; gap: 14px; margin-bottom: 4px; }
+.menu-mascot {
+  width: 64px; height: 64px;
+  border-radius: 22%;
+  background: linear-gradient(160deg, #fffdf6, #ffeecf);
+  border: 2px solid #f5d9a0;
+  box-shadow: 0 3px 0 #e3bd7d, 0 5px 10px rgba(23,74,52,.18);
+  display: flex; align-items: center; justify-content: center;
+}
+.menu-mascot svg { width: 82%; height: 82%; display: block; }
+.menu-mascot:nth-child(1) { transform: rotate(-7deg); }
+.menu-mascot:nth-child(3) { transform: rotate(7deg); }
+
+#menu-title {
+  font-size: clamp(24px, 8vw, 34px);
+  color: #fff;
+  letter-spacing: 2px;
+  text-align: center;
+  line-height: 1.15;
+  text-shadow: 0 2px 0 rgba(30,70,52,.35), 0 6px 18px rgba(9,40,26,.35);
+  margin-bottom: 8px;
+  max-width: 86%;
+}
+
+.btn3d.cta {
+  --surface-color: #ffb02e;
+  --surface-text: #3a2400;
+  --surface-height: 54px;
+  --surface-padding-x: 46px;
+  --surface-font-size: 20px;
+}
+.btn3d.cta:active .btn3d-surface { background: #ffb02e; }
+
+.ico-diamond { width: 58%; height: 58%; display: block; }
+
+/* ── Info panel (document ngắn: thông tin + cách chơi) ────────── */
+#info-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(23,60,44,.55);
+  opacity: 1;
+  transition: opacity .22s;
+}
+#info-panel.hidden { opacity: 0; pointer-events: none; }
+
+.doc-card {
+  width: min(86%, 380px);
+  max-height: 72%;
+  overflow: auto;
+  border-radius: 20px;
+  background: linear-gradient(170deg, #fffdf6, #f0fbe8);
+  border: 1px solid rgba(255,255,255,.75);
+  box-shadow: 0 18px 50px rgba(9,40,26,.4);
+  padding: 20px 20px 18px;
+  position: relative;
+  transform: scale(1);
+  transition: transform .22s;
+}
+#info-panel.hidden .doc-card { transform: scale(.92); }
+
+.doc-card h2 { font-size: 20px; color: var(--text); margin-bottom: 12px; padding-right: 42px; }
+
+/* Sơ đồ minh hoạ (ít chữ, nhiều hình) */
+.info-fig {
+  background: rgba(46,107,79,.07);
+  border-radius: 12px;
+  padding: 6px 6px 4px;
+}
+.info-fig svg { width: 100%; height: auto; display: block; }
+.info-cap {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--text);
+  opacity: .85;
+  margin: 3px 0 10px;
+  line-height: 1.3;
+}
+.info-grid2 { display: flex; gap: 10px; }
+.info-grid2 > div { flex: 1; min-width: 0; }
+
+.info-chips { display: flex; gap: 8px; }
+.info-chip {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  background: rgba(46,107,79,.07);
+  border-radius: 10px;
+  padding: 8px 2px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: var(--text);
+  text-transform: uppercase;
+  overflow: hidden;
+}
+.info-chip svg { width: 40px; height: 26px; display: block; }
+
+#info-close {
+  position: absolute;
+  top: 10px; right: 10px;
+  --surface-height: 34px;
+  --surface-width: 34px;
+  --surface-font-size: 16px;
+}
+
+/* ── Tutorial banner (hướng dẫn từng bước) ────────────────────── */
+#tut-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  z-index: 240;
+  width: min(88%, 380px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(30,70,52,.92);
+  border-radius: 18px;
+  padding: 12px 14px;
+  box-shadow: 0 8px 24px rgba(9,40,26,.35);
+  transition: opacity .2s;
+}
+#tut-banner.hidden { opacity: 0; pointer-events: none; }
+#tut-text { flex: 1; color: #fff; font-size: 14px; line-height: 1.4; }
+
+.btn3d.mini {
+  --surface-height: 32px;
+  --surface-font-size: 13px;
+  --surface-padding-x: 12px;
+  --surface-color: rgba(255,255,255,.18);
+  --surface-text: #fff;
+}
 
 /* ── Pause veil (not a result popup — game-common §1.3 onAppPause) */
 #pause-veil {
@@ -493,13 +726,24 @@ body {
       <div id="level-num">Level 1</div>
     </div>
 
-    <div class="btn3d btn-icon" id="restart-btn" role="button" aria-label="Restart" tabindex="0">
-      <span class="btn3d-shadow"></span>
-      <span class="btn3d-surface">
-        <svg class="restart-ico" viewBox="0 0 100 100" aria-hidden="true">
-          <path fill="currentColor" d="m50.7 19.003 4.793-4.793c2.696-2.697 2.696-6.991 0-9.688s-6.991-2.696-9.687 0L29.327 21.001a6.812 6.812 0 0 0 0 9.687l16.479 16.478a6.9 6.9 0 0 0 4.793 1.998c1.798 0 3.496-.7 4.794-1.998a6.812 6.812 0 0 0 0-9.687l-4.794-4.794c13.682.4 24.768 11.685 24.768 25.467 0 14.081-11.485 25.466-25.467 25.466S24.534 72.233 24.534 58.252c0-3.096.599-6.192 1.597-8.989 1.299-3.495-.4-7.49-3.994-8.788-3.496-1.298-7.49.4-8.789 3.995-1.698 4.394-2.496 9.088-2.496 13.882C10.852 79.923 28.428 97.5 50 97.5s39.148-17.577 39.148-39.148c0-21.472-17.177-38.95-38.449-39.349z"/>
-        </svg>
-      </span>
+    <div id="topbar-right">
+      <!-- Nút Menu (home) — mở hộp xác nhận về menu chính -->
+      <div class="btn3d btn-icon" id="menu-btn" role="button" aria-label="Menu" tabindex="0">
+        <span class="btn3d-shadow"></span>
+        <span class="btn3d-surface">
+          <svg class="home-ico" viewBox="0 0 100 100" aria-hidden="true">
+            <path fill="currentColor" d="M50 14 L88 46 L78 46 L78 82 A6 6 0 0 1 72 88 L58 88 L58 64 L42 64 L42 88 L28 88 A6 6 0 0 1 22 82 L22 46 L12 46 Z"/>
+          </svg>
+        </span>
+      </div>
+      <div class="btn3d btn-icon" id="restart-btn" role="button" aria-label="Restart" tabindex="0">
+        <span class="btn3d-shadow"></span>
+        <span class="btn3d-surface">
+          <svg class="restart-ico" viewBox="0 0 100 100" aria-hidden="true">
+            <path fill="currentColor" d="m50.7 19.003 4.793-4.793c2.696-2.697 2.696-6.991 0-9.688s-6.991-2.696-9.687 0L29.327 21.001a6.812 6.812 0 0 0 0 9.687l16.479 16.478a6.9 6.9 0 0 0 4.793 1.998c1.798 0 3.496-.7 4.794-1.998a6.812 6.812 0 0 0 0-9.687l-4.794-4.794c13.682.4 24.768 11.685 24.768 25.467 0 14.081-11.485 25.466-25.467 25.466S24.534 72.233 24.534 58.252c0-3.096.599-6.192 1.597-8.989 1.299-3.495-.4-7.49-3.994-8.788-3.496-1.298-7.49.4-8.789 3.995-1.698 4.394-2.496 9.088-2.496 13.882C10.852 79.923 28.428 97.5 50 97.5s39.148-17.577 39.148-39.148c0-21.472-17.177-38.95-38.449-39.349z"/>
+          </svg>
+        </span>
+      </div>
     </div>
   </div>
 
@@ -556,6 +800,171 @@ body {
 
 </div>
 
+<!-- Main menu (hiện lúc boot; Play / Tutorial / info) -->
+<div id="menu-screen">
+  <div id="menu-corner">
+    <div class="btn3d btn-icon" id="menu-back" role="button" aria-label="Back" tabindex="0">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="back-ico" viewBox="0 0 447.243 447.243" aria-hidden="true">
+          <path fill="currentColor" d="M420.361 192.229a31.967 31.967 0 0 0-5.535-.41H99.305l6.88-3.2a63.998 63.998 0 0 0 18.08-12.8l88.48-88.48c11.653-11.124 13.611-29.019 4.64-42.4-10.441-14.259-30.464-17.355-44.724-6.914a32.018 32.018 0 0 0-3.276 2.754l-160 160c-12.504 12.49-12.515 32.751-.025 45.255l.025.025 160 160c12.514 12.479 32.775 12.451 45.255-.063a32.084 32.084 0 0 0 2.745-3.137c8.971-13.381 7.013-31.276-4.64-42.4l-88.32-88.64a64.002 64.002 0 0 0-16-11.68l-9.6-4.32h314.24c16.347.607 30.689-10.812 33.76-26.88 2.829-17.445-9.019-33.88-26.464-36.71z"/>
+        </svg>
+      </span>
+    </div>
+    <!-- hình thoi trong hình tròn → mở panel thông tin -->
+    <div class="btn3d btn-icon" id="info-btn" role="button" aria-label="Info" tabindex="0">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="ico-diamond" viewBox="0 0 100 100" aria-hidden="true">
+          <circle cx="50" cy="50" r="38" fill="none" stroke="currentColor" stroke-width="8"/>
+          <rect x="36" y="36" width="28" height="28" rx="4" fill="currentColor" transform="rotate(45 50 50)"/>
+        </svg>
+      </span>
+    </div>
+  </div>
+
+  <div class="menu-mascots">
+    <div class="menu-mascot" data-animal="3"></div>
+    <div class="menu-mascot" data-animal="0"></div>
+    <div class="menu-mascot" data-animal="6"></div>
+  </div>
+  <div id="menu-title">ANIMAL CONNECT</div>
+
+  <button class="btn3d cta" id="menu-play" type="button">
+    <span class="btn3d-shadow"></span>
+    <span class="btn3d-surface" id="menu-play-label">Play</span>
+  </button>
+  <button class="btn3d" id="menu-tutorial" type="button">
+    <span class="btn3d-shadow"></span>
+    <span class="btn3d-surface" id="menu-tut-label">Tutorial</span>
+  </button>
+</div>
+
+<!-- Info panel — document ngắn: cách chơi -->
+<div id="info-panel" class="hidden">
+  <div class="doc-card">
+    <div class="btn3d btn-icon" id="info-close" role="button" aria-label="Close" tabindex="0">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">✕</span>
+    </div>
+    <h2 id="info-title">How to play</h2>
+
+    <!-- Sơ đồ 1: chạm 2 con giống nhau → đường nối + ✓ -->
+    <div class="info-fig">
+      <svg viewBox="0 0 320 118" aria-hidden="true">
+        <rect x="16" y="44" width="56" height="56" rx="13" fill="#fffdf6" stroke="#f5d9a0" stroke-width="2"/>
+        <rect x="96" y="44" width="56" height="56" rx="13" fill="#fffdf6" stroke="#f5d9a0" stroke-width="2" opacity=".45"/>
+        <rect x="176" y="44" width="56" height="56" rx="13" fill="#fffdf6" stroke="#f5d9a0" stroke-width="2" opacity=".45"/>
+        <rect x="248" y="44" width="56" height="56" rx="13" fill="#fffdf6" stroke="#f5d9a0" stroke-width="2"/>
+        <g data-animal="3" transform="translate(19,47) scale(.5)"></g>
+        <g data-animal="0" transform="translate(99,47) scale(.5)" opacity=".45"></g>
+        <g data-animal="6" transform="translate(179,47) scale(.5)" opacity=".45"></g>
+        <g data-animal="3" transform="translate(251,47) scale(.5)"></g>
+        <polyline points="44,42 44,16 276,16 276,42" fill="none" stroke="rgba(255,255,255,.95)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+        <polyline points="44,42 44,16 276,16 276,42" fill="none" stroke="#ff8a3d" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="160" cy="16" r="12" fill="#35c26e" stroke="#fff" stroke-width="2.5"/>
+        <polyline points="154,16 158.5,20.5 166.5,11.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="info-cap" id="info-b1"></div>
+
+    <div class="info-grid2">
+      <!-- Sơ đồ 2: đường rẽ tối đa 2 lần (2 chấm cam ở góc rẽ) -->
+      <div>
+        <div class="info-fig">
+          <svg viewBox="0 0 150 120" aria-hidden="true">
+            <rect x="8" y="8" width="44" height="44" rx="11" fill="#fffdf6" stroke="#f5d9a0" stroke-width="2"/>
+            <rect x="98" y="68" width="44" height="44" rx="11" fill="#fffdf6" stroke="#f5d9a0" stroke-width="2"/>
+            <g data-animal="6" transform="translate(10,10) scale(.4)"></g>
+            <g data-animal="6" transform="translate(100,70) scale(.4)"></g>
+            <polyline points="54,30 78,30 78,90 96,90" fill="none" stroke="rgba(255,255,255,.95)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="54,30 78,30 78,90 96,90" fill="none" stroke="#ff8a3d" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="78" cy="30" r="5.5" fill="#fff" stroke="#ff8a3d" stroke-width="3"/>
+            <circle cx="78" cy="90" r="5.5" fill="#fff" stroke="#ff8a3d" stroke-width="3"/>
+            <circle cx="128" cy="20" r="11" fill="#35c26e" stroke="#fff" stroke-width="2.5"/>
+            <polyline points="122.5,20 126.5,24 133.5,15.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="info-cap" id="info-b2"></div>
+      </div>
+      <!-- Sơ đồ 3: đường vòng ra NGOÀI mép bàn (khung nét đứt) -->
+      <div>
+        <div class="info-fig">
+          <svg viewBox="0 0 150 120" aria-hidden="true">
+            <rect x="16" y="10" width="118" height="84" rx="10" fill="none" stroke="#2e6b4f" stroke-width="2" stroke-dasharray="5 4" opacity=".55"/>
+            <rect x="26" y="50" width="40" height="40" rx="10" fill="#fffdf6" stroke="#f5d9a0" stroke-width="2"/>
+            <rect x="56" y="50" width="40" height="40" rx="10" fill="#fffdf6" stroke="#f5d9a0" stroke-width="2" opacity=".45" transform="translate(-1 0)"/>
+            <rect x="86" y="50" width="40" height="40" rx="10" fill="#fffdf6" stroke="#f5d9a0" stroke-width="2"/>
+            <g data-animal="4" transform="translate(28,52) scale(.36)"></g>
+            <g data-animal="9" transform="translate(57,52) scale(.36)" opacity=".45"></g>
+            <g data-animal="4" transform="translate(88,52) scale(.36)"></g>
+            <polyline points="46,92 46,107 106,107 106,92" fill="none" stroke="rgba(255,255,255,.95)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="46,92 46,107 106,107 106,92" fill="none" stroke="#ff8a3d" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="76" cy="107" r="10" fill="#35c26e" stroke="#fff" stroke-width="2.5"/>
+            <polyline points="71,107 74.8,110.8 81.5,103" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="info-cap" id="info-b3"></div>
+      </div>
+    </div>
+
+    <!-- Hàng chip: dồn tile · thời gian · hint · shuffle -->
+    <div class="info-chips">
+      <div class="info-chip">
+        <svg viewBox="0 0 40 26" aria-hidden="true">
+          <rect x="2" y="4" width="16" height="18" rx="4" fill="#fffdf6" stroke="#f5d9a0" stroke-width="1.6"/>
+          <rect x="30" y="4" width="8" height="18" rx="3" fill="#e3bd7d" opacity=".4"/>
+          <path d="M21 13 h8 m-3.4 -4 l4 4 l-4 4" fill="none" stroke="#2e6b4f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>&nbsp;</span>
+      </div>
+      <div class="info-chip">
+        <svg viewBox="0 0 40 26" aria-hidden="true">
+          <rect x="3" y="9" width="34" height="8" rx="4" fill="rgba(46,107,79,.2)"/>
+          <rect x="3" y="9" width="15" height="8" rx="4" fill="#ff8a3d"/>
+        </svg>
+        <span id="info-c-time"></span>
+      </div>
+      <div class="info-chip">
+        <svg viewBox="0 0 40 26" aria-hidden="true">
+          <path transform="translate(9,1) scale(.9)" fill="#2e6b4f" d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7zm-3 19a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9v1z"/>
+        </svg>
+        <span id="info-c-hint"></span>
+      </div>
+      <div class="info-chip">
+        <svg viewBox="0 0 40 26" aria-hidden="true">
+          <path transform="translate(8,1) scale(1)" fill="#2e6b4f" d="M17 4h4a1 1 0 0 1 1 1v4h-2V7.41l-4.79 4.8-1.42-1.42L18.59 6H17V4zM3 6h5.5l2.25 2.25-1.42 1.41L7.67 8H3V6zm13.79 7.79L22 19v-4h-2v1.59l-3.79-3.8-1.42 1.42.99 1zM3 18h4.67l1.66-1.66 1.42 1.41L8.5 20H3v-2z"/>
+        </svg>
+        <span id="info-c-shuffle"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hộp xác nhận về menu -->
+<div id="confirm-panel" class="hidden">
+  <div class="confirm-card">
+    <div id="confirm-text">Back to menu?</div>
+    <div class="confirm-btns">
+      <button class="btn3d" id="confirm-no" type="button">
+        <span class="btn3d-shadow"></span><span class="btn3d-surface">✕</span>
+      </button>
+      <button class="btn3d" id="confirm-yes" type="button">
+        <span class="btn3d-shadow"></span><span class="btn3d-surface">✓</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Tutorial banner -->
+<div id="tut-banner" class="hidden">
+  <span id="tut-text"></span>
+  <button class="btn3d mini" id="tut-skip" type="button">
+    <span class="btn3d-shadow"></span>
+    <span class="btn3d-surface" id="tut-skip-label">Skip</span>
+  </button>
+</div>
+
 <!-- Overlays -->
 <div id="combo-badge" aria-live="polite"></div>
 <div id="toast" role="status"></div>
@@ -579,73 +988,280 @@ const DEFAULT_LANG = 'en';
 const I18N = {
   en: { title:'ANIMAL CONNECT', level:'Level', score:'SCORE', time:'TIME', pairs:'PAIRS',
         hint:'Hint', shuffle:'Shuffle', noMoves:'No moves left — shuffling',
-        tapResume:'Tap to resume', back:'Back', restart:'Restart' },
+        tapResume:'Tap to resume', back:'Back', restart:'Restart',
+        play:'Play', tutorial:'Tutorial', howTo:'How to play', skip:'Skip',
+        tut1:'Tap two matching animals to connect them',
+        tut2:'Paths can bend at most 2 times',
+        tut3:'Paths can also go around the outside',
+        tutDone:'Perfect! Time to play',
+        infoShift:'Tiles slide together after every match',
+        infoTimer:'Clear all pairs before time runs out',
+        infoTools:'Hint marks a pair; Shuffle remixes the board',
+        menu:'Menu', confirmMenu:'Back to menu?' },
   vi: { title:'ANIMAL CONNECT', level:'Màn', score:'ĐIỂM', time:'THỜI GIAN', pairs:'CẶP',
         hint:'Gợi ý', shuffle:'Xáo trộn', noMoves:'Hết nước đi — xáo lại bàn',
-        tapResume:'Chạm để chơi tiếp', back:'Thoát', restart:'Chơi lại' },
+        tapResume:'Chạm để chơi tiếp', back:'Thoát', restart:'Chơi lại',
+        play:'Chơi', tutorial:'Hướng dẫn', howTo:'Cách chơi', skip:'Bỏ qua',
+        tut1:'Chạm 2 con thú giống nhau để nối',
+        tut2:'Đường nối rẽ tối đa 2 lần',
+        tut3:'Đường nối được vòng ra ngoài bàn',
+        tutDone:'Tuyệt! Vào chơi thôi',
+        infoShift:'Sau mỗi lần nối, tile sẽ dồn lại',
+        infoTimer:'Dọn sạch bàn trước khi hết giờ',
+        infoTools:'Gợi ý chỉ 1 cặp; Xáo trộn đảo lại bàn',
+        menu:'Menu', confirmMenu:'Về menu chính?' },
   'zh-Hans': { title:'动物连连看', level:'关卡', score:'得分', time:'时间', pairs:'配对',
         hint:'提示', shuffle:'洗牌', noMoves:'没有可连的了，自动洗牌',
-        tapResume:'点击继续', back:'返回', restart:'重玩' },
+        tapResume:'点击继续', back:'返回', restart:'重玩',
+        play:'开始', tutorial:'教程', howTo:'玩法说明', skip:'跳过',
+        tut1:'点击两只相同的动物进行连接',
+        tut2:'连线最多转弯 2 次',
+        tut3:'连线也可以绕到棋盘外面',
+        tutDone:'太棒了，开始游戏吧',
+        infoShift:'每次消除后方块会滑动聚拢',
+        infoTimer:'在时间耗尽前清空棋盘',
+        infoTools:'提示标出一对；洗牌重排棋盘',
+        menu:'菜单', confirmMenu:'返回主菜单？' },
   'zh-Hant': { title:'動物連連看', level:'關卡', score:'得分', time:'時間', pairs:'配對',
         hint:'提示', shuffle:'洗牌', noMoves:'沒有可連的了，自動洗牌',
-        tapResume:'點擊繼續', back:'返回', restart:'重玩' },
+        tapResume:'點擊繼續', back:'返回', restart:'重玩',
+        play:'開始', tutorial:'教學', howTo:'玩法說明', skip:'跳過',
+        tut1:'點擊兩隻相同的動物進行連接',
+        tut2:'連線最多轉彎 2 次',
+        tut3:'連線也可以繞到棋盤外面',
+        tutDone:'太棒了，開始遊戲吧',
+        infoShift:'每次消除後方塊會滑動聚攏',
+        infoTimer:'在時間耗盡前清空棋盤',
+        infoTools:'提示標出一對；洗牌重排棋盤',
+        menu:'選單', confirmMenu:'返回主選單？' },
   ja: { title:'アニマルコネクト', level:'レベル', score:'スコア', time:'時間', pairs:'ペア',
         hint:'ヒント', shuffle:'シャッフル', noMoves:'手詰まり、シャッフルします',
-        tapResume:'タップで再開', back:'戻る', restart:'やり直し' },
+        tapResume:'タップで再開', back:'戻る', restart:'やり直し',
+        play:'プレイ', tutorial:'チュートリアル', howTo:'遊び方', skip:'スキップ',
+        tut1:'同じ動物を2つタップしてつなげよう',
+        tut2:'線は最大2回まで曲がれます',
+        tut3:'線は盤の外側も通れます',
+        tutDone:'完璧！さあ遊ぼう',
+        infoShift:'マッチのたびにタイルが寄っていきます',
+        infoTimer:'時間切れになる前に全部消そう',
+        infoTools:'ヒントはペアを表示、シャッフルで並べ替え',
+        menu:'メニュー', confirmMenu:'メニューに戻る？' },
   ko: { title:'애니멀 커넥트', level:'레벨', score:'점수', time:'시간', pairs:'남은 쌍',
         hint:'힌트', shuffle:'섞기', noMoves:'연결할 짝이 없어 다시 섞어요',
-        tapResume:'탭하여 계속', back:'뒤로', restart:'다시하기' },
+        tapResume:'탭하여 계속', back:'뒤로', restart:'다시하기',
+        play:'시작', tutorial:'튜토리얼', howTo:'게임 방법', skip:'건너뛰기',
+        tut1:'같은 동물 2개를 탭해 연결하세요',
+        tut2:'선은 최대 2번 꺾일 수 있어요',
+        tut3:'선은 보드 바깥으로도 돌아갈 수 있어요',
+        tutDone:'완벽해요! 이제 시작해요',
+        infoShift:'매칭할 때마다 타일이 모여요',
+        infoTimer:'시간이 끝나기 전에 보드를 비우세요',
+        infoTools:'힌트는 한 쌍 표시, 섞기는 보드 재배열',
+        menu:'메뉴', confirmMenu:'메뉴로 돌아갈까요?' },
   es: { title:'ANIMAL CONNECT', level:'Nivel', score:'PUNTOS', time:'TIEMPO', pairs:'PARES',
         hint:'Pista', shuffle:'Mezclar', noMoves:'Sin jugadas, mezclando',
-        tapResume:'Toca para continuar', back:'Atrás', restart:'Reiniciar' },
+        tapResume:'Toca para continuar', back:'Atrás', restart:'Reiniciar',
+        play:'Jugar', tutorial:'Tutorial', howTo:'Cómo jugar', skip:'Saltar',
+        tut1:'Toca dos animales iguales para conectarlos',
+        tut2:'El camino puede doblar máximo 2 veces',
+        tut3:'El camino también puede rodear el tablero',
+        tutDone:'¡Perfecto! A jugar',
+        infoShift:'Las fichas se deslizan tras cada pareja',
+        infoTimer:'Limpia el tablero antes de que acabe el tiempo',
+        infoTools:'Pista marca una pareja; Mezclar reordena el tablero',
+        menu:'Menú', confirmMenu:'¿Volver al menú?' },
   'es-MX': { title:'ANIMAL CONNECT', level:'Nivel', score:'PUNTOS', time:'TIEMPO', pairs:'PARES',
         hint:'Pista', shuffle:'Mezclar', noMoves:'Sin jugadas, mezclando',
-        tapResume:'Toca para continuar', back:'Atrás', restart:'Reiniciar' },
+        tapResume:'Toca para continuar', back:'Atrás', restart:'Reiniciar',
+        play:'Jugar', tutorial:'Tutorial', howTo:'Cómo jugar', skip:'Saltar',
+        tut1:'Toca dos animales iguales para conectarlos',
+        tut2:'El camino puede doblar máximo 2 veces',
+        tut3:'El camino también puede rodear el tablero',
+        tutDone:'¡Perfecto! A jugar',
+        infoShift:'Las fichas se deslizan tras cada pareja',
+        infoTimer:'Limpia el tablero antes de que acabe el tiempo',
+        infoTools:'Pista marca una pareja; Mezclar reordena el tablero',
+        menu:'Menú', confirmMenu:'¿Volver al menú?' },
   'es-AR': { title:'ANIMAL CONNECT', level:'Nivel', score:'PUNTOS', time:'TIEMPO', pairs:'PARES',
         hint:'Pista', shuffle:'Mezclar', noMoves:'Sin jugadas, mezclando',
-        tapResume:'Tocá para continuar', back:'Atrás', restart:'Reiniciar' },
+        tapResume:'Tocá para continuar', back:'Atrás', restart:'Reiniciar',
+        play:'Jugar', tutorial:'Tutorial', howTo:'Cómo jugar', skip:'Saltar',
+        tut1:'Tocá dos animales iguales para conectarlos',
+        tut2:'El camino puede doblar máximo 2 veces',
+        tut3:'El camino también puede rodear el tablero',
+        tutDone:'¡Perfecto! A jugar',
+        infoShift:'Las fichas se deslizan tras cada pareja',
+        infoTimer:'Limpiá el tablero antes de que acabe el tiempo',
+        infoTools:'Pista marca una pareja; Mezclar reordena el tablero',
+        menu:'Menú', confirmMenu:'¿Volver al menú?' },
   'pt-BR': { title:'ANIMAL CONNECT', level:'Nível', score:'PONTOS', time:'TEMPO', pairs:'PARES',
         hint:'Dica', shuffle:'Embaralhar', noMoves:'Sem jogadas, embaralhando',
-        tapResume:'Toque para continuar', back:'Voltar', restart:'Reiniciar' },
+        tapResume:'Toque para continuar', back:'Voltar', restart:'Reiniciar',
+        play:'Jogar', tutorial:'Tutorial', howTo:'Como jogar', skip:'Pular',
+        tut1:'Toque em dois animais iguais para conectá-los',
+        tut2:'O caminho pode dobrar no máximo 2 vezes',
+        tut3:'O caminho também pode contornar o tabuleiro',
+        tutDone:'Perfeito! Vamos jogar',
+        infoShift:'As peças deslizam após cada par',
+        infoTimer:'Limpe o tabuleiro antes de o tempo acabar',
+        infoTools:'Dica marca um par; Embaralhar reorganiza o tabuleiro',
+        menu:'Menu', confirmMenu:'Voltar ao menu?' },
   pt: { title:'ANIMAL CONNECT', level:'Nível', score:'PONTOS', time:'TEMPO', pairs:'PARES',
         hint:'Dica', shuffle:'Baralhar', noMoves:'Sem jogadas, a baralhar',
-        tapResume:'Toca para continuar', back:'Voltar', restart:'Reiniciar' },
+        tapResume:'Toca para continuar', back:'Voltar', restart:'Reiniciar',
+        play:'Jogar', tutorial:'Tutorial', howTo:'Como jogar', skip:'Saltar',
+        tut1:'Toca em dois animais iguais para os ligar',
+        tut2:'O caminho pode dobrar no máximo 2 vezes',
+        tut3:'O caminho também pode contornar o tabuleiro',
+        tutDone:'Perfeito! Vamos jogar',
+        infoShift:'As peças deslizam após cada par',
+        infoTimer:'Limpa o tabuleiro antes de o tempo acabar',
+        infoTools:'Dica marca um par; Baralhar reorganiza o tabuleiro',
+        menu:'Menu', confirmMenu:'Voltar ao menu?' },
   fr: { title:'ANIMAL CONNECT', level:'Niveau', score:'SCORE', time:'TEMPS', pairs:'PAIRES',
         hint:'Indice', shuffle:'Mélanger', noMoves:'Plus de coups, on mélange',
-        tapResume:'Touchez pour reprendre', back:'Retour', restart:'Rejouer' },
+        tapResume:'Touchez pour reprendre', back:'Retour', restart:'Rejouer',
+        play:'Jouer', tutorial:'Tutoriel', howTo:'Comment jouer', skip:'Passer',
+        tut1:'Touchez deux animaux identiques pour les relier',
+        tut2:'Le trait peut tourner 2 fois maximum',
+        tut3:'Le trait peut aussi contourner le plateau',
+        tutDone:'Parfait, à vous de jouer',
+        infoShift:'Les tuiles glissent après chaque paire',
+        infoTimer:'Videz le plateau avant la fin du temps',
+        infoTools:'Indice montre une paire ; Mélanger réorganise le plateau',
+        menu:'Menu', confirmMenu:'Retour au menu ?' },
   de: { title:'ANIMAL CONNECT', level:'Level', score:'PUNKTE', time:'ZEIT', pairs:'PAARE',
         hint:'Tipp', shuffle:'Mischen', noMoves:'Keine Züge mehr, wird gemischt',
-        tapResume:'Zum Fortsetzen tippen', back:'Zurück', restart:'Neu starten' },
+        tapResume:'Zum Fortsetzen tippen', back:'Zurück', restart:'Neu starten',
+        play:'Spielen', tutorial:'Tutorial', howTo:'Spielanleitung', skip:'Überspringen',
+        tut1:'Tippe zwei gleiche Tiere an, um sie zu verbinden',
+        tut2:'Der Weg darf höchstens 2-mal abbiegen',
+        tut3:'Der Weg darf auch außen herum führen',
+        tutDone:'Perfekt! Los geht’s',
+        infoShift:'Nach jedem Paar rücken die Steine zusammen',
+        infoTimer:'Räume das Brett ab, bevor die Zeit abläuft',
+        infoTools:'Tipp zeigt ein Paar; Mischen ordnet das Brett neu',
+        menu:'Menü', confirmMenu:'Zurück zum Menü?' },
   it: { title:'ANIMAL CONNECT', level:'Livello', score:'PUNTI', time:'TEMPO', pairs:'COPPIE',
         hint:'Indizio', shuffle:'Mescola', noMoves:'Nessuna mossa, rimescolo',
-        tapResume:'Tocca per riprendere', back:'Indietro', restart:'Ricomincia' },
+        tapResume:'Tocca per riprendere', back:'Indietro', restart:'Ricomincia',
+        play:'Gioca', tutorial:'Tutorial', howTo:'Come si gioca', skip:'Salta',
+        tut1:'Tocca due animali uguali per collegarli',
+        tut2:'Il percorso può piegare al massimo 2 volte',
+        tut3:'Il percorso può anche girare fuori dal tabellone',
+        tutDone:'Perfetto! Si gioca',
+        infoShift:'Le tessere scorrono dopo ogni coppia',
+        infoTimer:'Svuota il tabellone prima che scada il tempo',
+        infoTools:'Indizio segna una coppia; Mescola riordina il tabellone',
+        menu:'Menu', confirmMenu:'Tornare al menu?' },
   nl: { title:'ANIMAL CONNECT', level:'Level', score:'SCORE', time:'TIJD', pairs:'PAREN',
         hint:'Hint', shuffle:'Schudden', noMoves:'Geen zetten meer, schudden',
-        tapResume:'Tik om verder te gaan', back:'Terug', restart:'Opnieuw' },
+        tapResume:'Tik om verder te gaan', back:'Terug', restart:'Opnieuw',
+        play:'Spelen', tutorial:'Tutorial', howTo:'Zo speel je', skip:'Overslaan',
+        tut1:'Tik op twee dezelfde dieren om ze te verbinden',
+        tut2:'De lijn mag maximaal 2 keer buigen',
+        tut3:'De lijn mag ook buitenom gaan',
+        tutDone:'Perfect! Spelen maar',
+        infoShift:'Tegels schuiven samen na elke match',
+        infoTimer:'Maak het bord leeg voor de tijd om is',
+        infoTools:'Hint toont een paar; Schudden herschikt het bord',
+        menu:'Menu', confirmMenu:'Terug naar het menu?' },
   pl: { title:'ANIMAL CONNECT', level:'Poziom', score:'WYNIK', time:'CZAS', pairs:'PARY',
         hint:'Podpowiedź', shuffle:'Tasuj', noMoves:'Brak ruchów, tasowanie',
-        tapResume:'Dotknij, aby wznowić', back:'Wstecz', restart:'Od nowa' },
+        tapResume:'Dotknij, aby wznowić', back:'Wstecz', restart:'Od nowa',
+        play:'Graj', tutorial:'Samouczek', howTo:'Jak grać', skip:'Pomiń',
+        tut1:'Dotknij dwóch takich samych zwierząt, by je połączyć',
+        tut2:'Linia może skręcić najwyżej 2 razy',
+        tut3:'Linia może też biec poza planszą',
+        tutDone:'Świetnie! Do gry',
+        infoShift:'Po każdej parze kafelki się zsuwają',
+        infoTimer:'Opróżnij planszę, zanim skończy się czas',
+        infoTools:'Podpowiedź wskazuje parę; Tasuj przestawia planszę',
+        menu:'Menu', confirmMenu:'Wrócić do menu?' },
   ru: { title:'СОЕДИНИ ЗВЕРЯТ', level:'Уровень', score:'ОЧКИ', time:'ВРЕМЯ', pairs:'ПАРЫ',
         hint:'Подсказка', shuffle:'Перемешать', noMoves:'Нет ходов, перемешиваем',
-        tapResume:'Нажмите, чтобы продолжить', back:'Назад', restart:'Заново' },
+        tapResume:'Нажмите, чтобы продолжить', back:'Назад', restart:'Заново',
+        play:'Играть', tutorial:'Обучение', howTo:'Как играть', skip:'Пропустить',
+        tut1:'Нажмите на двух одинаковых зверят, чтобы соединить их',
+        tut2:'Линия может повернуть не более 2 раз',
+        tut3:'Линия может проходить и за краем поля',
+        tutDone:'Отлично! Играем',
+        infoShift:'После каждой пары плитки сдвигаются',
+        infoTimer:'Очистите поле до конца времени',
+        infoTools:'Подсказка отмечает пару; Перемешать меняет поле',
+        menu:'Меню', confirmMenu:'Вернуться в меню?' },
   tr: { title:'ANIMAL CONNECT', level:'Seviye', score:'SKOR', time:'SÜRE', pairs:'ÇİFT',
         hint:'İpucu', shuffle:'Karıştır', noMoves:'Hamle kalmadı, karıştırılıyor',
-        tapResume:'Devam için dokun', back:'Geri', restart:'Yeniden' },
+        tapResume:'Devam için dokun', back:'Geri', restart:'Yeniden',
+        play:'Oyna', tutorial:'Eğitim', howTo:'Nasıl oynanır', skip:'Atla',
+        tut1:'Bağlamak için iki aynı hayvana dokun',
+        tut2:'Yol en fazla 2 kez dönebilir',
+        tut3:'Yol tahtanın dışından da geçebilir',
+        tutDone:'Harika! Hadi oynayalım',
+        infoShift:'Her eşleşmeden sonra taşlar kayar',
+        infoTimer:'Süre bitmeden tahtayı temizle',
+        infoTools:'İpucu bir çift gösterir; Karıştır tahtayı yeniden dizer',
+        menu:'Menü', confirmMenu:'Menüye dönülsün mü?' },
   ar: { title:'وصلة الحيوانات', level:'المستوى', score:'النقاط', time:'الوقت', pairs:'الأزواج',
         hint:'تلميح', shuffle:'خلط', noMoves:'لا حركات متبقية، إعادة خلط',
-        tapResume:'انقر للمتابعة', back:'رجوع', restart:'إعادة' },
+        tapResume:'انقر للمتابعة', back:'رجوع', restart:'إعادة',
+        play:'العب', tutorial:'تعليمي', howTo:'طريقة اللعب', skip:'تخطي',
+        tut1:'انقر على حيوانين متطابقين لتوصيلهما',
+        tut2:'يمكن للخط أن ينعطف مرتين كحد أقصى',
+        tut3:'يمكن للخط أيضًا المرور خارج اللوحة',
+        tutDone:'ممتاز! لنلعب',
+        infoShift:'تنزلق القطع بعد كل زوج',
+        infoTimer:'أفرغ اللوحة قبل نفاد الوقت',
+        infoTools:'التلميح يحدد زوجًا؛ الخلط يعيد ترتيب اللوحة',
+        menu:'القائمة', confirmMenu:'العودة إلى القائمة؟' },
   hi: { title:'एनिमल कनेक्ट', level:'स्तर', score:'स्कोर', time:'समय', pairs:'जोड़े',
         hint:'संकेत', shuffle:'फेंटें', noMoves:'कोई चाल नहीं, फेंट रहे हैं',
-        tapResume:'जारी रखने के लिए टैप करें', back:'वापस', restart:'फिर से' },
+        tapResume:'जारी रखने के लिए टैप करें', back:'वापस', restart:'फिर से',
+        play:'खेलें', tutorial:'ट्यूटोरियल', howTo:'कैसे खेलें', skip:'छोड़ें',
+        tut1:'जोड़ने के लिए दो एक जैसे जानवरों पर टैप करें',
+        tut2:'रेखा अधिकतम 2 बार मुड़ सकती है',
+        tut3:'रेखा बोर्ड के बाहर से भी जा सकती है',
+        tutDone:'बहुत बढ़िया! चलिए खेलें',
+        infoShift:'हर जोड़ी के बाद टाइलें खिसकती हैं',
+        infoTimer:'समय खत्म होने से पहले बोर्ड साफ़ करें',
+        infoTools:'संकेत एक जोड़ी दिखाता है; फेंटें बोर्ड बदलता है',
+        menu:'मेनू', confirmMenu:'मेनू पर वापस जाएँ?' },
   th: { title:'จับคู่สัตว์', level:'ด่าน', score:'คะแนน', time:'เวลา', pairs:'คู่',
         hint:'คำใบ้', shuffle:'สลับ', noMoves:'ไม่มีคู่ให้จับ กำลังสลับใหม่',
-        tapResume:'แตะเพื่อเล่นต่อ', back:'ย้อนกลับ', restart:'เริ่มใหม่' },
+        tapResume:'แตะเพื่อเล่นต่อ', back:'ย้อนกลับ', restart:'เริ่มใหม่',
+        play:'เล่น', tutorial:'สอนเล่น', howTo:'วิธีเล่น', skip:'ข้าม',
+        tut1:'แตะสัตว์ที่เหมือนกัน 2 ตัวเพื่อเชื่อม',
+        tut2:'เส้นหักเลี้ยวได้ไม่เกิน 2 ครั้ง',
+        tut3:'เส้นอ้อมออกนอกกระดานได้',
+        tutDone:'เยี่ยม! เริ่มเล่นกันเลย',
+        infoShift:'ไทล์จะเลื่อนชิดกันหลังจับคู่ทุกครั้ง',
+        infoTimer:'เคลียร์กระดานก่อนหมดเวลา',
+        infoTools:'คำใบ้ชี้คู่ให้; สลับจัดเรียงกระดานใหม่',
+        menu:'เมนู', confirmMenu:'กลับไปที่เมนู?' },
   id: { title:'ANIMAL CONNECT', level:'Level', score:'SKOR', time:'WAKTU', pairs:'PASANGAN',
         hint:'Petunjuk', shuffle:'Acak', noMoves:'Tidak ada langkah, mengacak ulang',
-        tapResume:'Ketuk untuk lanjut', back:'Kembali', restart:'Ulangi' },
+        tapResume:'Ketuk untuk lanjut', back:'Kembali', restart:'Ulangi',
+        play:'Main', tutorial:'Tutorial', howTo:'Cara main', skip:'Lewati',
+        tut1:'Ketuk dua hewan yang sama untuk menghubungkannya',
+        tut2:'Garis boleh berbelok maksimal 2 kali',
+        tut3:'Garis juga boleh memutar di luar papan',
+        tutDone:'Sempurna! Ayo main',
+        infoShift:'Ubin bergeser merapat setiap pasangan cocok',
+        infoTimer:'Kosongkan papan sebelum waktu habis',
+        infoTools:'Petunjuk menandai pasangan; Acak menyusun ulang papan',
+        menu:'Menu', confirmMenu:'Kembali ke menu?' },
   fil: { title:'ANIMAL CONNECT', level:'Level', score:'ISKOR', time:'ORAS', pairs:'PARES',
         hint:'Hint', shuffle:'Balasahin', noMoves:'Wala nang tugma, binabalasa muli',
-        tapResume:'I-tap para magpatuloy', back:'Bumalik', restart:'Ulitin' },
+        tapResume:'I-tap para magpatuloy', back:'Bumalik', restart:'Ulitin',
+        play:'Maglaro', tutorial:'Tutorial', howTo:'Paano maglaro', skip:'Laktawan',
+        tut1:'I-tap ang dalawang magkaparehong hayop para ikonekta',
+        tut2:'Ang linya ay puwedeng lumiko nang hanggang 2 beses',
+        tut3:'Puwede ring dumaan ang linya sa labas ng board',
+        tutDone:'Galing! Maglaro na tayo',
+        infoShift:'Nagsasama ang mga tile pagkatapos ng bawat pares',
+        infoTimer:'Ubusin ang board bago maubos ang oras',
+        infoTools:'Ang Hint ay nagtuturo ng pares; ang Balasa ay nag-aayos muli',
+        menu:'Menu', confirmMenu:'Bumalik sa menu?' },
 };
 
 let LANG = DEFAULT_LANG;
@@ -950,6 +1566,12 @@ let timeLeft    = 150;     // giây còn lại (float)
 let endCounter  = 0;       // đếm số ván kết thúc → bắn ads mỗi 3 ván
 let levelEpoch  = 0;       // tăng mỗi loadLevel — vô hiệu continuation async cũ
 let resultTimer = 0;       // setTimeout gửi game_result/victory (huỷ khi loadLevel)
+let menuOpen    = false;   // đang ở màn hình menu (Play/Tutorial/info)
+let tutorialMode = false;  // đang chạy tutorial tương tác
+let tutStep      = 0;
+let tutorialSeen = false;  // đã qua tutorial chưa (persist qua save_data + localStorage)
+let tutorialReturnToMenu = false;  // vào tutorial từ nút menu → xong quay lại menu
+let confirmOpen = false;           // hộp xác nhận "về menu?" đang mở (đứng giờ)
 
 const boardEl  = document.getElementById('board');
 const wrapEl   = document.getElementById('board-wrap');
@@ -1002,6 +1624,7 @@ function resize() {
                    .getPropertyValue('--sat') || '0') || 0;
   const topPad = Math.max(sbh, envTop) + 8;
   document.getElementById('topbar').style.paddingTop = topPad + 'px';
+  document.getElementById('menu-corner').style.paddingTop = topPad + 'px';
 
   requestAnimationFrame(() => {
     const topbar = document.getElementById('topbar');
@@ -1295,7 +1918,7 @@ function applyShift(mode) {
  * §11. Input — tap chọn 2 tile cùng loại
  * ================================================================ */
 boardEl.addEventListener('pointerdown', e => {
-  if (busy || ended || paused || !tiles.length) return;   // !tiles.length: chưa boot xong
+  if (busy || ended || paused || menuOpen || confirmOpen || !tiles.length) return;
   const rect = boardEl.getBoundingClientRect();
   const c = Math.floor((e.clientX - rect.left) / cellPx);
   const r = Math.floor((e.clientY - rect.top) / cellPx);
@@ -1371,7 +1994,10 @@ async function doMatch(a, b, path) {
 
     // Quyết định THẮNG ngay tại đây (đồng bộ) — để timer không thể chen
     // `lose` vào giữa 300ms animation của cặp cuối cùng
-    if (pairsLeft <= 0) winLevel();
+    if (tutorialMode) {
+      ended = true;                        // khoá input + chặn continuation (shift/xáo)
+      setTimeout(nextTutorialStep, 900);   // qua bước hướng dẫn kế tiếp
+    } else if (pairsLeft <= 0) winLevel();
 
     await sleep(300);
     if (ep !== levelEpoch) return;   // loadLevel đã chạy trong lúc animate
@@ -1410,7 +2036,7 @@ function clearHint() {
 }
 
 document.getElementById('hint-btn').addEventListener('click', () => {
-  if (busy || ended || paused || hintsLeft <= 0) return;
+  if (busy || ended || paused || tutorialMode || hintsLeft <= 0) return;
   const pair = findAnyPair(true);
   if (!pair) return;
   hintsLeft--;
@@ -1423,7 +2049,7 @@ document.getElementById('hint-btn').addEventListener('click', () => {
 
 document.getElementById('shuffle-btn').addEventListener('click', async () => {
   // pairsLeft < 2: chỉ còn 1 cặp — xáo không đổi được gì, đừng trừ lượt
-  if (busy || ended || paused || shufflesLeft <= 0 || pairsLeft < 2) return;
+  if (busy || ended || paused || tutorialMode || shufflesLeft <= 0 || pairsLeft < 2) return;
   busy = true;
   const ep = levelEpoch;
   try {
@@ -1523,6 +2149,22 @@ function updateLabels() {
   document.getElementById('pause-txt').textContent     = t('tapResume');
   document.getElementById('back-btn').setAttribute('aria-label', t('back'));
   document.getElementById('restart-btn').setAttribute('aria-label', t('restart'));
+  document.getElementById('menu-btn').setAttribute('aria-label', t('menu'));
+  document.getElementById('confirm-text').textContent = t('confirmMenu');
+
+  // Menu + info panel + tutorial
+  document.getElementById('menu-title').textContent      = t('title');
+  document.getElementById('menu-play-label').textContent = t('play');
+  document.getElementById('menu-tut-label').textContent  = t('tutorial');
+  document.getElementById('menu-back').setAttribute('aria-label', t('back'));
+  document.getElementById('tut-skip-label').textContent  = t('skip');
+  document.getElementById('info-title').textContent = t('howTo');
+  document.getElementById('info-b1').textContent = t('tut1');
+  document.getElementById('info-b2').textContent = t('tut2');
+  document.getElementById('info-b3').textContent = t('tut3');
+  document.getElementById('info-c-time').textContent    = t('time');
+  document.getElementById('info-c-hint').textContent    = t('hint');
+  document.getElementById('info-c-shuffle').textContent = t('shuffle');
 }
 
 function spawnScoreFly(boardR, boardC, pts) {
@@ -1574,21 +2216,24 @@ function showToast(msg) {
  * §15. Timer — rAF, pause được; hết giờ = thua
  * ================================================================ */
 let lastTs = null;
+let timerUiAcc = 1;   // ≥0.2 để frame active đầu tiên render ngay
 
-function tickTimer(ts) {
-  if (lastTs == null) lastTs = ts;
-  const dt = (ts - lastTs) / 1000;
-  lastTs = ts;
-
-  if (!paused && !ended) {
+/* dt tính bằng GIÂY (đã clamp ở mainLoop) — độc lập refresh rate */
+function tickTimer(dt) {
+  if (!paused && !ended && !menuOpen && !tutorialMode && !confirmOpen) {
     timeLeft -= dt;
     if (timeLeft <= 0) {
       timeLeft = 0;
       // pairsLeft === 0 nghĩa là cặp cuối vừa match (winLevel đã quyết) —
       // không bao giờ đổi thắng thành thua giữa animation
       if (pairsLeft > 0) loseLevel();
+      renderTimer();          // trạng thái chốt hiện ngay
+      return;
     }
-    renderTimer();
+    // DOM đồng hồ/thanh giờ chỉ ghi ~5 lần/s (transition width .3s làm mượt
+    // phần còn lại) — ở 120/144Hz không tốn style-recalc mỗi frame
+    timerUiAcc += dt;
+    if (timerUiAcc >= 0.2) { timerUiAcc = 0; renderTimer(); }
   }
 }
 
@@ -1620,8 +2265,8 @@ function winLevel() {
   if (bonus > 0) spawnScoreFly(ROWS / 2 - .5, COLS / 2 - .5, bonus);
 
   const newIdx = Math.min(currentLevelIdx + 1, MAX_LEVEL_IDX);
-  saveData({ levelIdx: newIdx });                    // nhẹ → native (§1.2)
-  saveLocal({ levelIdx: newIdx });                   // xoá snapshot ván dở
+  saveData({ levelIdx: newIdx, tutorialSeen });      // nhẹ → native (§1.2)
+  saveLocal({ levelIdx: newIdx, tutorialSeen });     // xoá snapshot ván dở
   maybeRequestAds();
 
   clearTimeout(resultTimer);
@@ -1636,7 +2281,7 @@ function loseLevel() {
   ended = true;
   deselect(); clearHint();
   renderTimer();
-  saveLocal({ levelIdx: currentLevelIdx });          // bỏ snapshot, retry ván mới
+  saveLocal({ levelIdx: currentLevelIdx, tutorialSeen });  // bỏ snapshot, retry ván mới
   maybeRequestAds();
   clearTimeout(resultTimer);
   resultTimer = setTimeout(() => {
@@ -1654,9 +2299,10 @@ function maybeRequestAds() {
  * §17. Persist trạng thái ván (localStorage — game-common §1.2)
  * ================================================================ */
 function saveCurrentState() {
-  if (ended || !grid.length) return;
+  if (ended || tutorialMode || !grid.length) return;   // đừng persist board tutorial
   saveLocal({
     levelIdx: currentLevelIdx,
+    tutorialSeen,
     game: {
       grid: grid.map(row => row.slice()),
       timeLeft: Math.floor(timeLeft),
@@ -1714,6 +2360,10 @@ function loadLevel(idx) {
   comboStreak = 0; lastMatchAt = 0;
   linkSvg.innerHTML = '';
   document.getElementById('pause-veil').classList.add('hidden');
+  // rời tutorial nếu đang dở (an toàn khi native gọi next/retry giữa chừng)
+  tutorialMode = false;
+  document.getElementById('tut-banner').classList.add('hidden');
+  document.getElementById('bottombar').style.visibility = '';
 
   fillBoard();
   updateLabels();
@@ -1723,6 +2373,154 @@ function loadLevel(idx) {
   resize();
   saveCurrentState();
 }
+
+/* ================================================================
+ * §18b. Menu + Tutorial
+ * Tutorial tương tác 3 bước, BẮT BUỘC lần đầu mở game (cờ tutorialSeen
+ * persist qua save_data + localStorage — game-common §1.2); có thể mở
+ * lại từ nút Tutorial dưới nút Play trong menu.
+ * ================================================================ */
+const TUT_STEPS = [
+  // Bước 1: 2 panda kề nhau — chạm 2 con giống nhau
+  { key: 'tut1', pair: [[1, 2], [1, 3]],
+    tiles: [[1, 2, 3], [1, 3, 3]] },
+  // Bước 2: 2 ếch lệch hàng — đường nối rẽ tối đa 2 lần
+  { key: 'tut2', pair: [[1, 1], [2, 4]],
+    tiles: [[1, 1, 6], [2, 4, 6]] },
+  // Bước 3: 2 chó ở 2 góc đáy, bị chặn kín — đường PHẢI vòng ra ngoài bàn
+  { key: 'tut3', pair: [[3, 0], [3, 5]],
+    tiles: [[3, 0, 0], [3, 5, 0],
+            [2, 0, 7], [2, 1, 8], [2, 2, 9], [2, 3, 10], [2, 4, 11], [2, 5, 13],
+            [3, 1, 1], [3, 2, 2], [3, 3, 4], [3, 4, 5]] },
+];
+
+function openMenu()  { menuOpen = true;  document.getElementById('menu-screen').classList.remove('hidden'); }
+function closeMenu() { menuOpen = false; document.getElementById('menu-screen').classList.add('hidden'); }
+
+function startTutorial(returnToMenu) {
+  saveCurrentState();               // giữ ván thật trước khi mượn board cho tutorial
+  tutorialReturnToMenu = returnToMenu;
+  tutorialMode = true;
+  closeMenu();
+  document.getElementById('bottombar').style.visibility = 'hidden';
+  loadTutorialStep(0);
+}
+
+function loadTutorialStep(i) {
+  const st = TUT_STEPS[i];
+  levelEpoch++;                     // vô hiệu continuation của bước trước
+  clearTimeout(resultTimer);
+  tutStep = i;
+  COLS = 6; ROWS = 4;
+  busy = false; ended = false; paused = false;
+  selected = null; hintPair = null;
+  comboStreak = 0;
+  linkSvg.innerHTML = '';
+  pairsLeft = TUT_STEPS.length - i; // HUD PAIRS = số bước còn lại
+
+  grid = Array.from({ length: ROWS }, () => new Array(COLS).fill(-1));
+  for (const [r, c, ty] of st.tiles) grid[r][c] = ty;
+  buildTileDom(true);
+  resize();
+
+  hintPair = st.pair.map(p => p.slice());
+  for (const [r, c] of st.pair) tiles[r][c].el.classList.add('hint');
+
+  document.getElementById('tut-banner').classList.remove('hidden');
+  document.getElementById('tut-text').textContent = t(st.key);
+  updateHUD();
+}
+
+function nextTutorialStep() {
+  if (!tutorialMode) return;
+  if (tutStep + 1 >= TUT_STEPS.length) {
+    document.getElementById('tut-text').textContent = t('tutDone');
+    setTimeout(() => { if (tutorialMode) finishTutorial(); }, 1200);
+  } else {
+    loadTutorialStep(tutStep + 1);
+  }
+}
+
+/* Xong / skip tutorial: đánh dấu đã xem, khôi phục ván thật */
+function finishTutorial() {
+  tutorialSeen = true;
+  tutorialMode = false;
+  document.getElementById('tut-banner').classList.add('hidden');
+  document.getElementById('bottombar').style.visibility = '';
+  levelEpoch++;
+
+  // Khôi phục ván thật (đã snapshot vào localStorage lúc vào tutorial)
+  const lv = levelConfig(currentLevelIdx);
+  COLS = lv.cols; ROWS = lv.rows;
+  timeTotal = lv.time;
+  busy = false; ended = false; paused = false;
+  selected = null; hintPair = null;
+  if (tryRestoreState(currentLevelIdx)) {
+    updateLabels(); updateHUD(); updateToolButtons(); renderTimer(); resize();
+  } else {
+    loadLevel(currentLevelIdx);
+  }
+
+  saveData({ levelIdx: currentLevelIdx, tutorialSeen: true });  // nhẹ → native
+  saveCurrentState();                                           // local kèm cờ mới
+  if (tutorialReturnToMenu) openMenu();
+}
+
+document.getElementById('tut-skip').addEventListener('click', () => {
+  if (tutorialMode) finishTutorial();
+});
+
+/* ── Menu handlers ─────────────────────────────────────────────── */
+document.getElementById('menu-play').addEventListener('click', () => {
+  if (!menuOpen) return;
+  if (!tutorialSeen) startTutorial(false);   // first open → bắt buộc tutorial
+  else closeMenu();                          // đóng menu là timer tự chạy tiếp
+});
+
+document.getElementById('menu-tutorial').addEventListener('click', () => {
+  if (!menuOpen) return;
+  startTutorial(true);                       // từ menu → xong quay lại menu
+});
+
+document.getElementById('menu-back').addEventListener('click', e => {
+  e.stopPropagation();
+  sendMessage('quit');
+});
+
+/* ── Nút Menu (home) trong HUD + hộp xác nhận ──────────────────── */
+function setConfirmOpen(open) {
+  confirmOpen = open;
+  document.getElementById('confirm-panel').classList.toggle('hidden', !open);
+}
+
+document.getElementById('menu-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  if (ended || tutorialMode || menuOpen || paused) return;
+  setConfirmOpen(true);              // đứng giờ trong lúc hỏi
+});
+
+document.getElementById('confirm-no').addEventListener('click', () => setConfirmOpen(false));
+
+document.getElementById('confirm-yes').addEventListener('click', () => {
+  setConfirmOpen(false);
+  saveCurrentState();                // giữ ván dở — bấm Play là chơi tiếp
+  openMenu();
+});
+
+document.getElementById('confirm-panel').addEventListener('pointerdown', e => {
+  if (e.target === e.currentTarget) setConfirmOpen(false);   // chạm nền = huỷ
+});
+
+/* ── Info panel — hình thoi trong hình tròn, góc phải trên menu ── */
+document.getElementById('info-btn').addEventListener('click', () => {
+  document.getElementById('info-panel').classList.remove('hidden');
+});
+document.getElementById('info-close').addEventListener('click', () => {
+  document.getElementById('info-panel').classList.add('hidden');
+});
+document.getElementById('info-panel').addEventListener('pointerdown', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.add('hidden');
+});
 
 /* ================================================================
  * §19. Native callbacks (game-common §1.3) + pause
@@ -1740,7 +2538,7 @@ window.onRetryLevel = function () {
 };
 
 function pauseGame() {
-  if (paused || ended) return;
+  if (paused || ended || menuOpen) return;   // ở menu thì không có gì để pause
   paused = true;
   saveCurrentState();
   document.getElementById('pause-veil').classList.remove('hidden');
@@ -1769,7 +2567,7 @@ document.getElementById('back-btn').addEventListener('click', e => {
 document.getElementById('restart-btn').addEventListener('click', e => {
   e.stopPropagation();
   // ended: app sắp/đang hiện popup kết quả — để onRetryLevel/onNextLevel lo
-  if (!busy && !ended) loadLevel(currentLevelIdx);   // reset nội bộ, KHÔNG bắn event
+  if (!busy && !ended && !tutorialMode) loadLevel(currentLevelIdx);   // reset nội bộ, KHÔNG bắn event
 });
 
 /* ================================================================
@@ -1811,11 +2609,13 @@ function drawPaw(ctx, s) {
   }
 }
 
-function animateBg() {
+function animateBg(dt) {
+  // Chuẩn hoá theo 60fps: 60Hz hay 144Hz lá đều trôi cùng tốc độ thật
+  const k = Math.min(dt, 0.1) * 60;
   bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
   bgCtx.fillStyle = '#2e6b4f';
   for (const it of bgItems) {
-    it.y -= it.vy; it.x += it.vx; it.rot += it.vr;
+    it.y -= it.vy * k; it.x += it.vx * k; it.rot += it.vr * k;
     if (it.y < -30) { it.y = bgCanvas.height + 30; it.x = Math.random() * bgCanvas.width; }
     bgCtx.save();
     bgCtx.globalAlpha = it.opacity;
@@ -1826,10 +2626,16 @@ function animateBg() {
   }
 }
 
-/* ── Main loop: nền + đồng hồ chung 1 rAF ─────────────────────── */
+/* ── Main loop: nền + đồng hồ chung 1 rAF, dt clamp chống stall ── */
 function mainLoop(ts) {
-  animateBg();
-  tickTimer(ts);
+  if (lastTs == null) lastTs = ts;
+  let dt = (ts - lastTs) / 1000;
+  lastTs = ts;
+  // Frame khựng (GC/janky) hay clock lùi → không trừ oan đồng hồ cả cục
+  if (dt < 0 || dt > 0.25) dt = 0.25;
+
+  if (!menuOpen) animateBg(dt);   // menu che kín màn → khỏi vẽ nền cho đỡ tốn
+  tickTimer(dt);
   requestAnimationFrame(mainLoop);
 }
 
@@ -1850,8 +2656,15 @@ function bootGame() {
       if (typeof obj.levelIdx === 'number' && obj.levelIdx >= 0) {
         startIdx = Math.min(Math.floor(obj.levelIdx), MAX_LEVEL_IDX);
       }
+      if (obj.tutorialSeen === true) tutorialSeen = true;
     } catch (e) { /* data hỏng → mặc định */ }
   }
+
+  // tutorialSeen cũng có thể nằm ở localStorage (chưa từng sync lên native)
+  try {
+    const lobj = JSON.parse(readLocal() || 'null');
+    if (lobj && lobj.tutorialSeen === true) tutorialSeen = true;
+  } catch (e) { /* ignore */ }
 
   initBgItems();
 
@@ -1876,6 +2689,17 @@ function bootGame() {
   updateToolButtons();
   renderTimer();
   resize();
+
+  // Menu: đổ hình mascot + art thú cho sơ đồ info panel, mở menu lúc boot
+  document.querySelectorAll('.menu-mascot').forEach(el => {
+    const ty = Number(el.dataset.animal) || 0;
+    el.innerHTML = `<svg viewBox="0 0 100 100" aria-hidden="true">${ANIMALS[ty]}</svg>`;
+  });
+  document.querySelectorAll('#info-panel g[data-animal]').forEach(g => {
+    g.innerHTML = ANIMALS[Number(g.dataset.animal) || 0];
+  });
+  openMenu();
+
   requestAnimationFrame(mainLoop);
 }
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#c3e4f2">
+<meta name="theme-color" content="#96c4dd">
 <title>Hamster Jump</title>
 
 <!-- Google Sans Flex (game-common.md — UI font chung) -->
@@ -35,7 +35,7 @@ html, body {
   inset: 0;
   overflow: hidden;
   overscroll-behavior: none;
-  background: #c3e4f2;
+  background: #96c4dd;
   font-family: var(--ui-font);
   font-weight: 700;
   color: var(--text);
@@ -184,10 +184,10 @@ html, body {
 }
 .back-ico { width: 52%; height: 52%; fill: currentColor; display: block; }
 
-/* ── Start hint (màn chờ — không phải popup kết quả) ──────────── */
-#start-hint {
+/* ── Menu chờ (không phải popup kết quả) ──────────────────────── */
+#menu {
   position: absolute;
-  top: 20%;
+  top: 17%;
   left: 0; right: 0;
   text-align: center;
   pointer-events: none;
@@ -195,20 +195,130 @@ html, body {
   opacity: 1;
   transition: opacity .3s;
 }
-#start-hint.hidden { opacity: 0; }
+#menu.hidden { opacity: 0; }
+#menu.hidden .btn3d { pointer-events: none; }
+#menu .btn3d { pointer-events: auto; }
 #start-title {
   font-size: 40px;
   line-height: 1.1;
   color: #e8842c;
   text-shadow: 0 3px 0 rgba(255, 255, 255, .85), 0 8px 18px rgba(190, 110, 30, .3);
   padding: 0 24px;
+  margin-bottom: 26px;
 }
-#start-tap {
-  margin-top: 14px;
-  font-size: 18px;
-  color: rgba(90, 67, 38, .85);
-  animation: tapPulse 1.2s ease-in-out infinite;
+#menu .btn-row { margin-top: 14px; }
+#play-btn {
+  --surface-height: 56px;
+  --surface-padding-x: 46px;
+  --surface-color: #ffb02e;
+  --surface-text: #3a2400;
+  --surface-font-size: 20px;
 }
+#play-btn .btn3d-surface { border: 0; backdrop-filter: none; }
+#play-btn:active .btn3d-surface { background: var(--surface-color); }
+#tut-btn {
+  --surface-height: 44px;
+  --surface-padding-x: 26px;
+  --surface-font-size: 16px;
+}
+/* nút mở panel hướng dẫn: HÌNH THOI trong HÌNH TRÒN — góc phải, dưới HUD */
+#info-btn {
+  position: fixed;
+  right: 14px;
+  top: calc(max(var(--sbh), env(safe-area-inset-top, 0px)) + 132px);
+}
+.diamond-ico { width: 60%; height: 60%; display: block; }
+
+/* ── Tutorial: gợi ý + nhắc bấm ───────────────────────────────── */
+#tut-hint {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: 17%;
+  text-align: center;
+  font-size: 19px;
+  color: #5a4326;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .8);
+  background: rgba(255, 255, 255, .6);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 10px 14px;
+  backdrop-filter: blur(6px);
+  z-index: 4;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity .25s;
+}
+#tut-hint.hidden { opacity: 0; }
+#tut-tap {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 27%;
+  text-align: center;
+  font-size: 36px;
+  color: #e8842c;
+  text-shadow: 0 2px 0 rgba(255, 255, 255, .9);
+  z-index: 4;
+  pointer-events: none;
+  animation: tapPulse .5s ease-in-out infinite;
+}
+#tut-tap.hidden { display: none; }
+
+/* ── Panel hướng dẫn (document ngắn) ──────────────────────────── */
+.card.info-card {
+  max-height: 78%;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  position: relative;
+}
+.info-card .card-title { text-align: center; padding: 0 40px; }
+#info-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  --surface-height: 34px;
+  --surface-width: 34px;
+}
+#info-close .btn3d-surface {
+  background: rgba(255, 255, 255, .12);
+  border-color: rgba(255, 255, 255, .25);
+  color: #fff;
+  font-size: 16px;
+  backdrop-filter: none;
+}
+#info-body {
+  overflow-y: auto;
+  font-family: system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 14.5px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, .92);
+}
+/* hàng luật chơi: icon vẽ bằng renderer thật + chú thích ngắn */
+.info-rule {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.info-rule canvas { flex: 0 0 auto; }
+.info-rule span { font-size: 14px; }
+/* lưới các loại phô mai — icon là hình trong game */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+.info-item {
+  background: rgba(255, 255, 255, .07);
+  border-radius: 12px;
+  padding: 8px 4px 6px;
+  text-align: center;
+}
+.info-item canvas { display: block; margin: 0 auto 4px; }
+.info-item .cap { font-size: 12.5px; line-height: 1.25; }
 @keyframes tapPulse {
   0%, 100% { opacity: .55; transform: scale(1); }
   50%      { opacity: 1;   transform: scale(1.06); }
@@ -265,11 +375,59 @@ html, body {
 /* popup-common §7: amber CTA là màu cố định — không cho :active glass đè */
 .btn3d.play:active .btn3d-surface { background: var(--surface-color); }
 
+/* nút Menu phụ trên popup kết quả — glass tối */
+.ov-menu-row { margin-top: 10px; }
+#ov-menu-btn {
+  --surface-height: 40px;
+  --surface-padding-x: 24px;
+  --surface-font-size: 15px;
+}
+#ov-menu-btn .btn3d-surface {
+  background: rgba(255, 255, 255, .12);
+  border-color: rgba(255, 255, 255, .25);
+  color: #fff;
+  backdrop-filter: none;
+}
+
 /* Chữ Ả Rập là chữ nối liền — bỏ letter-spacing để không đứt nét */
 body.lang-ar #score-label,
 body.lang-ar .chip .lbl,
 body.lang-ar .sb .k,
 body.lang-ar .btn3d-surface { letter-spacing: 0; }
+
+/* ── Responsive: co giãn theo bề rộng, chỉnh layout khi màn thấp ── */
+#topbar { gap: 8px; }
+#hud-mid { flex: 1 1 auto; min-width: 0; }
+#back-btn, #hud-right { flex: 0 0 auto; }
+#score-num { font-size: clamp(28px, 9vw, 40px); }
+.chip { min-width: clamp(64px, 17vw, 87px); }
+.chip .val { font-size: clamp(19px, 5.2vw, 25px); }
+#hud-coin { font-size: clamp(16px, 4.4vw, 21px); }
+#start-title { font-size: clamp(28px, 8.5vw, 44px); }
+
+@media (max-width: 380px) {
+  .chip .lbl { font-size: 11px; letter-spacing: 2px; }
+  #coin-ico { width: 18px; height: 18px; }
+  #score-label { font-size: 10px; }
+  #streak { font-size: 13px; }
+  #info-btn { right: 10px; }
+}
+
+@media (max-height: 600px) {
+  /* màn thấp / landscape: dồn menu lên, nút hướng dẫn nằm cạnh cột chip */
+  #menu { top: 6%; }
+  #start-title { margin-bottom: 12px; }
+  #play-btn { --surface-height: 48px; --surface-font-size: 18px; }
+  #tut-btn { --surface-height: 40px; }
+  #menu .btn-row { margin-top: 10px; }
+  #tut-hint { bottom: 7%; font-size: 16px; padding: 7px 12px; }
+  #tut-tap { bottom: 24%; font-size: 30px; }
+  #info-btn {
+    top: calc(max(var(--sbh), env(safe-area-inset-top, 0px)) + 8px);
+    right: calc(12px + clamp(64px, 17vw, 87px) + 12px);
+  }
+  .card.info-card { max-height: 92%; }
+}
 </style>
 </head>
 <body>
@@ -312,11 +470,45 @@ body.lang-ar .btn3d-surface { letter-spacing: 0; }
     </div>
   </div>
 
-  <!-- Màn chờ: tiêu đề + tap to start -->
-  <div id="start-hint">
+  <!-- Menu chờ: tiêu đề + Play + Tutorial; nút hướng dẫn (thoi trong tròn) góc phải -->
+  <div id="menu">
     <div id="start-title">HAMSTER JUMP</div>
-    <div id="start-tap">Tap to start</div>
+    <div class="btn-row">
+      <div class="btn3d" id="play-btn" role="button" tabindex="0">
+        <span class="btn3d-shadow"></span>
+        <span class="btn3d-surface" id="play-text">Play</span>
+      </div>
+    </div>
+    <div class="btn-row">
+      <div class="btn3d" id="tut-btn" role="button" tabindex="0">
+        <span class="btn3d-shadow"></span>
+        <span class="btn3d-surface" id="tut-text">Tutorial</span>
+      </div>
+    </div>
+    <div class="btn3d btn-icon" id="info-btn" role="button" aria-label="How to Play" tabindex="0">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="diamond-ico" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+          <rect x="8.6" y="8.6" width="6.8" height="6.8" fill="currentColor" transform="rotate(45 12 12)"/>
+        </svg>
+      </span>
+    </div>
   </div>
+
+  <!-- Tutorial: gợi ý + nhắc bấm -->
+  <div id="tut-hint" class="hidden"></div>
+  <div id="tut-tap" class="hidden">TAP!</div>
+
+  <!-- Panel hướng dẫn ngắn (mở từ nút thoi-trong-tròn) -->
+  <div id="info-overlay" class="overlay hidden"><div class="card info-card">
+    <div class="card-title" id="info-title">How to Play</div>
+    <div class="btn3d btn-icon" id="info-close" role="button" aria-label="Close" tabindex="0">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">✕</span>
+    </div>
+    <div id="info-body"></div>
+  </div></div>
 
   <!-- Popup kết quả (popup-common.md — game điểm cao tự vẽ) -->
   <div id="overlay" class="overlay hidden"><div class="card">
@@ -328,6 +520,11 @@ body.lang-ar .btn3d-surface { letter-spacing: 0; }
     <button class="btn3d play" id="ov-btn" type="button">
       <span class="btn3d-shadow"></span><span class="btn3d-surface" id="ov-btn-text">Play Again</span>
     </button>
+    <div class="ov-menu-row">
+      <button class="btn3d" id="ov-menu-btn" type="button">
+        <span class="btn3d-shadow"></span><span class="btn3d-surface" id="ov-menu-text">Menu</span>
+      </button>
+    </div>
   </div></div>
 
 </div>
@@ -350,74 +547,186 @@ const DEFAULT_LANG = 'en';
 const I18N = {
   en: { title:'HAMSTER JUMP', score:'SCORE', best:'BEST', tapToStart:'Tap to start',
         tapToResume:'Tap to resume', playAgain:'Play Again', gameOver:'Game Over',
-        newBest:'New Best!', perfect:'Perfect!', back:'Back' },
+        newBest:'New Best!', perfect:'Perfect!', back:'Back',
+        play:'Play', tutorial:'Tutorial', howToPlay:'How to Play', tutTap:'TAP!',
+        tutJump:'Tap to jump when the cheese gets close!',
+        tutPerfect:'Land in the middle for a Perfect!',
+        tutRetry:'Almost! Try again', tutDone:"You're ready!",
+        infoJump:'Tap to jump — land on the cheese',
+        infoPerfect:'Land in the middle = Perfect',
+        infoMiss:'Miss = top 5 layers fall (−5)',
+        infoLose:'Get hit = game over',
+        infoGold:'Fast! +8 coins',
+        infoMini:'×2 points',
+        infoIce:'Slippery!',
+        infoSpring:'Next jump higher',
+        infoMold:"Don't jump! Let it pass (+2)",
+        infoGift:'+3 coins',
+        infoDouble:'Pick one!',
+        infoStreak:'Streak: +5 → +10 → +15…', menu:'Menu' },
   vi: { title:'HAMSTER JUMP', score:'ĐIỂM', best:'CAO NHẤT', tapToStart:'Chạm để bắt đầu',
         tapToResume:'Chạm để chơi tiếp', playAgain:'Chơi lại', gameOver:'Thua rồi',
-        newBest:'Kỷ lục mới!', perfect:'Tuyệt hảo!', back:'Thoát' },
+        newBest:'Kỷ lục mới!', perfect:'Tuyệt hảo!', back:'Thoát',
+        play:'Chơi', tutorial:'Hướng dẫn', howToPlay:'Cách chơi', tutTap:'NHẢY!',
+        tutJump:'Chạm để nhảy khi phô mai tới gần!',
+        tutPerfect:'Đáp vào giữa miếng để được Perfect!',
+        tutRetry:'Suýt rồi! Thử lại nhé', tutDone:'Sẵn sàng rồi!',
+        infoJump:'Chạm để nhảy — đáp lên phô mai',
+        infoPerfect:'Đáp giữa miếng = Perfect',
+        infoMiss:'Nhảy hụt = sập 5 tầng (−5)',
+        infoLose:'Bị tông = thua',
+        infoGold:'Nhanh! +8 xu',
+        infoMini:'Điểm ×2',
+        infoIce:'Trơn trượt!',
+        infoSpring:'Cú nhảy sau cao hơn',
+        infoMold:'Đừng nhảy! Cho nó qua (+2)',
+        infoGift:'+3 xu',
+        infoDouble:'Chọn 1 miếng!',
+        infoStreak:'Chuỗi: +5 → +10 → +15…', menu:'Menu' },
   'zh-Hans': { title:'仓鼠跳跳', score:'分数', best:'最高', tapToStart:'点击开始',
         tapToResume:'点击继续', playAgain:'再玩一次', gameOver:'游戏结束',
-        newBest:'新纪录！', perfect:'完美！', back:'返回' },
+        newBest:'新纪录！', perfect:'完美！', back:'返回',
+        play:'开始', tutorial:'教程', howToPlay:'玩法说明', tutTap:'跳！',
+        tutJump:'奶酪靠近时点击跳跃！', tutPerfect:'落在正中间即可获得完美！',
+        tutRetry:'差一点！再试一次', tutDone:'准备好了！', menu:'菜单' },
   'zh-Hant': { title:'倉鼠跳跳', score:'分數', best:'最高', tapToStart:'點擊開始',
         tapToResume:'點擊繼續', playAgain:'再玩一次', gameOver:'遊戲結束',
-        newBest:'新紀錄！', perfect:'完美！', back:'返回' },
+        newBest:'新紀錄！', perfect:'完美！', back:'返回',
+        play:'開始', tutorial:'教學', howToPlay:'玩法說明', tutTap:'跳！',
+        tutJump:'起司靠近時點擊跳躍！', tutPerfect:'落在正中間即可獲得完美！',
+        tutRetry:'差一點！再試一次', tutDone:'準備好了！', menu:'選單' },
   ja: { title:'ハムスタージャンプ', score:'スコア', best:'ベスト', tapToStart:'タップでスタート',
         tapToResume:'タップで再開', playAgain:'もう一度', gameOver:'ゲームオーバー',
-        newBest:'新記録！', perfect:'パーフェクト！', back:'戻る' },
+        newBest:'新記録！', perfect:'パーフェクト！', back:'戻る',
+        play:'プレイ', tutorial:'チュートリアル', howToPlay:'遊び方', tutTap:'タップ！',
+        tutJump:'チーズが近づいたらタップでジャンプ！', tutPerfect:'真ん中に着地でパーフェクト！',
+        tutRetry:'おしい！もう一回', tutDone:'準備完了！', menu:'メニュー' },
   ko: { title:'햄스터 점프', score:'점수', best:'최고', tapToStart:'탭하여 시작',
         tapToResume:'탭하여 계속', playAgain:'다시하기', gameOver:'게임 오버',
-        newBest:'신기록!', perfect:'퍼펙트!', back:'뒤로' },
+        newBest:'신기록!', perfect:'퍼펙트!', back:'뒤로',
+        play:'플레이', tutorial:'튜토리얼', howToPlay:'게임 방법', tutTap:'탭!',
+        tutJump:'치즈가 가까워지면 탭해서 점프!', tutPerfect:'한가운데 착지하면 퍼펙트!',
+        tutRetry:'아쉬워요! 다시 시도', tutDone:'준비 완료!', menu:'메뉴' },
   es: { title:'HAMSTER JUMP', score:'PUNTOS', best:'RÉCORD', tapToStart:'Toca para empezar',
         tapToResume:'Toca para continuar', playAgain:'Jugar otra vez', gameOver:'Fin del juego',
-        newBest:'¡Nuevo récord!', perfect:'¡Perfecto!', back:'Atrás' },
+        newBest:'¡Nuevo récord!', perfect:'¡Perfecto!', back:'Atrás',
+        play:'Jugar', tutorial:'Tutorial', howToPlay:'Cómo jugar', tutTap:'¡SALTA!',
+        tutJump:'¡Toca para saltar cuando el queso se acerque!',
+        tutPerfect:'¡Aterriza en el centro para un Perfecto!',
+        tutRetry:'¡Casi! Inténtalo otra vez', tutDone:'¡Listo!', menu:'Menú' },
   'es-MX': { title:'HAMSTER JUMP', score:'PUNTOS', best:'RÉCORD', tapToStart:'Toca para empezar',
         tapToResume:'Toca para continuar', playAgain:'Jugar otra vez', gameOver:'Fin del juego',
-        newBest:'¡Nuevo récord!', perfect:'¡Perfecto!', back:'Atrás' },
+        newBest:'¡Nuevo récord!', perfect:'¡Perfecto!', back:'Atrás',
+        play:'Jugar', tutorial:'Tutorial', howToPlay:'Cómo jugar', tutTap:'¡SALTA!',
+        tutJump:'¡Toca para saltar cuando el queso se acerque!',
+        tutPerfect:'¡Aterriza en el centro para un Perfecto!',
+        tutRetry:'¡Casi! Inténtalo otra vez', tutDone:'¡Listo!', menu:'Menú' },
   'es-AR': { title:'HAMSTER JUMP', score:'PUNTOS', best:'RÉCORD', tapToStart:'Tocá para empezar',
         tapToResume:'Tocá para continuar', playAgain:'Jugar otra vez', gameOver:'Fin del juego',
-        newBest:'¡Nuevo récord!', perfect:'¡Perfecto!', back:'Atrás' },
+        newBest:'¡Nuevo récord!', perfect:'¡Perfecto!', back:'Atrás',
+        play:'Jugar', tutorial:'Tutorial', howToPlay:'Cómo jugar', tutTap:'¡SALTÁ!',
+        tutJump:'¡Tocá para saltar cuando el queso se acerque!',
+        tutPerfect:'¡Aterrizá en el centro para un Perfecto!',
+        tutRetry:'¡Casi! Probá de nuevo', tutDone:'¡Listo!', menu:'Menú' },
   'pt-BR': { title:'HAMSTER JUMP', score:'PONTOS', best:'RECORDE', tapToStart:'Toque para começar',
         tapToResume:'Toque para continuar', playAgain:'Jogar de novo', gameOver:'Fim de jogo',
-        newBest:'Novo recorde!', perfect:'Perfeito!', back:'Voltar' },
+        newBest:'Novo recorde!', perfect:'Perfeito!', back:'Voltar',
+        play:'Jogar', tutorial:'Tutorial', howToPlay:'Como jogar', tutTap:'PULE!',
+        tutJump:'Toque para pular quando o queijo chegar perto!',
+        tutPerfect:'Caia bem no meio para um Perfeito!',
+        tutRetry:'Quase! Tente de novo', tutDone:'Pronto!', menu:'Menu' },
   pt: { title:'HAMSTER JUMP', score:'PONTOS', best:'RECORDE', tapToStart:'Toca para começar',
         tapToResume:'Toca para continuar', playAgain:'Jogar novamente', gameOver:'Fim do jogo',
-        newBest:'Novo recorde!', perfect:'Perfeito!', back:'Voltar' },
+        newBest:'Novo recorde!', perfect:'Perfeito!', back:'Voltar',
+        play:'Jogar', tutorial:'Tutorial', howToPlay:'Como jogar', tutTap:'SALTA!',
+        tutJump:'Toca para saltar quando o queijo se aproximar!',
+        tutPerfect:'Aterra bem no meio para um Perfeito!',
+        tutRetry:'Quase! Tenta outra vez', tutDone:'Pronto!', menu:'Menu' },
   fr: { title:'HAMSTER JUMP', score:'SCORE', best:'RECORD', tapToStart:'Touchez pour commencer',
         tapToResume:'Touchez pour reprendre', playAgain:'Rejouer', gameOver:'Partie terminée',
-        newBest:'Nouveau record !', perfect:'Parfait !', back:'Retour' },
+        newBest:'Nouveau record !', perfect:'Parfait !', back:'Retour',
+        play:'Jouer', tutorial:'Tutoriel', howToPlay:'Comment jouer', tutTap:'SAUTE !',
+        tutJump:'Touchez pour sauter quand le fromage approche !',
+        tutPerfect:'Atterrissez au centre pour un Parfait !',
+        tutRetry:'Presque ! Réessayez', tutDone:'Prêt !', menu:'Menu' },
   de: { title:'HAMSTER JUMP', score:'PUNKTE', best:'REKORD', tapToStart:'Zum Starten tippen',
         tapToResume:'Zum Fortsetzen tippen', playAgain:'Nochmal spielen', gameOver:'Spiel vorbei',
-        newBest:'Neuer Rekord!', perfect:'Perfekt!', back:'Zurück' },
+        newBest:'Neuer Rekord!', perfect:'Perfekt!', back:'Zurück',
+        play:'Spielen', tutorial:'Tutorial', howToPlay:'Spielanleitung', tutTap:'SPRING!',
+        tutJump:'Tippe zum Springen, wenn der Käse naht!',
+        tutPerfect:'Lande genau mittig für ein Perfekt!',
+        tutRetry:"Fast! Versuch's nochmal", tutDone:'Bereit!', menu:'Menü' },
   it: { title:'HAMSTER JUMP', score:'PUNTI', best:'RECORD', tapToStart:'Tocca per iniziare',
         tapToResume:'Tocca per riprendere', playAgain:'Gioca ancora', gameOver:'Partita finita',
-        newBest:'Nuovo record!', perfect:'Perfetto!', back:'Indietro' },
+        newBest:'Nuovo record!', perfect:'Perfetto!', back:'Indietro',
+        play:'Gioca', tutorial:'Tutorial', howToPlay:'Come si gioca', tutTap:'SALTA!',
+        tutJump:'Tocca per saltare quando il formaggio si avvicina!',
+        tutPerfect:'Atterra al centro per un Perfetto!',
+        tutRetry:'Quasi! Riprova', tutDone:'Pronto!', menu:'Menu' },
   nl: { title:'HAMSTER JUMP', score:'SCORE', best:'RECORD', tapToStart:'Tik om te starten',
         tapToResume:'Tik om verder te gaan', playAgain:'Opnieuw spelen', gameOver:'Game over',
-        newBest:'Nieuw record!', perfect:'Perfect!', back:'Terug' },
+        newBest:'Nieuw record!', perfect:'Perfect!', back:'Terug',
+        play:'Spelen', tutorial:'Tutorial', howToPlay:'Speluitleg', tutTap:'TIK!',
+        tutJump:'Tik om te springen als de kaas dichtbij komt!',
+        tutPerfect:'Land in het midden voor een Perfect!',
+        tutRetry:'Bijna! Probeer opnieuw', tutDone:'Klaar!', menu:'Menu' },
   pl: { title:'HAMSTER JUMP', score:'WYNIK', best:'REKORD', tapToStart:'Dotknij, aby zagrać',
         tapToResume:'Dotknij, aby wznowić', playAgain:'Zagraj ponownie', gameOver:'Koniec gry',
-        newBest:'Nowy rekord!', perfect:'Idealnie!', back:'Wstecz' },
+        newBest:'Nowy rekord!', perfect:'Idealnie!', back:'Wstecz',
+        play:'Graj', tutorial:'Samouczek', howToPlay:'Jak grać', tutTap:'SKOK!',
+        tutJump:'Dotknij, aby skoczyć, gdy ser się zbliży!',
+        tutPerfect:'Wyląduj na środku, aby zdobyć Idealnie!',
+        tutRetry:'Prawie! Spróbuj jeszcze raz', tutDone:'Gotowe!', menu:'Menu' },
   ru: { title:'ПРЫЖОК ХОМЯКА', score:'СЧЁТ', best:'РЕКОРД', tapToStart:'Нажмите, чтобы начать',
         tapToResume:'Нажмите, чтобы продолжить', playAgain:'Играть снова', gameOver:'Игра окончена',
-        newBest:'Новый рекорд!', perfect:'Идеально!', back:'Назад' },
+        newBest:'Новый рекорд!', perfect:'Идеально!', back:'Назад',
+        play:'Играть', tutorial:'Обучение', howToPlay:'Как играть', tutTap:'ПРЫГАЙ!',
+        tutJump:'Нажмите, чтобы прыгнуть, когда сыр приблизится!',
+        tutPerfect:'Приземлитесь по центру — будет «Идеально»!',
+        tutRetry:'Почти! Попробуйте ещё раз', tutDone:'Готово!', menu:'Меню' },
   tr: { title:'HAMSTER JUMP', score:'SKOR', best:'REKOR', tapToStart:'Başlamak için dokun',
         tapToResume:'Devam etmek için dokun', playAgain:'Tekrar Oyna', gameOver:'Oyun Bitti',
-        newBest:'Yeni Rekor!', perfect:'Mükemmel!', back:'Geri' },
+        newBest:'Yeni Rekor!', perfect:'Mükemmel!', back:'Geri',
+        play:'Oyna', tutorial:'Eğitim', howToPlay:'Nasıl Oynanır', tutTap:'ZIPLA!',
+        tutJump:'Peynir yaklaşınca zıplamak için dokun!',
+        tutPerfect:'Tam ortaya inersen Mükemmel olur!',
+        tutRetry:'Az kaldı! Tekrar dene', tutDone:'Hazırsın!', menu:'Menü' },
   ar: { title:'قفزة الهمستر', score:'النقاط', best:'الأفضل', tapToStart:'انقر للبدء',
         tapToResume:'انقر للمتابعة', playAgain:'العب مجددًا', gameOver:'انتهت اللعبة',
         /* ‏ (RLM) để dấu ! đứng đúng phía trong ngữ cảnh LTR (DOM + canvas) */
-        newBest:'رقم قياسي جديد!‏', perfect:'ممتاز!‏', back:'رجوع' },
+        newBest:'رقم قياسي جديد!‏', perfect:'ممتاز!‏', back:'رجوع',
+        play:'العب', tutorial:'تعليمي', howToPlay:'طريقة اللعب', tutTap:'اقفز!',
+        tutJump:'انقر للقفز عندما تقترب الجبنة!',
+        tutPerfect:'اهبط في المنتصف لتحصل على ممتاز!',
+        tutRetry:'اقتربت! حاول مجددًا', tutDone:'أنت جاهز!', menu:'القائمة' },
   hi: { title:'हैम्स्टर जंप', score:'स्कोर', best:'सर्वश्रेष्ठ', tapToStart:'शुरू करने के लिए टैप करें',
         tapToResume:'जारी रखने के लिए टैप करें', playAgain:'फिर से खेलें', gameOver:'खेल समाप्त',
-        newBest:'नया रिकॉर्ड!', perfect:'एकदम सही!', back:'वापस' },
+        newBest:'नया रिकॉर्ड!', perfect:'एकदम सही!', back:'वापस',
+        play:'खेलें', tutorial:'ट्यूटोरियल', howToPlay:'खेलने का तरीका', tutTap:'कूदो!',
+        tutJump:'पनीर पास आए तो कूदने के लिए टैप करें!',
+        tutPerfect:'बीच में उतरें और परफेक्ट पाएं!',
+        tutRetry:'लगभग! फिर कोशिश करें', tutDone:'तैयार!', menu:'मेनू' },
   th: { title:'แฮมสเตอร์ จัมพ์', score:'คะแนน', best:'สูงสุด', tapToStart:'แตะเพื่อเริ่ม',
         tapToResume:'แตะเพื่อเล่นต่อ', playAgain:'เล่นอีกครั้ง', gameOver:'จบเกม',
-        newBest:'สถิติใหม่!', perfect:'เพอร์เฟกต์!', back:'กลับ' },
+        newBest:'สถิติใหม่!', perfect:'เพอร์เฟกต์!', back:'กลับ',
+        play:'เล่น', tutorial:'สอนเล่น', howToPlay:'วิธีเล่น', tutTap:'แตะ!',
+        tutJump:'แตะเพื่อกระโดดเมื่อชีสเข้ามาใกล้!',
+        tutPerfect:'ลงกลางก้อนเพื่อรับเพอร์เฟกต์!',
+        tutRetry:'เกือบแล้ว! ลองอีกครั้ง', tutDone:'พร้อมแล้ว!', menu:'เมนู' },
   id: { title:'HAMSTER JUMP', score:'SKOR', best:'TERBAIK', tapToStart:'Ketuk untuk mulai',
         tapToResume:'Ketuk untuk lanjut', playAgain:'Main Lagi', gameOver:'Permainan Berakhir',
-        newBest:'Rekor Baru!', perfect:'Sempurna!', back:'Kembali' },
+        newBest:'Rekor Baru!', perfect:'Sempurna!', back:'Kembali',
+        play:'Main', tutorial:'Tutorial', howToPlay:'Cara Main', tutTap:'LOMPAT!',
+        tutJump:'Ketuk untuk melompat saat keju mendekat!',
+        tutPerfect:'Mendarat tepat di tengah untuk Sempurna!',
+        tutRetry:'Hampir! Coba lagi', tutDone:'Siap!', menu:'Menu' },
   fil: { title:'HAMSTER JUMP', score:'ISKOR', best:'PINAKAMATAAS', tapToStart:'I-tap para magsimula',
         tapToResume:'I-tap para magpatuloy', playAgain:'Maglaro Muli', gameOver:'Tapos ang Laro',
-        newBest:'Bagong Rekord!', perfect:'Perpekto!', back:'Bumalik' },
+        newBest:'Bagong Rekord!', perfect:'Perpekto!', back:'Bumalik',
+        play:'Maglaro', tutorial:'Tutorial', howToPlay:'Paano Maglaro', tutTap:'TALON!',
+        tutJump:'I-tap para tumalon kapag palapit na ang keso!',
+        tutPerfect:'Tumapat sa gitna para sa Perpekto!',
+        tutRetry:'Muntik na! Subukan muli', tutDone:'Handa ka na!', menu:'Menu' },
 };
 
 let LANG = DEFAULT_LANG;
@@ -500,15 +809,16 @@ function getInitialData() {
   return fromWin != null ? fromWin : (fromUrl || '');
 }
 
-/** Đọc {best, coins} từ native (ưu tiên) + localStorage; lấy max để không mất dữ liệu. */
+/** Đọc {best, coins, tut} từ native (ưu tiên) + localStorage; lấy max để không mất dữ liệu. */
 function loadSaved() {
-  const out = { best: 0, coins: 0 };
+  const out = { best: 0, coins: 0, tut: 0 };
   const pick = raw => {
     try {
       const o = JSON.parse(raw || 'null');
       if (o) {
         if (Number.isFinite(+o.best)) out.best = Math.max(out.best, Math.floor(+o.best));
         if (Number.isFinite(+o.coins)) out.coins = Math.max(out.coins, Math.floor(+o.coins));
+        if (o.tut) out.tut = 1;
       }
     } catch (e) { /* data bẩn → bỏ qua */ }
   };
@@ -549,8 +859,7 @@ const DOUBLE_FROM = 25;     // từ tầng 25: thi thoảng 2 miếng vào từ 
 
 /* Màu vẽ */
 const C = {
-  bgTop: '#a8d8ee', bgMid: '#c3e4f2', bgBot: '#f2d7e0',
-  doodle: 'rgba(110,165,200,.32)',
+  bgTop: '#7fb3d4', bgMid: '#96c4dd', bgBot: '#dcb8c6',
   table: '#d59a58', tableEdge: '#b97f42',
   mat: '#f2a7ba', matDot: '#f9c9d6',
   plate: '#fdfdfd', plateShade: 'rgba(0,0,0,.08)',
@@ -593,6 +902,8 @@ let tower = [];             // mỗi tầng: {cx, kind, w, seed}
 let sliders = [];           // các miếng đang vào: {cx, dir, speed, kind, w, seed,
                             //   slideAt, yTopW, dead} — double trouble có 2 miếng
 let springArmed = false;    // đáp lên lò xo → cú nhảy kế tiếp cao & lâu hơn
+let tutorial = null;        // đang trong tutorial: {landed}
+let tutSeen = false;        // đã chơi qua tutorial (persist trong save_data)
 let boards = [];            // ván gỗ: {dir, yW, endX, extendT0, retractT0}
 let fallBlocks = [];        // miếng trượt hụt rơi khỏi tháp: {cx, yTop, vx, vy, rot, vr, gift, seed}
 let landBounceT0 = -1e9;    // thời điểm miếng trên cùng nhún (hamster vừa đáp)
@@ -690,40 +1001,156 @@ function frontFacePath(x, y, w, h, r) {
  * §6. Vẽ — bếp, bàn, phô mai, hamster, hiệu ứng
  * ================================================================ */
 
-/* Nền wallpaper pastel theo art-style hamster: gradient kem + hoạ tiết mờ
-   (miếng phô mai, dấu chân, hạt hướng dương, trái tim) parallax nhẹ */
-function drawDoodleCheese() {
+/* ── Nền: tường bếp có chiều sâu — giấy dán tường + đồ treo + bụi sáng ── */
+const DECOR = {
+  line: 'rgba(40,72,104,.45)',
+  wood: '#b08356',
+  woodDark: '#8f6740',
+  paper: '#f3e9d2',
+};
+
+let wallPattern = null;
+/* Giấy dán tường dựng 1 LẦN thành pattern (sọc dọc + motif phô mai lặp đều) */
+function makeWallPattern() {
+  const c = document.createElement('canvas');
+  c.width = 120;
+  c.height = 120;
+  const g = c.getContext('2d');
+  g.strokeStyle = 'rgba(30,65,100,.08)';
+  g.lineWidth = 8;
+  g.beginPath(); g.moveTo(4, 0); g.lineTo(4, 120); g.stroke();
+  g.fillStyle = 'rgba(30,65,100,.11)';
+  for (const m of [[38, 34], [98, 94]]) {
+    g.save();
+    g.translate(m[0], m[1]);
+    g.beginPath();
+    g.moveTo(-11, 7); g.lineTo(11, 7); g.lineTo(11, -1);
+    g.quadraticCurveTo(0, -9, -11, 7);
+    g.closePath(); g.fill();
+    g.restore();
+  }
+  return g.createPattern(c, 'repeat');
+}
+
+/* Tranh treo tường (vẽ phô mai) */
+function drawDecorFrame(x, y) {
+  ctx.strokeStyle = DECOR.line;
+  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(-22, 14); ctx.lineTo(22, 14); ctx.lineTo(22, -2);
-  ctx.quadraticCurveTo(0, -18, -22, 14);
-  ctx.closePath(); ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,.5)';
-  ctx.beginPath(); ctx.arc(2, 4, 3.5, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(12, 9, 2.5, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = C.doodle;
-}
-function drawDoodlePaw() {
-  ctx.beginPath(); ctx.ellipse(0, 6, 9, 7, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(-9, -4, 3.6, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(0, -7, 3.6, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(9, -4, 3.6, 0, Math.PI * 2); ctx.fill();
-}
-function drawDoodleSeed() {
-  ctx.beginPath(); ctx.ellipse(0, 0, 6, 12, 0.3, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,.45)';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(-2, -8); ctx.lineTo(2, 8); ctx.stroke();
-  ctx.strokeStyle = C.doodle;
-}
-function drawDoodleHeart() {
+  ctx.moveTo(x + 8, y); ctx.lineTo(x + 48, y - 16); ctx.lineTo(x + 88, y);
+  ctx.stroke();
+  ctx.fillStyle = DECOR.wood;
+  rr(x, y, 96, 76, 6); ctx.fill();
+  ctx.strokeStyle = DECOR.woodDark; ctx.stroke();
+  ctx.fillStyle = DECOR.paper;
+  rr(x + 8, y + 8, 80, 60, 3); ctx.fill();
+  ctx.fillStyle = '#e8cf6e';
   ctx.beginPath();
-  ctx.moveTo(0, 10);
-  ctx.bezierCurveTo(-14, -2, -7, -14, 0, -6);
-  ctx.bezierCurveTo(7, -14, 14, -2, 0, 10);
+  ctx.moveTo(x + 24, y + 52); ctx.lineTo(x + 72, y + 52); ctx.lineTo(x + 72, y + 34);
+  ctx.quadraticCurveTo(x + 48, y + 18, x + 24, y + 52);
   ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(190,160,70,.8)';
+  ctx.beginPath(); ctx.arc(x + 52, y + 42, 3.4, 0, Math.PI * 2); ctx.fill();
+}
+
+/* Kệ gỗ + lọ gia vị + miếng phô mai */
+function drawDecorShelf(x, y) {
+  ctx.fillStyle = 'rgba(210,230,240,.55)';
+  rr(x + 14, y - 34, 24, 34, 5); ctx.fill();
+  ctx.fillStyle = 'rgba(226,180,120,.7)';
+  rr(x + 50, y - 26, 28, 26, 6); ctx.fill();
+  ctx.fillStyle = DECOR.woodDark;
+  rr(x + 14, y - 40, 24, 8, 3); ctx.fill();
+  rr(x + 52, y - 31, 24, 7, 3); ctx.fill();
+  ctx.fillStyle = '#e8cf6e';
+  ctx.beginPath();
+  ctx.moveTo(x + 96, y); ctx.lineTo(x + 134, y); ctx.lineTo(x + 134, y - 14);
+  ctx.quadraticCurveTo(x + 115, y - 28, x + 96, y);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = DECOR.wood;
+  rr(x, y, 150, 10, 3); ctx.fill();
+  ctx.strokeStyle = DECOR.woodDark;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+/* Cửa sổ sáng nhìn ra trời + quầng nắng hắt xuống */
+function drawDecorWindow(x, y) {
+  ctx.fillStyle = 'rgba(255,250,220,.10)';
+  ctx.beginPath();
+  ctx.moveTo(x + 8, y + 96);
+  ctx.lineTo(x - 26, y + 190);
+  ctx.lineTo(x + 158, y + 190);
+  ctx.lineTo(x + 124, y + 96);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = DECOR.wood;
+  rr(x, y, 132, 104, 8); ctx.fill();
+  ctx.fillStyle = '#c8e9f6';
+  rr(x + 8, y + 8, 116, 88, 5); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.85)';
+  ctx.beginPath();
+  ctx.ellipse(x + 44, y + 40, 20, 8, 0, 0, Math.PI * 2);
+  ctx.ellipse(x + 62, y + 34, 14, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = DECOR.wood;
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(x + 66, y + 8); ctx.lineTo(x + 66, y + 96);
+  ctx.moveTo(x + 8, y + 52); ctx.lineTo(x + 124, y + 52);
+  ctx.stroke();
+}
+
+/* Dây đèn màu nhấp nháy vắt ngang tường */
+function drawDecorLights(y, seed) {
+  ctx.strokeStyle = DECOR.line;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-10, y);
+  ctx.quadraticCurveTo(LW / 2, y + 46, LW + 10, y);
+  ctx.stroke();
+  const cols = ['#ffd23f', '#ff8fb2', '#8fd3ff', '#b8e986'];
+  for (let k = 0; k <= 8; k++) {
+    const tt = k / 8;
+    const bx2 = -10 + tt * (LW + 20);
+    const by2 = y + 92 * tt * (1 - tt) + 5;
+    const tw = 0.5 + 0.5 * Math.sin(timeMs * 0.004 + k * 1.9 + seed);
+    ctx.globalAlpha = 0.45 + 0.5 * tw;
+    ctx.fillStyle = cols[k % 4];
+    ctx.beginPath();
+    ctx.arc(bx2, by2, 4.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* Chậu cây treo — lá đung đưa nhẹ */
+function drawDecorPlant(x, y, seed) {
+  ctx.strokeStyle = DECOR.line;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x, y); ctx.lineTo(x - 20, y + 26);
+  ctx.moveTo(x, y); ctx.lineTo(x + 20, y + 26);
+  ctx.stroke();
+  const sway = Math.sin(timeMs * 0.0012 + seed) * 0.1;
+  ctx.fillStyle = 'rgba(96,150,96,.9)';
+  for (let k = 0; k < 5; k++) {
+    ctx.save();
+    ctx.translate(x, y + 34);
+    ctx.rotate(-0.9 + k * 0.45 + sway);
+    ctx.beginPath();
+    ctx.ellipse(0, 26, 7, 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.fillStyle = '#c9764a';
+  rr(x - 26, y + 26, 52, 26, 7); ctx.fill();
+  ctx.strokeStyle = DECOR.woodDark;
+  ctx.stroke();
 }
 
 function drawBackground() {
+  /* nền tường — tối hơn một tông để phô mai & hamster nổi khối */
   const g = ctx.createLinearGradient(0, 0, 0, LH);
   g.addColorStop(0, C.bgTop);
   g.addColorStop(0.55, C.bgMid);
@@ -731,33 +1158,55 @@ function drawBackground() {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, LW, LH);
 
-  const par = 0.35, bandH = 260;
-  /* screenY = par*(artY + camOff) → artY ở mép trên màn = -camOff */
+  /* giấy dán tường lặp đều — cuộn theo camera (parallax) */
+  if (wallPattern) {
+    const ox = -(camX * 0.3) % 120;
+    const oy = (camOff * 0.3) % 120;
+    ctx.save();
+    ctx.translate(ox, oy);
+    ctx.fillStyle = wallPattern;
+    ctx.fillRect(-ox - 120, -oy - 120, LW + 240, LH + 240);
+    ctx.restore();
+  }
+
+  /* đồ treo tường theo dải (parallax 0.4): tranh / kệ / cửa sổ / đèn dây / cây */
+  const par = 0.4, bandH = 330;
   const yTop = -camOff;
   const first = Math.floor((yTop - bandH) / bandH);
   const last = Math.ceil((yTop + LH / par) / bandH);
-  ctx.fillStyle = C.doodle;
-  ctx.strokeStyle = C.doodle;
   for (let i = first; i <= last; i++) {
     const by = i * bandH * par + camOff * par;
-    for (let k = 0; k < 5; k++) {
-      const r1 = seededRand(i * 131 + k * 37 + 7);
-      const r2 = seededRand(i * 89 + k * 53 + 3);
-      const dx = 40 + r1 * (LW - 80) - camX * 0.12;
-      const dy = by + r2 * bandH * par;
-      const kind = Math.floor(seededRand(i * 17 + k * 71) * 4);
-      const s2 = 0.9 + seededRand(i * 13 + k * 29) * 0.8;
-      ctx.save();
-      ctx.translate(dx, dy);
-      ctx.rotate((r1 - 0.5) * 0.9);
-      ctx.scale(s2, s2);
-      if (kind === 0) drawDoodleCheese();
-      else if (kind === 1) drawDoodlePaw();
-      else if (kind === 2) drawDoodleSeed();
-      else drawDoodleHeart();
-      ctx.restore();
-    }
+    /* xoay vòng 5 loại + jitter nhẹ — không bao giờ lặp 3 lần cùng loại */
+    const kind = (((i % 5) + 5) + Math.floor(seededRand(i * 137 + 11) * 2)) % 5;
+    const bx = 40 + seededRand(i * 71 + 3) * (LW - 240) - camX * 0.15;
+    if (kind === 0) drawDecorFrame(bx, by + 60);
+    else if (kind === 1) drawDecorShelf(bx, by + 116);
+    else if (kind === 2) drawDecorWindow(bx, by + 40);
+    else if (kind === 3) drawDecorLights(by + 50, i);
+    else drawDecorPlant(bx + 60, by + 30, i);
   }
+
+  /* bụi sáng lơ lửng — nền "thở" nhẹ */
+  ctx.fillStyle = '#ffffff';
+  for (let k = 0; k < 8; k++) {
+    const sd = seededRand(k * 97 + 5);
+    const px = (sd * LW + timeMs * (0.006 + sd * 0.008)) % LW;
+    const py = (seededRand(k * 41 + 9) * LH + Math.sin(timeMs * 0.0006 + k) * 40 + LH) % LH;
+    ctx.globalAlpha = 0.10 + 0.14 * (0.5 + 0.5 * Math.sin(timeMs * 0.002 + k * 2.1));
+    ctx.beginPath();
+    ctx.arc(px, py, 2.4 + sd * 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  /* vignette 2 mép — dồn tương phản vào giữa màn */
+  const vg = ctx.createLinearGradient(0, 0, LW, 0);
+  vg.addColorStop(0, 'rgba(28,52,82,.15)');
+  vg.addColorStop(0.18, 'rgba(28,52,82,0)');
+  vg.addColorStop(0.82, 'rgba(28,52,82,0)');
+  vg.addColorStop(1, 'rgba(28,52,82,.15)');
+  ctx.fillStyle = vg;
+  ctx.fillRect(0, 0, LW, LH);
 }
 
 /* Nĩa hoạt hình — 4 răng, vòm, cán bo tròn có vệt sáng */
@@ -907,7 +1356,74 @@ const HOLE_SLOTS = [
   [0.20, 0.30], [0.50, 0.56], [0.80, 0.28], [0.34, 0.76], [0.68, 0.80],
 ];
 
-function drawBlock(cxW, topW, kind, seed, w) {
+/* Phô mai lò xo: 2 LÁT phô mai mỏng kẹp 2 lò xo — sq (0..1) nén lò xo lại */
+function drawSpringSandwich(x, y, w, seed, sq, SK, inset) {
+  const SLAB = 26;                         // độ dày mỗi lát
+  const gap0 = BLOCK_H - SLAB * 2;         // khoảng lò xo khi nghỉ
+  const off = sq * gap0 * 0.55;            // nén → lát trên tụt xuống
+  const topY = y + off;
+  const coilTop = topY + SLAB;
+  const coilBot = y + BLOCK_H - SLAB;
+
+  /* LÁT DƯỚI */
+  ctx.fillStyle = SK.body;
+  frontFacePath(x, y + BLOCK_H - SLAB, w, SLAB, 8);
+  ctx.fill();
+  ctx.strokeStyle = SK.line;
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+  ctx.fillStyle = SK.hole;
+  ctx.beginPath();
+  ctx.ellipse(x + w * 0.62, y + BLOCK_H - SLAB / 2, 5, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  /* 2 LÒ XO — chồng vòng ellipse, nén theo sq */
+  ctx.strokeStyle = C.spring;
+  ctx.lineWidth = 3;
+  const loops = 4;
+  const step = (coilBot - coilTop) / loops;
+  for (const fx of [x + w * 0.28, x + w * 0.72]) {
+    for (let k = 0; k < loops; k++) {
+      ctx.beginPath();
+      ctx.ellipse(fx, coilTop + step * (k + 0.5), 15, Math.max(2.5, step * 0.38), 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  /* LÁT TRÊN + mặt trên (tụt theo độ nén) */
+  ctx.fillStyle = SK.top;
+  ctx.beginPath();
+  ctx.moveTo(x, topY);
+  ctx.lineTo(x + w, topY);
+  ctx.lineTo(x + w - inset, topY - 22);
+  ctx.lineTo(x + inset, topY - 22);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = SK.line;
+  ctx.stroke();
+  ctx.fillStyle = SK.holeTop;
+  ctx.beginPath();
+  ctx.ellipse(x + w * 0.42, topY - 11, 6, 2.8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = SK.body;
+  frontFacePath(x, topY, w, SLAB, 6);
+  ctx.fill();
+  ctx.strokeStyle = SK.line;
+  ctx.stroke();
+  ctx.fillStyle = SK.hole;
+  ctx.beginPath();
+  ctx.ellipse(x + w * 0.3, topY + SLAB / 2 + 1, 5.5, 4.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = SK.fold;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(x + 1, topY);
+  ctx.lineTo(x + w - 1, topY);
+  ctx.stroke();
+}
+
+function drawBlock(cxW, topW, kind, seed, w, sq) {
   w = w || BLOCK_W;
   const x = sx(cxW - w / 2), y = sy(topW);
   if (y > LH / 2 + cullPad() || y < LH / 2 - cullPad() - BLOCK_H) return;
@@ -915,6 +1431,10 @@ function drawBlock(cxW, topW, kind, seed, w) {
     const SK = BLOCK_SKINS[kind] || BLOCK_SKINS.normal;
     const inset = Math.round(w * 0.1);
     const kw = w / BLOCK_W;               // tỉ lệ co (mini)
+    if (kind === 'spring') {
+      drawSpringSandwich(x, y, w, seed, sq || 0, SK, inset);
+      return;
+    }
     /* MẶT TRÊN — hình thang lùi về sau; góc trước TRÙNG góc trên mặt trước */
     ctx.fillStyle = SK.top;
     ctx.beginPath();
@@ -965,24 +1485,6 @@ function drawBlock(cxW, topW, kind, seed, w) {
       ctx.moveTo(x + 10, y + 30); ctx.lineTo(x + 30, y + 10);
       ctx.moveTo(x + 20, y + 40); ctx.lineTo(x + 46, y + 14);
       ctx.stroke();
-    } else if (kind === 'spring') {
-      /* 2 lò xo kim loại trên mặt trước */
-      ctx.strokeStyle = C.spring;
-      ctx.lineWidth = 3;
-      ctx.lineJoin = 'round';
-      for (const fx of [x + w * 0.24, x + w * 0.76]) {
-        ctx.beginPath();
-        ctx.moveTo(fx - 8, y + 20);
-        ctx.lineTo(fx + 8, y + 20);
-        let zy = y + 20;
-        for (let z = 0; z < 4; z++) {
-          ctx.lineTo(fx + (z % 2 ? 8 : -8), zy + 12);
-          zy += 12;
-        }
-        ctx.lineTo(fx + 8, zy + 4);
-        ctx.lineTo(fx - 8, zy + 4);
-        ctx.stroke();
-      }
     } else if (kind === 'mold') {
       /* đốm mốc + khói hôi bay lên */
       ctx.fillStyle = 'rgba(98,124,54,.55)';
@@ -1332,26 +1834,35 @@ function render() {
 
   drawTable();
 
-  /* nhún của miếng trên cùng khi hamster vừa đáp (impact) */
-  let bSq = 0;
+  /* nhún của miếng trên cùng khi hamster vừa đáp (impact).
+     Miếng LÒ XO có nhịp riêng: nén–nhả 2 lần, tắt dần, dài gấp đôi */
+  let bSq = 0, bSqS = 0;
   const bp = (timeMs - landBounceT0) / BOUNCE_MS;
   if (bp >= 0 && bp < 1) bSq = Math.sin(bp * Math.PI);
+  const bpS = (timeMs - landBounceT0) / (BOUNCE_MS * 2);
+  if (bpS >= 0 && bpS < 1) bSqS = Math.abs(Math.sin(bpS * Math.PI * 2)) * (1 - bpS * 0.55);
+  const topIsSpring = (tower[tower.length - 1].kind === 'spring');
 
   /* tháp phô mai (chỉ vẽ phần trong khung nhìn) */
   for (let i = 0; i < tower.length; i++) {
     const isTop = i === tower.length - 1;
-    if (isTop && bSq > 0) {
+    const kd = tower[i].kind || 'normal';
+    if (isTop && kd === 'spring' && bSqS > 0) {
+      /* lò xo TỰ NÉN bên trong — không scale cả khối */
+      drawBlock(tower[i].cx, -(i + 1) * BLOCK_H, kd,
+        tower[i].seed != null ? tower[i].seed : i, tower[i].w, bSqS);
+    } else if (isTop && kd !== 'spring' && bSq > 0) {
       /* squash quanh mép DƯỚI của miếng: lún xuống rồi bật lại */
       const bx = sx(tower[i].cx), byB = sy(-i * BLOCK_H);
       ctx.save();
       ctx.translate(bx, byB);
       ctx.scale(1 + 0.10 * bSq, 1 - 0.12 * bSq);
       ctx.translate(-bx, -byB);
-      drawBlock(tower[i].cx, -(i + 1) * BLOCK_H, tower[i].kind || 'normal',
+      drawBlock(tower[i].cx, -(i + 1) * BLOCK_H, kd,
         tower[i].seed != null ? tower[i].seed : i, tower[i].w);
       ctx.restore();
     } else {
-      drawBlock(tower[i].cx, -(i + 1) * BLOCK_H, tower[i].kind || 'normal',
+      drawBlock(tower[i].cx, -(i + 1) * BLOCK_H, kd,
         tower[i].seed != null ? tower[i].seed : i, tower[i].w);
     }
   }
@@ -1388,7 +1899,7 @@ function render() {
       const rot = lean * 0.24 * Math.sin(p * Math.PI) * (1 + 0.12 * Math.sin(p * 22));
       /* chân PHÍA MÉP (đối diện hướng nghiêng) quơ trong không khí,
          chân phía nghiêng làm trụ */
-      drawHam(ham.x, surfaceY() - 8 + BLOCK_H * 0.12 * bSq, {
+      drawHam(ham.x, surfaceY() - 8 + (topIsSpring ? 22 * bSqS : BLOCK_H * 0.12 * bSq), {
         rot, sweat: true, flap: true, lift: -lean, pivotX: lean * 10,
       });
     } else if (ham.state === 'drop') {
@@ -1402,8 +1913,8 @@ function render() {
       drawHam(c2.x, c2.y, { chute: true, rot: Math.sin(timeMs * 0.003) * 0.1, armsUp: true });
     } else {
       /* idle — thở nhẹ, lún theo nhún của miếng vừa đáp (đứng trên mặt trên) */
-      drawHam(ham.x, surfaceY() - 8 + BLOCK_H * 0.12 * bSq, {
-        squash: Math.sin(timeMs * 0.004) * 0.03 + 0.1 * bSq,
+      drawHam(ham.x, surfaceY() - 8 + (topIsSpring ? 22 * bSqS : BLOCK_H * 0.12 * bSq), {
+        squash: Math.sin(timeMs * 0.004) * 0.03 + 0.1 * (topIsSpring ? bSqS : bSq),
       });
     }
 
@@ -1488,6 +1999,7 @@ function spawnOne(dir, kind, extraDelay) {
 }
 
 function scheduleCycle() {
+  if (tutorial) { tutorialCycle(); return; }
   /* giữ lại miếng "chết" (double trouble) cho nó trượt nốt rồi rơi */
   sliders = sliders.filter(s => s.dead);
   const dir = rand01() < 0.5 ? 1 : -1;
@@ -1550,7 +2062,7 @@ function updateStreakHud() {
 }
 
 function persistSaved() {
-  const light = { best, coins: coinsTotal };
+  const light = { best, coins: coinsTotal, tut: tutSeen ? 1 : 0 };
   saveData(light);
   saveLocal(light);
 }
@@ -1593,27 +2105,32 @@ function pinSlider(s) {
   const eps = PERFECT_EPS * Math.max(1, s.speed / BASE_SPEED);
   const perfect = Math.abs(offset) <= eps;
 
-  if (perfect) combo += 1; else combo = 0;
-  /* Perfect: +5 điểm, mỗi Perfect liên tiếp cộng thêm 5 (5→10→15…); mini ×2 */
-  let gain = perfect ? 5 * combo : 1;
-  if (s.kind === 'mini') gain *= 2;
-  addScore(gain);
-  updateStreakHud();
-  floatTexts.push({
-    x: s.cx, y: surfaceY() - 14, born: timeMs,
-    text: '+' + gain, color: perfect ? '#ffd23f' : '#fff',
-  });
-  if (s.kind === 'gift') addCoins(3, s.cx, surfaceY() - 44);
-  if (s.kind === 'gold') addCoins(8, s.cx, surfaceY() - 44);
-  if (s.kind === 'spring') {
-    springArmed = true;                // cú nhảy KẾ TIẾP cao & lâu hơn
+  if (tutorial) {
+    /* tutorial: không tính điểm/xu/chuỗi — chỉ đếm lần đáp */
+    tutorial.landed += 1;
+  } else {
+    if (perfect) combo += 1; else combo = 0;
+    /* Perfect: +5 điểm, mỗi Perfect liên tiếp cộng thêm 5 (5→10→15…); mini ×2 */
+    let gain = perfect ? 5 * combo : 1;
+    if (s.kind === 'mini') gain *= 2;
+    addScore(gain);
+    updateStreakHud();
     floatTexts.push({
-      x: s.cx, y: surfaceY() - 74, born: timeMs, text: '▲', color: '#9adcff', size: 28,
+      x: s.cx, y: surfaceY() - 14, born: timeMs,
+      text: '+' + gain, color: perfect ? '#ffd23f' : '#fff',
     });
-  }
-  if (s.kind === 'ice') {
-    /* mặt băng trơn — hamster trượt theo đà của miếng */
-    ham.slideVx = s.dir * Math.max(2.2, s.speed * 0.5);
+    if (s.kind === 'gift') addCoins(3, s.cx, surfaceY() - 44);
+    if (s.kind === 'gold') addCoins(8, s.cx, surfaceY() - 44);
+    if (s.kind === 'spring') {
+      springArmed = true;              // cú nhảy KẾ TIẾP cao & lâu hơn
+      floatTexts.push({
+        x: s.cx, y: surfaceY() - 74, born: timeMs, text: '▲', color: '#9adcff', size: 28,
+      });
+    }
+    if (s.kind === 'ice') {
+      /* mặt băng trơn — hamster trượt theo đà của miếng */
+      ham.slideVx = s.dir * Math.max(2.2, s.speed * 0.5);
+    }
   }
 
   landBounceT0 = timeMs;               // miếng trên cùng nhún nhẹ khi đáp
@@ -1660,6 +2177,7 @@ function dropAllSliders() {
 /* Bị phô mai xô ngã → thua. fromY = vị trí chân hamster lúc bị tông
    (đang bay lên mà bị tông thì knock bắt đầu đúng chỗ đó, không giật hình) */
 function failRun(s, dir, fromY) {
+  if (tutorial) { tutorialRetry(s); return; }   // tutorial: không thua, thử lại
   /* chốt vị trí knock TRƯỚC khi tháp cao thêm (tower.push làm surfaceY đổi) */
   const fy = fromY != null ? fromY : surfaceY();
   if (s.kind === 'mold') {
@@ -1690,6 +2208,7 @@ function failRun(s, dir, fromY) {
    kéo SẬP 5 tầng trên cùng của tháp (trừ 5 điểm), hamster rơi tự do xuống
    đáp lên tầng thứ 6 (luôn chừa tầng gốc trên đĩa) */
 function missPenalty(dir) {
+  if (tutorial) { tutorialRetry(null); return; }   // tutorial: không phạt, thử lại
   /* vị trí chân hiện tại (đang bay thì giữa trời) làm điểm bắt đầu rơi */
   let fromY = surfaceY();
   if (ham.state === 'jump') {
@@ -1793,8 +2312,14 @@ function resetWorld() {
   updateStreakHud();
 }
 
-function startRun() {
-  $('start-hint').classList.add('hidden');
+function showMenu(v) {
+  $('menu').classList.toggle('hidden', !v);
+}
+
+/* Bấm Play: lần đầu mở game → vào tutorial trước, các lần sau vào thẳng ván */
+function onPlay() {
+  showMenu(false);
+  if (!tutSeen) { startTutorial(); return; }
   state = 'playing';
   scheduleCycle();
 }
@@ -1802,10 +2327,94 @@ function startRun() {
 function newRun() {
   clearTimeout(overTimer);             // hủy popup đang chờ hiện của ván trước
   elOverlay.classList.add('hidden');
+  tutorial = null;
+  setTutHint(null);
   resetWorld();
   state = 'playing';
   paused = false;
   scheduleCycle();
+}
+
+/* Từ popup kết quả quay về menu chính */
+function toMenu() {
+  clearTimeout(overTimer);
+  elOverlay.classList.add('hidden');
+  tutorial = null;
+  setTutHint(null);
+  resetWorld();
+  state = 'ready';
+  paused = false;
+  showMenu(true);
+}
+
+/* ================================================================
+ * §7b. Tutorial — 3 lần đáp có gợi ý, không thua, không tính điểm
+ * ================================================================ */
+function setTutHint(txt) {
+  const el = $('tut-hint');
+  if (!txt) {
+    el.classList.add('hidden');
+    $('tut-tap').classList.add('hidden');
+    return;
+  }
+  el.textContent = txt;
+  el.classList.remove('hidden');
+}
+
+function tutorialSpawn() {
+  const dir = rand01() < 0.5 ? 1 : -1;
+  spawnOne(dir, 'normal', 250);
+  /* miếng tutorial chạy chậm, nhanh dần nhẹ mỗi bước */
+  sliders[sliders.length - 1].speed = 4.2 + tutorial.landed * 0.6;
+}
+
+function startTutorial() {
+  showMenu(false);
+  tutorial = null;                     // resetWorld không đụng tutorial đang null
+  resetWorld();
+  state = 'playing';
+  tutorial = { landed: 0 };
+  setTutHint(t('tutJump'));
+  tutorialSpawn();
+}
+
+/* pinSlider gọi scheduleCycle → rẽ vào đây khi đang tutorial */
+function tutorialCycle() {
+  sliders = sliders.filter(s => s.dead);
+  if (tutorial.landed >= 3) {
+    /* hoàn thành! */
+    setTutHint(t('tutDone'));
+    tutSeen = true;
+    persistSaved();
+    setTimeout(() => {
+      if (!tutorial) return;
+      tutorial = null;
+      setTutHint(null);
+      resetWorld();
+      state = 'ready';
+      showMenu(true);
+    }, 1300);
+    return;
+  }
+  setTutHint(tutorial.landed === 0 ? t('tutJump') : t('tutPerfect'));
+  tutorialSpawn();
+}
+
+/* trượt / bị tông trong tutorial → không thua, chỉ thử lại */
+function tutorialRetry(s) {
+  if (s) {
+    sliders = sliders.filter(x => x !== s);
+    dropSlider(s);
+  }
+  dropAllSliders();
+  retractBoards();
+  setTutHint(t('tutRetry'));
+  setTimeout(() => {
+    if (tutorial && state === 'playing') {
+      setTutHint(tutorial.landed === 0 ? t('tutJump') : t('tutPerfect'));
+      tutorialSpawn();
+    }
+  }, 700);
 }
 
 /* ================================================================
@@ -1912,11 +2521,25 @@ function update(dt) {
       }
 
       if (p >= 0.5) {
-        /* đang rơi xuống: chạm mặt miếng phô mai nếu nó ở dưới chân */
+        /* đang rơi xuống: chạm mặt miếng phô mai nếu nó ở dưới chân.
+           NỘI SUY DƯỚI KHUNG HÌNH: lùi miếng về đúng vị trí tại THỜI ĐIỂM
+           chân chạm mặt miếng — vị trí đáp (và Perfect) không phụ thuộc
+           refresh rate (30/60/90/120Hz cho cùng kết quả) */
+        const pLand = 1 - Math.asin(Math.min(1, BLOCK_H / jH)) / Math.PI;
+        const overMs = Math.max(0, timeMs - (ham.t0 + pLand * jDur));
         for (const s of sliders) {
           if (s.dead || s.kind === 'mold' || timeMs < s.slideAt) continue;
-          if (h <= BLOCK_H && Math.abs(ham.x - s.cx) < s.w / 2) {
+          if (h > BLOCK_H) continue;
+          const cxAt = s.speed > 0
+            ? s.cx - s.dir * s.speed * (overMs / 16.667)
+            : s.cx;
+          if (Math.abs(ham.x - cxAt) < s.w / 2) {
+            s.cx = cxAt;
             pinSlider(s);              // đáp lên miếng mới → thành tầng
+            break;
+          }
+          if (Math.abs(ham.x - s.cx) < s.w / 2) {
+            pinSlider(s);              // dự phòng: chồng lấn ở khung hiện tại
             break;
           }
         }
@@ -1929,8 +2552,8 @@ function update(dt) {
     /* hamster rơi tự do xuống tầng mới sau khi tháp sập (miss penalty) */
     if (ham.state === 'drop') {
       const d = ham.drop;
+      d.y += (d.vy + 0.275 * dtf) * dtf;   // nửa bước — không lệch theo Hz
       d.vy += 0.55 * dtf;
-      d.y += d.vy * dtf;
       /* trôi nhẹ về vùng đứng được trên tầng mới */
       const tb = tower[tower.length - 1];
       const half = (tb.w || BLOCK_W) / 2 - 20;
@@ -1965,6 +2588,21 @@ function update(dt) {
     /* hamster loạng choạng xong → đứng lại (đứng NGUYÊN chỗ đáp, không tự nhích) */
     if (ham.state === 'stumble' && timeMs - ham.t0 > STUMBLE_MS) ham.state = 'idle';
 
+    /* tutorial: nhắc "NHẢY!" khi miếng vào đúng cửa sổ nhảy đẹp */
+    if (tutorial) {
+      let cue = false;
+      if (ham.state === 'idle' || ham.state === 'stumble') {
+        for (const s of sliders) {
+          if (s.dead || timeMs < s.slideAt) continue;
+          const dist = (ham.x - s.cx) * s.dir;
+          if (dist <= 0) continue;
+          const eta = dist * 16.667 / s.speed;
+          if (eta > 320 && eta < 640) { cue = true; break; }
+        }
+      }
+      $('tut-tap').classList.toggle('hidden', !cue);
+    }
+
     /* xu rơi + nhặt xu */
     const hamCy = surfaceY() - hamFeetH() - 30;   // tâm thân hamster (world)
     for (const c of coins) {
@@ -1978,11 +2616,11 @@ function update(dt) {
     coins = coins.filter(c => !c.hit && c.y < surfaceY() + 6);
   }
 
-  /* miếng phô mai trượt hụt đang rơi */
+  /* miếng phô mai trượt hụt đang rơi (tích phân nửa bước) */
   for (const fb of fallBlocks) {
+    fb.yTop += (fb.vy + 0.275 * dtf) * dtf;
     fb.vy += 0.55 * dtf;
     fb.cx += fb.vx * dtf;
-    fb.yTop += fb.vy * dtf;
     fb.rot += fb.vr * dtf;
   }
   fallBlocks = fallBlocks.filter(fb => sy(fb.yTop) < LH / 2 + cullPad() + 220);
@@ -1993,9 +2631,10 @@ function update(dt) {
   /* hamster bị xô ngã → bay ra rồi bung dù */
   if (ham && ham.state === 'knock') {
     const k = ham.knock;
+    /* tích phân nửa bước — quỹ đạo giống nhau ở mọi refresh rate */
+    k.y += (k.vy + 0.25 * dtf) * dtf;
     k.vy += 0.5 * dtf;
     k.x += k.vx * dtf;
-    k.y += k.vy * dtf;
     k.rot += k.vr * dtf;
     if (k.vy > 2.2) {                  // qua đỉnh và bắt đầu rơi nhanh → bung dù
       ham.state = 'chute';
@@ -2045,7 +2684,7 @@ function loop(ts) {
  * §10. Input
  * ================================================================ */
 function onTap() {
-  if (state === 'ready') { startRun(); return; }
+  if (state === 'ready') return;       // menu: chỉ nút Play/Tutorial khởi động
   if (state === 'playing') {
     if (paused) { paused = false; return; }   // tap đầu chỉ resume, không nhảy
     if (ham.state === 'idle' || ham.state === 'stumble') {
@@ -2080,16 +2719,153 @@ window.onRetryLevel = function () {
 /* ================================================================
  * §12. Boot (game-common §3 — đợi native inject, fallback 200ms)
  * ================================================================ */
+/* Vẽ icon panel bằng CHÍNH renderer của game: tráo ctx/camera tạm thời,
+   vẽ lên canvas nhỏ (2x cho nét) rồi trả lại */
+function iconCanvas(pxW, pxH, lw, drawFn) {
+  const c = document.createElement('canvas');
+  c.width = pxW * 2;
+  c.height = pxH * 2;
+  c.style.width = pxW + 'px';
+  c.style.height = pxH + 'px';
+  const pCtx = ctx, pX = camX, pOff = camOff, pZ = viewZoom, pLH = LH;
+  ctx = c.getContext('2d');
+  camX = 0; camOff = 0; viewZoom = 1; LH = 100000;   // tắt cull
+  ctx.setTransform(pxW * 2 / lw, 0, 0, pxW * 2 / lw, 0, 0);
+  drawFn(lw, lw * pxH / pxW);
+  ctx = pCtx; camX = pX; camOff = pOff; viewZoom = pZ; LH = pLH;
+  return c;
+}
+
+function blockIcon(kind, w) {
+  const lw = BLOCK_W + 24;
+  return iconCanvas(56, 63, lw, function (lw2) {
+    drawBlock(lw2 / 2, 46, kind, 3, w);
+  });
+}
+
+function hamIcon(opts, extraFn) {
+  return iconCanvas(46, 50, 120, function (lw2, lh2) {
+    drawHam(lw2 / 2, 112, opts);
+    if (extraFn) extraFn(lw2, lh2);
+  });
+}
+
+function buildInfoPanel() {
+  const body = $('info-body');
+  body.innerHTML = '';
+
+  /* luật chơi — 4 hàng icon + chú thích ngắn */
+  const rules = [
+    [hamIcon({ armsUp: true }, function () {
+      /* mũi tên nhảy lên */
+      ctx.strokeStyle = '#e8842c';
+      ctx.fillStyle = '#e8842c';
+      ctx.lineWidth = 7;
+      ctx.beginPath(); ctx.moveTo(22, 108); ctx.lineTo(22, 50); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(22, 30); ctx.lineTo(38, 56); ctx.lineTo(6, 56);
+      ctx.closePath(); ctx.fill();
+    }), t('infoJump')],
+    [iconCanvas(56, 63, BLOCK_W + 24, function (lw2) {
+      drawBlock(lw2 / 2, 46, 'normal', 3, BLOCK_W);
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.ellipse(lw2 / 2, 48, 62, 17, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }), t('infoPerfect')],
+    [iconCanvas(56, 26, 260, function (lw2, lh2) {
+      /* chuỗi Perfect — vẽ đúng kiểu chữ nổi trong game */
+      const txt = t('perfect') + ' ×3';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      let fs = 44;
+      ctx.font = '800 ' + fs + 'px ' + CANVAS_FONT_STACK;
+      while (ctx.measureText(txt).width > lw2 - 12 && fs > 16) {
+        fs -= 2;
+        ctx.font = '800 ' + fs + 'px ' + CANVAS_FONT_STACK;
+      }
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = 'rgba(120,80,30,.8)';
+      ctx.lineWidth = 6;
+      ctx.strokeText(txt, lw2 / 2, lh2 / 2);
+      ctx.fillStyle = '#ffd23f';
+      ctx.fillText(txt, lw2 / 2, lh2 / 2);
+    }), t('infoStreak')],
+    [iconCanvas(56, 56, 180, function (lw2, lh2) {
+      /* các miếng đổ nhào */
+      for (const [ox, oy, rot] of [[50, 40, -0.4], [118, 66, 0.35], [86, 118, 0.15]]) {
+        ctx.save();
+        ctx.translate(ox, oy);
+        ctx.rotate(rot);
+        ctx.translate(-ox, -oy);
+        drawBlock(ox, oy, 'normal', 3, BLOCK_W * 0.7);
+        ctx.restore();
+      }
+    }), t('infoMiss')],
+    [hamIcon({ bang: true, rot: 0.35 }), t('infoLose')],
+  ];
+  for (const r of rules) {
+    const row = document.createElement('div');
+    row.className = 'info-rule';
+    const tx = document.createElement('span');
+    tx.textContent = r[1];
+    row.appendChild(r[0]);
+    row.appendChild(tx);
+    body.appendChild(row);
+  }
+
+  /* các loại phô mai — icon là hình THẬT trong game */
+  const grid = document.createElement('div');
+  grid.className = 'info-grid';
+  const pieces = [
+    ['gold', BLOCK_W, t('infoGold')],
+    ['mini', MINI_W, t('infoMini')],
+    ['ice', BLOCK_W, t('infoIce')],
+    ['spring', BLOCK_W, t('infoSpring')],
+    ['mold', BLOCK_W, t('infoMold')],
+    ['gift', BLOCK_W, t('infoGift')],
+  ];
+  for (const p of pieces) {
+    const item = document.createElement('div');
+    item.className = 'info-item';
+    item.appendChild(blockIcon(p[0], p[1]));
+    const cap = document.createElement('div');
+    cap.className = 'cap';
+    cap.textContent = p[2];
+    item.appendChild(cap);
+    grid.appendChild(item);
+  }
+  /* double trouble: 2 miếng từ 2 phía */
+  const dItem = document.createElement('div');
+  dItem.className = 'info-item';
+  dItem.appendChild(iconCanvas(56, 63, 300, function (lw2) {
+    drawBlock(78, 70, 'normal', 3, BLOCK_W);
+    drawBlock(lw2 - 78, 130, 'normal', 5, BLOCK_W);
+  }));
+  const dCap = document.createElement('div');
+  dCap.className = 'cap';
+  dCap.textContent = t('infoDouble');
+  dItem.appendChild(dCap);
+  grid.appendChild(dItem);
+  body.appendChild(grid);
+}
+
 function localizeDom() {
   document.title = 'Hamster Jump';
   $('start-title').textContent = t('title');
-  $('start-tap').textContent = t('tapToStart');
+  $('play-text').textContent = t('play');
+  $('tut-text').textContent = t('tutorial');
+  $('info-title').textContent = t('howToPlay');
+  $('info-btn').setAttribute('aria-label', t('howToPlay'));
+  $('tut-tap').textContent = t('tutTap');
   $('score-label').textContent = t('score');
   $('lbl-best').textContent = t('best');
   $('ov-lbl-score').textContent = t('score');
   $('ov-lbl-best').textContent = t('best');
   $('ov-btn-text').textContent = t('playAgain');
+  $('ov-menu-text').textContent = t('menu');
   $('back-btn').setAttribute('aria-label', t('back'));
+  buildInfoPanel();
 }
 
 function boot() {
@@ -2105,6 +2881,7 @@ function boot() {
 
   canvas = $('game-canvas');
   ctx = canvas.getContext('2d');
+  wallPattern = makeWallPattern();
   elScore = $('score-num');
   elBest = $('hud-best');
   elCoin = $('hud-coin');
@@ -2119,12 +2896,13 @@ function boot() {
   /* tiện chơi thử: ?reset=1 xoá kỷ lục + xu đã lưu (native không bao giờ gửi) */
   if (new URLSearchParams(window.location.search).get('reset') === '1') {
     try { localStorage.removeItem(LS_KEY); } catch (e) { /* ignore */ }
-    saveData({ best: 0, coins: 0 });
+    saveData({ best: 0, coins: 0, tut: 0 });
   }
 
   const saved = loadSaved();
   best = saved.best;
   coinsTotal = saved.coins;
+  tutSeen = !!saved.tut;
   bestStart = best;
 
   localizeDom();
@@ -2140,6 +2918,7 @@ function boot() {
     if (state === 'over') return;                     // để nút Play Again nhận phím
     if (e.target && e.target.closest && e.target.closest('.btn3d')) return;
     e.preventDefault();
+    if (state === 'ready') { onPlay(); return; }      // Space ở menu = Play
     onTap();
   });
   $('back-btn').addEventListener('click', function (e) {
@@ -2155,6 +2934,28 @@ function boot() {
   $('ov-btn').addEventListener('click', function () {
     sendMessage('retry_level');        // game tự xử lý chơi lại (game-common §1.3)
     newRun();
+  });
+  $('ov-menu-btn').addEventListener('click', function () {
+    toMenu();                          // về menu — không bắn event (không chơi lại)
+  });
+  /* menu: Play / Tutorial / panel hướng dẫn */
+  $('play-btn').addEventListener('click', function (e) {
+    e.stopPropagation();
+    onPlay();
+  });
+  $('tut-btn').addEventListener('click', function (e) {
+    e.stopPropagation();
+    startTutorial();
+  });
+  $('info-btn').addEventListener('click', function (e) {
+    e.stopPropagation();
+    $('info-overlay').classList.remove('hidden');
+  });
+  $('info-close').addEventListener('click', function () {
+    $('info-overlay').classList.add('hidden');
+  });
+  $('info-overlay').addEventListener('click', function (e) {
+    if (e.target === this) this.classList.add('hidden');   // chạm nền tối để đóng
   });
 
   /* app chuyển nền khi chạy trong browser thường → cũng pause */
