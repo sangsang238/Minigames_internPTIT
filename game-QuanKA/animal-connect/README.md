@@ -20,6 +20,18 @@
 - **Điểm**: +10/cặp, combo trong 4s +5×(n−1), thắng +2/giây còn lại.
 - **Trợ giúp mỗi màn**: 3 Hint, 2 Shuffle; hết nước đi tự xáo miễn phí.
 - **14 mặt thú** vẽ inline SVG; theme đồng cỏ pastel, lá + dấu chân trôi trên canvas.
+- **Menu** lúc boot: Play, Tutorial (dưới Play), nút **hình thoi-trong-tròn** góc
+  phải trên mở panel cách chơi **dạng hình** (3 sơ đồ SVG + hàng chip icon, chữ tối thiểu).
+- **Nút Menu (home)** trong HUD cạnh Restart — mở **hộp xác nhận ✕/✓** rồi về menu
+  (giờ đứng khi hộp mở, ván dở được giữ, bấm Play chơi tiếp).
+- **HUD responsive**: font/chip theo `clamp()`, media query gọn hoá khi màn thấp
+  (≤640px/≤480px), board tự cuộn khi thiếu chỗ — đã probe 5 cỡ màn kể cả landscape.
+- **Độc lập refresh rate**: mọi chuyển động theo `dt` (nền lá chuẩn hoá 60fps,
+  đồng hồ trừ theo giây thật, clamp dt 0.25s chống stall); DOM đồng hồ chỉ ghi
+  ~5 lần/s — test giả lập 30fps vs 144fps cho kết quả giống hệt nhau.
+- **Tutorial tương tác 3 bước** (nối cặp kề → đường rẽ 2 lần → đường vòng ra
+  ngoài bàn) — **bắt buộc lần đầu mở game** (cờ `tutorialSeen` persist qua
+  `save_data` + localStorage), có nút Skip, mở lại được từ menu.
 
 ### Level sinh theo công thức — `levelConfig(idx)`
 
@@ -50,6 +62,9 @@ Deterministic theo số màn (hash, retry ra đúng màn đó); xếp tile rando
 
 - Boot en/ar/ja, `data={"levelIdx":3}` vào đúng màn 4, `?currentLevel=137` chạy tốt.
 - Bot phá màn 1 và màn 10: sự kiện + tiến độ đúng; hết giờ ra đúng một `lose`; 0 lỗi JS.
+- Flow first-open: menu → Play → tutorial 3 bước (bot tự chơi) → `save_data`
+  kèm `tutorialSeen:true` → vào màn 1 thắng bình thường; người chơi cũ
+  (`tutorialSeen` đã lưu) bấm Play vào thẳng ván.
 - Review đa-agent (33 agents): 20 lỗi xác nhận đã sửa hết (race thắng/thua sát giờ,
   continuation async sống sót qua loadLevel, desync grid/DOM khi restore, v.v.).
 

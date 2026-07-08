@@ -1,0 +1,24 @@
+{
+  "title": "Runic Blaze",
+  "packageName": "com.falcon.runicblaze",
+  "engine": "HTML5",
+  "version": "2.0.0",
+  "category": "PUZZLE",
+  "tags": ["match3", "puzzle", "fantasy", "rune", "casual"],
+  "description": "Swap adjacent runes to match three or more. Forge Blaze, Nova and Prism runes from bigger matches, chain them into giant combos, and reach the score goal before your moves run out — then watch the Blaze Rush finale burn your leftover moves for bonus points. Endless level ladder: the arcane trial never ends, climb as far as your skill carries you.",
+  "controls": "Tap a rune to select it, then tap an adjacent rune to swap — or swipe directly. Match 4 for a Blaze Rune (clears a line), L/T for a Nova (3×3 double blast), 5 for a Prism (burns a whole color). Swap two specials together for giant combos.",
+  "aiContext": "",
+  "aiBuildLink": "",
+  "demoUrl": "",
+  "storeLinks": {
+    "googlePlay": { "url": "", "downloads": 0 },
+    "iosAppStore": { "url": "", "downloads": 0 },
+    "steam": { "url": "", "downloads": 0 }
+  },
+  "entry": "index.html",
+  "coverImages": {
+    "landscape16x9": "cover-landscape-1920x1080.png",
+    "portrait2x3": "cover-portrait-800x1200.png",
+    "square1x1": "cover-square-800x800.png"
+  }
+}
