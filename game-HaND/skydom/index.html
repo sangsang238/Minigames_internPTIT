@@ -168,6 +168,70 @@
     width: 16px; height: 16px; border-radius: 50%; transform: translate(-50%, -50%);
     box-shadow: 0 0 8px currentColor;
   }
+  /* Ngôi sao bay từ ô nổ lên thẻ SCORE khi ăn điểm — LÕI TRẮNG + quầng vàng
+     (trắng để KHÔNG lẫn với viên vàng/cam trên bàn) + bóng đổ */
+  .fx-star {
+    position: fixed; z-index: 90; pointer-events: none;
+    font-size: 22px; line-height: 1; color: #fff;
+    text-shadow: 0 0 4px #fff, 0 0 9px var(--gold), 0 0 16px rgba(255, 152, 56, .7), 0 1px 1px rgba(80, 40, 0, .45);
+    filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .4)) drop-shadow(0 0 7px rgba(255, 200, 60, .55));
+    transform: translate(-50%, -50%);
+    will-change: transform, opacity;
+  }
+  /* Lóe sáng tại bảng điểm khi ngôi sao chạm vào */
+  .fx-score-flash {
+    position: fixed; z-index: 91; pointer-events: none;
+    width: 60px; height: 60px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, .95), rgba(255, 210, 63, .5) 40%, rgba(255, 210, 63, 0) 72%);
+    transform: translate(-50%, -50%);
+    will-change: transform, opacity;
+  }
+  /* ── Onboarding: chuỗi popup mẫu từng tutorial (hiện lần đầu, trước khi chơi) ── */
+  .tut-ob { position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center;
+    background: rgba(3, 9, 24, .74); opacity: 1; transition: opacity .25s; }
+  .tut-ob.hidden { opacity: 0; pointer-events: none; }
+  .tut-ob-card { width: min(88%, 360px); padding: 20px 22px 18px; border-radius: 22px; text-align: center;
+    background: linear-gradient(180deg, #1c2f63, #0c1838); border: 2px solid rgba(120, 160, 255, .22);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, .5); transform: scale(1); transition: transform .25s; }
+  .tut-ob.hidden .tut-ob-card { transform: scale(.9); }
+  .tut-ob-demo { position: relative; height: 190px; margin-bottom: 12px; }
+  .tut-ob-stage { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+  .ob-cell { position: absolute; width: 44px; height: 44px; }
+  .ob-cell svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .3)); }
+  .ob-mark { position: absolute; width: 44px; height: 44px; border-radius: 12px; box-sizing: border-box;
+    border: 3px solid var(--gold); background: rgba(255, 210, 63, .26);
+    box-shadow: 0 0 12px rgba(255, 210, 63, .8); opacity: 0; }
+  .ob-hand { position: absolute; width: 24px; height: 24px; border-radius: 50%; z-index: 6;
+    border: 3px solid #fff; background: rgba(255, 255, 255, .35); box-shadow: 0 0 12px rgba(255, 255, 255, .85); }
+  .ob-beam { position: absolute; height: 12px; border-radius: 7px; z-index: 5;
+    background: linear-gradient(90deg, transparent, #fff, transparent); box-shadow: 0 0 12px #fff; opacity: 0; }
+  .ob-ring { position: absolute; border-radius: 50%; z-index: 5; border: 4px solid #fff; box-shadow: 0 0 16px #fff; opacity: 0; }
+  .ob-flash { position: absolute; z-index: 7; width: 42px; height: 42px; border-radius: 50%; pointer-events: none;
+    transform: translate(-50%, -50%); background: radial-gradient(circle, rgba(255,255,255,.95), rgba(255,255,255,0) 70%); }
+  .ob-shard { position: absolute; z-index: 8; width: 9px; height: 9px; border-radius: 50%; pointer-events: none;
+    transform: translate(-50%, -50%); box-shadow: 0 0 6px currentColor; }
+  .ob-bomb { display: flex; align-items: center; justify-content: center; border-radius: 12px;
+    background: #2b3350; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .16), 0 3px 4px rgba(0, 0, 0, .3);
+    color: #fff; font-family: var(--ui-font); font-weight: 900; font-size: 22px; }
+  .ob-bomb.low { background: var(--danger); }
+  .ob-float { position: absolute; z-index: 9; pointer-events: none; transform: translate(-50%, 0);
+    color: var(--gold); font-family: var(--ui-font); font-weight: 900; font-size: 18px;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, .5); white-space: nowrap; }
+  .tut-ob-title { color: #fff; font-family: var(--ui-font); font-weight: 900; font-size: 23px; margin-bottom: 6px; }
+  .tut-ob-desc { color: #cdd9ff; font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.5; min-height: 44px; }
+  .tut-ob-dots { display: flex; gap: 7px; justify-content: center; margin: 12px 0 14px; }
+  .tut-ob-dots i { width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, .28); transition: background .2s; }
+  .tut-ob-dots i.on { background: var(--gold); }
+  .tut-ob-btns { display: flex; gap: 12px; justify-content: space-between; align-items: center; padding: 0 6px; }
+  .tut-ob-nav { font-family: var(--ui-font); font-weight: 900; font-size: 24px; line-height: 1; color: #cdd9ff;
+    background: rgba(255, 255, 255, .08); border: 1px solid rgba(120, 160, 255, .32); border-radius: 14px;
+    width: 48px; height: 48px; cursor: pointer; padding: 0; flex: 0 0 auto; }
+  .tut-ob-nav:active { transform: scale(.95); }
+  .tut-ob-nav.disabled { opacity: .28; pointer-events: none; }
+  .tut-ob-nav.go { color: #3a2400; background: #ffb02e; border-color: #d68e18; }   /* nút tiến/PLAY nổi bật */
+  .tut-ob-nav.play { width: auto; padding: 0 26px; font-size: 17px; font-weight: 800; }
+  .tut-ob-skip { font-family: system-ui, sans-serif; font-weight: 700; font-size: 14px; color: #9fb3e6;
+    background: transparent; border: 0; height: 48px; padding: 0 12px; cursor: pointer; flex: 0 0 auto; }
   .fx-combo {
     position: absolute; left: 50%; top: 40%; z-index: 7; pointer-events: none; white-space: nowrap;
     font-family: var(--ui-font); font-weight: 900; font-size: 32px; color: var(--gold);
@@ -466,8 +530,22 @@ const LATIN_LANGS = new Set([
 
 const I18N = {
   en: { moves: 'Moves', score: 'Score', best: 'Best', gameOver: 'Game Over', newBest: 'New Best!', playAgain: 'Play Again', shuffle: 'Shuffle!', combo: 'COMBO',
+        tipStripeT: 'Line Blast', tipBombT: 'Bomb', tipRainbowT: 'Rainbow',
+        obSwapT: 'Swap & Match', obSwapD: 'Drag a piece next to another to line up 3 or more of the same color — they pop for points.',
+        obStripeD: 'Match 4 in a line to create it. It clears a whole row or column.',
+        obBombD: 'Match in an L or T shape to create it. It blasts the 3×3 area around it.',
+        obRainbowD: 'Match 5 in a line to create it. It clears every piece of one color.',
+        obCountT: 'Countdown Bomb', obCountD: 'A bomb drops in now and then. Clear a piece next to it to defuse it — if it reaches 0 it explodes and the run ends.',
+        obSkip: 'Skip', obPlay: 'Play',
         praise: ['Nice!', 'Great!', 'Awesome!', 'Amazing!', 'Unstoppable!', 'Legendary!'] },
   vi: { moves: 'Lượt', score: 'Điểm', best: 'Cao nhất', gameOver: 'Thua rồi', newBest: 'Kỷ lục mới!', playAgain: 'Chơi lại', shuffle: 'Trộn lại!',
+        tipStripeT: 'Nổ hàng', tipBombT: 'Bom gói', tipRainbowT: 'Cầu vồng',
+        obSwapT: 'Đổi chỗ & Ghép', obSwapD: 'Kéo một viên sang ô kề để xếp 3 viên trở lên cùng màu — chúng sẽ nổ ra điểm.',
+        obStripeD: 'Ghép 4 viên thẳng hàng để tạo. Nó nổ cả một hàng hoặc cột.',
+        obBombD: 'Ghép hình chữ L hoặc T để tạo. Nó nổ tung vùng 3×3 quanh nó.',
+        obRainbowD: 'Ghép 5 viên thẳng hàng để tạo. Nó xoá mọi viên cùng một màu.',
+        obCountT: 'Bom đếm ngược', obCountD: 'Thỉnh thoảng rơi xuống một quả bom. Cho nổ trúng ô kề để gỡ — nếu đếm về 0 nó nổ và bạn thua.',
+        obSkip: 'Bỏ qua', obPlay: 'Chơi',
         praise: ['Tốt lắm!', 'Tuyệt vời!', 'Xuất sắc!', 'Đỉnh cao!', 'Không thể cản phá!', 'Huyền thoại!'] },
   es: { level: 'Nivel', moves: 'Mov.', win: '¡Nivel completo!', lose: 'Sin movimientos', victory: '¡Ganaste!', next: 'Siguiente', retry: 'Reintentar' },
   fr: { level: 'Niveau', moves: 'Coups', win: 'Niveau terminé !', lose: 'Plus de coups', victory: 'Vous avez gagné !', next: 'Suivant', retry: 'Réessayer' },
@@ -582,6 +660,10 @@ let sel = null;          // {r,c} đang chọn
 let idc = 0;
 let moves = 0;           // số lượt đã đi (mốc đếm ngược & spawn bom)
 let comboQueue = null;   // [[tile,...], ...] — combo 🌈+special: nổ theo từng đợt, giữa đợt rơi đầy lại
+
+// ── Tutorial (chỉ hiện LẦN ĐẦU) ─────────────────────────────────
+let tutorialSeen = false;         // đã xem hướng dẫn chưa (persist)
+let onboarding = false;           // đang hiện chuỗi popup onboarding (trước khi chơi)
 
 // Bom đếm ngược: cứ SPAWN_EVERY lượt sinh 1 bom, đếm BOMB_START → 0 thì NỔ & thua.
 // Gỡ bom = cho nổ trúng 1 ô kề (trên/dưới/trái/phải) hoặc chính ô bom.
@@ -859,6 +941,12 @@ const Sound = (function () {
       [0, 4, 7, 12].forEach((iv, i) =>
         tone({ freq: mtof(67 + tier + iv), dur: 0.26, type: 'sine', gain: 0.22, delay: i * 0.055, lp: 2600, attack: 0.02 }));
     },
+    // Tiếng "ting" lấp lánh khi ngôi sao rơi vào bảng điểm (chuông cao, sáng)
+    sparkle() {
+      ensure();
+      [0, 0.045, 0.095].forEach((dl, i) =>
+        tone({ freq: mtof(88 + i * 5), dur: 0.19, type: 'sine', gain: 0.13, delay: dl, attack: 0.004, lp: 7000 }));
+    },
   };
 })();
 
@@ -975,6 +1063,24 @@ function computeRunLens() {
   return { H, V };
 }
 
+// Chọn k ô trải đều dọc 1 dãy (line đã sắp theo trục); ưu tiên giữ ô vừa swap.
+function spreadPicks(line, k, sw, horiz) {
+  const n = line.length;
+  k = Math.max(1, Math.min(k, n));
+  const picks = [];
+  for (let i = 0; i < k; i++) picks.push(line[Math.min(n - 1, Math.floor((i + 0.5) * n / k))]);
+  // Đảm bảo cầu vồng xuất hiện tại ô người chơi vừa đổi (thay pick gần nó nhất)
+  if (sw && line.some(p => p.r === sw.r && p.c === sw.c) && !picks.some(p => p.r === sw.r && p.c === sw.c)) {
+    let bi = 0, bd = 1e9;
+    picks.forEach((p, i) => { const d = horiz ? Math.abs(p.c - sw.c) : Math.abs(p.r - sw.r); if (d < bd) { bd = d; bi = i; } });
+    picks[bi] = line.find(p => p.r === sw.r && p.c === sw.c);
+  }
+  // Bỏ trùng (khi k sát với số ô)
+  const out = [], seen = new Set();
+  for (const p of picks) { const kk = key(p.r, p.c); if (!seen.has(kk)) { seen.add(kk); out.push(p); } }
+  return out;
+}
+
 // Trả về { clearCells:Set, specialPlans:[{r,c,type,color}] }
 function findMatches(swapCells) {
   const { H, V } = computeRunLens();
@@ -1007,24 +1113,48 @@ function findMatches(swapCells) {
 
     // Loại special cho component
     let type = null;
-    if (maxH >= 5 || maxV >= 5) type = 'rainbow';
+    if (maxH >= 5 || maxV >= 5) type = 'rainbow';   // ≥5 viên thẳng hàng → cầu vồng (chia theo mỗi 5)
     else if (inter) type = 'bomb';
     else if (maxH >= 4) type = 'row';
     else if (maxV >= 4) type = 'col';
 
-    let spPos = null;
     if (type) {
       const sw = (swapCells || []).find(s => comp.some(p => p.r === s.r && p.c === s.c));
-      if (sw) spPos = sw;
-      else if (type === 'bomb' && inter) spPos = inter;
-      else spPos = comp[(comp.length / 2) | 0];
-      // cells: các viên trong cụm (trừ ô sinh special) → dùng cho hiệu ứng TỤ LẠI
-      const cells = comp.filter(p => !(p.r === spPos.r && p.c === spPos.c)).map(p => ({ r: p.r, c: p.c }));
-      specialPlans.push({ r: spPos.r, c: spPos.c, type, color, cells });
-    }
-    for (const p of comp) {
-      if (spPos && p.r === spPos.r && p.c === spPos.c) continue;
-      clearCells.add(key(p.r, p.c));
+
+      // (Các) ô sinh special. Cầu vồng: CỨ MỖI 5 viên thẳng hàng → 1 cầu vồng
+      // (5–9 → 1, 10–14 → 2, …); line dài chia đều nhiều cầu vồng.
+      let spCells;
+      if (type === 'rainbow') {
+        const horiz = maxH >= maxV;
+        const runLen = horiz ? maxH : maxV;
+        const k = Math.max(1, Math.floor(runLen / 5));
+        // Dãy ô của hàng/cột dài nhất trong cụm, sắp theo trục chính
+        const groups = {};
+        for (const p of comp) { const gk = horiz ? p.r : p.c; (groups[gk] = groups[gk] || []).push(p); }
+        const line = Object.values(groups).sort((a, b) => b.length - a.length)[0]
+          .slice().sort((a, b) => horiz ? a.c - b.c : a.r - b.r);
+        spCells = spreadPicks(line, k, sw, horiz);
+      } else {
+        let sp;
+        if (sw) sp = sw;
+        else if (type === 'bomb' && inter) sp = inter;
+        else sp = comp[(comp.length / 2) | 0];
+        spCells = [sp];
+      }
+
+      // Các viên còn lại tụ về special GẦN NHẤT (hiệu ứng TỤ LẠI) rồi biến mất
+      const spSet = new Set(spCells.map(s => key(s.r, s.c)));
+      const cellsFor = new Map(spCells.map(s => [key(s.r, s.c), []]));
+      for (const p of comp) {
+        if (spSet.has(key(p.r, p.c))) continue;
+        let best = spCells[0], bd = 1e9;
+        for (const s of spCells) { const d = Math.abs(s.r - p.r) + Math.abs(s.c - p.c); if (d < bd) { bd = d; best = s; } }
+        cellsFor.get(key(best.r, best.c)).push({ r: p.r, c: p.c });
+        clearCells.add(key(p.r, p.c));
+      }
+      for (const s of spCells) specialPlans.push({ r: s.r, c: s.c, type, color, cells: cellsFor.get(key(s.r, s.c)) });
+    } else {
+      for (const p of comp) clearCells.add(key(p.r, p.c));
     }
   }
   return { clearCells, specialPlans };
@@ -1241,6 +1371,7 @@ async function rainbowSpecialCombo(raPos, col, kind) {
     return false;
   };
   let cleared = 0, sx = 0, sy = 0;
+  const parts = [];
   const bcol = COLORS[col] || '#fff';
   for (let i = 0; i < tiles.length; i++) {
     const { t, r, c } = tiles[i];
@@ -1259,7 +1390,9 @@ async function rainbowSpecialCombo(raPos, col, kind) {
         : Array.from({ length: ROWS }, (_, rr) => [rr, c]);
     }
     for (const [br, bc] of list) {
-      if (mark(br, bc)) { cleared++; const [ccx, ccy] = fxCenter(br, bc); sx += ccx; sy += ccy; }
+      const bt = board[br][bc];
+      const bclr = bt ? (COLORS[bt.color] || bcol) : bcol;
+      if (mark(br, bc)) { cleared++; const [ccx, ccy] = fxCenter(br, bc); sx += ccx; sy += ccy; parts.push([ccx, ccy, bclr, 0]); }
     }
     t.special = null;   // đã nổ trong combo → bỏ special để KHÔNG nổ lại (gói không nổ đôi)
     await sleep(95);
@@ -1267,7 +1400,8 @@ async function rainbowSpecialCombo(raPos, col, kind) {
   if (cleared) {
     addScore(cleared, 1);
     spawnPop(sx / cleared, sy / cleared, '+' + cleared * 10);
-    flyToScore(sx / cleared, sy / cleared);
+    flyToScore(sx / cleared, sy / cleared, cleared, 2);
+    spawnParticles(parts);                                    // nổ thành từng mảnh vỡ bắn ra rồi rơi
     Sound.blast(2, cleared);
   }
   await sleep(340);
@@ -1427,8 +1561,8 @@ async function cascade(pending, swapCells) {
       const pts = cleared * 10 * chain;
       addScore(cleared, chain);
       spawnPop(sx / cleared, sy / cleared, '+' + pts);
-      flyToScore(sx / cleared, sy / cleared);   // đốm điểm bay về thẻ SCORE
-      // (đã bỏ) spawnParticles(parts) — không rải mảnh vỡ rơi chậm khi ăn khối
+      flyToScore(sx / cleared, sy / cleared, cleared, chain);   // ngôi sao thu thập điểm về thẻ SCORE
+      spawnParticles(parts);                                    // nổ thành từng mảnh vỡ bắn ra rồi rơi
       if (rbHits.length) {
         // Tia xẹt nối cầu vồng → các viên bị xoá (theo đúng thứ tự nổ trong zapDelay)
         const zapTargets = [];
@@ -1718,7 +1852,7 @@ function defuseBombs(clr) {
     defuseBurst(cx, cy);               // nổ khói/mảnh MÀU ĐEN khi gỡ bom
     spawnPop(cx, cy, '+50');
     addScore(5, 1);                    // thưởng gỡ bom = 50 điểm
-    flyToScore(cx, cy);                // đốm điểm bay về thẻ SCORE
+    flyToScore(cx, cy, 5, 1);          // ngôi sao thu thập điểm về thẻ SCORE
     t.el.remove(); board[r][c] = null; // gỡ xong biến mất (gravity sẽ lấp)
   }
 }
@@ -1850,10 +1984,83 @@ function bumpScoreCard() {
   box.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.12)', offset: .4 }, { transform: 'scale(1)' }],
     { duration: 240, easing: 'ease-out' });
 }
-// Ghi nhận điểm: số CHẠY DẦN lên + thẻ SCORE nảy (đã bỏ hiệu ứng đốm bay về score)
-function flyToScore(bx, by) {
-  bumpScoreCard();
-  tweenScore();
+// Ghi nhận điểm — Hiệu ứng THU THẬP: nhiều NGÔI SAO nhỏ tản ra từ cụm nổ rồi
+// hội tụ, bay theo đường cong (chậm rồi tăng tốc về đích) lên thẻ SCORE, kéo
+// theo vệt sáng. Chạm bảng điểm → lóe sáng + thẻ nảy + số đếm tăng + tiếng "ting".
+// count = số khối vừa ăn, chain = cấp combo → match lớn/combo: nhiều sao, nhanh & sáng hơn.
+function flyToScore(bx, by, count, chain) {
+  count = count || 1; chain = chain || 1;
+  const scoreVal = document.getElementById('score-val');
+  const target = scoreVal && scoreVal.closest('.sc-box');
+  if (!target || !boardEl) { bumpScoreCard(); tweenScore(); return; }
+
+  const bRect = boardEl.getBoundingClientRect();
+  const tRect = target.getBoundingClientRect();
+  const ox = bRect.left + bx, oy = bRect.top + by;             // tâm cụm nổ (viewport)
+  const tx = tRect.left + tRect.width / 2;                     // đích: tâm thẻ SCORE
+  const ty = tRect.top + tRect.height / 2;
+
+  // MỖI khối ăn được = 1 ngôi sao bay lên (merge 3 cục → 3 sao); giới hạn 24 để khỏi quá tải
+  const n = Math.max(1, Math.min(24, count));
+  const rush = 1 - Math.min(0.36, (chain - 1) * 0.08);         // combo cao → bay nhanh hơn
+  let landed = false;
+
+  const onLanded = () => {                                     // sao ĐẦU TIÊN chạm bảng điểm
+    if (landed) return; landed = true;
+    scoreFlash(tx, ty);
+    bumpScoreCard();
+    tweenScore();
+    Sound.sparkle();
+  };
+
+  const HOLD = 0.42;   // hiện lên xong KHỰNG tới mốc này (tỉ lệ thời gian) rồi mới bay
+  const BURST = 430;   // chờ khối NỔ XONG (.clearing ~.42s) rồi ngôi sao mới hiện tại chỗ nổ
+
+  for (let i = 0; i < n; i++) {
+    // Xuất phát tản nhẹ quanh tâm rồi cùng hội tụ về thẻ
+    const a = Math.random() * Math.PI * 2, rad = 6 + Math.random() * 26;
+    const sx = ox + Math.cos(a) * rad, sy = oy + Math.sin(a) * rad;
+    const dx = tx - sx, dy = ty - sy;
+
+    const star = document.createElement('div');
+    star.className = 'fx-star';
+    star.textContent = '★';
+    star.style.left = sx + 'px'; star.style.top = sy + 'px';
+    star.style.fontSize = (15 + Math.random() * 11) + 'px';
+    document.body.appendChild(star);
+
+    const dur = (1100 + Math.random() * 280 + i * 40) * rush;
+    const delay = BURST + i * 44 + Math.random() * 50;   // sau khi nổ xong mới xuất hiện
+    const spin = (Math.random() * 360 - 60) | 0;
+
+    const r1 = (spin * .06) | 0, r2 = (spin * .15) | 0;
+    const anim = star.animate([
+      // Hiện lên NẢY MÚP (squash & stretch jelly) rồi ĐỨNG YÊN tại chỗ (khựng)...
+      { offset: 0,     transform: 'translate(-50%,-50%) scale(.2) rotate(0deg)', opacity: 0, easing: 'cubic-bezier(.2,1.5,.5,1)' },
+      { offset: .10,   transform: 'translate(-50%,-50%) scale(1.5, 1.32) rotate(' + r1 + 'deg)', opacity: 1, easing: 'ease-out' },   // vọt phồng
+      { offset: .17,   transform: 'translate(-50%,-52%) scale(1.16, .82) rotate(' + r1 + 'deg)', opacity: 1, easing: 'ease-in-out' }, // dẹt xuống (múp)
+      { offset: .25,   transform: 'translate(-50%,-49%) scale(.92, 1.12) rotate(' + r2 + 'deg)', opacity: 1, easing: 'ease-in-out' }, // bật cao lại
+      { offset: .33,   transform: 'translate(-50%,-50%) scale(1.06, .96) rotate(' + r2 + 'deg)', opacity: 1, easing: 'ease-out' },    // nảy nhỏ dần
+      { offset: HOLD,  transform: 'translate(-50%,-50%) scale(1) rotate(' + r2 + 'deg)', opacity: 1, easing: 'cubic-bezier(.5,0,.85,1)' }, // yên
+      // ...rồi BAY THẲNG về thẻ SCORE, tăng tốc dần (hơi kéo dãn theo hướng bay)
+      { offset: .55,   transform: 'translate(calc(-50% + ' + (dx * .12) + 'px), calc(-50% + ' + (dy * .12) + 'px)) scale(1.12, .9) rotate(' + ((spin * .4) | 0) + 'deg)', opacity: 1 },
+      { offset: 1,     transform: 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px)) scale(.42) rotate(' + spin + 'deg)', opacity: .95 },
+    ], { duration: dur, delay: delay, fill: 'both' });
+
+    anim.onfinish = () => { star.remove(); onLanded(); };
+  }
+}
+
+// Lóe sáng tại bảng điểm khi ngôi sao chạm vào
+function scoreFlash(x, y) {
+  const f = document.createElement('div');
+  f.className = 'fx-score-flash';
+  f.style.left = x + 'px'; f.style.top = y + 'px';
+  document.body.appendChild(f);
+  f.animate([
+    { transform: 'translate(-50%,-50%) scale(.3)', opacity: .9 },
+    { transform: 'translate(-50%,-50%) scale(1.15)', opacity: 0 },
+  ], { duration: 340, easing: 'ease-out', fill: 'both' }).onfinish = () => f.remove();
 }
 /* Co cỡ chữ SỐ trong mỗi khung điểm để LUÔN vừa khung (số lớn → nhỏ dần, không bị cắt). */
 function fitHudScores() {
@@ -1893,9 +2100,10 @@ function loadPersist() {
   const merged = Object.assign({}, localObj || {}, nativeObj || {}); // native thắng data nhẹ
   best = Number(merged.best) || 0;
   Sound.setMuted(merged.muted === true);
+  tutorialSeen = merged.tutorialSeen === true;
 }
 function persistBest() {
-  const payload = { best, muted: Sound.isMuted() };
+  const payload = { best, muted: Sound.isMuted(), tutorialSeen };
   saveData(payload);   // native (data nhẹ) — ghi đè
   saveLocal(payload);  // localStorage backup
 }
@@ -2197,7 +2405,7 @@ function clearHint() {
 }
 function showHint() {
   clearHint();
-  if (busy || ended) return;
+  if (busy || ended || onboarding) return;   // đang onboarding → không chèn gợi ý idle
   const h = findHint();
   if (!h) return;
   if (h.special) {   // special đơn lẻ: lắc tại chỗ nhắc "dùng được"
@@ -2223,9 +2431,430 @@ function showHint() {
 function resetIdle() {
   clearHint();
   if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
-  if (busy || ended) return;
+  if (busy || ended || onboarding) return;   // đang onboarding → chưa cần gợi ý idle
   idleTimer = setTimeout(showHint, IDLE_MS);
 }
+
+/* =====================================================================
+ * 9b. Onboarding — chuỗi popup mẫu TỪNG tutorial (lần đầu) rồi mới vào game.
+ * Mỗi bước có DEMO minh hoạ bằng chính viên của game (shapeSvg).
+ * ===================================================================== */
+let obEl = null, obStep = 0, obTimers = [], obUid = 0;
+const OB_STEP = 50, OB_SZ = 44;   // ô demo 44px, cách nhau 50px
+const OB_STEPS = [
+  { demo: 'swap',      titleKey: 'obSwapT',     descKey: 'obSwapD' },
+  { demo: 'stripe',    titleKey: 'tipStripeT',  descKey: 'obStripeD' },
+  { demo: 'bomb',      titleKey: 'tipBombT',    descKey: 'obBombD' },
+  { demo: 'rainbow',   titleKey: 'tipRainbowT', descKey: 'obRainbowD' },
+  { demo: 'countdown', titleKey: 'obCountT',    descKey: 'obCountD' },
+];
+
+function buildOnboardDOM() {
+  const ov = document.createElement('div');
+  ov.className = 'tut-ob hidden'; ov.id = 'tut-ob';
+  ov.innerHTML =
+    '<div class="tut-ob-card">' +
+      '<div class="tut-ob-demo" id="ob-demo"></div>' +
+      '<div class="tut-ob-title" id="ob-title"></div>' +
+      '<div class="tut-ob-desc" id="ob-desc"></div>' +
+      '<div class="tut-ob-dots" id="ob-dots"></div>' +
+      '<div class="tut-ob-btns">' +
+        '<button class="tut-ob-nav" id="ob-prev" aria-label="Prev">&lsaquo;</button>' +
+        '<button class="tut-ob-skip" id="ob-skip"></button>' +
+        '<button class="tut-ob-nav go" id="ob-next" aria-label="Next">&rsaquo;</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(ov);
+  ov.querySelector('#ob-skip').addEventListener('click', finishOnboarding);
+  ov.querySelector('#ob-prev').addEventListener('click', () => {
+    if (obStep > 0) showOnboardStep(obStep - 1);
+  });
+  ov.querySelector('#ob-next').addEventListener('click', () => {
+    if (obStep >= OB_STEPS.length - 1) finishOnboarding();
+    else showOnboardStep(obStep + 1);
+  });
+  return ov;
+}
+function startOnboarding() {
+  if (!obEl) obEl = buildOnboardDOM();
+  onboarding = true;
+  if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
+  clearHint();
+  showOnboardStep(0);
+  obEl.classList.remove('hidden');
+}
+function showOnboardStep(i) {
+  obStep = i;
+  obClearTimers();
+  const step = OB_STEPS[i];
+  document.getElementById('ob-title').textContent = t(step.titleKey);
+  document.getElementById('ob-desc').textContent = t(step.descKey);
+  const dots = document.getElementById('ob-dots'); dots.innerHTML = '';
+  for (let k = 0; k < OB_STEPS.length; k++) { const d = document.createElement('i'); if (k === i) d.className = 'on'; dots.appendChild(d); }
+  const last = i >= OB_STEPS.length - 1;
+  const nextBtn = document.getElementById('ob-next');
+  nextBtn.textContent = last ? t('obPlay') : '›';
+  nextBtn.classList.toggle('play', last);                                      // bước cuối: nút PLAY rộng ra
+  document.getElementById('ob-skip').textContent = t('obSkip');
+  document.getElementById('ob-prev').classList.toggle('disabled', i === 0);   // bước đầu: không lùi được
+  playObDemo(step.demo);
+}
+function finishOnboarding() {
+  obClearTimers();
+  onboarding = false;
+  tutorialSeen = true;
+  persistBest();
+  if (obEl) {
+    const el = obEl; el.classList.add('hidden');
+    setTimeout(() => { if (el && el.parentNode) el.remove(); }, 320);
+    obEl = null;
+  }
+  resetIdle();
+}
+function obClearTimers() { obTimers.forEach(clearTimeout); obTimers = []; }
+
+// ── Trình chạy demo (lặp lại tới khi sang bước khác) ──────────────
+function playObDemo(kind) {
+  const demo = document.getElementById('ob-demo');
+  const run = () => {
+    demo.innerHTML = '';
+    const stage = document.createElement('div'); stage.className = 'tut-ob-stage'; demo.appendChild(stage);
+    const total = OB_DEMOS[kind](stage);
+    obTimers.push(setTimeout(run, total + 800));   // nghỉ rồi lặp
+  };
+  run();
+}
+function obSetStage(stage, cols, rows) {
+  stage.style.width = ((cols - 1) * OB_STEP + OB_SZ) + 'px';
+  stage.style.height = ((rows - 1) * OB_STEP + OB_SZ) + 'px';
+}
+function obGem(stage, r, c, color, special) {
+  const d = document.createElement('div'); d.className = 'ob-cell';
+  d.style.left = (c * OB_STEP) + 'px'; d.style.top = (r * OB_STEP) + 'px';
+  d.innerHTML = shapeSvg(color, special || null, 'ob' + (++obUid));
+  stage.appendChild(d); return d;
+}
+function obMarkAt(stage, r, c, delay) {
+  const m = document.createElement('div'); m.className = 'ob-mark';
+  m.style.left = (c * OB_STEP) + 'px'; m.style.top = (r * OB_STEP) + 'px';
+  stage.appendChild(m);
+  m.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, delay: delay || 0, fill: 'forwards' });
+  return m;
+}
+function obPop(el, delay) {
+  el.animate([
+    { transform: 'scale(1)', opacity: 1 },
+    { transform: 'scale(1.28)', opacity: 1, offset: .3 },
+    { transform: 'scale(0)', opacity: 0 },
+  ], { duration: 430, delay: delay || 0, easing: 'ease-in', fill: 'forwards' });
+}
+// Hiệu ứng "match": chớp trắng + mảnh vỡ bắn ra tại ô nổ (color = index màu, hoặc 'rb' = cầu vồng nhiều màu)
+function obBurst(stage, r, c, color, delay) {
+  const cx = c * OB_STEP + OB_SZ / 2, cy = r * OB_STEP + OB_SZ / 2;
+  const fl = document.createElement('div'); fl.className = 'ob-flash';
+  fl.style.left = cx + 'px'; fl.style.top = cy + 'px'; stage.appendChild(fl);
+  fl.animate([
+    { transform: 'translate(-50%,-50%) scale(.4)', opacity: .9 },
+    { transform: 'translate(-50%,-50%) scale(1.7)', opacity: 0 },
+  ], { duration: 380, delay: delay || 0, easing: 'ease-out', fill: 'forwards' }).onfinish = () => fl.remove();
+  for (let k = 0; k < 6; k++) {
+    const p = document.createElement('div'); p.className = 'ob-shard';
+    const col = color === 'rb' ? COLORS[k % COLORS.length] : (COLORS[color] || '#fff');
+    p.style.left = cx + 'px'; p.style.top = cy + 'px'; p.style.background = col; p.style.color = col;
+    stage.appendChild(p);
+    const ang = (k / 6) * Math.PI * 2 + 0.3, dist = 17 + (k % 3) * 6;
+    const dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist;
+    p.animate([
+      { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
+      { transform: 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px)) scale(.2)', opacity: 0 },
+    ], { duration: 440, delay: delay || 0, easing: 'cubic-bezier(.3,.6,.4,1)', fill: 'forwards' }).onfinish = () => p.remove();
+  }
+}
+// Nổ 1 viên trong demo: co nhỏ (pop) + hiệu ứng match (mảnh vỡ) ngay sau đó
+function obClear(stage, gem, r, c, color, delay) {
+  obPop(gem, delay);
+  obBurst(stage, r, c, color, (delay || 0) + 150);
+}
+// "Ngón tay" ảo kéo từ ô (fromR,fromC) sang (toR,toC)
+function obHand(stage, fromR, fromC, toR, toC, delay, dur) {
+  const hand = document.createElement('div'); hand.className = 'ob-hand';
+  hand.style.left = (fromC * OB_STEP + OB_SZ / 2 - 12) + 'px';
+  hand.style.top = (fromR * OB_STEP + OB_SZ / 2 - 12) + 'px';
+  stage.appendChild(hand);
+  const dx = (toC - fromC) * OB_STEP, dy = (toR - fromR) * OB_STEP;
+  hand.animate([
+    { transform: 'translate(0,0)', opacity: 0 }, { transform: 'translate(0,0)', opacity: 1, offset: .18 },
+    { transform: 'translate(' + dx + 'px,' + dy + 'px)', opacity: 1, offset: .9 }, { transform: 'translate(' + dx + 'px,' + dy + 'px)', opacity: 0 },
+  ], { duration: dur || 900, delay: delay || 0, fill: 'forwards' });
+  return hand;
+}
+// Trượt 1 viên sang ô kề (đổi chỗ) — animate transform, giữ nguyên vị trí cuối
+function obSlide(gem, dR, dC, delay, dur) {
+  gem.animate([{ transform: 'translate(0,0)' }, { transform: 'translate(' + (dC * OB_STEP) + 'px,' + (dR * OB_STEP) + 'px)' }],
+    { duration: dur || 500, delay: delay || 0, easing: 'ease-in-out', fill: 'forwards' });
+}
+// Chốt viên về đúng ô: huỷ animation trượt (fill) rồi đặt lại left/top để pop/morph tại chỗ
+function obSettle(gem, r, c) {
+  gem.getAnimations().forEach(a => a.cancel());
+  gem.style.transform = ''; gem.style.left = (c * OB_STEP) + 'px'; gem.style.top = (r * OB_STEP) + 'px';
+}
+// Tia sáng quét ngang 1 hàng (kẹo sọc kích hoạt)
+function obBeamRow(stage, row, cols, delay) {
+  const beam = document.createElement('div'); beam.className = 'ob-beam';
+  const rowW = (cols - 1) * OB_STEP + OB_SZ;
+  beam.style.width = '42px'; beam.style.top = (row * OB_STEP + OB_SZ / 2 - 6) + 'px'; beam.style.left = '0';
+  stage.appendChild(beam);
+  beam.animate([
+    { transform: 'translateX(-42px)', opacity: 0 }, { transform: 'translateX(0)', opacity: 1, offset: .15 },
+    { transform: 'translateX(' + (rowW - 42) + 'px)', opacity: 1, offset: .85 }, { transform: 'translateX(' + rowW + 'px)', opacity: 0 },
+  ], { duration: 600, delay: delay || 0, easing: 'linear' });
+}
+// Vòng sóng lan ra từ 1 ô (bom gói kích hoạt)
+function obRingAt(stage, r, c, delay) {
+  const ring = document.createElement('div'); ring.className = 'ob-ring';
+  const cx = c * OB_STEP + OB_SZ / 2, cy = r * OB_STEP + OB_SZ / 2;
+  ring.style.left = (cx - 20) + 'px'; ring.style.top = (cy - 20) + 'px'; ring.style.width = '40px'; ring.style.height = '40px';
+  stage.appendChild(ring);
+  ring.animate([{ transform: 'scale(.2)', opacity: 1 }, { transform: 'scale(3.6)', opacity: 0 }], { duration: 540, delay: delay || 0, easing: 'ease-out' });
+}
+// Tia xẹt cầu vồng: sét zíc-zắc nhiều màu nối từ (sr,sc) tới các viên đích, giật giật rồi tắt khi nổ
+function obZaps(stage, sr, sc, targets, holdMs) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const w = parseFloat(stage.style.width) || 0, h = parseFloat(stage.style.height) || 0;
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('width', w); svg.setAttribute('height', h);
+  svg.style.cssText = 'position:absolute;left:0;top:0;z-index:9;pointer-events:none;overflow:visible';
+  stage.appendChild(svg);
+  const SP = ['#ff4d6a', '#ffcf3a', '#2ed673', '#3aa0ff', '#b268ff', '#ff9838'];
+  const ctr = (r, c) => [c * OB_STEP + OB_SZ / 2, r * OB_STEP + OB_SZ / 2];
+  const [sx, sy] = ctr(sr, sc);
+  const jag = (x1, y1, x2, y2) => {
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len, ny = dx / len, segs = 5;
+    let d = 'M' + x1.toFixed(1) + ' ' + y1.toFixed(1);
+    for (let i = 1; i < segs; i++) {
+      const t = i / segs, off = (Math.random() * 2 - 1) * Math.min(12, len * 0.18);
+      d += ' L' + (x1 + dx * t + nx * off).toFixed(1) + ' ' + (y1 + dy * t + ny * off).toFixed(1);
+    }
+    return d + ' L' + x2.toFixed(1) + ' ' + y2.toFixed(1);
+  };
+  let i = 0;
+  for (const [tr, tc] of targets) {
+    const [tx, ty] = ctr(tr, tc);
+    const g = document.createElementNS(NS, 'g');
+    const glow = document.createElementNS(NS, 'path');
+    glow.setAttribute('d', jag(sx, sy, tx, ty)); glow.setAttribute('fill', 'none');
+    glow.setAttribute('stroke', SP[i++ % SP.length]); glow.setAttribute('stroke-width', '5'); glow.setAttribute('stroke-opacity', '.5');
+    glow.setAttribute('stroke-linecap', 'round'); glow.setAttribute('stroke-linejoin', 'round');
+    const core = document.createElementNS(NS, 'path');
+    core.setAttribute('d', jag(sx, sy, tx, ty)); core.setAttribute('fill', 'none');
+    core.setAttribute('stroke', '#fff'); core.setAttribute('stroke-width', '1.8');
+    core.setAttribute('stroke-linecap', 'round'); core.setAttribute('stroke-linejoin', 'round');
+    g.appendChild(glow); g.appendChild(core); svg.appendChild(g);
+    g.animate([                                                       // hiện + giữ + giật giật
+      { opacity: 0 }, { opacity: 1, offset: .2 }, { opacity: .55, offset: .45 },
+      { opacity: 1, offset: .65 }, { opacity: .7, offset: .82 }, { opacity: 1, offset: 1 },
+    ], { duration: holdMs, easing: 'linear', fill: 'forwards' });
+    g.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, delay: holdMs, easing: 'ease-out', fill: 'forwards' });
+    for (let fk = 1; fk <= 3; fk++) obTimers.push(setTimeout(() => { const d = jag(sx, sy, tx, ty); glow.setAttribute('d', d); core.setAttribute('d', d); }, holdMs * fk / 4));
+  }
+  obTimers.push(setTimeout(() => svg.remove(), holdMs + 320));
+}
+// Biến 1 viên thường thành special (đổi hình + nảy nhẹ)
+function obMorph(gem, color, special) {
+  gem.innerHTML = shapeSvg(color, special || null, 'ob' + (++obUid));
+  gem.animate([{ transform: 'scale(.7)' }, { transform: 'scale(1.22)', offset: .6 }, { transform: 'scale(1)' }], { duration: 300, easing: 'ease-out' });
+}
+// Viên mới RƠI xuống lấp ô trống (sau khi nổ tạo special)
+function obDropIn(stage, r, c, color, delay) {
+  const g = obGem(stage, r, c, color);
+  g.animate([{ transform: 'translateY(-' + (OB_STEP * 0.9) + 'px)', opacity: 0 }, { transform: 'translateY(0)', opacity: 1 }],
+    { duration: 320, delay: delay || 0, easing: 'cubic-bezier(.3,1.1,.5,1)', fill: 'backwards' });
+  return g;
+}
+// Ô bom đếm ngược (hình vuông tối + số) — khớp look game
+function obBombCell(stage, r, c, num, low) {
+  const d = document.createElement('div'); d.className = 'ob-cell ob-bomb' + (low ? ' low' : '');
+  d.style.left = (c * OB_STEP) + 'px'; d.style.top = (r * OB_STEP) + 'px';
+  d.innerHTML = '<span>' + num + '</span>';
+  stage.appendChild(d); return d;
+}
+// Chữ nổi (vd "+50" khi gỡ bom)
+function obFloat(stage, r, c, text, delay) {
+  const el = document.createElement('div'); el.className = 'ob-float';
+  el.style.left = (c * OB_STEP + OB_SZ / 2) + 'px'; el.style.top = (r * OB_STEP - 4) + 'px'; el.textContent = text;
+  stage.appendChild(el);
+  el.animate([
+    { transform: 'translate(-50%,4px)', opacity: 0 }, { transform: 'translate(-50%,-12px)', opacity: 1, offset: .3 },
+    { transform: 'translate(-50%,-34px)', opacity: 0 },
+  ], { duration: 950, delay: delay || 0, fill: 'forwards' }).onfinish = () => el.remove();
+}
+
+const OB_DEMOS = {
+  // ĐỔI & GHÉP: kéo 1 viên xuống xếp 3 cùng màu → nổ
+  swap(stage) {
+    obSetStage(stage, 3, 2);
+    obGem(stage, 0, 0, 2); obGem(stage, 0, 1, 3);        // filler
+    const gTop = obGem(stage, 0, 2, 0);                  // ĐỎ ở (0,2)
+    const gL = obGem(stage, 1, 0, 0), gM = obGem(stage, 1, 1, 0);  // ĐỎ, ĐỎ
+    const gBlue = obGem(stage, 1, 2, 1);                 // XANH ở (1,2)
+    obHand(stage, 0, 2, 1, 2, 120, 900);
+    obSlide(gTop, 1, 0, 420, 520); obSlide(gBlue, -1, 0, 420, 520);
+    const M = 1050;
+    obTimers.push(setTimeout(() => {
+      obSettle(gTop, 1, 2);
+      obMarkAt(stage, 1, 0); obMarkAt(stage, 1, 1); obMarkAt(stage, 1, 2);
+      obClear(stage, gL, 1, 0, 0, 240); obClear(stage, gM, 1, 1, 0, 240); obClear(stage, gTop, 1, 2, 0, 240);
+    }, M));
+    return M + 240 + 500;
+  },
+  // KẸO SỌC: (1) ghép 4 THẲNG HÀNG → TẠO sọc ; (2) GHÉP 3 CÙNG MÀU có sọc → KÍCH HOẠT nổ cả hàng
+  stripe(stage) {
+    obSetStage(stage, 5, 2);
+    obGem(stage, 0, 0, 3); obGem(stage, 0, 1, 4); obGem(stage, 0, 2, 2);
+    const drag = obGem(stage, 0, 3, 0);                                  // ĐỎ kéo xuống (tạo sọc)
+    const redSwap = obGem(stage, 0, 4, 0);                               // ĐỎ để kích hoạt (kéo xuống sau)
+    const r0 = obGem(stage, 1, 0, 0), r1 = obGem(stage, 1, 1, 0), r2 = obGem(stage, 1, 2, 0);
+    const tgt = obGem(stage, 1, 3, 1);                                   // XANH ở đích
+    const last = obGem(stage, 1, 4, 2);                                  // XANH LÁ cuối hàng
+    obHand(stage, 0, 3, 1, 3, 120, 900);
+    obSlide(drag, 1, 0, 420, 520); obSlide(tgt, -1, 0, 420, 520);
+    const M = 1050;
+    obTimers.push(setTimeout(() => {                                     // GHÉP 4: 4 đỏ sáng lên
+      obSettle(drag, 1, 3);
+      for (let c = 0; c < 4; c++) obMarkAt(stage, 1, c);
+    }, M));
+    obTimers.push(setTimeout(() => {                                     // TẠO SỌC: 3 đỏ nổ, viên đích hoá sọc
+      obClear(stage, r0, 1, 0, 0, 0); obClear(stage, r1, 1, 1, 0, 0); obClear(stage, r2, 1, 2, 0, 0);
+      obMorph(drag, 0, 'row');
+    }, M + 360));
+    let f0, f1, f2;
+    obTimers.push(setTimeout(() => {                                     // viên mới rơi: (1,2) là ĐỎ để ghép với sọc
+      stage.querySelectorAll('.ob-mark').forEach(m => m.remove());
+      f0 = obDropIn(stage, 1, 0, 2); f1 = obDropIn(stage, 1, 1, 4); f2 = obDropIn(stage, 1, 2, 0);
+    }, M + 780));
+    obTimers.push(setTimeout(() => {                                     // GHÉP LẦN 2: kéo ĐỎ (0,4) xuống (1,4)
+      obHand(stage, 0, 4, 1, 4, 0, 760);
+      obSlide(redSwap, 1, 0, 180, 480); obSlide(last, -1, 0, 180, 480);
+    }, M + 1150));
+    obTimers.push(setTimeout(() => {                                     // GHÉP 3 ĐỎ (1,2)(1,3-sọc)(1,4) → sọc NỔ cả hàng
+      obSettle(redSwap, 1, 4); obSettle(last, 0, 4);
+      obMarkAt(stage, 1, 2); obMarkAt(stage, 1, 3); obMarkAt(stage, 1, 4);
+      obBeamRow(stage, 1, 5, 60);
+      obClear(stage, f0, 1, 0, 2, 240); obClear(stage, f1, 1, 1, 4, 240); obClear(stage, f2, 1, 2, 0, 240);
+      obClear(stage, drag, 1, 3, 0, 240); obClear(stage, redSwap, 1, 4, 0, 240);
+    }, M + 1150 + 560));
+    return M + 1150 + 560 + 820;
+  },
+  // BOM GÓI: (1) ghép hình T → TẠO bom ; (2) GHÉP 3 CÙNG MÀU có bom → KÍCH HOẠT nổ 3×3
+  bomb(stage) {
+    obSetStage(stage, 4, 3);
+    const g = {};
+    g['0,0'] = obGem(stage, 0, 0, 3); g['0,1'] = obGem(stage, 0, 1, 0); const drag = obGem(stage, 0, 2, 0); g['0,3'] = obGem(stage, 0, 3, 2);
+    g['1,0'] = obGem(stage, 1, 0, 0); g['1,1'] = obGem(stage, 1, 1, 0); const tgt = obGem(stage, 1, 2, 1); g['1,3'] = obGem(stage, 1, 3, 4);
+    g['2,0'] = obGem(stage, 2, 0, 2); g['2,1'] = obGem(stage, 2, 1, 0); g['2,2'] = obGem(stage, 2, 2, 0); g['2,3'] = obGem(stage, 2, 3, 1);  // (2,2) ĐỎ để kích hoạt
+    obHand(stage, 0, 2, 1, 2, 120, 900);
+    obSlide(drag, 1, 0, 420, 520); obSlide(tgt, -1, 0, 420, 520);       // drag→(1,2), tgt→(0,2)
+    const M = 1050;
+    obTimers.push(setTimeout(() => {                                     // GHÉP hình T (giao ở (1,1))
+      obSettle(drag, 1, 2);
+      [[0, 1], [1, 0], [1, 1], [1, 2], [2, 1]].forEach(([r, c]) => obMarkAt(stage, r, c));
+    }, M));
+    obTimers.push(setTimeout(() => {                                     // TẠO bom ở giao điểm (1,1)
+      obClear(stage, g['0,1'], 0, 1, 0, 0); obClear(stage, g['1,0'], 1, 0, 0, 0);
+      obClear(stage, drag, 1, 2, 0, 0); obClear(stage, g['2,1'], 2, 1, 0, 0);
+      obMorph(g['1,1'], 0, 'bomb');
+    }, M + 360));
+    const f = {};
+    obTimers.push(setTimeout(() => {                                     // viên mới rơi ĐÚNG 4 ô trống: (0,1)(1,0)(1,2)(2,1)
+      stage.querySelectorAll('.ob-mark').forEach(m => m.remove());
+      f['0,1'] = obDropIn(stage, 0, 1, 4); f['1,0'] = obDropIn(stage, 1, 0, 0);   // (1,0) ĐỎ
+      f['1,2'] = obDropIn(stage, 1, 2, 2); f['2,1'] = obDropIn(stage, 2, 1, 1);
+    }, M + 780));
+    obTimers.push(setTimeout(() => {                                     // GHÉP LẦN 2: kéo ĐỎ (2,2) LÊN (1,2)
+      obHand(stage, 2, 2, 1, 2, 0, 760);
+      obSlide(g['2,2'], -1, 0, 180, 480); obSlide(f['1,2'], 1, 0, 180, 480);
+    }, M + 1150));
+    obTimers.push(setTimeout(() => {                                     // GHÉP 3 ĐỎ (1,0)(1,1-bom)(1,2) → bom NỔ 3×3
+      obSettle(g['2,2'], 1, 2); obSettle(f['1,2'], 2, 2);
+      obMarkAt(stage, 1, 0); obMarkAt(stage, 1, 1); obMarkAt(stage, 1, 2);
+      obRingAt(stage, 1, 1, 120);
+      for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) obMarkAt(stage, r, c, 180);
+      obClear(stage, g['1,1'], 1, 1, 0, 320);            // bom
+      obClear(stage, g['0,0'], 0, 0, 3, 320); obClear(stage, f['0,1'], 0, 1, 4, 320); obClear(stage, tgt, 0, 2, 1, 320);
+      obClear(stage, f['1,0'], 1, 0, 0, 320); obClear(stage, g['2,2'], 1, 2, 0, 320);
+      obClear(stage, g['2,0'], 2, 0, 2, 320); obClear(stage, f['2,1'], 2, 1, 1, 320); obClear(stage, f['1,2'], 2, 2, 2, 320);
+    }, M + 1150 + 560));
+    return M + 1150 + 560 + 900;
+  },
+  // CẦU VỒNG: (1) ghép 5 THẲNG HÀNG → TẠO cầu vồng ; (2) đổi cầu vồng với 1 viên → xoá MỌI viên màu đó
+  rainbow(stage) {
+    obSetStage(stage, 5, 2);
+    const oR0 = obGem(stage, 0, 0, 0);                                   // đỏ ở nơi khác
+    obGem(stage, 0, 1, 4); obGem(stage, 0, 2, 2);
+    const drag = obGem(stage, 0, 3, 0);                                  // đỏ kéo xuống
+    const oR1 = obGem(stage, 0, 4, 0);                                   // đỏ ở nơi khác
+    const r0 = obGem(stage, 1, 0, 0), r1 = obGem(stage, 1, 1, 0), r2 = obGem(stage, 1, 2, 0);
+    const tgt = obGem(stage, 1, 3, 1);
+    const r4 = obGem(stage, 1, 4, 0);
+    obHand(stage, 0, 3, 1, 3, 120, 900);
+    obSlide(drag, 1, 0, 420, 520); obSlide(tgt, -1, 0, 420, 520);
+    const M = 1050;
+    obTimers.push(setTimeout(() => {                                     // GHÉP 5 đỏ thẳng hàng
+      obSettle(drag, 1, 3);
+      for (let c = 0; c < 5; c++) obMarkAt(stage, 1, c);
+    }, M));
+    obTimers.push(setTimeout(() => {                                     // TẠO cầu vồng ở (1,3)
+      obClear(stage, r0, 1, 0, 0, 0); obClear(stage, r1, 1, 1, 0, 0); obClear(stage, r2, 1, 2, 0, 0); obClear(stage, r4, 1, 4, 0, 0);
+      obMorph(drag, 0, 'rainbow');
+    }, M + 360));
+    let f0, f1, f2, red4;
+    obTimers.push(setTimeout(() => {                                     // viên mới rơi (có 1 ĐỎ ở (1,4) để đổi)
+      stage.querySelectorAll('.ob-mark').forEach(m => m.remove());       // xoá khoanh của pha GHÉP
+      f0 = obDropIn(stage, 1, 0, 2); f1 = obDropIn(stage, 1, 1, 4); f2 = obDropIn(stage, 1, 2, 3);
+      red4 = obDropIn(stage, 1, 4, 0);
+    }, M + 780));
+    obTimers.push(setTimeout(() => {                                     // GHÉP LẦN 2: đổi cầu vồng với viên ĐỎ
+      obHand(stage, 1, 3, 1, 4, 0, 760);
+      obSlide(drag, 0, 1, 180, 480); obSlide(red4, 0, -1, 180, 480);
+    }, M + 1150));
+    obTimers.push(setTimeout(() => {                                     // KÍCH HOẠT: tia xẹt nối tới mọi viên đỏ rồi NỔ
+      obSettle(drag, 1, 4); obSettle(red4, 1, 3);
+      const HOLD = 420;                                                 // thời gian tia xẹt nối trước khi nổ
+      obZaps(stage, 1, 4, [[1, 3], [0, 0], [0, 4]], HOLD);              // sét từ cầu vồng (1,4) tới 3 viên đỏ
+      obMarkAt(stage, 0, 0, HOLD); obMarkAt(stage, 0, 4, HOLD); obMarkAt(stage, 1, 3, HOLD);
+      obClear(stage, drag, 1, 4, 'rb', HOLD + 40);      // cầu vồng nổ khi tia xẹt tắt
+      obClear(stage, red4, 1, 3, 0, HOLD + 40);
+      obClear(stage, oR0, 0, 0, 0, HOLD + 40); obClear(stage, oR1, 0, 4, 0, HOLD + 40);
+    }, M + 1150 + 560));
+    return M + 1150 + 560 + 420 + 820;
+  },
+  // BOM ĐẾM NGƯỢC: cho nổ trúng ô KỀ để gỡ (nếu về 0 sẽ nổ & thua)
+  countdown(stage) {
+    obSetStage(stage, 3, 3);
+    const a0 = obGem(stage, 0, 0, 0);                                    // đỏ (cột 0)
+    obGem(stage, 0, 1, 2); obGem(stage, 0, 2, 3);
+    const a1 = obGem(stage, 1, 0, 0);                                    // đỏ (cột 0, KỀ bom)
+    const bomb = obBombCell(stage, 1, 1, 3, true);                       // bom "3"
+    obGem(stage, 1, 2, 4);
+    const tgt = obGem(stage, 2, 0, 1);                                   // xanh ở đích (2,0)
+    const drag = obGem(stage, 2, 1, 0);                                  // đỏ kéo sang trái
+    obGem(stage, 2, 2, 2);
+    obTimers.push(setTimeout(() => { const s = bomb.querySelector('span'); if (s) s.textContent = '2'; bomb.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.12)', offset: .5 }, { transform: 'scale(1)' }], { duration: 260 }); }, 260));
+    obHand(stage, 2, 1, 2, 0, 480, 900);
+    obSlide(drag, 0, -1, 780, 520); obSlide(tgt, 0, 1, 780, 520);
+    const M = 1420;
+    obTimers.push(setTimeout(() => {                                     // cột 0 = 3 đỏ (kề bom) → sáng
+      obSettle(drag, 2, 0);
+      obMarkAt(stage, 0, 0); obMarkAt(stage, 1, 0); obMarkAt(stage, 2, 0);
+    }, M));
+    obTimers.push(setTimeout(() => {                                     // nổ cột 0 + GỠ bom (+50)
+      obClear(stage, a0, 0, 0, 0, 0); obClear(stage, a1, 1, 0, 0, 0); obClear(stage, drag, 2, 0, 0, 0);
+      obPop(bomb, 120); obBurst(stage, 1, 1, 3, 260); obFloat(stage, 1, 1, '+50', 200);
+    }, M + 320));
+    return M + 320 + 700;
+  },
+};
 
 /* =====================================================================
  * 10. Build board / new run
@@ -2267,6 +2896,7 @@ function newRun() {
   renderScore();
   renderBest();
   resetIdle();           // bắt đầu đếm giờ gợi ý cho ván mới
+  if (!tutorialSeen) startOnboarding();   // lần đầu chơi: chuỗi popup mẫu → rồi mới vào game
 }
 
 /* Game Over (bom nổ) — game điểm-cao tự vẽ popup (popup-common) */
@@ -2492,6 +3122,8 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => resi
           dbgStopIdle(); dbgClearAll();
           for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) board[r][c] = makeTile(m.color, m.special || null);
           layout(); ack(); break;
+        case 'onboard':     // xem lại chuỗi popup onboarding từ đầu
+          tutorialSeen = false; startOnboarding(); ack(); break;
         default: ack({ ok: false });
       }
     } catch (err) { ack({ ok: false, error: String(err) }); }
