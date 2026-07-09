@@ -1701,7 +1701,7 @@ async function cascade(pending, swapCells) {
       if (merged.size) await sleep(190);
     }
     let cleared = 0, sx = 0, sy = 0;
-    let starTotal = 0, starDropAt = 0;  // mốc rớt kẹo = khi sao bay được ~1/3 đường
+    let starDropAt = 0;                 // mốc rớt kẹo = khi sao CUỐI bay được 2/3 quãng
     let spx = 0, spy = 0, spn = 0;      // tâm các viên ĐẶC BIỆT phát nổ → điểm xuất phát ngôi sao
     const spTypes = new Set();          // loại special phát nổ ở bước này → chọn tiếng
     const parts = [];
@@ -1721,6 +1721,7 @@ async function cascade(pending, swapCells) {
           for (const [or, oc] of rbHits) { const dd = Math.hypot(r - or, c - oc); if (dd < best) best = dd; }
           d = explodeAt + Math.min(best * 0.06, 0.7);   // sóng ~0.06s/ô, tối đa +0.7s
         }
+        if (t.special) d += 0.2;      // ô CÓ item đặc biệt: nổ hiệu ứng trễ thêm 0.2s (charge rồi bung)
         if (d > maxDelay) maxDelay = d;
         parts.push([cx, cy, COLORS[t.color], d]);
         if (t.special) drawSpecialFx(r, c, t.special, t.color, d);   // tia/vòng nổ kiểu CC
@@ -1746,8 +1747,10 @@ async function cascade(pending, swapCells) {
       else { gx = sx / cleared; gy = sy / cleared; }
       spawnPop(gx, gy, '+' + pts);
       // Ngôi sao thu thập điểm về thẻ SCORE (đợi nổ xong). Lưu mốc sao BAY HẾT để hoãn rơi kẹo.
-      starTotal = flyToScore(gx, gy, cleared, chain, maxDelay);
-      starDropAt = Date.now() + starTotal / 3;   // sao đi được ~1/3 đường thì rớt kẹo
+      const st = flyToScore(gx, gy, cleared, chain, maxDelay);
+      // Match 3 viên thường → chờ MỘT CHÚT rồi rớt kẹo. Còn lại: chờ sao cuối bay ~2/3 quãng.
+      if (cleared <= 3 && !spn && !rbHits.length) starDropAt = Date.now() + 380;
+      else starDropAt = Date.now() + st.total - st.flight / 3;
       spawnParticles(parts);                                    // nổ thành từng mảnh vỡ bắn ra rồi rơi
       if (rbHits.length) {
         // Tia xẹt nối cầu vồng → các viên bị xoá (theo đúng thứ tự nổ trong zapDelay)
@@ -1788,7 +1791,7 @@ async function cascade(pending, swapCells) {
     // Cầu vồng vẫn đợi lâu cho sóng nổ trọn vẹn.
     await sleep(pulledCombo ? 350 : (maxDelay > 0 ? 620 : 240));
 
-    // Chờ sao bay được ~1/3 đường rồi mới rớt kẹo xuống lấp chỗ trống.
+    // Chờ ĐÀN SAO BAY HẾT rồi mới rớt kẹo xuống lấp chỗ trống.
     if (starDropAt) await sleep(Math.max(0, starDropAt - Date.now()));
 
     gravityAndRefill();
@@ -1806,6 +1809,32 @@ async function cascade(pending, swapCells) {
   }
   cascading = false; stableWindow = false;
   comboQueue = null;   // dọn hàng đợi combo (nếu còn)
+  sanitizeBoardTiles();   // tự chữa: khôi phục viên bị kẹt style (phình to / trong suốt) khi nhiều hiệu ứng
+}
+
+// TỰ CHỮA trạng thái rò: khi quá nhiều hiệu ứng, đôi khi một viên CÒN Ở LẠI bàn nhưng bị kẹt
+// class .clearing / inline scale(1.6) / opacity 0 (do animation fill hoặc removal bị lỡ) → trông
+// phình to hoặc trong suốt. Quét bàn: viên KHÔNG còn animation đang chạy mà lệch trạng thái nghỉ
+// → cancel mọi animation sót, gỡ class, đưa về đúng ô + hiện đủ, mở khoá.
+function sanitizeBoardTiles() {
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const t = board[r][c];
+    if (!t) continue;
+    const el = t.el;
+    const anims = el.getAnimations ? el.getAnimations() : [];
+    if (anims.some(a => a.playState === 'running')) continue;   // đang rơi/nổ THẬT → chừa
+    const restT = pos(r, c);
+    // Dấu hiệu RÒ: còn class clearing, mờ (opacity<1), hoặc còn scale (viên nghỉ chỉ có translate).
+    const dirty = el.classList.contains('clearing') ||
+                  (el.style.opacity !== '' && parseFloat(el.style.opacity) < 1) ||
+                  /scale\(/.test(el.style.transform);
+    if (!dirty) continue;
+    anims.forEach(a => a.cancel());
+    el.classList.remove('clearing', 'no-anim');
+    el.style.opacity = ''; el.style.transitionDelay = ''; el.style.zIndex = '';
+    el.style.transform = restT;
+    t.locked = false;
+  }
 }
 
 function gravityAndRefill() {
@@ -2293,7 +2322,8 @@ function flyToScore(bx, by, count, chain, waitS) {
   // Chờ khối NỔ XONG rồi ngôi sao mới hiện: .clearing ~.22s + trễ sóng nổ (cầu vồng) waitS.
   const BURST = 180 + (waitS || 0) * 1000;
   // Sao bay LẦN LƯỢT từng cái, nhưng TOÀN BỘ xong trong ~1s: rải xuất phát trong (1000 - dur).
-  const dur = 460;
+  // Nổ 3 viên thường (đúng 3 viên) → sao bay nhanh hơn 0.01s.
+  const dur = 460 - (count <= 3 ? 10 : 0);
   const span = Math.max(0, 1000 - dur);                       // khoảng rải xuất phát
   const step = n > 1 ? span / (n - 1) : 0;
 
@@ -2323,7 +2353,8 @@ function flyToScore(bx, by, count, chain, waitS) {
 
     anim.onfinish = () => { star.remove(); onLanded(); };
   }
-  return BURST + (n > 1 ? span : 0) + dur;   // tổng thời gian tới khi sao CUỐI về đích (ms)
+  // total: lúc sao CUỐI về đích · flight: thời lượng bay 1 sao (để tính mốc 2/3 quãng)
+  return { total: BURST + (n > 1 ? span : 0) + dur, flight: dur };
 }
 
 // Lóe sáng tại bảng điểm khi ngôi sao chạm vào
@@ -2549,6 +2580,7 @@ function fireworkBurst(app, bx, by, delay) {
 
 async function settleAfterMove() {
   if (ended) return;                    // bom vừa nổ → thua, không xáo nữa
+  sanitizeBoardTiles();                 // tự chữa viên bị kẹt style (kể cả luồng 🌈+special)
   if (!hasAnyMove()) reshuffle(true);   // endless: chỉ xáo khi kẹt (kèm toast + anim)
 }
 

@@ -20,6 +20,9 @@
 - **Endless — không giới hạn lượt, không level.** Chơi tới khi **bom đếm ngược nổ**
   (xem dưới). Mục tiêu: phá **kỷ lục điểm** (Best).
 - Bàn tự **trộn lại** (shuffle) khi hết nước đi hợp lệ.
+- **Không bị khoá khi đang nổ:** lúc một vùng đang nổ/rơi, người chơi vẫn **kéo được ở
+  những cột đã lắng** (grab theo từng cột) — nước đi được **chèn** vào chuỗi đang chạy,
+  không cần chờ nổ xong.
 
 ## Viên đặc biệt (special)
 
@@ -46,7 +49,10 @@ bất kỳ.
 
 ## Bom đếm ngược (thử thách thua)
 
-- Cứ **10 lượt** đi sinh **1 quả bom** có số **đếm ngược từ 12**; mỗi lượt đi số giảm 1.
+- Định kỳ sinh **1 quả bom** với số **đếm ngược ngẫu nhiên 5–15**; mỗi lượt đi số giảm 1
+  (≤ 3 thì **nhấp nháy** cảnh báo).
+- Tần suất sinh **tăng dần theo độ khó**: ban đầu **mỗi 6 lượt** một quả, nhanh dần tới
+  **mỗi 2 lượt**; tối đa **5 quả** trên bàn cùng lúc.
 - Bom **không đổi chỗ / không match** được. **Gỡ bom** = cho một vụ nổ **trúng ô kề**
   (trên/dưới/trái/phải) hoặc chính ô bom → **+50 điểm**.
 - Quả bom nào **đếm về 0** → **NỔ LỚN & thua** (game over).
@@ -81,12 +87,21 @@ game. Lưu cờ `tutorialSeen` (qua `save_data` + localStorage) → chỉ hiện
 
 ## Hiệu ứng (juice)
 
-- Viên nổ **vỡ thành mảnh** bắn ra rồi rơi theo parabol.
-- **Mỗi viên ăn được = 1 ngôi sao** hiện tại chỗ nổ (nảy squash-stretch + bóng đổ),
-  khựng một chút rồi **bay thẳng về thẻ SCORE** → lóe sáng + thẻ nảy + đếm điểm +
-  tiếng "ting".
+- **Match thường nổ & rơi nhanh gọn**, còn **mảnh vỡ nấn ná** lâu hơn một nhịp để đọng
+  lại cảm giác nổ.
+- **Mảnh vỡ** = hình **trăng khuyết bóng 3D** (gradient + đầu bo tròn), chỉ **hiện đúng
+  lúc viên nổ** (không lấp ló trước), **bung tại chỗ** rồi mờ tan.
+- **Item đặc biệt nổ trễ ~0.2s** so với viên thường ở cùng đợt — "charge" một nhịp rồi
+  mới bung tia/vòng, cho thấy rõ special vừa kích hoạt.
+- **Mỗi viên ăn được = 1 ngôi sao**, xuất hiện **sau khi vụ nổ hoàn tất**, tại **tâm
+  viên đặc biệt** (cầu vồng → tâm cầu vồng; match thường → tâm cụm nổ). Sao **bay vèo
+  thẳng** về thẻ SCORE (không rề rà), cả đàn **so le nhưng gọn trong ~1s** → lóe sáng +
+  thẻ nảy + đếm điểm + tiếng "ting".
+- **Kẹo chỉ rớt xuống** lấp chỗ trống khi **ngôi sao cuối đã bay ~2/3 đường** về bảng điểm.
 - Cầu vồng có **tia xẹt** (sét nhiều màu) nối lần lượt tới từng viên; combo có pháo
   hoa khi phá kỷ lục.
+- **Tự chữa trạng thái:** khi hiệu ứng dồn dày, viên nào lỡ bị kẹt style (phình to /
+  trong suốt) sẽ được **quét & khôi phục** cuối mỗi đợt — không đụng viên đang nổ/rơi thật.
 - **Âm thanh Web Audio tổng hợp** (không file rời): nhạc nền vui + tiếng nổ theo
   chuỗi + "ting" khi ghi điểm. Có nút bật/tắt tiếng.
 
@@ -106,17 +121,16 @@ game. Lưu cờ `tutorialSeen` (qua `save_data` + localStorage) → chỉ hiện
 - **zip-common.md** — single-file `index.html` ở root, `game.json` đủ field bắt buộc
   (text tiếng Anh), **3 cover** đúng tên & kích thước (1920×1080 / 800×1200 / 800×800),
   dựng bằng **chính gem + khay bàn của game** (`shapeSvg` + CSS `.board-wrap`) nên khớp
-  100% với game. Zip **không** kèm `.md` / file dev (`test.html`, `tune.html`,
-  `tutorial.html`).
+  100% với game. Zip **không** kèm `.md` / file dev (`test.html`).
 - **i18n** — bảng dịch inline trong `index.html`; đủ `en` (mặc định) + `vi`, các ngôn
   ngữ khác fallback `en`.
 
 ## File dev (không đóng gói)
 
-- `test.html` — bàn thử engine (đặt viên/special/bom, swap, kịch bản dựng sẵn) qua
-  bridge `?debug=1`.
-- `tune.html` — chỉnh chiếu sáng viên (`LIGHT`) live, xuất JSON dán lại index.html.
-- `tutorial.html` — xem trước onboarding (op `onboard`).
+- `test.html` — **màn test các trường hợp nổ**: mỗi nút tự dựng bàn (nền caro không tự
+  khớp) rồi kích một kịch bản — match thường, từng viên đặc biệt (sọc/gói/cầu vồng),
+  các combo (sọc+sọc, gói+gói, 🌈+sọc/gói, 🌈+🌈…), gỡ bom & bom nổ thua. Điều khiển
+  engine qua **bridge `?debug=1`** (postMessage), chạy được cả `file://`.
 
 ## Backlog
 
