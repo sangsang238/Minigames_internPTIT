@@ -210,10 +210,13 @@
     transform: translate(-50%, -50%); background: radial-gradient(circle, rgba(255,255,255,.95), rgba(255,255,255,0) 70%); }
   .ob-shard { position: absolute; z-index: 8; width: 9px; height: 9px; border-radius: 50%; pointer-events: none;
     transform: translate(-50%, -50%); box-shadow: 0 0 6px currentColor; }
-  .ob-bomb { display: flex; align-items: center; justify-content: center; border-radius: 12px;
-    background: #2b3350; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .16), 0 3px 4px rgba(0, 0, 0, .3);
-    color: #fff; font-family: var(--ui-font); font-weight: 900; font-size: 22px; }
-  .ob-bomb.low { background: var(--danger); }
+  .ob-bomb { position: relative; overflow: visible; }
+  .ob-bomb .bomb-svg { width: 100%; height: 100%; display: block; overflow: visible;
+    filter: drop-shadow(-1px 3px 2px rgba(0, 0, 0, .3)); }
+  .ob-bomb.low { animation: bombblink .5s ease-in-out infinite; }
+  .ob-bomb > span { position: absolute; left: 50%; top: 53%; transform: translate(-50%, -50%);
+    color: #fff; font-family: var(--ui-font); font-weight: 900; font-size: 18px; z-index: 2;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .65); }
   .ob-float { position: absolute; z-index: 9; pointer-events: none; transform: translate(-50%, 0);
     color: var(--gold); font-family: var(--ui-font); font-weight: 900; font-size: 18px;
     text-shadow: 0 2px 6px rgba(0, 0, 0, .5); white-space: nowrap; }
@@ -400,24 +403,50 @@
     z-index: 3;
   }
 
-  /* ── Bom đếm ngược theo lượt ──────────────────────────────────────── */
+  /* ── Bom đếm ngược theo lượt — quả bom cầu bóng + ngòi + tia lửa ────── */
   .tile-face.bomb-face {
-    background: #2b3350;
-    color: #fff;
-    box-shadow: inset 0 0 0 3px rgba(255,255,255,.16);
+    background: transparent;
+    box-shadow: none;
+    filter: none;
+    overflow: visible;
+  }
+  .bomb-svg {
+    width: 100%; height: 100%; display: block; overflow: visible;
+    filter: drop-shadow(-1px 3px 2px rgba(0, 0, 0, .3));
+  }
+  .bomb-body-circle { fill: url(#bombBody); }
+  .bomb-cap, .bomb-cap2 { fill: url(#bombCap); }
+  .bomb-gloss  { fill: rgba(255, 255, 255, .5); }
+  .bomb-gloss2 { fill: rgba(255, 255, 255, .32); }
+  .bomb-fuse   { fill: none; stroke: #c98a4e; stroke-width: 4.6; stroke-linecap: round; }
+  .bomb-spark {
+    fill: #ffd43b;
+    filter: drop-shadow(0 0 3px #ffa94d) drop-shadow(0 0 6px #ff922b);
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: bombspark .5s ease-in-out infinite;
+  }
+  @keyframes bombspark {
+    0%, 100% { transform: scale(1);   opacity: 1; }
+    50%      { transform: scale(1.6); opacity: .65; }
   }
   .bomb-num {
+    position: absolute;
+    left: 50%; top: 53%;
+    transform: translate(-50%, -50%);
     font-family: var(--ui-font);
     font-weight: 900;
-    font-size: calc(var(--cell) * .42);
+    font-size: calc(var(--cell) * .4);
     color: #fff;
     line-height: 1;
-    text-shadow: 0 1px 2px rgba(0,0,0,.4);
+    z-index: 2;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .65);
   }
-  .tile.bomb-low .tile-face { animation: bombpulse .55s ease-in-out infinite; }
-  @keyframes bombpulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.12); }
+  /* Sắp nổ (≤3): NHẤP NHÁY (chớp sáng + phồng nhẹ), KHÔNG đổi màu đỏ */
+  .tile.bomb-low .tile-face { animation: bombblink .5s ease-in-out infinite; }
+  @keyframes bombblink {
+    0%, 100% { filter: brightness(1);    transform: scale(1); }
+    50%      { filter: brightness(1.85); transform: scale(1.12); }
   }
 
   /* ── Popup thua (Game Over / New Best) — popup-common ─────────────── */
@@ -499,6 +528,27 @@
       <div class="board" id="board"></div>
     </div>
   </div>
+
+  <!-- Gradient dùng chung cho quả bom (mọi bom tham chiếu qua url(#...)) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <radialGradient id="bombBody" cx="66%" cy="28%" r="78%">
+      <stop offset="0%" stop-color="#6a779a"/>
+      <stop offset="42%" stop-color="#3a4363"/>
+      <stop offset="78%" stop-color="#232b47"/>
+      <stop offset="100%" stop-color="#151b30"/>
+    </radialGradient>
+    <radialGradient id="bombBodyLow" cx="35%" cy="28%" r="78%">
+      <stop offset="0%" stop-color="#ffb0a6"/>
+      <stop offset="42%" stop-color="#f4676b"/>
+      <stop offset="78%" stop-color="#cc2f38"/>
+      <stop offset="100%" stop-color="#8f1f27"/>
+    </radialGradient>
+    <linearGradient id="bombCap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e2e8f3"/>
+      <stop offset="48%" stop-color="#aab4cc"/>
+      <stop offset="100%" stop-color="#7f8aa6"/>
+    </linearGradient>
+  </defs></svg>
 
   <div id="overlay" class="overlay hidden">
     <div class="card">
@@ -993,22 +1043,39 @@ function paintTile(tile) {
   tile.face.style.background = 'transparent';   // khối = hình, không nền vuông
   tile.face.innerHTML = shapeSvg(tile.color, tile.special, tile.id);
 }
+// Hình quả bom: cầu bóng + nắp kim loại + ngòi cong + tia lửa (số đếm ngược ở giữa)
+const BOMB_SVG =
+  '<svg class="bomb-svg" viewBox="0 0 100 100" aria-hidden="true">' +
+    // Dịch toàn bộ quả bom lên để căn giữa ô (cầu vốn nằm sát đáy)
+    '<g transform="translate(0,-8)">' +
+      '<circle class="bomb-body-circle" cx="50" cy="61" r="39"/>' +
+      '<ellipse class="bomb-gloss" cx="63" cy="45" rx="14" ry="10" transform="rotate(28 63 45)"/>' +
+      '<circle class="bomb-gloss2" cx="37" cy="57" r="3.6"/>' +
+      // Nắp + ngòi nghiêng 45° ⇒ trông bom nghiêng; cầu & vệt sáng & số giữ nguyên
+      '<g transform="rotate(-45 50 61)">' +
+        '<rect class="bomb-cap" x="40" y="10" width="20" height="15" rx="3.5"/>' +
+        '<rect class="bomb-cap2" x="44" y="4" width="12" height="8" rx="3"/>' +
+        // Ngòi ngắn lại — tia lửa sát nắp như sắp nổ
+        '<path class="bomb-fuse" d="M54 12 C 58 7, 62 6, 63 2"/>' +
+        '<circle class="bomb-spark" cx="63" cy="2" r="5.5"/>' +
+      '</g>' +
+    '</g>' +
+  '</svg>';
+
 // Tile bom đếm ngược (không màu, không match — chỉ gỡ bằng cách nổ trúng ô kề)
 function makeBomb(timer) {
   const el = document.createElement('div');
   el.className = 'tile';
-  el.innerHTML = '<div class="tile-face bomb-face"><span class="bomb-num"></span></div>';
+  el.innerHTML = '<div class="tile-face bomb-face">' + BOMB_SVG + '<span class="bomb-num"></span></div>';
   boardEl.appendChild(el);
   const face = el.firstChild;
-  const tile = { id: ++idc, bomb: true, timer, el, face, num: face.firstChild };
+  const tile = { id: ++idc, bomb: true, timer, el, face, num: face.querySelector('.bomb-num') };
   paintBomb(tile);
   return tile;
 }
 function paintBomb(tile) {
   tile.num.textContent = tile.timer;
-  const low = tile.timer <= 3;
-  tile.el.classList.toggle('bomb-low', low);
-  tile.face.style.background = low ? 'var(--danger)' : '#2b3350';
+  tile.el.classList.toggle('bomb-low', tile.timer <= 3);
 }
 function pos(r, c) { return 'translate(' + (c * cell) + 'px,' + (r * cell) + 'px)'; }
 function layout() {
@@ -1435,6 +1502,7 @@ async function rainbowSpecialCombo(raPos, col, kind) {
   for (const k of clr) { const [r, c] = k.split(',').map(Number); mark(r, c); }
   defuseBombs(clr);
   for (const k of clr) { const [r, c] = k.split(',').map(Number); const t = board[r][c]; if (t) { t.el.remove(); board[r][c] = null; } }
+  await sleep(620);   // đợi các hạt/mảnh nổ bay tản đi rồi kẹo phía trên mới rơi
   gravityAndRefill();
   await sleep(380);
   await cascade(null, []);   // tiếp tục chuỗi match mới sau khi rơi đầy
@@ -1621,6 +1689,9 @@ async function cascade(pending, swapCells) {
       const t = board[r][c];
       if (t) { t.el.remove(); board[r][c] = null; }
     }
+
+    // đợi các hạt/mảnh nổ bay tản đi (khỏi vướng tầm nhìn) rồi kẹo phía trên mới rơi
+    await sleep(pulledCombo ? 350 : 620);
 
     gravityAndRefill();
     await sleep(pulledCombo ? 230 : 380);   // combo: rơi đầy nhanh rồi sang viên kế
@@ -1937,18 +2008,48 @@ async function explodeBomb(r, c) {
   await sleep(2000);        // khựng lại 2s cho người chơi thấy vụ nổ trước khi hiện màn thua
   gameOver();
 }
-// Nổ lớn (bom đếm ngược): chớp trắng + 2 vòng sốc đỏ/cam + mảnh bắn tỏa nhanh
+// Nổ lớn (bom đếm ngược): chớp trắng bùng · rung màn · nhiều vòng sốc · cầu lửa · mảnh & tia lửa · khói
 function bigBoom(cx, cy) {
+  // 0) RUNG MÀN — cả bàn giật mạnh rồi lắng dần
+  boardEl.animate([
+    { transform: 'translate(0,0)' },
+    { transform: 'translate(-9px,6px)' },
+    { transform: 'translate(8px,-7px)' },
+    { transform: 'translate(-7px,-5px)' },
+    { transform: 'translate(6px,6px)' },
+    { transform: 'translate(-4px,3px)' },
+    { transform: 'translate(3px,-2px)' },
+    { transform: 'translate(0,0)' },
+  ], { duration: 560, easing: 'ease-out' });
+
+  // 1) CHỚP TRẮNG — bùng to hơn, giữ sáng lâu hơn một nhịp
   const flash = document.createElement('div');
   flash.className = 'fx-rainbow-flash';
-  flash.style.width = flash.style.height = (cell * 3.4) + 'px';
+  flash.style.width = flash.style.height = (cell * 5) + 'px';
   flash.style.left = cx + 'px'; flash.style.top = cy + 'px';
   boardEl.appendChild(flash);
   flash.animate([
+    { transform: 'translate(-50%,-50%) scale(.15)', opacity: 1 },
+    { transform: 'translate(-50%,-50%) scale(1.2)', opacity: 1, offset: .25 },
+    { transform: 'translate(-50%,-50%) scale(3.2)', opacity: 0 },
+  ], { duration: 520, easing: 'ease-out' }).onfinish = () => flash.remove();
+
+  // 2) CẦU LỬA — lõi trắng-vàng nở bung ở tâm rồi tắt
+  const ball = document.createElement('div');
+  ball.style.cssText = 'position:absolute;border-radius:50%;pointer-events:none;z-index:9;' +
+    'background:radial-gradient(circle,#fff 0%,#ffe27a 32%,#ffb02e 60%,#ff5a5f 82%,rgba(255,90,95,0) 100%);' +
+    'filter:blur(1px);';
+  ball.style.width = ball.style.height = (cell * 3.2) + 'px';
+  ball.style.left = cx + 'px'; ball.style.top = cy + 'px';
+  boardEl.appendChild(ball);
+  ball.animate([
     { transform: 'translate(-50%,-50%) scale(.2)', opacity: 1 },
-    { transform: 'translate(-50%,-50%) scale(2.2)', opacity: 0 },
-  ], { duration: 360, easing: 'ease-out' }).onfinish = () => flash.remove();
-  [['#ff5a5f', 3.6, 520], ['#ffb02e', 4.6, 640]].forEach(([col, sc, dur]) => {
+    { transform: 'translate(-50%,-50%) scale(1.25)', opacity: 1, offset: .45 },
+    { transform: 'translate(-50%,-50%) scale(1.7)', opacity: 0 },
+  ], { duration: 620, easing: 'cubic-bezier(.15,.7,.3,1)' }).onfinish = () => ball.remove();
+
+  // 3) NHIỀU VÒNG SỐC — trắng mảnh + đỏ + cam, lệch pha nở ra
+  [['#ffffff', 3.2, 460, 0], ['#ff5a5f', 4.6, 560, 40], ['#ffb02e', 6, 720, 90]].forEach(([col, sc, dur, delay]) => {
     const ring = document.createElement('div');
     ring.className = 'fx-ring';
     ring.style.color = col;
@@ -1956,29 +2057,68 @@ function bigBoom(cx, cy) {
     ring.style.width = ring.style.height = (cell * sc) + 'px';
     boardEl.appendChild(ring);
     ring.animate([
-      { transform: 'translate(-50%,-50%) scale(.25)', opacity: .95 },
+      { transform: 'translate(-50%,-50%) scale(.2)', opacity: .95 },
       { transform: 'translate(-50%,-50%) scale(1)', opacity: 0 },
-    ], { duration: dur, easing: 'ease-out' }).onfinish = () => ring.remove();
+    ], { duration: dur, delay, easing: 'ease-out', fill: 'backwards' }).onfinish = () => ring.remove();
   });
-  const n = 18;
+
+  // 4) MẢNH VĂNG — cục lửa đỏ/cam bắn tỏa xa
+  const n = 34;
   for (let i = 0; i < n; i++) {
     const p = document.createElement('div');
     p.className = 'fx-particle';
-    const sz = 6 + Math.random() * 6;
+    const sz = 6 + Math.random() * 9;
     p.style.width = p.style.height = sz + 'px';
     p.style.borderRadius = '50%';
     const col = i % 2 ? '#ff5a5f' : '#ffb02e';
     p.style.background = col; p.style.color = col;
     p.style.left = cx + 'px'; p.style.top = cy + 'px';
     boardEl.appendChild(p);
-    const a = (i / n) * Math.PI * 2 + Math.random() * 0.3;
-    const dist = cell * (2 + Math.random() * 1.6);
+    const a = (i / n) * Math.PI * 2 + Math.random() * 0.4;
+    const dist = cell * (2.6 + Math.random() * 2.4);
     const dx = Math.cos(a) * dist, dy = Math.sin(a) * dist;
     p.animate([
-      { transform: 'translate(-50%,-50%) scale(1.4)', opacity: 1 },
+      { transform: 'translate(-50%,-50%) scale(1.6)', opacity: 1 },
       { transform: 'translate(calc(-50% + ' + (dx * 0.6) + 'px),calc(-50% + ' + (dy * 0.6) + 'px)) scale(1)', opacity: 1, offset: .5 },
       { transform: 'translate(calc(-50% + ' + dx + 'px),calc(-50% + ' + dy + 'px)) scale(.2)', opacity: 0 },
-    ], { duration: 480 + Math.random() * 220, easing: 'cubic-bezier(.2,.7,.3,1)' }).onfinish = () => p.remove();
+    ], { duration: 560 + Math.random() * 320, easing: 'cubic-bezier(.2,.7,.3,1)' }).onfinish = () => p.remove();
+  }
+
+  // 5) TIA LỬA — vệt nhỏ trắng-vàng vọt cực nhanh ra ngoài
+  const sparks = 18;
+  for (let i = 0; i < sparks; i++) {
+    const s = document.createElement('div');
+    s.style.cssText = 'position:absolute;width:3px;height:12px;border-radius:2px;pointer-events:none;z-index:10;' +
+      'background:linear-gradient(#fff,#ffd43b);box-shadow:0 0 6px #ffd43b;';
+    s.style.left = cx + 'px'; s.style.top = cy + 'px';
+    boardEl.appendChild(s);
+    const a = Math.random() * Math.PI * 2;
+    const dist = cell * (3.2 + Math.random() * 2.6);
+    const dx = Math.cos(a) * dist, dy = Math.sin(a) * dist;
+    s.animate([
+      { transform: 'translate(-50%,-50%) rotate(' + (a + Math.PI / 2) + 'rad) scale(1)', opacity: 1 },
+      { transform: 'translate(calc(-50% + ' + dx + 'px),calc(-50% + ' + dy + 'px)) rotate(' + (a + Math.PI / 2) + 'rad) scale(.4)', opacity: 0 },
+    ], { duration: 340 + Math.random() * 200, easing: 'cubic-bezier(.1,.8,.2,1)' }).onfinish = () => s.remove();
+  }
+
+  // 6) KHÓI — cụm tối lan ra chậm rồi tan, đọng lại chút dư âm
+  const puffs = 7;
+  for (let i = 0; i < puffs; i++) {
+    const sm = document.createElement('div');
+    sm.style.cssText = 'position:absolute;border-radius:50%;pointer-events:none;z-index:8;filter:blur(3px);' +
+      'background:radial-gradient(circle,rgba(60,50,55,.55),rgba(40,35,40,0) 70%);';
+    const sz = cell * (1.6 + Math.random() * 1.2);
+    sm.style.width = sm.style.height = sz + 'px';
+    sm.style.left = cx + 'px'; sm.style.top = cy + 'px';
+    boardEl.appendChild(sm);
+    const a = (i / puffs) * Math.PI * 2 + Math.random() * 0.5;
+    const dist = cell * (1.2 + Math.random() * 1.3);
+    const dx = Math.cos(a) * dist, dy = Math.sin(a) * dist - cell * 0.4;
+    sm.animate([
+      { transform: 'translate(-50%,-50%) scale(.4)', opacity: 0 },
+      { transform: 'translate(calc(-50% + ' + (dx * 0.5) + 'px),calc(-50% + ' + (dy * 0.5) + 'px)) scale(1)', opacity: .8, offset: .3 },
+      { transform: 'translate(calc(-50% + ' + dx + 'px),calc(-50% + ' + dy + 'px)) scale(1.5)', opacity: 0 },
+    ], { duration: 1100 + Math.random() * 400, easing: 'ease-out' }).onfinish = () => sm.remove();
   }
 }
 
@@ -2705,11 +2845,11 @@ function obDropIn(stage, r, c, color, delay) {
     { duration: 320, delay: delay || 0, easing: 'cubic-bezier(.3,1.1,.5,1)', fill: 'backwards' });
   return g;
 }
-// Ô bom đếm ngược (hình vuông tối + số) — khớp look game
+// Ô bom đếm ngược (quả bom cầu + số) — khớp look game
 function obBombCell(stage, r, c, num, low) {
   const d = document.createElement('div'); d.className = 'ob-cell ob-bomb' + (low ? ' low' : '');
   d.style.left = (c * OB_STEP) + 'px'; d.style.top = (r * OB_STEP) + 'px';
-  d.innerHTML = '<span>' + num + '</span>';
+  d.innerHTML = BOMB_SVG + '<span>' + num + '</span>';
   stage.appendChild(d); return d;
 }
 // Chữ nổi (vd "+50" khi gỡ bom)
