@@ -397,7 +397,7 @@
     32%, 100%    { transform: rotate(0deg) scale(1); }
   }
   .tile.clearing {
-    transition: transform .42s ease, opacity .42s ease;
+    transition: transform .22s ease, opacity .22s ease;   /* match thường: viên nổ NHANH gọn */
     transform: scale(1.6);
     opacity: 0;
     z-index: 3;
@@ -1557,15 +1557,28 @@ function requestMove(a, b) {
   if (!busy) { tryMove(a, b); return; }
   if (canInject(a, b)) injectMove(a, b);
 }
-// Được phép chèn nước đi giữa lúc đang nổ? Chỉ khi bàn đã lắng & 2 viên "tĩnh".
+// Một CỘT đã "lắng" khi: không tile nào đang khoá (nổ/rơi) và không có lỗ hổng dưới tile
+// (mọi tile đã dồn sát đáy). Quét từ trên xuống: gặp tile rồi mà bên dưới còn ô trống → chưa lắng.
+function colSettled(c) {
+  let seenTile = false;
+  for (let r = 0; r < ROWS; r++) {
+    const t = board[r][c];
+    if (t) { if (t.locked) return false; seenTile = true; }
+    else if (seenTile) return false;                // có tile lơ lửng trên khoảng trống → chưa lắng
+  }
+  return true;
+}
+// Được phép chèn nước đi giữa lúc đang nổ? GRAB THEO TỪNG CỘT: chỉ cần 2 cột liên quan đã lắng
+// (cột khác vẫn đang nổ/rơi cũng không sao) → người chơi không bị chặn ở vùng bàn đã yên.
 function canInject(a, b) {
-  if (!cascading || !stableWindow) return false;    // đang nổ & bàn đã ổn định → mới cho chèn
+  if (!cascading) return false;                     // chỉ khi đang trong vòng nổ (rảnh thì dùng tryMove)
   if (!(Math.abs(a.r - b.r) + Math.abs(a.c - b.c) === 1)) return false;
   const ta = tileAt(a.r, a.c), tb = tileAt(b.r, b.c);
   if (!ta || !tb) return false;
   if (ta.locked || tb.locked) return false;         // đang nổ / đang rơi → không grab
   if (ta.bomb || tb.bomb) return false;             // bom: chỉ gỡ bằng nổ trúng ô kề
   if (ta.special || tb.special) return false;       // special để dành sau khi hết combo
+  if (!colSettled(a.c) || !colSettled(b.c)) return false;   // 2 cột liên quan phải đã lắng
   return true;
 }
 // Chèn 1 nước đi (đồng bộ, không await) — vòng nổ đang chạy sẽ tự nuốt ở đợt kế.
@@ -1688,6 +1701,8 @@ async function cascade(pending, swapCells) {
       if (merged.size) await sleep(190);
     }
     let cleared = 0, sx = 0, sy = 0;
+    let starTotal = 0, starDropAt = 0;  // mốc rớt kẹo = khi sao bay được ~1/3 đường
+    let spx = 0, spy = 0, spn = 0;      // tâm các viên ĐẶC BIỆT phát nổ → điểm xuất phát ngôi sao
     const spTypes = new Set();          // loại special phát nổ ở bước này → chọn tiếng
     const parts = [];
     for (const k of clr) {
@@ -1698,6 +1713,7 @@ async function cascade(pending, swapCells) {
         if (t.special) spTypes.add(t.special);
         const [cx, cy] = fxCenter(r, c);
         sx += cx; sy += cy;
+        if (t.special) { spx += cx; spy += cy; spn++; }   // ghi vị trí viên đặc biệt
         // cầu vồng: nối xẹt xong (explodeAt) rồi NỔ TỎA RA từ tâm cầu vồng (gần trước, xa sau)
         let d = 0;
         if (rbHits.length) {
@@ -1719,8 +1735,19 @@ async function cascade(pending, swapCells) {
     if (cleared) {
       const pts = cleared * 10 * chain;
       addScore(cleared, chain);
-      spawnPop(sx / cleared, sy / cleared, '+' + pts);
-      flyToScore(sx / cleared, sy / cleared, cleared, chain);   // ngôi sao thu thập điểm về thẻ SCORE
+      // Điểm xuất phát ngôi sao: CẦU VỒNG → tâm viên cầu vồng · viên đặc biệt khác → tại viên đó
+      // · match thường → tâm cụm nổ.
+      let gx, gy;
+      if (rbHits.length) {
+        let rx = 0, ry = 0;
+        for (const [rr, rc] of rbHits) { const [cx0, cy0] = fxCenter(rr, rc); rx += cx0; ry += cy0; }
+        gx = rx / rbHits.length; gy = ry / rbHits.length;
+      } else if (spn) { gx = spx / spn; gy = spy / spn; }
+      else { gx = sx / cleared; gy = sy / cleared; }
+      spawnPop(gx, gy, '+' + pts);
+      // Ngôi sao thu thập điểm về thẻ SCORE (đợi nổ xong). Lưu mốc sao BAY HẾT để hoãn rơi kẹo.
+      starTotal = flyToScore(gx, gy, cleared, chain, maxDelay);
+      starDropAt = Date.now() + starTotal / 3;   // sao đi được ~1/3 đường thì rớt kẹo
       spawnParticles(parts);                                    // nổ thành từng mảnh vỡ bắn ra rồi rơi
       if (rbHits.length) {
         // Tia xẹt nối cầu vồng → các viên bị xoá (theo đúng thứ tự nổ trong zapDelay)
@@ -1745,7 +1772,8 @@ async function cascade(pending, swapCells) {
       }
     }
 
-    await sleep(clr.size ? (pulledCombo ? 300 : (420 + maxDelay * 1000)) : 90);   // combo: mỗi đợt nhanh gọn
+    // Match thường (maxDelay=0): nổ nhanh (chờ ngắn). Cầu vồng giữ nhịp sóng (maxDelay).
+    await sleep(clr.size ? (pulledCombo ? 300 : (maxDelay > 0 ? 420 + maxDelay * 1000 : 200)) : 90);
 
     defuseBombs(clr);   // bom có ô kề (hoặc chính nó) bị xoá → gỡ an toàn
 
@@ -1756,12 +1784,16 @@ async function cascade(pending, swapCells) {
       if (t) { t.el.remove(); board[r][c] = null; }
     }
 
-    // đợi các hạt/mảnh nổ bay tản đi (khỏi vướng tầm nhìn) rồi kẹo phía trên mới rơi
-    await sleep(pulledCombo ? 350 : 620);
+    // Match thường: KHÔNG đợi hạt tan — kẹo rơi xuống NHANH (hạt cứ nấn ná bay tiếp phía trên).
+    // Cầu vồng vẫn đợi lâu cho sóng nổ trọn vẹn.
+    await sleep(pulledCombo ? 350 : (maxDelay > 0 ? 620 : 240));
+
+    // Chờ sao bay được ~1/3 đường rồi mới rớt kẹo xuống lấp chỗ trống.
+    if (starDropAt) await sleep(Math.max(0, starDropAt - Date.now()));
 
     gravityAndRefill();
     stableWindow = true;                      // bàn đã rơi đầy & ổn định → MỞ chèn nước đi
-    await sleep(pulledCombo ? 300 : 480);    // giữ cửa sổ chèn rộng hơn giữa các đợt
+    await sleep(pulledCombo ? 300 : (maxDelay > 0 ? 480 : 260));
     // Kẹo gói đã nổ lần 1 → sau khi rơi, ép NỔ LẦN 2 ở vòng kế
     const reboom = [];
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
@@ -2233,7 +2265,7 @@ function bumpScoreCard() {
 // hội tụ, bay theo đường cong (chậm rồi tăng tốc về đích) lên thẻ SCORE, kéo
 // theo vệt sáng. Chạm bảng điểm → lóe sáng + thẻ nảy + số đếm tăng + tiếng "ting".
 // count = số khối vừa ăn, chain = cấp combo → match lớn/combo: nhiều sao, nhanh & sáng hơn.
-function flyToScore(bx, by, count, chain) {
+function flyToScore(bx, by, count, chain, waitS) {
   count = count || 1; chain = chain || 1;
   const scoreVal = document.getElementById('score-val');
   const target = scoreVal && scoreVal.closest('.sc-box');
@@ -2258,8 +2290,12 @@ function flyToScore(bx, by, count, chain) {
     Sound.sparkle();
   };
 
-  const HOLD = 0.42;   // hiện lên xong KHỰNG tới mốc này (tỉ lệ thời gian) rồi mới bay
-  const BURST = 430;   // chờ khối NỔ XONG (.clearing ~.42s) rồi ngôi sao mới hiện tại chỗ nổ
+  // Chờ khối NỔ XONG rồi ngôi sao mới hiện: .clearing ~.22s + trễ sóng nổ (cầu vồng) waitS.
+  const BURST = 180 + (waitS || 0) * 1000;
+  // Sao bay LẦN LƯỢT từng cái, nhưng TOÀN BỘ xong trong ~1s: rải xuất phát trong (1000 - dur).
+  const dur = 460;
+  const span = Math.max(0, 1000 - dur);                       // khoảng rải xuất phát
+  const step = n > 1 ? span / (n - 1) : 0;
 
   for (let i = 0; i < n; i++) {
     // Xuất phát tản nhẹ quanh tâm rồi cùng hội tụ về thẻ
@@ -2274,26 +2310,20 @@ function flyToScore(bx, by, count, chain) {
     star.style.fontSize = (15 + Math.random() * 11) + 'px';
     document.body.appendChild(star);
 
-    const dur = (1100 + Math.random() * 280 + i * 40) * rush;
-    const delay = BURST + i * 44 + Math.random() * 50;   // sau khi nổ xong mới xuất hiện
+    const delay = BURST + i * step;   // sau khi nổ xong → hiện & bay so le nhưng gọn trong 1s
     const spin = (Math.random() * 360 - 60) | 0;
 
-    const r1 = (spin * .06) | 0, r2 = (spin * .15) | 0;
+    const r1 = (spin * .1) | 0;
     const anim = star.animate([
-      // Hiện lên NẢY MÚP (squash & stretch jelly) rồi ĐỨNG YÊN tại chỗ (khựng)...
-      { offset: 0,     transform: 'translate(-50%,-50%) scale(.2) rotate(0deg)', opacity: 0, easing: 'cubic-bezier(.2,1.5,.5,1)' },
-      { offset: .10,   transform: 'translate(-50%,-50%) scale(1.5, 1.32) rotate(' + r1 + 'deg)', opacity: 1, easing: 'ease-out' },   // vọt phồng
-      { offset: .17,   transform: 'translate(-50%,-52%) scale(1.16, .82) rotate(' + r1 + 'deg)', opacity: 1, easing: 'ease-in-out' }, // dẹt xuống (múp)
-      { offset: .25,   transform: 'translate(-50%,-49%) scale(.92, 1.12) rotate(' + r2 + 'deg)', opacity: 1, easing: 'ease-in-out' }, // bật cao lại
-      { offset: .33,   transform: 'translate(-50%,-50%) scale(1.06, .96) rotate(' + r2 + 'deg)', opacity: 1, easing: 'ease-out' },    // nảy nhỏ dần
-      { offset: HOLD,  transform: 'translate(-50%,-50%) scale(1) rotate(' + r2 + 'deg)', opacity: 1, easing: 'cubic-bezier(.5,0,.85,1)' }, // yên
-      // ...rồi BAY THẲNG về thẻ SCORE, tăng tốc dần (hơi kéo dãn theo hướng bay)
-      { offset: .55,   transform: 'translate(calc(-50% + ' + (dx * .12) + 'px), calc(-50% + ' + (dy * .12) + 'px)) scale(1.12, .9) rotate(' + ((spin * .4) | 0) + 'deg)', opacity: 1 },
-      { offset: 1,     transform: 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px)) scale(.42) rotate(' + spin + 'deg)', opacity: .95 },
+      // Hiện lên NHANH (vọt phồng gọn) rồi VÈO thẳng về thẻ — bay NHANH NGAY, không tăng tốc dần.
+      { offset: 0,    transform: 'translate(-50%,-50%) scale(.2) rotate(0deg)', opacity: 0, easing: 'cubic-bezier(.2,1.4,.5,1)' },
+      { offset: .14,  transform: 'translate(-50%,-50%) scale(1.3) rotate(' + r1 + 'deg)', opacity: 1, easing: 'cubic-bezier(.1,.85,.25,1)' }, // vọt hiện → phóng đi liền
+      { offset: 1,    transform: 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px)) scale(.42) rotate(' + spin + 'deg)', opacity: .95 },
     ], { duration: dur, delay: delay, fill: 'both' });
 
     anim.onfinish = () => { star.remove(); onLanded(); };
   }
+  return BURST + (n > 1 ? span : 0) + dur;   // tổng thời gian tới khi sao CUỐI về đích (ms)
 }
 
 // Lóe sáng tại bảng điểm khi ngôi sao chạm vào
@@ -2388,18 +2418,17 @@ function spawnParticles(list) {
       p.style.color = color;        // cho box-shadow glow ăn theo màu mảnh
       p.style.left = x + 'px'; p.style.top = y + 'px';
       boardEl.appendChild(p);
-      // Bắn mảnh vỡ ra ngoài + lên cao, rồi trọng lực kéo rơi xuống (quỹ đạo parabol) — TO & CHẬM hơn
+      // Mảnh vỡ NỔ BUNG TẠI CHỖ: phồng to nhanh, dạt ra 1 chút quanh tâm rồi CO LẠI & mờ tan
+      // (gần như không rơi) — cảm giác "tan biến" tức thì.
       const ang = Math.random() * Math.PI * 2;
-      const spd = cell * (0.75 + Math.random() * 1.1);                          // văng xa hơn
-      const dx = Math.cos(ang) * spd;
-      const up = Math.abs(Math.sin(ang)) * spd * 0.6 + cell * (0.5 + Math.random() * 0.4);
-      const fall = cell * (1.9 + Math.random() * 1.3);                          // rơi xa hơn
-      const rot = (Math.random() * 640 - 320) | 0;
+      const rad = cell * (0.18 + Math.random() * 0.22);   // dạt ra quanh tâm rất ngắn
+      const ox = Math.cos(ang) * rad, oy = Math.sin(ang) * rad;
+      const rot = (Math.random() * 200 - 100) | 0;
       p.animate([
-        { transform: 'translate(-50%,-50%) rotate(0deg) scale(1.35)', opacity: 1, offset: 0 },
-        { transform: 'translate(calc(-50% + ' + (dx * 0.55) + 'px), calc(-50% - ' + up + 'px)) rotate(' + (rot * 0.5) + 'deg) scale(1.05)', opacity: 1, offset: .42 },
-        { transform: 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + fall + 'px)) rotate(' + rot + 'deg) scale(.2)', opacity: 0, offset: 1 },
-      ], { duration: 1250 + Math.random() * 450, delay: (delay || 0) * 1000, fill: 'backwards', easing: 'cubic-bezier(.3,.5,.55,1)' }).onfinish = () => p.remove();
+        { transform: 'translate(-50%,-50%) rotate(0deg) scale(.5)', opacity: 1, offset: 0 },
+        { transform: 'translate(calc(-50% + ' + (ox * 0.7) + 'px), calc(-50% + ' + (oy * 0.7) + 'px)) rotate(' + (rot * 0.5) + 'deg) scale(1.5)', opacity: 1, offset: .32 },
+        { transform: 'translate(calc(-50% + ' + ox + 'px), calc(-50% + ' + oy + 'px)) rotate(' + rot + 'deg) scale(.2)', opacity: 0, offset: 1 },
+      ], { duration: 600 + Math.random() * 200, delay: (delay || 0) * 1000, fill: 'backwards', easing: 'cubic-bezier(.25,.6,.4,1)' }).onfinish = () => p.remove();
     }
   }
 }
