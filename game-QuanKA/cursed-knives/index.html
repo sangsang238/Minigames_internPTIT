@@ -347,7 +347,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
       </span>
     </div>
   </div>
-  <div id="hud-stage">Stage 1</div>
+  <div id="hud-stage" style="display:none"></div>
 </div>
 
 <!-- Banner tutorial -->
@@ -882,8 +882,8 @@ const KNIFE_GAP = 0.105;    // khoảng cách góc tối thiểu giữa 2 dao (r
 const GEM_ARC = 0.165;      // bán cung trúng ngọc (rad)
 const NEAR_MISS = 0.17;     // sượt qua dao khác trong cung này → +2 "Sát nút!"
 const ADS_EVERY = 3;        // mỗi 3 ván thua → xin app hiện quảng cáo (game-common §1.7)
-const SPAWN_MS = 340;       // totem mới phóng to vào (easeOutBack)
-const BREAK_MS = 680;       // thời gian mảnh vỡ bay trước khi totem kế vào
+const SPAWN_MS = 1000;      // totem mới PHÌNH TỪ TÂM ra trong ~1s (chặn touch tới khi xong)
+const BREAK_MS = 100;       // vỡ xong → mảnh bung ra là lòi ngay totem trong (nested reveal)
 const GEM_SCORE = 5;
 const STAGE_BONUS = 2;      // thưởng phá totem thường
 const BOSS_BONUS = 10;      // thưởng phá totem TRÙM
@@ -1624,13 +1624,11 @@ function spawnStage(idx, quiet) {
   endBreath();
   echoLive = !quiet && !tutorial && echoS >= 1 && stageIdx === echoS && !echoBrokenRun;
   echoDissolveT0 = 0;
-  if (!quiet) {
-    if (cfg.boss) {
-      sBoss();
-      floatTexts.push({ x: LW / 2, y: disc.y - disc.R - 46, born: timeMs, life: 1300, size: 46, color: BOSS_ACCENT, text: t('boss') });
-    } else {
-      floatTexts.push({ x: LW / 2, y: disc.y - disc.R - 46, born: timeMs, life: 1000, size: 38, color: cfg.accent, text: t('stage') + ' ' + (stageIdx + 1) });
-    }
+  // Không còn "Stage N" — totem thường vào lặng lẽ (phình ra là đủ tín hiệu);
+  // chỉ TRÙM mới báo hiệu.
+  if (!quiet && cfg.boss) {
+    sBoss();
+    floatTexts.push({ x: LW / 2, y: disc.y - disc.R - 46, born: timeMs, life: 1300, size: 46, color: BOSS_ACCENT, text: t('boss') });
   }
   updateStageHud();
 }
@@ -2173,7 +2171,10 @@ function render() {
   /* totem + dao cắm + ngọc */
   if (cfg && phase !== 'break') {
     let sc = 1;
-    if (phase === 'spawn') sc = easeOutBack(Math.min(1, (timeMs - spawnT0) / SPAWN_MS));
+    if (phase === 'spawn') {                          // phình từ tâm ra (easeOutCubic, mượt, không nảy)
+      const sp = Math.min(1, (timeMs - spawnT0) / SPAWN_MS);
+      sc = 1 - (1 - sp) * (1 - sp) * (1 - sp);
+    }
     const pp = (timeMs - stagePulseT0) / 180;
     if (pp >= 0 && pp < 1) sc *= 1 + 0.03 * Math.sin(pp * Math.PI);   // nhún khi dao cắm
 
@@ -2448,17 +2449,13 @@ function loop(ts) {
 function updateScoreHud() { $('hud-score').textContent = String(score); }
 function updateBestHud()  { $('hud-best').textContent = String(best); }
 
+/* Không còn nhãn "Stage" — dòng này giờ chỉ báo TRÙM (ẩn hẳn lúc thường/tutorial). */
 function updateStageHud() {
   const el = $('hud-stage');
-  if (tutorial) {
-    el.textContent = t('tutorial');
-    el.classList.remove('boss');
-  } else {
-    let txt = cfg && cfg.boss ? t('boss') : t('stage') + ' ' + (stageIdx + 1);
-    if (deep >= 0 && stageIdx === deep) txt += ' ✦';   // rìa vùng đã biết (Deepest)
-    el.textContent = txt;
-    el.classList.toggle('boss', !!(cfg && cfg.boss));
-  }
+  const showBoss = !tutorial && cfg && cfg.boss;
+  el.textContent = showBoss ? t('boss') : '';
+  el.classList.toggle('boss', !!showBoss);
+  el.style.display = showBoss ? '' : 'none';
 }
 
 /* Tự co cỡ điểm cho vừa card khi điểm ≥ 6 chữ số (popup-common §5b) */

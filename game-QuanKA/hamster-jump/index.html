@@ -52,59 +52,82 @@ html, body {
   user-select: none;
 }
 
-/* ── Header chuẩn: Back | SCORE + BEST (pill) | Volume ────────── */
-#topbar {
+/* ── Header chuẩn — BỐ CỤC copy từ index(exampleforheader.html):
+      Back/Volume neo 2 mép (absolute), 2 pill SCORE+BEST BẰNG NHAU căn giữa;
+      top + width do layoutHud() đặt. Màu giữ tông kem ấm của game. ──────── */
+.hud {
   position: absolute;
   top: 0; left: 0; right: 0;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: calc(max(var(--sbh), env(safe-area-inset-top, 0px)) + 8px) 12px 0;
-  pointer-events: none;
   z-index: 5;
+  pointer-events: none;
 }
-#topbar .btn3d { pointer-events: auto; flex: 0 0 auto; }
-
+.hud > * { pointer-events: auto; }
+.btn3d.hud-back { position: absolute; left: 12px; }
+.btn3d.hud-mute { position: absolute; right: 12px; }
 .hud-scores {
-  flex: 1 1 auto;
-  min-width: 0;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
-  gap: 8px;
-  justify-content: center;
+  gap: 6px;
 }
 .hud-pill {
-  flex: 0 1 auto;
+  flex: 1 1 0;
   min-width: 0;
+  overflow: hidden;
+  background: rgba(255, 250, 236, .94);
+  border: 2px solid rgba(150, 105, 45, .3);
+  border-radius: 14px;
+  padding: 7px 8px 9px 4px;
+  text-align: center;
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 5px 14px 6px 10px;
-  border-radius: 15px;
-  background: rgba(255, 250, 236, .92);
-  border: 2px solid rgba(150, 105, 45, .3);
-  box-shadow: 0 3px 0 rgba(150, 100, 40, .22), inset 0 1px 0 rgba(255, 255, 255, .7);
-  -webkit-user-select: none; user-select: none;
+  justify-content: center;
+  gap: 5px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 3px 0 rgba(150, 100, 40, .22);
 }
+.pill-text { display: flex; flex-direction: column; align-items: center; min-width: 0; flex: 1 0 auto; }
 .pill-ico {
   flex: 0 0 auto;
-  width: clamp(18px, 5vw, 22px); height: clamp(18px, 5vw, 22px); display: block;
-  filter: drop-shadow(0 1px 0 rgba(150, 100, 30, .35));
+  width: clamp(16px, 4.8vw, 21px); height: clamp(16px, 4.8vw, 21px); display: block;
+  filter: drop-shadow(0 1px 1px rgba(150, 100, 30, .35));
 }
-.pill-text { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; line-height: 1; }
-.hud-pill .label { font-size: clamp(9px, 2.8vw, 11px); letter-spacing: 1.5px; font-weight: 700; color: #a9803f; white-space: nowrap; }
-.hud-pill .value { font-size: clamp(19px, 5.6vw, 26px); font-weight: 800; color: #6f4a1c; text-shadow: 0 1px 0 rgba(255, 255, 255, .55); white-space: nowrap; }
+.hud-pill .label {
+  font-size: clamp(10px, 3.2vw, 13px);
+  font-weight: 700; letter-spacing: .5px;
+  color: #a9803f; line-height: 1.05; white-space: nowrap;
+}
+.hud-pill .value {
+  font-size: clamp(16px, 5vw, 24px); line-height: 1.1;
+  color: #6f4a1c; white-space: nowrap;
+  font-weight: 800; text-shadow: 0 1px 0 rgba(255, 255, 255, .55);
+}
 #best-val { color: #e8842c; }
+.back-ico { width: 52%; height: 52%; fill: currentColor; display: block; }
+.snd-ico { width: 58%; height: 58%; display: block; }
 
-/* phụ: độ cao tháp + xu (nhỏ), căn giữa ngay dưới hàng điểm */
+/* Nút Back / Volume: icon vuông, nền kem phẳng đồng bộ pill (top/size do JS) */
+.btn3d.hud-back, .btn3d.hud-mute { --surface-height: 44px; --surface-width: 44px; --radius: 13px; }
+.btn3d.hud-back .btn3d-shadow, .btn3d.hud-mute .btn3d-shadow { display: none; }
+.btn3d.hud-back .btn3d-surface, .btn3d.hud-mute .btn3d-surface {
+  background: rgba(255, 250, 236, .94);
+  border: 2px solid rgba(150, 105, 45, .3);
+  color: #7a4f1e;
+  backdrop-filter: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 3px 0 rgba(150, 100, 40, .22);
+}
+.btn3d.hud-back:active .btn3d-surface, .btn3d.hud-mute:active .btn3d-surface { background: rgba(244, 232, 210, .95); }
+#mute-btn .ico-off { display: none; }
+#mute-btn.muted .ico-on { display: none; }
+#mute-btn.muted .ico-off { display: block; }
+
+/* phụ: độ cao tháp + xu (top do layoutHud đặt, dưới hàng điểm) */
 #substat {
   position: absolute;
   top: calc(max(var(--sbh), env(safe-area-inset-top, 0px)) + 62px);
   left: 0; right: 0;
-  display: flex;
-  justify-content: center;
-  gap: 16px;
-  pointer-events: none;
-  z-index: 5;
+  display: flex; justify-content: center; gap: 16px;
+  pointer-events: none; z-index: 5;
 }
 #substat > div {
   display: inline-flex; align-items: center; gap: 4px;
@@ -115,15 +138,102 @@ html, body {
 .coin-ico2 { width: 18px; height: 18px; display: block; }
 #coin-ind span { color: #c98a12; }
 
-/* chỉ báo chuỗi Perfect — hiện khi combo ≥ 2, pop mỗi lần tăng */
+/* chỉ báo chuỗi Perfect */
 #streak {
   position: absolute;
   top: calc(max(var(--sbh), env(safe-area-inset-top, 0px)) + 88px);
   left: 0; right: 0;
-  text-align: center;
-  font-size: 16px; font-weight: 800;
-  color: #e8842c;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, .85);
+  text-align: center; font-size: 16px; font-weight: 800;
+  color: #e8842c; text-shadow: 0 1px 0 rgba(255, 255, 255, .85);
+  pointer-events: none; z-index: 5;
+  opacity: 1; transition: opacity .25s;
+}
+#streak.hidden { opacity: 0; }
+#streak.pop { animation: streakPop .3s ease-out; }
+@keyframes streakPop {
+  0%   { transform: scale(1.45); }
+  100% { transform: scale(1); }
+}
+
+/* ── btn3d (game-common §1.4 / popup-common §6) ───────────────── */
+.btn3d {
+  --radius: 12px;
+  --surface-color: rgba(255, 255, 255, .5);
+  --surface-text: var(--text);
+  --surface-height: 42px;
+  --surface-width: auto;
+  --surface-padding-x: 16px;
+  --surface-font-size: 18px;
+  position: relative;
+  display: inline-block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.btn3d-shadow { display: none; }
+.btn3d-surface {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: var(--surface-height);
+  width: var(--surface-width);
+  padding: 0 var(--surface-padding-x);
+  border-radius: var(--radius);
+  background: var(--surface-color);
+  border: 1px solid var(--glass-border);
+  color: var(--surface-text);
+  font-family: var(--ui-font);
+  font-size: var(--surface-font-size);
+  letter-spacing: .5px;
+  backdrop-filter: blur(8px);
+  transition: transform .09s ease-out, background .1s;
+}
+.btn3d:active { transform: scale(.94); }
+.btn3d:active .btn3d-surface { background: rgba(255, 255, 255, .75); }
+
+.btn3d.btn-icon {
+  --surface-height: 42px;
+  --surface-width: 42px;
+  --surface-padding-x: 0;
+}
+.back-ico { width: 52%; height: 52%; fill: currentColor; display: block; }
+
+/* ── Menu chờ (không phải popup kết quả) ──────────────────────── */
+
+
+
+/* phụ: độ cao tháp + xu (top do layoutHud đặt, dưới hàng điểm) */
+#substat {
+  position: absolute;
+  top: calc(max(var(--sbh), env(safe-area-inset-top, 0px)) + 62px);
+  left: 0; right: 0;
+  display: flex; justify-content: center; gap: 16px;
+  pointer-events: none; z-index: 5;
+}
+#substat > div {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 16px; font-weight: 800; color: #7a5a2e;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .6);
+}
+.stack-ico { width: 19px; height: 19px; display: block; }
+.coin-ico2 { width: 18px; height: 18px; display: block; }
+#coin-ind span { color: #c98a12; }
+
+/* chỉ báo chuỗi Perfect */
+#streak {
+  position: absolute;
+  top: calc(max(var(--sbh), env(safe-area-inset-top, 0px)) + 88px);
+  left: 0; right: 0;
+  text-align: center; font-size: 16px; font-weight: 800;
+  color: #e8842c; text-shadow: 0 1px 0 rgba(255, 255, 255, .85);
   pointer-events: none; z-index: 5;
   opacity: 1; transition: opacity .25s;
 }
@@ -409,8 +519,8 @@ body.lang-ar .btn3d-surface { letter-spacing: 0; }
 
   <canvas id="game-canvas"></canvas>
 
-  <!-- Header chuẩn: Back (trái) | SCORE + BEST | Volume (phải) -->
-  <div id="topbar">
+  <!-- Header chuẩn (bố cục copy từ index(exampleforheader).html) -->
+  <div class="hud">
     <div class="btn3d btn-icon hud-back" id="back-btn" role="button" aria-label="Back" tabindex="0">
       <span class="btn3d-shadow"></span>
       <span class="btn3d-surface">
@@ -420,7 +530,7 @@ body.lang-ar .btn3d-surface { letter-spacing: 0; }
       </span>
     </div>
 
-    <div class="hud-scores">
+    <div class="hud-scores" id="hud-scores">
       <div class="hud-pill">
         <svg class="pill-ico" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 2 L14.9 8.6 L22 9.3 L16.7 14 L18.3 21 L12 17.3 L5.7 21 L7.3 14 L2 9.3 L9.1 8.6 Z" fill="#ffc63f" stroke="#c8901a" stroke-width="1" stroke-linejoin="round"/>
@@ -483,6 +593,7 @@ body.lang-ar .btn3d-surface { letter-spacing: 0; }
   </div>
   <div id="streak" class="hidden">Perfect &times;2</div>
 
+
   <!-- Tutorial: gợi ý + nhắc bấm -->
   <div id="tut-hint" class="hidden"></div>
   <div id="tut-tap" class="hidden">TAP!</div>
@@ -524,6 +635,7 @@ const I18N = {
         tutJump:'Tap to jump when the cheese gets close!',
         tutPerfect:'Land in the middle for a Perfect!',
         tutRetry:'Almost! Try again', tutDone:"You're ready!",
+        tutGood:'Nice!', tutHaveFun:'Have fun!',
         infoJump:'Tap to jump — land on the cheese',
         infoPerfect:'Land in the middle = Perfect',
         infoMiss:'Miss = top 5 layers fall (−5)',
@@ -543,6 +655,7 @@ const I18N = {
         tutJump:'Chạm để nhảy khi phô mai tới gần!',
         tutPerfect:'Đáp vào giữa miếng để được Perfect!',
         tutRetry:'Suýt rồi! Thử lại nhé', tutDone:'Sẵn sàng rồi!',
+        tutGood:'Giỏi lắm!', tutHaveFun:'Chúc chơi vui vẻ!',
         infoJump:'Chạm để nhảy — đáp lên phô mai',
         infoPerfect:'Đáp giữa miếng = Perfect',
         infoMiss:'Nhảy hụt = sập 5 tầng (−5)',
@@ -1312,6 +1425,37 @@ function resize() {
   scale = cssW / LW;
   LH = cssH / scale;
   ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+  layoutHud();
+}
+
+function safeTop() {
+  const v = getComputedStyle(document.documentElement).getPropertyValue('--sat');
+  return parseFloat(v) || 0;
+}
+/* Bố cục header — CƠ CHẾ copy từ index(exampleforheader).html: Back/Volume neo 2
+   mép, 2 pill SCORE+BEST BẰNG NHAU căn giữa, top căn theo chiều cao pill. */
+function layoutHud() {
+  const hudScores = $('hud-scores'), hudBack = $('back-btn'), hudMute = $('mute-btn');
+  if (!hudScores || !hudBack || !hudMute) return;
+  const rectW = $('app').clientWidth;
+  const topInset = Math.max(getStatusBarHeight(), safeTop()) + 8;
+  hudScores.style.top = topInset + 'px';
+  const pillH = Math.round(hudScores.getBoundingClientRect().height);
+  const btnSize = Math.round(pillH * 0.92);
+  [hudBack, hudMute].forEach(function (b) {
+    b.style.setProperty('--surface-height', btnSize + 'px');
+    b.style.setProperty('--surface-width', btnSize + 'px');
+  });
+  const wrapH = hudBack.getBoundingClientRect().height || btnSize;
+  const btnTop = topInset + Math.round((pillH - wrapH) / 2);
+  hudBack.style.top = btnTop + 'px';
+  hudMute.style.top = btnTop + 'px';
+  const btnW = hudBack.getBoundingClientRect().width || btnSize;
+  hudScores.style.width = Math.round(rectW - 2 * (12 + btnW + 18)) + 'px';
+  const belowTop = topInset + pillH + 6;
+  const ss = $('substat'), sk = $('streak');
+  if (ss) ss.style.top = belowTop + 'px';
+  if (sk) sk.style.top = (belowTop + 22) + 'px';
 }
 
 function surfaceY() { return -tower.length * BLOCK_H; }   // mặt trên tháp (world)
@@ -2460,6 +2604,7 @@ function addCoins(n, wx, wy) {
 
 /* Miếng phô mai dừng lại & thành tầng mới (hamster đáp lên nó) */
 function pinSlider(s) {
+  if (tutorial) s.cx = topCx();        // tutorial: canh đúng tâm → LUÔN Perfect
   const prevTop = topCx();
   const offset = s.cx - prevTop;
   tower.push({ cx: s.cx, kind: s.kind, w: s.w, seed: s.seed });
@@ -2732,58 +2877,79 @@ function setTutHint(txt) {
 function tutorialSpawn() {
   const dir = rand01() < 0.5 ? 1 : -1;
   spawnOne(dir, 'normal', 250);
-  /* miếng tutorial chạy chậm, nhanh dần nhẹ mỗi bước */
-  sliders[sliders.length - 1].speed = 4.2 + tutorial.landed * 0.6;
+  const s = sliders[sliders.length - 1];
+  s.speed = 4.6;                        // trôi vào từ tốn rồi FREEZE (đợi người chơi bấm)
+  tutorial.s = s;
+  tutorial.phase = 'approach';
+  setTutHint(null);
 }
 
 function startTutorial() {
   tutorial = null;                     // resetWorld không đụng tutorial đang null
   resetWorld();
   state = 'playing';
-  tutorial = { landed: 0 };
-  setTutHint(t('tutJump'));
+  tutorial = { landed: 0, phase: 'approach', s: null };
   tutorialSpawn();
 }
 
-/* pinSlider gọi scheduleCycle → rẽ vào đây khi đang tutorial */
+/* Bấm khi miếng đang FREEZE → hamster nhảy, miếng trôi tiếp đúng nhịp để đáp Perfect. */
+function tutorialJump() {
+  const s = tutorial.s;
+  if (!s) return;
+  ham.state = 'jump';
+  ham.t0 = timeMs;
+  ham.slideVx = 0;
+  ham.jumpH = JUMP_H;
+  ham.jumpDur = JUMP_DUR;
+  sJump();
+  /* tốc độ để miếng tới đúng tâm lúc hamster chạm đất (tới sớm ~10% cho chắc; đáp vẫn snap tâm) */
+  const pLand = 1 - Math.asin(Math.min(1, BLOCK_H / ham.jumpH)) / Math.PI;
+  const framesToLand = Math.max(1, pLand * ham.jumpDur / 16.667);
+  s.speed = Math.abs(ham.x - s.cx) / (framesToLand * 0.9);
+  tutorial.phase = 'jumping';
+  setTutHint(null);
+}
+
+/* Xong tutorial → bấm màn hình lần nữa để bắt đầu chơi bình thường. */
+function tutorialFinish() {
+  tutorial = null;
+  setTutHint(null);
+  score = 0; updateScoreHud();
+  combo = 0; updateStreakHud();
+  scheduleCycle();
+}
+
+/* pinSlider (tutorial) gọi scheduleCycle → vào đây: khen ngợi rồi lặp / kết thúc. */
 function tutorialCycle() {
   sliders = sliders.filter(s => s.dead);
+  tutorial.phase = 'praise';
+  setTutHint(t('tutGood'));             // lời khen (kèm "Perfect!" bay lên từ pinSlider)
   if (tutorial.landed >= 3) {
-    /* Xong tutorial → chảy thẳng vào VÁN THẬT: giữ nguyên tháp vừa xếp, bắt đầu
-       tính điểm; KHÔNG reset về menu (sửa bug "nhảy 3 tầng là tự reset"). */
-    setTutHint(t('tutDone'));
     tutSeen = true;
     persistSaved();
     setTimeout(() => {
       if (!tutorial) return;
-      tutorial = null;
-      setTutHint(null);
-      score = 0; updateScoreHud();
-      combo = 0; updateStreakHud();
-      scheduleCycle();               // state vẫn 'playing' → miếng thật vào tiếp
+      tutorial.phase = 'done';
+      setTutHint(t('tutHaveFun'));       // "Chúc chơi vui vẻ!"
+      $('tut-tap').classList.remove('hidden');   // nhắc bấm màn hình để bắt đầu
     }, 1100);
-    return;
+  } else {
+    setTimeout(() => {
+      if (tutorial && state === 'playing') tutorialSpawn();   // miếng kế tiếp trôi vào
+    }, 1000);
   }
-  setTutHint(tutorial.landed === 0 ? t('tutJump') : t('tutPerfect'));
-  tutorialSpawn();
 }
 
-/* trượt / bị tông trong tutorial → không thua, chỉ thử lại */
+/* an toàn (không nên xảy ra vì đáp luôn Perfect có canh): thử lại bước hiện tại. */
 function tutorialRetry(s) {
-  if (s) {
-    sliders = sliders.filter(x => x !== s);
-    dropSlider(s);
-  }
+  if (s) { sliders = sliders.filter(x => x !== s); dropSlider(s); }
   dropAllSliders();
   retractBoards();
-  sStumble();
-  setTutHint(t('tutRetry'));
+  ham.state = 'idle';
+  setTutHint(null);
   setTimeout(() => {
-    if (tutorial && state === 'playing') {
-      setTutHint(tutorial.landed === 0 ? t('tutJump') : t('tutPerfect'));
-      tutorialSpawn();
-    }
-  }, 700);
+    if (tutorial && state === 'playing') tutorialSpawn();
+  }, 500);
 }
 
 /* ================================================================
@@ -2825,8 +2991,9 @@ function update(dt) {
       if (timeMs < s.slideAt) continue;
       s.cx += s.dir * s.speed * dtf;
 
-      /* miếng mốc bay cao — đứng yên là an toàn, không xô đẩy khi grounded */
-      if (!s.dead && s.kind !== 'mold' && grounded0) {
+      /* miếng mốc bay cao — đứng yên là an toàn, không xô đẩy khi grounded.
+         Tutorial: KHÔNG bao giờ xô ngã (miếng freeze trước mặt, an toàn). */
+      if (!s.dead && s.kind !== 'mold' && grounded0 && !tutorial) {
         /* nhảy trễ (hoặc không nhảy) → miếng CHỒNG LẤN thân hamster → xô ngã
            (test overlap 2 mép: miếng đã trượt QUA hẳn thì không tính) */
         const hit = s.cx + s.w / 2 >= ham.x - HAM_HALF &&
@@ -2870,7 +3037,8 @@ function update(dt) {
       const p = (timeMs - ham.t0) / jDur;
       const h = jH * Math.sin(Math.min(1, p) * Math.PI);
 
-      for (const s of sliders) {
+      /* va chạm gây THUA — tutorial bỏ qua hoàn toàn (cú nhảy hướng dẫn luôn an toàn) */
+      if (!tutorial) for (const s of sliders) {
         if (s.dead || timeMs < s.slideAt) continue;
         const horiz = s.cx + s.w / 2 >= ham.x - HAM_HALF &&
                       s.cx - s.w / 2 <= ham.x + HAM_HALF;
@@ -2960,21 +3128,16 @@ function update(dt) {
     /* hamster loạng choạng xong → đứng lại (đứng NGUYÊN chỗ đáp, không tự nhích) */
     if (ham.state === 'stumble' && timeMs - ham.t0 > STUMBLE_MS) ham.state = 'idle';
 
-    /* tutorial: nhắc "NHẢY!" khi miếng vào đúng cửa sổ nhảy đẹp */
-    if (tutorial) {
-      let cue = false;
-      if (ham.state === 'idle' || ham.state === 'stumble') {
-        for (const s of sliders) {
-          if (s.dead || timeMs < s.slideAt) continue;
-          const dist = (ham.x - s.cx) * s.dir;
-          if (dist <= 0) continue;
-          const eta = dist * 16.667 / s.speed;
-          if (eta > 320 && eta < 640) { cue = true; break; }
-        }
+    /* tutorial: miếng trôi tới gần rồi FREEZE → hiện "Chạm để nhảy", chờ người chơi bấm */
+    if (tutorial && tutorial.phase === 'approach') {
+      const s = tutorial.s;
+      if (s && !s.dead && timeMs >= s.slideAt && (ham.x - s.cx) * s.dir <= 118) {
+        s.speed = 0;                     // FREEZE ngay trước mặt hamster (chưa chồng lấn)
+        tutorial.phase = 'frozen';
+        setTutHint(t('tutJump'));
+        $('tut-tap').classList.remove('hidden');
+        sTutTap();
       }
-      const elTap = $('tut-tap');
-      if (cue && elTap.classList.contains('hidden')) sTutTap();   // chỉ kêu lúc hiện
-      elTap.classList.toggle('hidden', !cue);
     }
 
     /* xu rơi + nhặt xu */
@@ -3062,6 +3225,11 @@ function onTap() {
   if (state === 'ready') return;       // menu: chỉ nút Play/Tutorial khởi động
   if (state === 'playing') {
     if (paused) { paused = false; return; }   // tap đầu chỉ resume, không nhảy
+    if (tutorial) {                            // tutorial hướng dẫn: điều khiển riêng
+      if (tutorial.phase === 'frozen') tutorialJump();
+      else if (tutorial.phase === 'done') tutorialFinish();
+      return;                                  // approach/jumping/praise: bỏ qua tap
+    }
     if (ham.state === 'idle' || ham.state === 'stumble') {
       ham.state = 'jump';
       ham.t0 = timeMs;

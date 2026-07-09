@@ -27,8 +27,8 @@
 1. Totem obsidian xoay ở trên, dao găm chờ ở dưới — **tap để phóng dao** (mỗi lúc chỉ 1 dao bay)
 2. Dao cắm vào vành totem và **xoay theo totem**; một số totem có **dao cắm sẵn** (màu tím)
 3. **Phóng trúng dao đã cắm → thua ngay** (dao văng, flash đỏ, popup sau 0.7s)
-4. Cắm đủ số dao (cột đạn bên trái) → **totem vỡ tan** (mảnh đá + dao văng thừa hưởng vận tốc xoay) → sang stage kế
-5. Chơi **vô hạn** — thua thì chơi lại từ stage 1, ganh điểm Best
+4. Cắm đủ số dao (cột đạn bên trái) → **totem vỡ tan** (mảnh đá bung ra ngoài + dao văng thừa hưởng vận tốc xoay) → **totem TRONG phình từ tâm ra trong ~1s** (nested reveal: phá lớp ngoài lòi lớp trong), **chặn touch tới khi phình xong**
+5. Chơi **vô hạn** — thua thì chơi lại từ đầu, ganh điểm Best. **Không có bộ đếm "Stage/Level"** — chỉ mạch totem nối tiếp nhau (dòng nhỏ dưới header chỉ báo **BOSS**)
 
 ### Điểm (v1.1 — ranh giới chết là thang thưởng)
 | Hành động | Điểm |
@@ -72,7 +72,7 @@ Best **persist ngay khi vượt** (không chờ hết ván) qua `save_data` + lo
 
 ### UI (không menu — mở game vào thẳng gameplay)
 - **Không có màn menu**: lần đầu mở = tutorial, các lần sau vào thẳng ván (yêu cầu chuẩn chung)
-- **Header chuẩn chung**: nút **Back** (quit) trái · pill **SCORE ★** + pill **BEST ♛** (vàng) giữa · nút **Volume** phải; nhãn stage/TRÙM nhỏ ngay dưới header
+- **Header chuẩn chung**: nút **Back** (quit) trái · pill **SCORE ★** + pill **BEST ♛** (vàng) giữa · nút **Volume** phải; dòng nhỏ dưới header chỉ hiện **BOSS** (không có bộ đếm stage/level)
 - Popup kết quả **tự vẽ theo popup-common**: một tiêu đề đổi chữ `New Best!` / `Game Over`, SCORE trắng / BEST vàng, nút Play Again amber (bắn `retry_level`), `fitScores()` chống tràn điểm to
 - Pause vẽ trên canvas ("Chạm để chơi tiếp") — `timeMs` đóng băng nên **toàn bộ thế giới tự đứng im**, tap đầu chỉ resume không phóng dao
 

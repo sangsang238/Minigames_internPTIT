@@ -12,8 +12,10 @@
 ## Cách chơi
 
 - **Không có menu** — mở game là **vào thẳng gameplay**. Lần đầu (cờ `tut` chưa
-  đặt) chơi qua tutorial 3 lần đáp có gợi ý (không thua, không tính điểm) rồi
-  **chảy thẳng vào ván thật** (giữ nguyên tháp, bắt đầu tính điểm — KHÔNG reset).
+  đặt) chơi **tutorial hướng dẫn**: một miếng trôi tới gần rồi **FREEZE**, hiện
+  "Chạm để nhảy" → chạm → hamster nhảy, miếng canh đúng nhịp để **luôn Perfect** →
+  hiện lời khen. Lặp **3 lần** rồi "Chúc chơi vui vẻ!"; **chạm lần nữa** vào ván
+  thật (giữ nguyên tháp, bắt đầu tính điểm — KHÔNG reset). Tutorial không thể thua.
 - **Header chuẩn**: Back (trái) · pill **SCORE** (★) + **BEST** (👑) ở giữa ·
   nút **Volume** bật/tắt âm thanh (phải). Ngay dưới: **độ cao tháp** (icon 2 phô
   mai chồng) + số **xu**.
