@@ -498,15 +498,6 @@
       </div>
     </div>
 
-    <div class="btn3d btn-icon" id="restart-btn" role="button" aria-label="Restart">
-      <span class="btn3d-shadow"></span>
-      <span class="btn3d-surface">
-        <svg class="restart-ico" viewBox="0 0 100 100" aria-hidden="true">
-          <path fill="currentColor" d="m50.7 19.003 4.793-4.793c2.696-2.697 2.696-6.991 0-9.688s-6.991-2.696-9.687 0L29.327 21.001a6.812 6.812 0 0 0 0 9.687l16.479 16.478a6.9 6.9 0 0 0 4.793 1.998c1.798 0 3.496-.7 4.794-1.998a6.812 6.812 0 0 0 0-9.687l-4.794-4.794c13.682.4 24.768 11.685 24.768 25.467 0 14.081-11.485 25.466-25.467 25.466S24.534 72.233 24.534 58.252c0-3.096.599-6.192 1.597-8.989 1.299-3.495-.4-7.49-3.994-8.788-3.496-1.298-7.49.4-8.789 3.995-1.698 4.394-2.496 9.088-2.496 13.882C10.852 79.923 28.428 97.5 50 97.5s39.148-17.577 39.148-39.148c0-21.472-17.177-38.95-38.449-39.349z"/>
-        </svg>
-      </span>
-    </div>
-
     <div class="btn3d btn-icon" id="sound-btn" role="button" aria-label="Sound">
       <span class="btn3d-shadow"></span>
       <span class="btn3d-surface">
@@ -706,6 +697,9 @@ let recordHit = false;   // đã phá kỷ lục trong ván này chưa
 let cell = 40;
 let busy = false;
 let ended = false;
+let cascading = false;       // đang trong vòng lặp nổ dây chuyền (cascade)
+let stableWindow = false;    // bàn đã rơi đầy & ổn định → an toàn để CHÈN nước đi (match không bị vỡ)
+let injectedSwaps = [];      // ô người chơi vừa đổi (chèn lúc đang nổ) — vòng nổ kế sẽ nuốt
 let sel = null;          // {r,c} đang chọn
 let idc = 0;
 let moves = 0;           // số lượt đã đi (mốc đếm ngược & spawn bom)
@@ -1557,12 +1551,77 @@ async function tryMove(a, b) {
   resetIdle();
 }
 
+// Điều phối cử chỉ: rảnh → nước đi thường; đang nổ → CHÈN nếu đủ điều kiện.
+function requestMove(a, b) {
+  if (ended) return;
+  if (!busy) { tryMove(a, b); return; }
+  if (canInject(a, b)) injectMove(a, b);
+}
+// Được phép chèn nước đi giữa lúc đang nổ? Chỉ khi bàn đã lắng & 2 viên "tĩnh".
+function canInject(a, b) {
+  if (!cascading || !stableWindow) return false;    // đang nổ & bàn đã ổn định → mới cho chèn
+  if (!(Math.abs(a.r - b.r) + Math.abs(a.c - b.c) === 1)) return false;
+  const ta = tileAt(a.r, a.c), tb = tileAt(b.r, b.c);
+  if (!ta || !tb) return false;
+  if (ta.locked || tb.locked) return false;         // đang nổ / đang rơi → không grab
+  if (ta.bomb || tb.bomb) return false;             // bom: chỉ gỡ bằng nổ trúng ô kề
+  if (ta.special || tb.special) return false;       // special để dành sau khi hết combo
+  return true;
+}
+// Chèn 1 nước đi (đồng bộ, không await) — vòng nổ đang chạy sẽ tự nuốt ở đợt kế.
+function injectMove(a, b) {
+  swapModel(a, b);
+  const test = findMatches([a, b]);
+  const valid = test.clearCells.size > 0 || test.specialPlans.length > 0;
+  if (!valid) {                                     // vô hiệu → hoàn tác model + lắc-về cho có phản hồi
+    swapModel(a, b);
+    wiggleSwap(a, b);
+    return;
+  }
+  animateSwapTiles(a, b);                            // đổi chỗ mượt 2 viên
+  injectedSwaps.push({ r: a.r, c: a.c }, { r: b.r, c: b.c });
+  clearSelection();
+  resetIdle();
+}
+// Lắc-về khi vuốt KHÔNG tạo match (model đã hoàn tác) — chỉ phản hồi thị giác.
+function wiggleSwap(a, b) {
+  const t1 = tileAt(a.r, a.c), t2 = tileAt(b.r, b.c);
+  const dc = b.c - a.c, dr = b.r - a.r;
+  const nudge = (t, p, sx, sy) => {
+    if (!t || t.locked) return;
+    const base = pos(p.r, p.c);
+    t.el.animate([
+      { transform: base },
+      { transform: base + ' translate(' + (sx * cell * 0.26) + 'px,' + (sy * cell * 0.26) + 'px)', offset: .5 },
+      { transform: base },
+    ], { duration: 220, easing: 'ease-in-out' });
+  };
+  nudge(t1, a, dc, dr); nudge(t2, b, -dc, -dr);
+}
+// Đổi chỗ mượt 2 viên vừa CHÈN, khóa tạm tới khi animation xong.
+function animateSwapTiles(a, b) {
+  const t1 = tileAt(a.r, a.c), t2 = tileAt(b.r, b.c);
+  if (!t1 || !t2) return;
+  [[t1, a], [t2, b]].forEach(([t, p]) => {
+    t.locked = true;
+    const from = t.el.style.transform || pos(p.r, p.c);
+    const an = t.el.animate([{ transform: from }, { transform: pos(p.r, p.c) }],
+      { duration: 150, easing: 'ease-out' });
+    t.el.style.transform = pos(p.r, p.c);
+    an.onfinish = () => { t.locked = false; };
+  });
+}
+
 async function cascade(pending, swapCells) {
   let first = true;
   let chain = 1;             // hệ số điểm tăng theo mỗi bước cascade (combo)
   let forcedNext = null;     // kẹo gói nổ lần 2 sau khi rơi
+  cascading = true; stableWindow = false;
   while (true) {
-    const { clearCells, specialPlans } = findMatches(first ? swapCells : []);
+    // Nuốt nước đi người chơi CHÈN giữa các đợt nổ (findMatches quét cả bàn nên luôn thấy).
+    const scan = first ? swapCells.slice() : [];
+    if (injectedSwaps.length) { for (const s of injectedSwaps) scan.push(s); injectedSwaps = []; }
+    const { clearCells, specialPlans } = findMatches(scan);
     const clr = new Set(clearCells);
     if (first && pending) for (const k of pending) clr.add(k);
     if (forcedNext) { for (const k of forcedNext) clr.add(k); forcedNext = null; }   // gói nổ lần 2
@@ -1580,8 +1639,14 @@ async function cascade(pending, swapCells) {
 
     if (clr.size === 0 && specialPlans.length === 0) {
       if (comboQueue && comboQueue.length) { first = false; continue; }   // còn đợt → sang đợt sau
+      // Hết match tự nhiên: bàn đang ổn định → chừa 1 nhịp cho người chơi CHÈN cú cuối.
+      stableWindow = true;
+      await sleep(450);
+      stableWindow = false;
+      if (injectedSwaps.length) { first = false; continue; }   // có chèn → xử tiếp
       break;
     }
+    stableWindow = false;   // sắp nổ đợt mới (sẽ có ô trống + rơi) → KHÓA chèn tới khi rơi xong
 
     // Tính điểm + hiệu ứng + đánh dấu clear.
     // Cầu vồng: tia xẹt NỐI lần lượt (chậm) tới từng viên → nối hết mới nổ CÙNG LÚC.
@@ -1643,6 +1708,7 @@ async function cascade(pending, swapCells) {
         if (d > maxDelay) maxDelay = d;
         parts.push([cx, cy, COLORS[t.color], d]);
         if (t.special) drawSpecialFx(r, c, t.special, t.color, d);   // tia/vòng nổ kiểu CC
+        t.locked = true;        // viên đang nổ: không cho đổi chỗ
         if (!merged.has(k)) {   // viên đã tụ về ô special thì giữ nguyên (không phóng to)
           t.el.style.transitionDelay = d + 's';
           t.el.classList.add('clearing');
@@ -1683,7 +1749,7 @@ async function cascade(pending, swapCells) {
 
     defuseBombs(clr);   // bom có ô kề (hoặc chính nó) bị xoá → gỡ an toàn
 
-    // Xoá các tile đã clear
+    // Xoá các tile đã clear (bàn có ô trống, chèn đã bị khóa ở trên)
     for (const k of clr) {
       const [r, c] = k.split(',').map(Number);
       const t = board[r][c];
@@ -1694,7 +1760,8 @@ async function cascade(pending, swapCells) {
     await sleep(pulledCombo ? 350 : 620);
 
     gravityAndRefill();
-    await sleep(pulledCombo ? 230 : 380);   // combo: rơi đầy nhanh rồi sang viên kế
+    stableWindow = true;                      // bàn đã rơi đầy & ổn định → MỞ chèn nước đi
+    await sleep(pulledCombo ? 300 : 480);    // giữ cửa sổ chèn rộng hơn giữa các đợt
     // Kẹo gói đã nổ lần 1 → sau khi rơi, ép NỔ LẦN 2 ở vòng kế
     const reboom = [];
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
@@ -1705,6 +1772,7 @@ async function cascade(pending, swapCells) {
     first = false;
     chain++;
   }
+  cascading = false; stableWindow = false;
   comboQueue = null;   // dọn hàng đợi combo (nếu còn)
 }
 
@@ -1730,9 +1798,13 @@ function gravityAndRefill() {
     }
   }
   // Đặt sẵn ở điểm xuất phát (không animation) rồi reflow, để không nháy khung đầu
-  for (const d of drops) { d.t.el.classList.add('no-anim'); d.t.el.style.transform = pos(d.from, d.c); }
+  for (const d of drops) { d.t.locked = true; d.t.el.classList.add('no-anim'); d.t.el.style.transform = pos(d.from, d.c); }
   void boardEl.offsetWidth;
-  for (const d of drops) { d.t.el.classList.remove('no-anim'); bounceDrop(d.t, d.from, d.to, d.c); }
+  for (const d of drops) {
+    d.t.el.classList.remove('no-anim');
+    const an = bounceDrop(d.t, d.from, d.to, d.c);   // khóa viên đang rơi tới khi hạ cánh
+    if (an) an.onfinish = () => { d.t.locked = false; }; else d.t.locked = false;
+  }
   layout();   // vị trí nghỉ cuối cùng (khớp keyframe cuối của bounceDrop)
 }
 
@@ -1741,7 +1813,7 @@ function bounceDrop(t, from, to, c) {
   const endT = pos(to, c);
   const dist = Math.max(1, to - from);
   const dur = Math.min(440, 170 + dist * 40);
-  t.el.animate([
+  return t.el.animate([
     { transform: pos(from, c) },
     { transform: endT },
   ], { duration: dur, easing: 'cubic-bezier(.25,.6,.4,1)' });
@@ -3061,6 +3133,7 @@ function newRun() {
   recordHit = false;
   ended = false;
   busy = false;
+  cascading = false; stableWindow = false; injectedSwaps = [];
   sel = null;
   moves = 0;
   movesSinceBomb = 0;
@@ -3124,32 +3197,32 @@ function selectCell(p) {
 let downCell = null, downX = 0, downY = 0, swiped = false;
 boardEl.addEventListener('pointerdown', (e) => {
   resetIdle();               // chạm bàn → tắt hint, hẹn lại giờ gợi ý
-  if (busy || ended) return;
+  if (ended) return;         // đang nổ vẫn cho chạm (để CHÈN nước đi viên tĩnh)
   const p = cellFromEvent(e);
   if (!p) return;
   downCell = p; downX = e.clientX; downY = e.clientY; swiped = false;
 });
 boardEl.addEventListener('pointermove', (e) => {
-  if (busy || ended || !downCell || swiped) return;
+  if (ended || !downCell || swiped) return;
   const dx = e.clientX - downX, dy = e.clientY - downY;
   if (Math.abs(dx) < cell * 0.4 && Math.abs(dy) < cell * 0.4) return;
   swiped = true;
   let nr = downCell.r, nc = downCell.c;
   if (Math.abs(dx) > Math.abs(dy)) nc += dx > 0 ? 1 : -1;
   else nr += dy > 0 ? 1 : -1;
-  if (inb(nr, nc)) tryMove(downCell, { r: nr, c: nc });
+  if (inb(nr, nc)) requestMove(downCell, { r: nr, c: nc });
   downCell = null;
 });
 window.addEventListener('pointerup', (e) => {
-  if (busy || ended || !downCell || swiped) { downCell = null; return; }
+  if (ended || !downCell || swiped) { downCell = null; return; }
   const p = downCell; downCell = null;
   if (sel) {
     if (sel.r === p.r && sel.c === p.c) { clearSelection(); return; }
     if (Math.abs(sel.r - p.r) + Math.abs(sel.c - p.c) === 1) {
-      const a = sel; clearSelection(); tryMove(a, p); return;
+      const a = sel; clearSelection(); requestMove(a, p); return;
     }
   }
-  selectCell(p);
+  if (!busy) selectCell(p);   // chọn-để-đổi chỉ khi rảnh (đang nổ dùng vuốt để chèn)
 });
 
 /* =====================================================================
@@ -3157,9 +3230,6 @@ window.addEventListener('pointerup', (e) => {
  * ===================================================================== */
 document.getElementById('back-btn').addEventListener('click', (e) => {
   e.stopPropagation(); sendMessage('quit');
-});
-document.getElementById('restart-btn').addEventListener('click', (e) => {
-  e.stopPropagation(); newRun();  // ván mới: score về 0, giữ best (không bắn event)
 });
 document.getElementById('ov-btn').addEventListener('click', (e) => {
   e.stopPropagation();
@@ -3262,7 +3332,7 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => resi
 
   function dbgSetup(m) {
     dbgStopIdle();
-    ended = false; busy = false;
+    ended = false; busy = false; cascading = false; stableWindow = false; injectedSwaps = [];
     const ov = document.getElementById('overlay'); if (ov) ov.classList.add('hidden');
     if (m.clear !== false) dbgClearAll();
     if (m.fill !== 'none') dbgFillChecker();
