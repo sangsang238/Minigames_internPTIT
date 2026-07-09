@@ -52,7 +52,7 @@ Best **persist ngay khi vượt** (không chờ hết ván) qua `save_data` + lo
 - **Executioner's Breath**: dao CUỐI khi vành đã ≥6 dao — thế giới nín thở (35% tốc độ, BGM nghẹt về 400Hz) rồi **snap về tốc độ thật đúng khoảnh khắc chạm**. Chậm ĐỀU cả totem lẫn dao (nhân `dt` một chỗ duy nhất) → thuần kịch tính, không phải trợ giúp
 - **Omen Flick**: 120ms trước khi totem đảo chiều/vọt tốc, sigil lóe + riser — cố ý *không đủ* để phản ứng: chết vì pattern giờ đọc là "tôi tham" thay vì "game gian lận"
 - **Last Stand**: TRÙM còn 1 dao là giãy chết (dao động 0.25×→1.35×, telegraph 0.8s) — chờ pha chậm ăn +10 an toàn, hay đâm pha nhanh lấy +20? Rình mãi thì **gai xương mọc** (vòng đỏ 6s, gai mọc 0.6s vô hại rồi thành vật cản, tối đa 2)
-- **Deepest Descent**: menu hiện "Sâu nhất · Màn N" đúng màu accent totem đó; vào lại stage kỷ lục có dấu ✦
+- **Deepest Descent**: phá totem sâu hơn mọi run trước được +5; vào lại stage kỷ lục có dấu ✦ cạnh nhãn stage
 - **Echo Wraith**: stage là deterministic nên "nơi run best gục ngã" là vị trí cố định — bóng ma sọ tím lảng vảng đúng stage đó, cắm vượt qua là nó tan (+5)
 
 ### Stage Design — VÔ HẠN, sinh deterministic
@@ -67,14 +67,13 @@ Best **persist ngay khi vượt** (không chờ hết ván) qua `save_data` + lo
 - Va chạm **nghiêm ngặt nhưng công bằng**: ngưỡng góc 0.105 rad ≈ đúng bề rộng lưỡi dao nhìn thấy; thời điểm chạm **nội suy sub-frame** (không phụ thuộc 60/90/120 Hz)
 
 ### Trợ giúp người chơi
-- **Tutorial tương tác 3 bước, không thể thua** (phóng dao → né dao cắm sẵn (dao nảy ra + nhắc thử lại) → phá totem) — bắt buộc lần chơi đầu, skip được, mở lại từ menu
-- **How-to-play panel** — icon vẽ bằng chính renderer của game (menu, nút `?`)
+- **Tutorial tương tác 3 bước, không thể thua** (phóng dao → né dao cắm sẵn (dao nảy ra + nhắc thử lại) → phá totem) — **tự chạy ở lần mở đầu tiên**, skip được
 - Cue **"CHẠM!"** nhấp nháy ở bước tutorial đầu
 
-### UI
-- Topbar: **Back** (quit về app) · **SCORE** to giữa + nhãn stage/TRÙM · **Sound** + chip **BEST**
-- Menu: 3 dao găm mascot trôi nổi, totem xoay mờ sau lớp menu, Play (CTA amber) + Tutorial + `?` + Sound + Back
-- Popup kết quả **tự vẽ theo popup-common**: một tiêu đề đổi chữ `New Best!` / `Game Over`, SCORE trắng / BEST vàng, nút Play Again amber (bắn `retry_level`), nút Menu phụ, `fitScores()` chống tràn điểm to
+### UI (không menu — mở game vào thẳng gameplay)
+- **Không có màn menu**: lần đầu mở = tutorial, các lần sau vào thẳng ván (yêu cầu chuẩn chung)
+- **Header chuẩn chung**: nút **Back** (quit) trái · pill **SCORE ★** + pill **BEST ♛** (vàng) giữa · nút **Volume** phải; nhãn stage/TRÙM nhỏ ngay dưới header
+- Popup kết quả **tự vẽ theo popup-common**: một tiêu đề đổi chữ `New Best!` / `Game Over`, SCORE trắng / BEST vàng, nút Play Again amber (bắn `retry_level`), `fitScores()` chống tràn điểm to
 - Pause vẽ trên canvas ("Chạm để chơi tiếp") — `timeMs` đóng băng nên **toàn bộ thế giới tự đứng im**, tap đầu chỉ resume không phóng dao
 
 ### Âm thanh (WebAudio synthesize 100%, không file ngoài)

@@ -11,10 +11,12 @@
 
 ## Cách chơi
 
-- **Menu**: nút Play + Tutorial; icon hình thoi-trong-tròn (góc phải) mở panel
-  tóm tắt luật & các loại phô mai; icon loa (dưới nút Back, luôn hiện) bật/tắt
-  âm thanh. **Lần đầu mở game** bấm Play sẽ vào tutorial 3 lần đáp có gợi ý
-  (không thua, không tính điểm; cờ `tut` lưu trong save_data).
+- **Không có menu** — mở game là **vào thẳng gameplay**. Lần đầu (cờ `tut` chưa
+  đặt) chơi qua tutorial 3 lần đáp có gợi ý (không thua, không tính điểm) rồi
+  **chảy thẳng vào ván thật** (giữ nguyên tháp, bắt đầu tính điểm — KHÔNG reset).
+- **Header chuẩn**: Back (trái) · pill **SCORE** (★) + **BEST** (👑) ở giữa ·
+  nút **Volume** bật/tắt âm thanh (phải). Ngay dưới: **độ cao tháp** (icon 2 phô
+  mai chồng) + số **xu**.
 - Miếng phô mai **trượt vào trên ván gỗ** ở đúng tầm mặt tháp (hướng, tốc độ và
   nhịp chờ ngẫu nhiên; nhanh dần theo độ cao, trần 10.5px/frame). **Khởi đầu dịu**:
   3 tầng đầu chạy ×0.75, tăng dần lên tốc chuẩn (×1.0) ở tầng 20.
@@ -22,8 +24,7 @@
   **dừng ngay chỗ hamster đáp lên** → thành tầng mới (miếng **nhún & nghiêng** về
   phía đáp cho đã tay). Đáp lệch thì tháp xiêu vẹo (không cắt miếng, không đổ);
   đáp sát mép (<30px) → loạng choạng 1s.
-- **HUD**: điểm ở giữa, kèm **độ cao tháp** (số + icon 2 phô mai chồng). Menu hiện
-  kỷ lục **Highest** (tháp cao nhất từng đạt — lưu trong save_data).
+- Kỷ lục **tháp cao nhất** (`bh`) vẫn được lưu trong save_data (dùng cho thống kê).
 - Lệch ≤ ~7px → **Perfect** (vòng sáng, chuỗi hiện "Perfect ×n" dưới điểm).
 - **Nhảy vọt qua** (không ai đáp) → KHÔNG thua: miếng văng đi kéo **sập 5 tầng**
   (−5 điểm, đứt chuỗi), hamster rơi xuống đáp tầng thứ 6.

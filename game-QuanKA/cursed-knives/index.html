@@ -134,18 +134,6 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   --surface-padding-x: 0;
 }
 
-/* CTA amber (Play) — popup-common §6, màu cố định */
-.btn3d.cta {
-  --surface-height: 54px;
-  --surface-padding-x: 44px;
-  --surface-color: #ffb02e;
-  --surface-text: #3a2400;
-  --surface-font-size: 19px;
-  --radius: 16px;
-}
-.btn3d.cta .btn3d-surface { border: none; box-shadow: 0 6px 22px rgba(255,150,30,.35); }
-.btn3d.cta:active .btn3d-surface { background: var(--surface-color); }
-
 /* Nút Play Again trên popup (popup-common §6) */
 .btn3d.play {
   --surface-height: 52px;
@@ -168,15 +156,11 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 
 .back-ico  { width: 52%; height: 52%; fill: currentColor; display: block; }
 .sound-ico { width: 58%; height: 58%; fill: currentColor; display: block; }
-.help-ico  { width: 58%; height: 58%; fill: currentColor; display: block; }
 #sound-btn .ico-off { display: none; }
 #sound-btn.muted .ico-on  { display: none; }
 #sound-btn.muted .ico-off { display: block; }
-#menu-sound .ico-off { display: none; }
-#menu-sound.muted .ico-on  { display: none; }
-#menu-sound.muted .ico-off { display: block; }
 
-/* ── Topbar HUD ──────────────────────────────────────────────── */
+/* ── Topbar HUD — header chuẩn chung: Back | SCORE ★ | BEST ♛ | Volume ── */
 #topbar {
   position: fixed;
   top: 0;
@@ -186,26 +170,67 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   max-width: 520px;
   z-index: 5;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 6px;
+  flex-direction: column;
+  gap: 3px;
   padding: 0 max(10px, env(safe-area-inset-right)) 0 max(10px, env(safe-area-inset-left));
   pointer-events: none;          /* không nuốt tap gameplay */
 }
 #topbar .btn3d { pointer-events: auto; }
 
-#hud-center { text-align: center; flex: 1; min-width: 0; }
-#hud-score {
-  font-size: 42px;
-  font-weight: 800;
-  line-height: 1.05;
-  color: #fff;
-  text-shadow: 0 0 18px rgba(82,255,157,.35), 0 2px 8px rgba(0,0,0,.6);
+#hud-bar { display: flex; align-items: center; gap: 8px; }
+
+.hud-scores {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 6px;
 }
+.hud-pill {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  background: rgba(8, 16, 30, 0.55);
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  padding: 5px 8px 6px 4px;       /* icon ghim sát mép trái (chuẩn chung) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.08),
+              0 3px 8px rgba(0, 0, 0, 0.35);
+}
+.pill-text { display: flex; flex-direction: column; align-items: center; min-width: 0; flex: 1 0 auto; }
+.pill-ico {
+  flex: 0 0 auto;
+  width: clamp(16px, 4.8vw, 21px); height: clamp(16px, 4.8vw, 21px); display: block;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));
+}
+.hud-pill .label {
+  font-size: clamp(9px, 3vw, 12px);
+  font-family: system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #8fb4ff;                 /* nhãn xanh (đồng bộ popup-common) */
+  line-height: 1.05;
+  white-space: nowrap;
+}
+.hud-pill .value {
+  font-size: clamp(15px, 4.6vw, 22px);
+  line-height: 1.1;
+  color: #fff;
+  white-space: nowrap;
+  font-family: var(--ui-font);
+  font-weight: 800;
+  text-shadow: 0 2px 2px rgba(0, 0, 0, 0.4);
+}
+#hud-best { color: #ffd86b; }     /* BEST accent vàng (chuẩn chung) */
+
 #hud-stage {
   font-size: 11px;
   letter-spacing: 2.5px;
   text-transform: uppercase;
+  text-align: center;
   color: var(--text-soft);
   white-space: nowrap;
   overflow: hidden;
@@ -213,20 +238,6 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 }
 #hud-stage.boss { color: #ff5d76; animation: bossPulse 1s ease-in-out infinite; }
 @keyframes bossPulse { 50% { opacity: .55; } }
-
-#hud-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-.hud-chip {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 56px;
-  padding: 4px 10px;
-  border-radius: 10px;
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-}
-.hud-chip .k { font-family: system-ui, sans-serif; font-size: 9px; letter-spacing: 1.5px; color: var(--text-soft); font-weight: 800; }
-.hud-chip .v { font-size: 15px; color: var(--gold); }
 
 /* ── Banner tutorial ─────────────────────────────────────────── */
 #tut-banner {
@@ -281,130 +292,9 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 .sb .v { font-size: 32px; color: #fff; }
 .sb .v.best { color: #ffd23f; }
 
-.ov-menu-row { margin-top: 10px; }
-
-/* ── Menu chính ──────────────────────────────────────────────── */
-#menu {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  overflow: auto;
-  background:
-    radial-gradient(ellipse 90% 55% at 50% -12%, rgba(30,160,100,.38), transparent),
-    linear-gradient(170deg, rgba(5,8,16,.86) 0%, rgba(10,20,34,.68) 55%, rgba(5,8,16,.88) 100%);
-  opacity: 1;
-  transition: opacity .25s;
-}
-#menu.hidden { opacity: 0; pointer-events: none; }
-
-#menu-corner {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 0 12px;
-}
-#menu-right { display: flex; gap: 8px; }
-
-.menu-mascots { display: flex; align-items: flex-end; gap: 20px; margin-bottom: 4px; }
-.mascot { width: 56px; height: 100px; filter: drop-shadow(0 6px 16px rgba(0,0,0,.55)); animation: mascotFloat 3.4s ease-in-out infinite; }
-.mascot:nth-child(1) { transform: rotate(-9deg);  animation-delay: 0s; }
-.mascot:nth-child(2) { width: 66px; height: 118px; transform: rotate(2deg); animation-delay: .5s; }
-.mascot:nth-child(3) { transform: rotate(9deg);   animation-delay: 1s; }
-.mascot svg { width: 100%; height: 100%; display: block; }
-@keyframes mascotFloat { 50% { translate: 0 -12px; } }
-/* WebView cũ (Chromium < 104) drop thuộc tính translate → fallback offset
-   tương đối (không đụng transform rotate, không làm bơm layout flex) */
-@supports not (translate: 0 0) {
-  .mascot { position: relative; top: 0; }
-  @keyframes mascotFloat { 50% { top: -12px; } }
-}
-
-#menu-title {
-  font-size: 44px;
-  font-weight: 800;
-  letter-spacing: 2px;
-  text-align: center;
-  line-height: 1.08;
-  background: linear-gradient(180deg, #fff 12%, #b8ffd9 42%, #52ff9d 68%, #1e9a60 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 0 22px rgba(82,255,157,.35)) drop-shadow(0 3px 6px rgba(0,0,0,.5));
-}
-#menu-tagline {
-  font-family: system-ui, sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-soft);
-  text-align: center;
-  padding: 0 24px;
-  margin-bottom: 8px;
-}
-#menu-deepest {
-  font-size: 12px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--text-soft);
-  text-align: center;
-  min-height: 15px;
-  margin-top: -4px;
-  margin-bottom: 4px;
-}
-
-/* ── How to play ─────────────────────────────────────────────── */
-#info-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 30;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(4,2,12,.72);
-  opacity: 1;
-  transition: opacity .25s;
-}
-#info-overlay.hidden { opacity: 0; pointer-events: none; }
-
-.doc-card {
-  position: relative;
-  width: min(88%, 400px);
-  max-height: 76%;
-  overflow-y: auto;
-  padding: 20px;
-  border-radius: 20px;
-  background: linear-gradient(180deg, #10253d, #081222);
-  border: 1.5px solid rgba(110,220,170,.28);
-  box-shadow: 0 18px 60px rgba(0,0,0,.6);
-  transform: scale(1);
-  transition: transform .25s;
-}
-#info-overlay.hidden .doc-card { transform: scale(.92); }
-
-.doc-card h2 { font-size: 20px; text-align: center; margin-bottom: 12px; }
-.info-row { display: flex; align-items: center; gap: 12px; margin: 10px 0; }
-.info-ico { width: 56px; height: 56px; flex: 0 0 56px; border-radius: 12px; background: var(--glass); border: 1px solid var(--glass-border); }
-.info-txt { font-family: system-ui, sans-serif; font-size: 13px; font-weight: 600; color: #cfe3ff; line-height: 1.35; }
-#info-close { position: absolute; top: 10px; right: 10px; --surface-height: 34px; --surface-width: 34px; --surface-font-size: 16px; }
-
 /* ── Responsive ──────────────────────────────────────────────── */
 @media (max-width: 380px) {
   .btn3d.btn-icon { --surface-height: 36px; --surface-width: 36px; }
-  #hud-score { font-size: 34px; }
-  #menu-title { font-size: 36px; }
-}
-@media (max-height: 640px) {
-  .btn3d.cta { --surface-height: 46px; }
-  #menu-title { font-size: 34px; }
-  .menu-mascots { display: none; }
 }
 </style>
 </head>
@@ -413,21 +303,42 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 <canvas id="bg-canvas"></canvas>
 <canvas id="game-canvas"></canvas>
 
-<!-- HUD trên -->
+<!-- HUD trên — header chuẩn: Back | SCORE ★ | BEST ♛ | Volume (theo mẫu chung) -->
 <div id="topbar">
-  <div class="btn3d btn-icon" id="back-btn" role="button" aria-label="Back" tabindex="0">
-    <span class="btn3d-shadow"></span>
-    <span class="btn3d-surface">
-      <svg class="back-ico" viewBox="0 0 447.243 447.243" aria-hidden="true">
-        <path fill="currentColor" d="M420.361 192.229a31.967 31.967 0 0 0-5.535-.41H99.305l6.88-3.2a63.998 63.998 0 0 0 18.08-12.8l88.48-88.48c11.653-11.124 13.611-29.019 4.64-42.4-10.441-14.259-30.464-17.355-44.724-6.914a32.018 32.018 0 0 0-3.276 2.754l-160 160c-12.504 12.49-12.515 32.751-.025 45.255l.025.025 160 160c12.514 12.479 32.775 12.451 45.255-.063a32.084 32.084 0 0 0 2.745-3.137c8.971-13.381 7.013-31.276-4.64-42.4l-88.32-88.64a64.002 64.002 0 0 0-16-11.68l-9.6-4.32h314.24c16.347.607 30.689-10.812 33.76-26.88 2.829-17.445-9.019-33.88-26.464-36.71z"/>
-      </svg>
-    </span>
-  </div>
-  <div id="hud-center">
-    <div id="hud-score">0</div>
-    <div id="hud-stage">Stage 1</div>
-  </div>
-  <div id="hud-right">
+  <div id="hud-bar">
+    <div class="btn3d btn-icon" id="back-btn" role="button" aria-label="Back" tabindex="0">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="back-ico" viewBox="0 0 447.243 447.243" aria-hidden="true">
+          <path fill="currentColor" d="M420.361 192.229a31.967 31.967 0 0 0-5.535-.41H99.305l6.88-3.2a63.998 63.998 0 0 0 18.08-12.8l88.48-88.48c11.653-11.124 13.611-29.019 4.64-42.4-10.441-14.259-30.464-17.355-44.724-6.914a32.018 32.018 0 0 0-3.276 2.754l-160 160c-12.504 12.49-12.515 32.751-.025 45.255l.025.025 160 160c12.514 12.479 32.775 12.451 45.255-.063a32.084 32.084 0 0 0 2.745-3.137c8.971-13.381 7.013-31.276-4.64-42.4l-88.32-88.64a64.002 64.002 0 0 0-16-11.68l-9.6-4.32h314.24c16.347.607 30.689-10.812 33.76-26.88 2.829-17.445-9.019-33.88-26.464-36.71z"/>
+        </svg>
+      </span>
+    </div>
+    <div class="hud-scores">
+      <div class="hud-pill">
+        <svg class="pill-ico" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2 L14.9 8.6 L22 9.3 L16.7 14 L18.3 21 L12 17.3 L5.7 21 L7.3 14 L2 9.3 L9.1 8.6 Z"
+                fill="#ffd23f" stroke="#c8901a" stroke-width="1" stroke-linejoin="round"/>
+        </svg>
+        <div class="pill-text">
+          <div class="label" id="hud-score-label">SCORE</div>
+          <div class="value" id="hud-score">0</div>
+        </div>
+      </div>
+      <div class="hud-pill">
+        <svg class="pill-ico" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 18 L4.2 8 L9 12.5 L12 5.5 L15 12.5 L19.8 8 L21 18 Z" fill="#ffd23f" stroke="#a9740a" stroke-width="1.2" stroke-linejoin="round"/>
+          <rect x="3.4" y="16.6" width="17.2" height="3" rx="1.2" fill="#f0b400"/>
+          <circle cx="4.2" cy="8" r="1.5" fill="#fff1a8"/>
+          <circle cx="12" cy="5.5" r="1.6" fill="#fff1a8"/>
+          <circle cx="19.8" cy="8" r="1.5" fill="#fff1a8"/>
+        </svg>
+        <div class="pill-text">
+          <div class="label" id="hud-best-label">BEST</div>
+          <div class="value" id="hud-best">0</div>
+        </div>
+      </div>
+    </div>
     <div class="btn3d btn-icon" id="sound-btn" role="button" aria-label="Sound" tabindex="0">
       <span class="btn3d-shadow"></span>
       <span class="btn3d-surface">
@@ -435,11 +346,8 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
         <svg class="sound-ico ico-off" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3 3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4 9.91 6.09 12 8.18V4z"/></svg>
       </span>
     </div>
-    <div class="hud-chip">
-      <span class="k" id="hud-best-label">BEST</span>
-      <span class="v" id="hud-best">0</span>
-    </div>
   </div>
+  <div id="hud-stage">Stage 1</div>
 </div>
 
 <!-- Banner tutorial -->
@@ -460,94 +368,6 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   <button class="btn3d play" id="ov-btn" type="button">
     <span class="btn3d-shadow"></span><span class="btn3d-surface" id="ov-btn-text">Play Again</span>
   </button>
-  <div class="ov-menu-row">
-    <button class="btn3d" id="ov-menu-btn" type="button">
-      <span class="btn3d-shadow"></span><span class="btn3d-surface" id="ov-menu-text">Menu</span>
-    </button>
-  </div>
-</div></div>
-
-<!-- Menu chính -->
-<div id="menu">
-  <div id="menu-corner">
-    <div class="btn3d btn-icon" id="menu-back" role="button" aria-label="Back" tabindex="0">
-      <span class="btn3d-shadow"></span>
-      <span class="btn3d-surface">
-        <svg class="back-ico" viewBox="0 0 447.243 447.243" aria-hidden="true">
-          <path fill="currentColor" d="M420.361 192.229a31.967 31.967 0 0 0-5.535-.41H99.305l6.88-3.2a63.998 63.998 0 0 0 18.08-12.8l88.48-88.48c11.653-11.124 13.611-29.019 4.64-42.4-10.441-14.259-30.464-17.355-44.724-6.914a32.018 32.018 0 0 0-3.276 2.754l-160 160c-12.504 12.49-12.515 32.751-.025 45.255l.025.025 160 160c12.514 12.479 32.775 12.451 45.255-.063a32.084 32.084 0 0 0 2.745-3.137c8.971-13.381 7.013-31.276-4.64-42.4l-88.32-88.64a64.002 64.002 0 0 0-16-11.68l-9.6-4.32h314.24c16.347.607 30.689-10.812 33.76-26.88 2.829-17.445-9.019-33.88-26.464-36.71z"/>
-        </svg>
-      </span>
-    </div>
-    <div id="menu-right">
-      <div class="btn3d btn-icon" id="menu-sound" role="button" aria-label="Sound" tabindex="0">
-        <span class="btn3d-shadow"></span>
-        <span class="btn3d-surface">
-          <svg class="sound-ico ico-on" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
-          <svg class="sound-ico ico-off" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3 3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4 9.91 6.09 12 8.18V4z"/></svg>
-        </span>
-      </div>
-      <div class="btn3d btn-icon" id="menu-info" role="button" aria-label="How to play" tabindex="0">
-        <span class="btn3d-shadow"></span>
-        <span class="btn3d-surface">
-          <svg class="help-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 17h-2v-2h2v2zm2.07-7.75-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26A2 2 0 1 0 10 9H8a4 4 0 1 1 7.07 2.25z"/></svg>
-        </span>
-      </div>
-    </div>
-  </div>
-
-  <div class="menu-mascots" aria-hidden="true">
-    <div class="mascot"><svg viewBox="0 0 64 128">
-      <path d="M32 6 L42 62 L32 74 L22 62 Z" fill="#101726" stroke="#6fd8ff" stroke-width="7" opacity=".26" stroke-linejoin="round"/>
-      <path d="M32 6 L42 62 L32 74 L22 62 Z" fill="#1b2740" stroke="#6fd8ff" stroke-width="3" stroke-linejoin="round"/>
-      <path d="M32 14 L32 62" stroke="#fff" stroke-width="1.6" opacity=".85" stroke-linecap="round"/>
-      <rect x="18" y="72" width="28" height="7" rx="3.5" fill="#0d1524" stroke="#6fd8ff" stroke-width="2"/>
-      <rect x="26" y="80" width="12" height="34" rx="6" fill="#141026" stroke="#3a3358" stroke-width="2"/>
-      <circle cx="32" cy="119" r="6" fill="#0d1524" stroke="#6fd8ff" stroke-width="2"/>
-      <circle cx="32" cy="119" r="2" fill="#fff"/>
-    </svg></div>
-    <div class="mascot"><svg viewBox="0 0 64 128">
-      <path d="M32 4 L43 64 L32 77 L21 64 Z" fill="#101726" stroke="#52ff9d" stroke-width="7" opacity=".26" stroke-linejoin="round"/>
-      <path d="M32 4 L43 64 L32 77 L21 64 Z" fill="#152b22" stroke="#52ff9d" stroke-width="3" stroke-linejoin="round"/>
-      <path d="M32 13 L32 64" stroke="#fff" stroke-width="1.6" opacity=".85" stroke-linecap="round"/>
-      <rect x="17" y="75" width="30" height="7" rx="3.5" fill="#0d1a14" stroke="#52ff9d" stroke-width="2"/>
-      <rect x="25" y="83" width="14" height="36" rx="7" fill="#141026" stroke="#3a3358" stroke-width="2"/>
-      <circle cx="32" cy="122" r="6" fill="#0d1a14" stroke="#52ff9d" stroke-width="2"/>
-      <circle cx="32" cy="122" r="2" fill="#fff"/>
-    </svg></div>
-    <div class="mascot"><svg viewBox="0 0 64 128">
-      <path d="M32 6 L42 62 L32 74 L22 62 Z" fill="#101726" stroke="#c060ff" stroke-width="7" opacity=".26" stroke-linejoin="round"/>
-      <path d="M32 6 L42 62 L32 74 L22 62 Z" fill="#241535" stroke="#c060ff" stroke-width="3" stroke-linejoin="round"/>
-      <path d="M32 14 L32 62" stroke="#fff" stroke-width="1.6" opacity=".85" stroke-linecap="round"/>
-      <rect x="18" y="72" width="28" height="7" rx="3.5" fill="#190f26" stroke="#c060ff" stroke-width="2"/>
-      <rect x="26" y="80" width="12" height="34" rx="6" fill="#141026" stroke="#3a3358" stroke-width="2"/>
-      <circle cx="32" cy="119" r="6" fill="#190f26" stroke="#c060ff" stroke-width="2"/>
-      <circle cx="32" cy="119" r="2" fill="#fff"/>
-    </svg></div>
-  </div>
-
-  <div id="menu-title">CURSED KNIVES</div>
-  <div id="menu-tagline">Throw daggers · Dodge steel · Shatter the totem</div>
-  <div id="menu-deepest"></div>
-
-  <button class="btn3d cta" id="menu-play" type="button">
-    <span class="btn3d-shadow"></span><span class="btn3d-surface" id="menu-play-text">Play</span>
-  </button>
-  <button class="btn3d" id="menu-tutorial" type="button">
-    <span class="btn3d-shadow"></span><span class="btn3d-surface" id="menu-tut-text">Tutorial</span>
-  </button>
-</div>
-
-<!-- How to play -->
-<div id="info-overlay" class="hidden"><div class="doc-card">
-  <div class="btn3d btn-icon" id="info-close" role="button" aria-label="Close" tabindex="0">
-    <span class="btn3d-shadow"></span><span class="btn3d-surface">✕</span>
-  </div>
-  <h2 id="info-title">How to play</h2>
-  <div class="info-row"><canvas class="info-ico" id="ico-throw" width="112" height="112"></canvas><div class="info-txt" id="info-txt-throw"></div></div>
-  <div class="info-row"><canvas class="info-ico" id="ico-avoid" width="112" height="112"></canvas><div class="info-txt" id="info-txt-avoid"></div></div>
-  <div class="info-row"><canvas class="info-ico" id="ico-gem"   width="112" height="112"></canvas><div class="info-txt" id="info-txt-gem"></div></div>
-  <div class="info-row"><canvas class="info-ico" id="ico-break" width="112" height="112"></canvas><div class="info-txt" id="info-txt-break"></div></div>
-  <div class="info-row"><canvas class="info-ico" id="ico-boss"  width="112" height="112"></canvas><div class="info-txt" id="info-txt-boss"></div></div>
 </div></div>
 
 <script>
@@ -1075,7 +895,7 @@ const BOSS_ACCENT = '#ff3d5a';
 /* ================================================================
  * §3. State
  * ================================================================ */
-let state = 'ready';        // 'ready' | 'playing' | 'over'
+let state = 'playing';      // 'playing' | 'over' — không còn menu, boot vào thẳng gameplay
 let paused = false;
 let timeMs = 0, lastTs = 0; // đồng hồ game — ĐÓNG BĂNG khi pause (mọi anim key theo timeMs)
 let score = 0, best = 0, bestStart = 0;
@@ -1099,9 +919,6 @@ let flash = 0, shakeAmp = 0;
 let stagePulseT0 = -9999;   // totem nhún nhẹ khi dao cắm
 let overTimer = null;
 let tutorial = null;        // {step, need} — null = không ở tutorial
-let tutFromMenu = false;
-let menuOpen = true;
-let infoOpen = false;
 
 /* ── v1.1 ─────────────────────────────────────────────────────── */
 let timeScale = 1;          // slow-mo toàn cục — nhân vào dt MỘT chỗ duy nhất ở loop()
@@ -1109,9 +926,9 @@ let realMs = 0;             // đồng hồ THẬT không scale (kill-cam / brea
 let breath = false;         // Executioner's Breath: dao cuối bay trong slow-mo
 let killCam = null;         // kill-cam: {until, zoomStart, x, y, killerA, missDeg}
 let riskyCount = 0;         // số cú liều (Razor/Close/Needle) trong stage — thưởng lúc vỡ
-let wraths = [];            // Skull Tithe: các cơn thịnh nộ đã lên lịch {start, end}
+let wraths = [];            // Skull Tithe: các cơn thịnh nộ đã lên lịch {start, end, dir}
 let lastWrathEnd = 0;
-let wrathDir = 1;
+let stallTries = 0;         // chu kỳ anti-stall đã thử đặt gai (đổi salt mỗi lần)
 let lastStand = null;       // boss dao cuối: {t0, mult}
 let stallRing = 0;          // vòng anti-stall Last Stand [0..1]
 let spikesGrown = 0;        // gai xương đã mọc (max 2)
@@ -1241,7 +1058,6 @@ function setMuted(v) {
   muted = v;
   if (audioMaster) audioMaster.gain.value = muted ? 0 : 0.9;
   document.getElementById('sound-btn').classList.toggle('muted', muted);
-  document.getElementById('menu-sound').classList.toggle('muted', muted);
   persistSaved();
 }
 
@@ -1456,7 +1272,6 @@ function resize() {
   measureEnvSafeTop();
   const topPad = Math.max(getStatusBarHeight(), envSafeTop) + 8;
   $('topbar').style.paddingTop = topPad + 'px';
-  $('menu-corner').style.paddingTop = topPad + 'px';
 
   /* Hình học màn chơi: totem trên, dao chờ dưới, luôn đủ đường bay */
   const topbarLg = (topPad + 70) / scale;          // đáy HUD (logic)
@@ -1748,10 +1563,10 @@ function easeOutBack(k) {
   return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2);
 }
 
-/** Cơn thịnh nộ Skull Tithe còn hiệu lực? (dọn các cơn đã hết hạn) */
+/** Cơn thịnh nộ Skull Tithe đang hiệu lực → trả về cơn đó (dọn cơn hết hạn). */
 function wrathActive() {
   if (wraths.length && timeMs >= wraths[0].end) wraths = wraths.filter(w => timeMs < w.end);
-  return wraths.some(w => timeMs >= w.start);
+  return wraths.find(w => timeMs >= w.start) || null;
 }
 
 /** Độ sáng telegraph cơn thịnh nộ sắp nổ [0..1] — vẽ vignette đỏ dâng dần. */
@@ -1804,7 +1619,7 @@ function spawnStage(idx, quiet) {
   /* reset state v1.1 theo stage */
   riskyCount = 0;
   wraths = []; lastWrathEnd = 0;
-  lastStand = null; stallRing = 0; spikesGrown = 0; overkillPending = false;
+  lastStand = null; stallRing = 0; spikesGrown = 0; stallTries = 0; overkillPending = false;
   omenFiredAt = -1; omenGlow = 0;
   endBreath();
   echoLive = !quiet && !tutorial && echoS >= 1 && stageIdx === echoS && !echoBrokenRun;
@@ -1838,9 +1653,9 @@ function resolveImpact(rotAt) {
       if (gm.skull) {
         sShriek();
         const start = Math.max(timeMs + 400, lastWrathEnd);
-        wraths.push({ start, end: start + 500 });
+        // dir đóng băng THEO TỪNG CƠN — gem thứ 2 không được đảo hướng cơn đã lên lịch
+        wraths.push({ start, end: start + 500, dir: disc.w >= 0 ? 1 : -1 });
         lastWrathEnd = start + 500;
-        wrathDir = disc.w >= 0 ? 1 : -1;
       } else {
         sGem();
       }
@@ -1988,6 +1803,7 @@ function breakDisc() {
     });
   }
   for (const k of stuck) {
+    if (k.grow0 && timeMs - k.grow0 < 600) continue;   // gai chưa mọc xong → tan cùng totem, không văng nguyên cây
     const th = disc.rot + k.a;
     const cd = disc.R - EMBED + KNIFE_TIP;
     debris.push({
@@ -2024,7 +1840,6 @@ function breakDisc() {
       addScore(5);
       floatTexts.push({ x: LW / 2, y: disc.y + 46, born: timeMs, life: 1200, size: 26, color: '#52ff9d', text: t('uncharted') + ' +5' });
       persistSaved();
-      updateMenuDeepest();
     }
   } else {
     tutorial.stage = 'done';
@@ -2034,6 +1849,8 @@ function breakDisc() {
   }
   lastStand = null;
   overkillPending = false;
+  wraths = [];               // cơn thịnh nộ chết cùng totem — không telegraph lên xác totem
+  lastWrathEnd = 0;
 }
 
 function addScore(n) {
@@ -2045,13 +1862,10 @@ function addScore(n) {
   }
 }
 
-/** Ván mới (Play / Play Again / onRetryLevel). */
+/** Ván mới (boot / Play Again / onRetryLevel) — không còn menu, vào thẳng. */
 function newRun() {
   clearTimeout(overTimer);               // hủy popup đang chờ hiện của ván trước
-  closeInfo();                           // không để run mới chạy dưới panel how-to
   $('overlay').classList.add('hidden');
-  $('menu').classList.add('hidden');
-  menuOpen = false;
   tutorial = null;
   hideTutBanner();
   score = 0;
@@ -2065,24 +1879,6 @@ function newRun() {
   state = 'playing';
   paused = false;
   spawnStage(0, false);
-}
-
-function toMenu() {
-  clearTimeout(overTimer);
-  $('overlay').classList.add('hidden');
-  tutorial = null;
-  hideTutBanner();
-  killCam = null; timeScale = 1; endBreath();
-  state = 'ready';
-  openMenu();
-}
-
-function openMenu() {
-  menuOpen = true;
-  $('menu').classList.remove('hidden');
-  updateMenuDeepest();
-  // totem trang trí xoay sau lớp menu mờ (phase 'break' = totem vừa vỡ → dựng lại)
-  if (!cfg || phase === 'break') spawnStage(0, true);
 }
 
 /* ================================================================
@@ -2104,11 +1900,7 @@ function tutCfg(i) {
   };
 }
 
-function startTutorial(fromMenu) {
-  tutFromMenu = fromMenu;
-  closeInfo();
-  $('menu').classList.add('hidden');
-  menuOpen = false;
+function startTutorial() {
   clearTimeout(overTimer);
   $('overlay').classList.add('hidden');
   shards = []; debris = []; floatTexts = []; rings = []; sparks = [];
@@ -2169,13 +1961,11 @@ function tutorialBounce() {
 }
 
 function finishTutorial() {
-  const fromMenu = tutFromMenu;
   tutSeen = true;
   persistSaved();
   tutorial = null;
   hideTutBanner();
-  if (fromMenu) { state = 'ready'; openMenu(); }
-  else newRun();
+  newRun();                              // hết tutorial → vào thẳng ván thật
 }
 
 function setTutText(s) { $('tut-text').textContent = s; }
@@ -2196,7 +1986,7 @@ function update(dt) {
     if (state === 'over') {
       disc.w *= Math.pow(0.9992, dt);    // thua: totem chậm dần, không khựng
     } else {
-      let target = state === 'ready' ? 0.6 * (cfg.dir || 1) : patternOmega();
+      let target = patternOmega();
       if (state === 'playing' && !tutorial) {
         /* Last Stand: boss dao cuối — sau 800ms telegraph, totem giãy chết
            (dao động 0.25×→1.35×); ưu tiên trên mọi pattern/wrath */
@@ -2204,10 +1994,11 @@ function update(dt) {
           const lsT = (timeMs - lastStand.t0 - 800) / 1000;
           lastStand.mult = 0.8 + 0.55 * Math.sin(Math.PI * 2 * lsT / 1.1);
           target = cfg.speed * cfg.dir * lastStand.mult;
-        } else if (wrathActive()) {
-          /* Skull Tithe: cơn thịnh nộ — vọt tốc theo MỘT chiều cố định
-             (đè pattern để flip không cộng dồn thành spike vô lý) */
-          target = cfg.speed * wrathDir * 1.6;
+        } else {
+          /* Skull Tithe: cơn thịnh nộ — vọt tốc theo chiều đã đóng băng lúc
+             ăn gem (đè pattern để flip không cộng dồn thành spike vô lý) */
+          const w = wrathActive();
+          if (w) target = cfg.speed * w.dir * 1.6;
         }
       }
       const k = 1 - Math.pow(0.82, dt / 16.667);
@@ -2230,8 +2021,9 @@ function update(dt) {
     stallRing += dt / 6000;
     if (stallRing >= 1 && spikesGrown < 2) {
       stallRing = 0;
+      stallTries++;          // đổi salt mỗi chu kỳ — vành chật vẫn tìm ra góc mới
       for (let tr = 0; tr < 40; tr++) {
-        const a = hash01(stageIdx, 300 + spikesGrown * 40 + tr) * Math.PI * 2;
+        const a = hash01(stageIdx, 300 + spikesGrown * 40 + stallTries * 97 + tr) * Math.PI * 2;
         const okS = stuck.every(k => angDiff(a, k.a) >= 0.25);
         const okG = gems.every(g => angDiff(a, g.a) >= 0.3);
         if (okS && okG) {
@@ -2437,14 +2229,15 @@ function render() {
         disc.x + Math.cos(th) * cd, disc.y + Math.sin(th) * cd, th - Math.PI / 2, sc * gk, gk < 1 ? 0.4 + 0.6 * gk : 1);
     }
 
-    /* kill-cam: soi dao thủ phạm — sprite đỏ pulse 6Hz + cung cấm ±KNIFE_GAP */
+    /* kill-cam: soi dao thủ phạm — sprite đỏ pulse 6Hz + cung cấm ±KNIFE_GAP.
+       Nhân cùng sc với dao thật kẻo lệch hình dưới zoom 1.35× */
     if (killCam) {
       const th = disc.rot + killCam.killerA;
-      const cd = disc.R - EMBED + KNIFE_TIP;
+      const cd = (disc.R - EMBED + KNIFE_TIP) * sc;
       const pulse = 0.5 + 0.5 * Math.sin(realMs * 0.038);
-      drawKnife(redKnifeSpr, disc.x + Math.cos(th) * cd, disc.y + Math.sin(th) * cd, th - Math.PI / 2, 1, 0.45 + 0.55 * pulse);
+      drawKnife(redKnifeSpr, disc.x + Math.cos(th) * cd, disc.y + Math.sin(th) * cd, th - Math.PI / 2, sc, 0.45 + 0.55 * pulse);
       ctx.beginPath();
-      ctx.arc(disc.x, disc.y, disc.R + 6, th - KNIFE_GAP, th + KNIFE_GAP);
+      ctx.arc(disc.x, disc.y, (disc.R + 6) * sc, th - KNIFE_GAP, th + KNIFE_GAP);
       ctx.strokeStyle = '#ff3d5a';
       ctx.globalAlpha = 0.55 + 0.35 * pulse;
       ctx.lineWidth = 5;
@@ -2452,33 +2245,36 @@ function render() {
       ctx.globalAlpha = 1;
     }
 
-    /* Echo Wraith: bóng vọng của run best lảng vảng đúng stage nó đã gục */
-    if ((echoLive || echoDissolveT0) && state === 'playing' && !tutorial) {
-      const dis = echoDissolveT0 ? Math.min(1, (timeMs - echoDissolveT0) / 600) : 0;
-      if (dis >= 1) { echoDissolveT0 = 0; }
-      else {
-        const bob = Math.sin(timeMs * 0.003) * 8;
-        const wx = disc.x + disc.R + 40;
-        const wy = disc.y - disc.R * 0.35 + bob - dis * 60;
-        const al = (0.22 + 0.12 * Math.sin(timeMs * 0.005)) * (1 - dis);
-        ctx.save();
-        ctx.translate(wx, wy);
-        ctx.scale(0.5, 0.5);
-        ctx.translate(-50, -50);
-        if (!echoSigPath) echoSigPath = new Path2D(SIGIL_D[5]);   // cache — không alloc mỗi frame
-        const sig = echoSigPath;
-        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-        ctx.strokeStyle = '#b88cff';
-        ctx.globalAlpha = al;
-        ctx.lineWidth = 5;
-        ctx.stroke(sig);
-        ctx.strokeStyle = '#fff';
-        ctx.globalAlpha = al * 0.7;
-        ctx.lineWidth = 1.8;
-        ctx.stroke(sig);
-        ctx.restore();
-        ctx.globalAlpha = 1;
-      }
+  }
+
+  /* Echo Wraith: bóng vọng của run best lảng vảng đúng stage nó đã gục.
+     Vẽ NGOÀI guard phase!=='break' — dao cuối vừa phá echo vừa phá totem
+     thì màn tan biến vẫn phải chạy trọn qua lúc totem vỡ */
+  if (cfg && (echoLive || echoDissolveT0) && state === 'playing' && !tutorial) {
+    const dis = echoDissolveT0 ? Math.min(1, (timeMs - echoDissolveT0) / 600) : 0;
+    if (dis >= 1) { echoDissolveT0 = 0; }
+    else {
+      const bob = Math.sin(timeMs * 0.003) * 8;
+      const wx = disc.x + disc.R + 40;
+      const wy = disc.y - disc.R * 0.35 + bob - dis * 60;
+      const al = (0.22 + 0.12 * Math.sin(timeMs * 0.005)) * (1 - dis);
+      ctx.save();
+      ctx.translate(wx, wy);
+      ctx.scale(0.5, 0.5);
+      ctx.translate(-50, -50);
+      if (!echoSigPath) echoSigPath = new Path2D(SIGIL_D[5]);   // cache — không alloc mỗi frame
+      const sig = echoSigPath;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#b88cff';
+      ctx.globalAlpha = al;
+      ctx.lineWidth = 5;
+      ctx.stroke(sig);
+      ctx.strokeStyle = '#fff';
+      ctx.globalAlpha = al * 0.7;
+      ctx.lineWidth = 1.8;
+      ctx.stroke(sig);
+      ctx.restore();
+      ctx.globalAlpha = 1;
     }
   }
 
@@ -2665,17 +2461,6 @@ function updateStageHud() {
   }
 }
 
-/** Dòng "Sâu nhất · Màn N" trên menu — mặc màu accent của đúng totem đó. */
-function updateMenuDeepest() {
-  const el = $('menu-deepest');
-  if (deep >= 0) {
-    el.textContent = t('deepest') + ' · ' + t('stage') + ' ' + (deep + 1);
-    el.style.color = stageConfig(deep).accent;
-  } else {
-    el.textContent = '';
-  }
-}
-
 /* Tự co cỡ điểm cho vừa card khi điểm ≥ 6 chữ số (popup-common §5b) */
 function fitScores() {
   var r = document.querySelector('.sb');
@@ -2692,122 +2477,16 @@ function fitScores() {
   }
 }
 
-function openInfo()  { infoOpen = true;  $('info-overlay').classList.remove('hidden'); }
-function closeInfo() { infoOpen = false; $('info-overlay').classList.add('hidden'); }
-
-/** Icon how-to-play vẽ bằng chính renderer của game — art luôn khớp. */
-function buildInfoIcons() {
-  const icon = (id, draw) => {
-    const cv = $(id), c = cv.getContext('2d');
-    c.setTransform(2, 0, 0, 2, 0, 0);            // canvas 112 thật / 56 CSS
-    c.clearRect(0, 0, 56, 56);
-    draw(c);
-  };
-  const miniKnife = (c, x, y, rot, s, spr) => {
-    c.save();
-    c.translate(x, y);
-    c.rotate(rot);
-    c.drawImage(spr || knifeSpr, -KNIFE_SPR_W * s / 2, -KNIFE_SPR_H * s / 2, KNIFE_SPR_W * s, KNIFE_SPR_H * s);
-    c.restore();
-  };
-  const miniDisc = (c, x, y, r, accent, sigil) => {
-    const g = c.createRadialGradient(x, y - r * .3, r * .1, x, y, r);
-    g.addColorStop(0, '#1c2434'); g.addColorStop(1, '#07090f');
-    c.fillStyle = g;
-    c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
-    c.strokeStyle = accent; c.globalAlpha = .8; c.lineWidth = 1.6;
-    c.beginPath(); c.arc(x, y, r - 1, 0, Math.PI * 2); c.stroke();
-    c.globalAlpha = 1;
-    const sig = new Path2D(SIGIL_D[sigil]);
-    c.save();
-    c.translate(x - r * .62, y - r * .62);
-    c.scale(r * 1.24 / 100, r * 1.24 / 100);
-    strokeSigil(c, sig, accent, 6);
-    c.restore();
-  };
-  icon('ico-throw', c => {
-    miniDisc(c, 28, 14, 12, '#35e0ff', 0);
-    miniKnife(c, 28, 44, 0, 0.24);
-    c.strokeStyle = '#fff'; c.globalAlpha = .7; c.lineWidth = 2; c.lineCap = 'round';
-    c.beginPath(); c.moveTo(28, 33); c.lineTo(28, 27); c.stroke();
-    c.beginPath(); c.moveTo(24, 30); c.lineTo(28, 26); c.lineTo(32, 30); c.stroke();
-    c.globalAlpha = 1;
-  });
-  icon('ico-avoid', c => {
-    miniDisc(c, 28, 18, 14, '#c060ff', 1);
-    miniKnife(c, 28, 38, 0, 0.24, preKnifeSpr);
-    miniKnife(c, 33, 40, 0.3, 0.24);
-    c.strokeStyle = '#ff3d5a'; c.lineWidth = 2.4; c.lineCap = 'round';
-    c.beginPath(); c.moveTo(40, 34); c.lineTo(50, 44); c.moveTo(50, 34); c.lineTo(40, 44); c.stroke();
-  });
-  icon('ico-gem', c => {
-    c.save();
-    c.translate(28, 28);
-    c.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const a = -Math.PI / 2 + i / 6 * Math.PI * 2;
-      const rr2 = i % 2 ? 13 : 16;
-      c[i ? 'lineTo' : 'moveTo'](Math.cos(a) * rr2, Math.sin(a) * rr2);
-    }
-    c.closePath();
-    c.fillStyle = 'rgba(82,255,157,.16)'; c.fill();
-    c.lineJoin = 'round';
-    c.strokeStyle = '#52ff9d'; c.globalAlpha = .3; c.lineWidth = 6; c.stroke();
-    c.globalAlpha = 1; c.lineWidth = 2.4; c.stroke();
-    c.strokeStyle = '#fff'; c.globalAlpha = .8; c.lineWidth = 1; c.stroke();
-    c.globalAlpha = 1;
-    c.fillStyle = '#fff';
-    c.font = '800 11px system-ui';
-    c.textAlign = 'center';
-    c.fillText('+5', 0, 4);
-    c.restore();
-  });
-  icon('ico-break', c => {
-    const cx = 28, cy = 28;
-    for (let i = 0; i < 5; i++) {
-      const a0 = i / 5 * Math.PI * 2, a1 = a0 + Math.PI * 2 / 5 - 0.12;
-      const mid = (a0 + a1) / 2, off = 5;
-      c.save();
-      c.translate(cx + Math.cos(mid) * off, cy + Math.sin(mid) * off);
-      c.beginPath();
-      c.moveTo(0, 0);
-      c.arc(0, 0, 15, a0, a1);
-      c.closePath();
-      c.fillStyle = '#101624'; c.fill();
-      c.strokeStyle = '#ffb830'; c.globalAlpha = .6; c.lineWidth = 1.6; c.stroke();
-      c.globalAlpha = 1;
-      c.restore();
-    }
-  });
-  icon('ico-boss', c => {
-    miniDisc(c, 28, 28, 20, BOSS_ACCENT, 5);
-  });
-}
-
 /** Áp toàn bộ label theo ngôn ngữ (gọi 1 lần lúc boot). */
 function updateLabels() {
-  $('menu-title').textContent = t('title');
-  $('menu-tagline').textContent = t('tagline');
-  $('menu-play-text').textContent = t('play');
-  $('menu-tut-text').textContent = t('tutorial');
+  $('hud-score-label').textContent = t('score');
   $('hud-best-label').textContent = t('best');
   $('ov-lbl-score').textContent = t('score');
   $('ov-lbl-best').textContent = t('best');
   $('ov-btn-text').textContent = t('playAgain');
-  $('ov-menu-text').textContent = t('menu');
   $('tut-skip-text').textContent = t('skip');
-  $('info-title').textContent = t('howToPlay');
-  $('info-txt-throw').textContent = t('infoThrow');
-  $('info-txt-avoid').textContent = t('infoAvoid');
-  $('info-txt-gem').textContent = t('infoGem');
-  $('info-txt-break').textContent = t('infoBreak');
-  $('info-txt-boss').textContent = t('infoBoss');
   $('back-btn').setAttribute('aria-label', t('back'));
-  $('menu-back').setAttribute('aria-label', t('back'));
   $('sound-btn').setAttribute('aria-label', t('sound'));
-  $('menu-sound').setAttribute('aria-label', t('sound'));
-  $('menu-info').setAttribute('aria-label', t('howToPlay'));
-  $('info-close').setAttribute('aria-label', t('close'));
   updateStageHud();
 }
 
@@ -2840,8 +2519,6 @@ window.addEventListener('keydown', function (e) {
   if (state === 'over') return;                     // để nút Play Again nhận phím
   if (e.target && e.target.closest && e.target.closest('.btn3d')) return;
   e.preventDefault();
-  if (infoOpen) return;                             // panel how-to đang mở → không Play chồng
-  if (menuOpen) { playPressed(); return; }          // Space ở menu = Play
   onTap();
 });
 
@@ -2856,21 +2533,8 @@ function onBtn(id, fn) {
 
 /* Overlay ẩn bằng opacity nên nút vẫn giữ focus bàn phím → mọi handler
    phải tự guard theo state, kẻo Space/Enter giữa trận kích nút vô hình. */
-function playPressed() {
-  if (!menuOpen) return;
-  sButton();
-  if (!tutSeen) startTutorial(false);    // lần đầu chơi → tutorial trước
-  else newRun();
-}
-
 onBtn('back-btn', () => { sButton(); sendMessage('quit'); });
-onBtn('menu-back', () => { if (!menuOpen) return; sButton(); sendMessage('quit'); });
 onBtn('sound-btn', () => { setMuted(!muted); sButton(); });
-onBtn('menu-sound', () => { if (!menuOpen) return; setMuted(!muted); sButton(); });
-onBtn('menu-info', () => { if (!menuOpen) return; sButton(); openInfo(); });
-onBtn('info-close', () => { sButton(); closeInfo(); });
-onBtn('menu-play', playPressed);
-onBtn('menu-tutorial', () => { if (!menuOpen) return; sButton(); startTutorial(true); });
 onBtn('tut-skip', () => { if (!tutorial) return; sButton(); finishTutorial(); });
 $('ov-btn').addEventListener('click', function (e) {
   e.stopPropagation();
@@ -2879,15 +2543,6 @@ $('ov-btn').addEventListener('click', function (e) {
   sendMessage('retry_level');            // game tự xử lý chơi lại (game-common §1.3)
   newRun();
 });
-$('ov-menu-btn').addEventListener('click', function (e) {
-  e.stopPropagation();
-  if (state !== 'over') return;
-  sButton();
-  toMenu();                              // về menu — không bắn event (không chơi lại)
-});
-$('info-overlay').addEventListener('pointerdown', function (e) {
-  if (e.target === this) closeInfo();
-}, { passive: true });
 
 /* ================================================================
  * §15. Native callbacks (game-common §1.3) + boot
@@ -2931,16 +2586,16 @@ function boot() {
   echoS = sv.eS;
   echoK = sv.eK;
   $('sound-btn').classList.toggle('muted', muted);
-  $('menu-sound').classList.toggle('muted', muted);
 
   buildKnifeSprites();
   resize();
   updateLabels();
   updateScoreHud();
   updateBestHud();
-  buildInfoIcons();
-  openMenu();
   requestAnimationFrame(loop);
+  /* Không còn menu: lần đầu chơi → tutorial; các lần sau vào thẳng ván */
+  if (!tutSeen) startTutorial();
+  else newRun();
 }
 
 /* Đợi native inject (chống race) — fallback 200ms (game-common §3) */
