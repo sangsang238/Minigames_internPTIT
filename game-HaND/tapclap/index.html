@@ -1,0 +1,997 @@
+<!--
+  Tap Away (clone Tap Away / Tile Away Story — TAPCLAP) — HaND
+  Flat theme. Single-file HTML (CSS + JS inline).
+  KHUNG (khay/tray) vừa màn hình — KHÔNG pan/zoom. Mỗi ô có mũi tên 1 trong 4 hướng
+  (lên/phải/xuống/trái). Chạm ô → trượt theo hướng đó ra khỏi khung khi đường tới
+  mép trống. Dọn SẠCH 1 khung ⇒ khung kế (đang xếp chồng phía sau) trượt lên thay thế.
+  CHIA THEO MÀN (level): mỗi màn gồm 1..N KHUNG phải dọn hết; dọn hết mọi khung ⇒ THẮNG
+  màn → app hiện popup, qua màn kế. MAP TO DẦN theo màn (cols×rows tăng) & số khung tăng.
+  Khung dựng ngược (đặt ô chỉ khi có đường thoát) ⇒ luôn dọn hết được, KHÔNG bế tắc.
+  Tuân thủ game-common.md (bridge, game CÓ level).
+-->
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Tap Away</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap" rel="stylesheet" />
+
+<style>
+  /* ── Reset + tắt highlight khi chạm (game-common §UI) ─────────────── */
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+
+  :root {
+    --ui-font: 'Google Sans Flex', system-ui, sans-serif;
+    --bg-1: #eef3ff;
+    --bg-2: #dfe8ff;
+    --ink: #24304d;
+    --ink-soft: #5b6b8f;
+    --accent: #3b5bdb;
+    --gold: #f5b301;
+    --cell: 56px;   /* set bởi JS */
+  }
+
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: var(--ui-font);
+    font-weight: 700;
+    color: var(--ink);
+    background: var(--bg-1);   /* nền màu đều (phẳng) */
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: none;
+  }
+
+  .app {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── HUD trên cùng ────────────────────────────────────────────────── */
+  .topbar {
+    width: 100%;
+    max-width: 560px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 14px 8px;
+  }
+  /* ── Thanh Level / Frame — 2 khung thẻ (giống Score/Best các game khác) ── */
+  .scorebar {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 0 8px;
+  }
+  .sc-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.02;
+    min-width: 0;
+    flex: 1 1 0;
+    max-width: 150px;
+    padding: 5px 12px 7px;
+    background: rgba(255, 255, 255, .94);
+    border-radius: 16px;
+    box-shadow: 0 4px 14px rgba(24, 20, 60, .18);
+    overflow: hidden;
+  }
+  .sc-k {
+    font-size: 10px; letter-spacing: 1.5px; font-weight: 800;
+    color: var(--accent); text-transform: uppercase;
+    max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .sc-v { font-size: 26px; color: var(--ink); max-width: 100%; white-space: nowrap; }
+
+  /* ── Frame = thông tin phụ ⇒ 1 hàng riêng dưới thanh tim, nhỏ & nhạt ── */
+  .frame-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 6px;
+    padding: 2px 0 2px;
+    color: var(--ink-soft);
+  }
+  .frame-k { font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; }
+  .frame-v { font-size: 15px; font-weight: 800; }
+
+  /* ── Tim (lượt chơi) — 3 tim mỗi lần chơi ─────────────────────────── */
+  .lives {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 560px;
+    padding: 2px 0 4px;
+  }
+  .heart { width: 26px; height: 26px; display: block; color: #ff5a72; }
+  .heart svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 2px 3px rgba(255, 90, 114, .35)); }
+  .heart.empty { color: #c7cede; }
+  .heart.empty svg { filter: none; }
+  .heart.lose { animation: heartLose .45s ease; }
+  @keyframes heartLose {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.4); }
+    100% { transform: scale(1); }
+  }
+
+  /* Btn3d — biến thể flat (shadow ẩn), icon vuông */
+  .btn3d {
+    --radius: 14px;
+    --surface-color: #ffffff;
+    --surface-text: var(--accent);
+    position: relative;
+    display: inline-block;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+  }
+  .btn3d-shadow { display: none; }
+  .btn3d-surface {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius);
+    background-color: var(--surface-color);
+    color: var(--surface-text);
+    box-shadow: 0 3px 0 rgba(59, 91, 219, .18), 0 6px 14px rgba(36, 48, 77, .12);
+    transition: transform .09s ease-out;
+  }
+  .btn3d:active .btn3d-surface { transform: scale(.95); }
+  .btn3d.btn-icon .btn3d-surface { width: 46px; height: 46px; }
+  .btn3d.btn-icon { -webkit-user-select: none; user-select: none; }
+  .back-ico { width: 52%; height: 52%; fill: currentColor; display: block; }
+  .restart-ico { width: 62%; height: 62%; fill: currentColor; display: block; }
+
+  /* ── Sân khấu: chồng khay (deck) ở giữa màn hình ───────────────────── */
+  .stage {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 8px 8px 20px;
+    overflow: visible;   /* KHÔNG cắt ">>>" gợi ý ở ô sát mép khay */
+  }
+  .deck {
+    position: relative;   /* width/height = kích thước khay (set bởi JS) */
+  }
+
+  /* Các "khay chờ" xếp chồng phía sau ⇒ ảo giác một chồng khay */
+  .plate {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 18px;
+    transform-origin: 50% 0;
+  }
+  .plate.p1 {
+    transform: translate(-50%, 16px) scale(.955);
+    background: linear-gradient(180deg, #e6edfb, #d3ddf3);
+    box-shadow:
+      inset 0 2px 0 rgba(255, 255, 255, .7),
+      0 9px 0 #b0bfe0,
+      0 18px 22px rgba(36, 48, 77, .18);
+    z-index: 0;
+  }
+  .plate.p2 {
+    transform: translate(-50%, 31px) scale(.912);
+    background: linear-gradient(180deg, #dbe4f6, #c8d5ef);
+    box-shadow:
+      inset 0 2px 0 rgba(255, 255, 255, .55),
+      0 9px 0 #9fb0d6,
+      0 18px 22px rgba(36, 48, 77, .16);
+    z-index: 0;
+  }
+
+  /* Khay đang chơi — khung 3D (thành khay nổi, lòng khay lõm) */
+  .tray {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    border-radius: 18px;
+    background:
+      linear-gradient(0deg, rgba(59,91,219,.05) 1px, transparent 1px) 0 var(--pad, 0) / 100% var(--cell),
+      linear-gradient(90deg, rgba(59,91,219,.05) 1px, transparent 1px) var(--pad, 0) 0 / var(--cell) 100%,
+      #ffffff;
+    box-shadow:
+      0 13px 0 #aebedf,                       /* độ dày thành khay (3D) */
+      0 15px 0 #9fb0d6,                        /* mép đáy đậm hơn */
+      0 30px 36px -8px rgba(36, 48, 77, .40);  /* bóng đổ nền */
+    cursor: pointer;
+  }
+  /* Khung/bevel: vành viền + gờ trên sáng, gờ dưới tối, lòng khay lõm.
+     Dùng pseudo-element ⇒ KHÔNG ảnh hưởng layout ô. */
+  .tray::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 18px;
+    pointer-events: none;
+    box-shadow:
+      inset 0 0 0 6px #e8eefb,                     /* vành khung sáng */
+      inset 0 0 0 8px rgba(59, 91, 219, .22),       /* đường viền khung */
+      inset 0 7px 0 2px rgba(255, 255, 255, .95),   /* gờ trên sáng */
+      inset 0 -9px 0 2px rgba(36, 48, 77, .14),     /* gờ dưới tối */
+      inset 0 12px 14px -13px rgba(36, 48, 77, .14); /* lòng khay lõm (nhẹ) */
+  }
+  .tray.out { animation: trayOut .3s ease forwards; }
+  .tray.in  { animation: trayIn .36s cubic-bezier(.2, .7, .3, 1) both; }
+  @keyframes trayOut {
+    to { transform: translateY(-34px) scale(.9); opacity: 0; }
+  }
+  @keyframes trayIn {
+    from { transform: translateY(30px) scale(.92); opacity: 0; }
+    to   { transform: none; opacity: 1; }
+  }
+
+  /* lóe sáng ô vừa được dọn */
+  .reveal {
+    position: absolute;
+    width: var(--cell);
+    height: var(--cell);
+    border-radius: 24%;
+    background: rgba(255, 255, 255, .85);
+    pointer-events: none;
+    z-index: 3;
+    animation: revealFade .5s ease forwards;
+  }
+  @keyframes revealFade {
+    0% { opacity: .85; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.18); }
+  }
+
+  .tile {
+    position: absolute;
+    width: var(--cell);
+    height: var(--cell);
+    cursor: pointer;
+    z-index: 2;
+    will-change: transform;
+  }
+  .tile-face {
+    position: absolute;
+    inset: 3px;                     /* mặc định; JS chỉnh từng cạnh để chụm khối */
+    border-radius: 24%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .18), 0 2px 5px rgba(36, 48, 77, .28);
+    transition: transform .1s ease;
+  }
+  .tile-face svg { width: 76%; height: 76%; display: block; }
+  .tile:active .tile-face { transform: scale(.92); }
+
+  .tile.spawn .tile-face { animation: pop .28s ease; }
+  @keyframes pop {
+    0% { transform: scale(0); opacity: 0; }
+    60% { transform: scale(1.08); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .tile.slide {
+    transition: transform .32s cubic-bezier(.4, 0, .7, .2), opacity .32s ease;
+    opacity: 0;
+    z-index: 4;
+    pointer-events: none;
+  }
+  .tile.blocked .tile-face { animation: shake .32s ease; }
+  @keyframes shake {
+    0%, 100% { transform: translate(0, 0); }
+    20% { transform: translate(-3px, 0); }
+    40% { transform: translate(3px, 0); }
+    60% { transform: translate(-2px, 0); }
+    80% { transform: translate(2px, 0); }
+  }
+
+  /* ── ">>" gợi ý hướng khi rê chuột vào ô di chuyển được ─────────────── */
+  .chev {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .12s ease;
+  }
+  .tile.can-move:hover { z-index: 5; }
+  .tile.can-move:hover .chev { opacity: 1; }
+  .chev-in {
+    position: absolute;
+    left: 50%;
+    bottom: 100%;                    /* ngay trên mép ô, theo hướng mũi tên */
+    transform: translateX(-50%);
+    width: 40%;
+    display: flex;
+    flex-direction: column-reverse;  /* > đầu tiên gần ô, > cuối ở xa nhất */
+    align-items: center;
+    gap: 8%;
+    padding-bottom: 8%;
+  }
+  .cv {
+    width: 100%;
+    height: auto;
+    display: block;
+    opacity: .15;
+    animation: chevWave 1.05s ease-in-out infinite;
+    filter: drop-shadow(0 1px 2px rgba(255, 255, 255, .7));   /* quầng sáng ⇒ mực đậm nổi rõ mọi nền */
+  }
+  .cv2 { animation-delay: .17s; }
+  .cv3 { animation-delay: .34s; }
+  .cv path {
+    fill: none;
+    stroke: #8a92a3;                 /* xám đậm vừa */
+    stroke-width: 14;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  /* nhấp nháy: mờ → sáng bừng → mờ, lệch pha ⇒ sóng chạy từ > đầu đến > cuối */
+  @keyframes chevWave {
+    0%, 60%, 100% { opacity: .15; }
+    25%           { opacity: 1; }
+  }
+
+  /* ── Coach tooltip (chỉ hiện lần đầu) ───────────────────────────────── */
+  .coach {
+    position: absolute;
+    left: 50%;
+    bottom: 20px;
+    z-index: 7;
+    pointer-events: none;
+    animation: coachIn .3s ease both;
+  }
+  @keyframes coachIn {
+    from { opacity: 0; transform: translate(-50%, 10px); }
+    to   { opacity: 1; transform: translate(-50%, 0); }
+  }
+  .coach-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: 16px;
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 8px 22px rgba(36, 48, 77, .28);
+    font-size: 14px;
+    font-weight: 700;
+    max-width: min(88vw, 340px);
+    text-align: left;
+  }
+  .coach-hand { font-size: 22px; animation: coachTap 1.1s ease-in-out infinite; }
+  @keyframes coachTap { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+
+  .hidden { display: none !important; }
+</style>
+
+<div class="app" id="app">
+  <div class="topbar" id="topbar">
+    <div class="btn3d btn-icon" id="back-btn" role="button" aria-label="Back">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="back-ico" viewBox="0 0 447.243 447.243" aria-hidden="true">
+          <path fill="currentColor" d="M420.361 192.229a31.967 31.967 0 0 0-5.535-.41H99.305l6.88-3.2a63.998 63.998 0 0 0 18.08-12.8l88.48-88.48c11.653-11.124 13.611-29.019 4.64-42.4-10.441-14.259-30.464-17.355-44.724-6.914a32.018 32.018 0 0 0-3.276 2.754l-160 160c-12.504 12.49-12.515 32.751-.025 45.255l.025.025 160 160c12.514 12.479 32.775 12.451 45.255-.063a32.084 32.084 0 0 0 2.745-3.137c8.971-13.381 7.013-31.276-4.64-42.4l-88.32-88.64a64.002 64.002 0 0 0-16-11.68l-9.6-4.32h314.24c16.347.607 30.689-10.812 33.76-26.88 2.829-17.445-9.019-33.88-26.464-36.71z"/>
+        </svg>
+      </span>
+    </div>
+
+    <div class="scorebar" id="scorebar">
+      <div class="sc-box">
+        <div class="sc-k" id="level-label">Level</div>
+        <div class="sc-v" id="level-num">1</div>
+      </div>
+    </div>
+
+    <div class="btn3d btn-icon" id="restart-btn" role="button" aria-label="Restart">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="restart-ico" viewBox="0 0 100 100" aria-hidden="true">
+          <path fill="currentColor" d="m50.7 19.003 4.793-4.793c2.696-2.697 2.696-6.991 0-9.688s-6.991-2.696-9.687 0L29.327 21.001a6.812 6.812 0 0 0 0 9.687l16.479 16.478a6.9 6.9 0 0 0 4.793 1.998c1.798 0 3.496-.7 4.794-1.998a6.812 6.812 0 0 0 0-9.687l-4.794-4.794c13.682.4 24.768 11.685 24.768 25.467 0 14.081-11.485 25.466-25.467 25.466S24.534 72.233 24.534 58.252c0-3.096.599-6.192 1.597-8.989 1.299-3.495-.4-7.49-3.994-8.788-3.496-1.298-7.49.4-8.789 3.995-1.698 4.394-2.496 9.088-2.496 13.882C10.852 79.923 28.428 97.5 50 97.5s39.148-17.577 39.148-39.148c0-21.472-17.177-38.95-38.449-39.349z"/>
+        </svg>
+      </span>
+    </div>
+  </div>
+
+  <div class="lives" id="lives"></div>
+
+  <div class="frame-row">
+    <span class="frame-k" id="frame-label">Frame</span>
+    <span class="frame-v" id="frame-num">1/1</span>
+  </div>
+
+  <div class="stage">
+    <div class="deck" id="deck">
+      <div class="plate p2"></div>
+      <div class="plate p1"></div>
+      <div class="tray" id="tray"></div>
+    </div>
+    <div class="coach hidden" id="coach">
+      <div class="coach-card">
+        <span class="coach-hand">👆</span>
+        <span class="coach-text" id="coach-text"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+ * 0. Localization (inline — game-common §5)
+ * ===================================================================== */
+const SUPPORTED_LANGS = [
+  'en','vi','zh-Hans','zh-Hant','ja','ko','es','es-MX','es-AR','pt-BR','pt',
+  'fr','de','it','nl','pl','ru','tr','ar','hi','th','id','fil',
+];
+const DEFAULT_LANG = 'en';
+const LATIN_LANGS = new Set([
+  'en','vi','es','es-MX','es-AR','pt-BR','pt','fr','de','it','nl','pl','tr','id','fil',
+]);
+
+const I18N = {
+  en: { level: 'Level', frame: 'Frame', best: 'Best', tut: 'Tap a tile — it slides where its arrow points' },
+  vi: { level: 'Màn', frame: 'Khung', best: 'Cao nhất', tut: 'Chạm ô → trượt theo hướng mũi tên' },
+  es: { level: 'Nivel', frame: 'Marco', best: 'Mejor', tut: 'Toca una ficha — se desliza hacia su flecha' },
+  fr: { level: 'Niveau', frame: 'Cadre', best: 'Record', tut: 'Touche une tuile — elle glisse vers sa flèche' },
+  de: { level: 'Level', frame: 'Feld', best: 'Best', tut: 'Tippe ein Feld — es gleitet in Pfeilrichtung' },
+  'pt-BR': { level: 'Nível', frame: 'Quadro', best: 'Recorde', tut: 'Toque numa peça — ela desliza para a seta' },
+  ja: { level: 'レベル', frame: '枠', best: '最高', tut: 'タップすると矢印の方向へ滑ります' },
+  ko: { level: '레벨', frame: '틀', best: '최고', tut: '타일을 누르면 화살표 방향으로 미끄러져요' },
+  'zh-Hans': { level: '关卡', frame: '框', best: '最高', tut: '点击方块，它会沿箭头方向滑出' },
+  ru: { level: 'Уровень', frame: 'Рамка', best: 'Рекорд', tut: 'Нажми на плитку — она скользит по стрелке' },
+  tr: { level: 'Seviye', frame: 'Çerçeve', best: 'En iyi', tut: 'Bir kareye dokun — oku yönünde kayar' },
+  id: { level: 'Level', frame: 'Bingkai', best: 'Terbaik', tut: 'Ketuk ubin — meluncur ke arah panah' },
+};
+
+function getLanguage() {
+  const fromWin = typeof window.language === 'string' ? window.language : null;
+  const fromUrl = new URLSearchParams(location.search).get('language');
+  const raw = fromWin != null ? fromWin : fromUrl;
+  return SUPPORTED_LANGS.includes(raw) ? raw : DEFAULT_LANG;
+}
+let LANG = getLanguage();
+function t(key) { return (I18N[LANG] && I18N[LANG][key]) || I18N.en[key] || key; }
+function applyUiFont(lang) {
+  if (!LATIN_LANGS.has(lang)) {
+    document.documentElement.style.setProperty('--ui-font', 'system-ui, sans-serif');
+  }
+}
+
+/* =====================================================================
+ * 1. Native bridge (game-common §1) — game KHÔNG level
+ * ===================================================================== */
+function post(msg) {
+  try {
+    if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+      window.ReactNativeWebView.postMessage(JSON.stringify(msg));
+    } else {
+      console.log('[tap-away → native]', msg);
+    }
+  } catch (e) { /* ignore */ }
+}
+function isNative() {
+  return !!(window.ReactNativeWebView && window.ReactNativeWebView.postMessage);
+}
+function sendMessage(type, opts) {
+  opts = opts || {};
+  post({
+    type,
+    level: currentLevelIdx + 1,   // game CÓ level → 1-indexed
+    result: opts.result != null ? opts.result : null,
+    data: opts.data != null ? opts.data : null,
+    showModal: opts.showModal === true,
+  });
+}
+function saveData(payload) {
+  const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
+  sendMessage('save_data', { data });
+}
+function getStatusBarHeight() {
+  const params = new URLSearchParams(location.search);
+  const fromUrl = params.get('statusBarHeight');
+  const fromWin = typeof window.statusBarHeight !== 'undefined' ? window.statusBarHeight : null;
+  let h = Number(fromUrl != null ? fromUrl : fromWin);
+  if (Number.isNaN(h) || h < 0) h = 0;
+  return h;
+}
+function getInitialSaved() {
+  const fromWin = typeof window.data === 'string' ? window.data : null;
+  const fromUrl = new URLSearchParams(location.search).get('data');
+  const raw = fromWin != null ? fromWin : (fromUrl || '');
+  if (!raw) return { seen: false };
+  try {
+    const o = JSON.parse(raw) || {};
+    return { seen: o.seen === true };
+  } catch (e) { return { seen: false }; }
+}
+/* Level khởi tạo (1-indexed từ native) → 0-indexed, clamp [0, LEVELS.length-1]. */
+function getInitialLevelIdx() {
+  const fromWin = typeof window.currentLevel === 'number' ? window.currentLevel : null;
+  const fromUrl = new URLSearchParams(location.search).get('currentLevel');
+  const raw = Number(fromWin != null ? fromWin : fromUrl);
+  if (!Number.isFinite(raw) || raw < 1) return 0;
+  return Math.min(Math.floor(raw), LEVELS.length) - 1;
+}
+
+/* =====================================================================
+ * 2. Hướng + màu + mũi tên   (dir: 0=lên, 1=phải, 2=xuống, 3=trái)
+ * ===================================================================== */
+const DR = [-1, 0, 1, 0];
+const DC = [0, 1, 0, -1];
+const DIRS = [0, 1, 2, 3];
+const PALETTE = [
+  '#ff6b6b', '#4dabf7', '#51cf66', '#fab005', '#b197fc', '#ff922b',
+  '#22b8cf', '#f783ac', '#748ffc', '#20c997', '#f06595', '#94d82d',
+];
+const ARROW = '<path d="M50 20 L78 52 L60 52 L60 80 L40 80 L40 52 L22 52 Z" ' +
+  'stroke="#ffffff" stroke-width="11" stroke-linejoin="round" stroke-linecap="round"/>';
+function arrowSvg(dir) {
+  return '<svg viewBox="0 0 100 100" fill="#ffffff" aria-hidden="true" ' +
+    'style="transform:rotate(' + (dir * 90) + 'deg)">' + ARROW + '</svg>';
+}
+// ">>>" — 3 chevron (hướng lên), xoay theo dir để chỉ hướng thoát khi hover.
+// Mỗi chevron 1 SVG riêng ⇒ lệch pha animation ⇒ nhấp nháy lần lượt từ đầu tới cuối.
+function cvSvg(cls) {
+  return '<svg class="cv ' + cls + '" viewBox="0 0 40 24" aria-hidden="true">' +
+    '<path d="M6 20 L13 12 Q20 4.5 27 12 L34 20"/></svg>';
+}
+function chevMarkup(dir) {
+  return '<div class="chev" style="transform:rotate(' + (dir * 90) + 'deg)">' +
+    '<div class="chev-in">' + cvSvg('cv1') + cvSvg('cv2') + cvSvg('cv3') + '</div></div>';
+}
+
+/* =====================================================================
+ * 3. State — MÀN (level): map to dần + số KHUNG tăng dần. Khung cỡ COLS×ROWS.
+ * ===================================================================== */
+// Mỗi màn: kích thước lưới (cols×rows) + số KHUNG (khay) phải dọn hết để thắng màn.
+// Map TO DẦN theo màn; số khung cũng tăng dần ⇒ khó tăng đều.
+const LEVELS = [
+  { cols: 4, rows: 5,  frames: 1 },
+  { cols: 5, rows: 6,  frames: 1 },
+  { cols: 5, rows: 7,  frames: 2 },
+  { cols: 6, rows: 7,  frames: 2 },
+  { cols: 6, rows: 8,  frames: 2 },
+  { cols: 6, rows: 9,  frames: 3 },
+  { cols: 7, rows: 9,  frames: 3 },
+  { cols: 7, rows: 10, frames: 4 },
+  { cols: 8, rows: 10, frames: 4 },
+  { cols: 8, rows: 11, frames: 5 },
+];
+let currentLevelIdx = 0;      // màn hiện tại (0-indexed)
+let framesTotal = 1;          // tổng số khung của màn hiện tại
+let frameNo = 0;              // khung hiện tại (0-indexed) trong màn
+
+let tutorialSeen = false;     // đã xem coach tooltip lần đầu chưa (persist)
+let advancing = false;        // đang chuyển khung / chờ thắng màn (khoá thao tác)
+
+const MAX_HEARTS = 3;         // số tim mỗi màn
+let hearts = MAX_HEARTS;      // tim còn lại của màn hiện tại
+
+let COLS = 6, ROWS = 8;       // kích thước khung màn hiện tại (đặt bởi loadLevel)
+let CELL = 56;                // cỡ ô (px) — tính theo viewport
+const PAD = 10;               // lề trong khay = độ dày khung 3D ⇒ ô KHÔNG tràn ra khung
+
+let live = new Map();         // "r,c" -> { dir, color, el }
+let viewW = 320, viewH = 400; // vùng sân khấu khả dụng (px)
+
+const trayEl = document.getElementById('tray');
+const deckEl = document.getElementById('deck');
+const coachEl = document.getElementById('coach');
+const livesEl = document.getElementById('lives');
+
+const KEY = (r, c) => r + ',' + c;
+function getCell(r, c) { return live.get(KEY(r, c)) || null; }
+function inBounds(r, c) { return r >= 0 && r < ROWS && c >= 0 && c < COLS; }
+
+/* =====================================================================
+ * 4. Đường thoát + dựng khay (dựng ngược trên khay 4 mép)
+ *   Đặt ô chỉ khi đường tới mép theo hướng của nó đang trống ⇒ đảo thứ tự đặt
+ *   là một thứ tự dọn hợp lệ. Gỡ ô chỉ mở đường (đơn điệu) ⇒ khay LUÔN dọn hết
+ *   được ⇒ không bao giờ bế tắc.
+ * ===================================================================== */
+function pathClear(r, c, dir) {
+  if (dir === 0) { for (let rr = r - 1; rr >= 0;    rr--) if (getCell(rr, c)) return false; return true; }
+  if (dir === 1) { for (let cc = c + 1; cc < COLS;  cc++) if (getCell(r, cc)) return false; return true; }
+  if (dir === 2) { for (let rr = r + 1; rr < ROWS;  rr++) if (getCell(rr, c)) return false; return true; }
+  if (dir === 3) { for (let cc = c - 1; cc >= 0;    cc--) if (getCell(r, cc)) return false; return true; }
+  return false;
+}
+
+function placeTile(r, c, dir, color, animate) {
+  const el = document.createElement('div');
+  el.className = animate ? 'tile spawn' : 'tile';
+  el.dataset.r = r;
+  el.dataset.c = c;
+  el.style.left = (PAD + c * CELL) + 'px';
+  el.style.top = (PAD + r * CELL) + 'px';
+  el.innerHTML = '<div class="tile-face" style="background:' + PALETTE[color] + '">' +
+    arrowSvg(dir) + '</div>' + chevMarkup(dir);
+  trayEl.appendChild(el);
+  live.set(KEY(r, c), { dir, color, el });
+  if (animate) setTimeout(() => el.classList.remove('spawn'), 300);
+}
+
+/* Đánh dấu ô đang có đường thoát (để hover hiện ">>") */
+function markMoves() {
+  for (const [k, tl] of live) {
+    if (!tl.el) continue;
+    const i = k.indexOf(',');
+    const r = +k.slice(0, i), c = +k.slice(i + 1);
+    tl.el.classList.toggle('can-move', pathClear(r, c, tl.dir));
+  }
+}
+
+/* MỖI ô là 1 viên RIÊNG (bo góc + khe quanh) — KHÔNG nối các ô thành khối.
+   Khe nhỏ (GAP) để các viên sát nhau nhưng vẫn tách bạch, mỗi mũi tên 1 ô. */
+const GAP = 1;
+function styleBlocks() {
+  const R = Math.round(CELL * 0.26);   // bán kính bo góc viên
+  for (const [, tl] of live) {
+    if (!tl.el) continue;
+    const f = tl.el.firstElementChild;   // .tile-face
+    f.style.top = f.style.bottom = f.style.left = f.style.right = GAP + 'px';
+    f.style.borderRadius = R + 'px';     // bo cả 4 góc ⇒ viên độc lập
+    f.style.boxShadow = 'inset 0 -4px 0 rgba(0, 0, 0, .16), 0 3px 6px rgba(36, 48, 77, .22)';
+  }
+}
+
+/* Số ô 1 viên phải đi để ra tới mép theo hướng dir (càng lớn = càng chĩa SÂU vào trong,
+   càng dễ bị viên khác chặn về sau ⇒ dây chuyền chặt hơn). */
+function distEdge(r, c, dir) {
+  return dir === 0 ? r : dir === 1 ? COLS - 1 - c : dir === 2 ? ROWS - 1 - r : c;
+}
+/* Chọn hướng cho viên mới: LUÔN lấy hướng chĩa SÂU nhất vào trong (đường thoát DÀI nhất)
+   ⇒ gần như mọi viên đều chĩa vào trong, dây chuyền chặt nhất. Nhiều hướng dài bằng nhau
+   thì bốc ngẫu nhiên trong số đó (giữ chút biến thiên, tránh đơn điệu hoàn toàn). */
+function chooseSpreadDir(r, c, dirs) {
+  let best = -1;
+  for (const d of dirs) best = Math.max(best, distEdge(r, c, d));
+  const far = dirs.filter(d => distEdge(r, c, d) === best);   // các hướng dài nhất
+  return far[(Math.random() * far.length) | 0];
+}
+
+/* Gán hướng cho MỌI ô bằng cách "BÓC NGƯỢC" (reverse peel):
+   Khay đầy 100% ô. Mô phỏng thứ tự THÁO: mỗi bước tìm ô còn lại mà có 1 hướng ra mép
+   với toàn bộ đường đi đã bị tháo trước đó (removed), gán hướng đó rồi đánh dấu tháo.
+   Vì ô ở "biên còn lại" ngoài cùng luôn có đường ra (vd ô có hàng nhỏ nhất luôn thoát
+   được lên trên), quá trình KHÔNG BAO GIỜ bế tắc ⇒ phủ kín mọi ô, và thứ tự bóc chính
+   là một thứ tự dọn hợp lệ ⇒ khay luôn dọn hết được, KHÔNG khoảng trắng, KHÔNG chồng ô. */
+function assignDirections() {
+  const removed = new Set();
+  const dirOf = new Map();
+  const pathRemoved = (r, c, dir) => {           // đường tới mép theo dir đã tháo hết chưa?
+    let rr = r + DR[dir], cc = c + DC[dir];
+    while (inBounds(rr, cc)) {
+      if (!removed.has(KEY(rr, cc))) return false;
+      rr += DR[dir]; cc += DC[dir];
+    }
+    return true;
+  };
+  let left = ROWS * COLS;
+  while (left > 0) {
+    const cands = [];
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      if (removed.has(KEY(r, c))) continue;
+      const dirs = DIRS.filter(d => pathRemoved(r, c, d));
+      if (dirs.length) cands.push([r, c, dirs]);
+    }
+    const [r, c, dirs] = cands[(Math.random() * cands.length) | 0];
+    dirOf.set(KEY(r, c), chooseSpreadDir(r, c, dirs));   // ưu tiên hướng chĩa sâu ⇒ dây chuyền chặt
+    removed.add(KEY(r, c));
+    left--;
+  }
+  return dirOf;
+}
+
+/* Gom các ô KỀ NHAU CÙNG HƯỚNG thành cụm ⇒ mỗi cụm 1 màu (nhìn gọn mắt như bản gốc). */
+function colorClusters(dirOf) {
+  const color = new Map();
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const k = KEY(r, c);
+    if (color.has(k)) continue;
+    const col = (Math.random() * PALETTE.length) | 0;
+    const dir = dirOf.get(k);
+    const stack = [[r, c]];
+    color.set(k, col);
+    while (stack.length) {
+      const [br, bc] = stack.pop();
+      for (const [nr, nc] of [[br - 1, bc], [br + 1, bc], [br, bc - 1], [br, bc + 1]]) {
+        if (!inBounds(nr, nc)) continue;
+        const nk = KEY(nr, nc);
+        if (color.has(nk) || dirOf.get(nk) !== dir) continue;
+        color.set(nk, col);
+        stack.push([nr, nc]);
+      }
+    }
+  }
+  return color;
+}
+
+/* Dựng một khay ĐẦY KÍN (mọi ô đều có 1 viên) — không khoảng trắng, không chồng ô. */
+function buildTray() {
+  trayEl.innerHTML = '';
+  live = new Map();
+  const dirOf = assignDirections();
+  const color = colorClusters(dirOf);
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    placeTile(r, c, dirOf.get(KEY(r, c)), color.get(KEY(r, c)), false);
+  }
+  markMoves();
+  styleBlocks();
+}
+
+/* =====================================================================
+ * 5. Chơi — chạm ô để trượt ra mép; dọn sạch khay ⇒ khay mới
+ * ===================================================================== */
+function tapCell(r, c) {
+  if (advancing) return;
+  const tile = getCell(r, c);
+  if (!tile || !tile.el) return;
+  if (tile.el.classList.contains('slide')) return;
+
+  if (!tutorialSeen) dismissCoach();   // chạm lần đầu → tắt hướng dẫn
+
+  if (!pathClear(r, c, tile.dir)) {
+    tile.el.classList.remove('blocked');
+    void tile.el.offsetWidth;
+    tile.el.classList.add('blocked');
+    loseHeart();                        // chạm ô bị chặn = 1 lỗi ⇒ mất 1 tim
+    return;
+  }
+
+  live.delete(KEY(r, c));
+
+  // lóe sáng ô vừa dọn
+  const rv = document.createElement('div');
+  rv.className = 'reveal';
+  rv.style.left = (PAD + c * CELL) + 'px';
+  rv.style.top = (PAD + r * CELL) + 'px';
+  trayEl.appendChild(rv);
+  setTimeout(() => rv.remove(), 480);
+
+  // trượt ra khỏi khay theo hướng mũi tên — chỉ cần ra khỏi mép + 2 ô rồi mờ dần
+  // (stage không còn cắt overflow ⇒ giữ quãng trượt ngắn để ô không bay ngang màn hình)
+  const dist = (distEdge(r, c, tile.dir) + 2) * CELL;
+  const el = tile.el;
+  el.classList.add('slide');
+  requestAnimationFrame(() => {
+    el.style.transform = 'translate(' + (DC[tile.dir] * dist) + 'px,' + (DR[tile.dir] * dist) + 'px)';
+  });
+  setTimeout(() => el.remove(), 340);
+
+  markMoves();
+  styleBlocks();   // dọn bớt ⇒ bo lại mép khối vừa lộ ra
+  if (live.size === 0) onFrameCleared();   // dọn sạch khung ⇒ khung kế / thắng màn
+}
+
+/* Dọn sạch 1 khung: còn khung ⇒ dựng khung kế; hết khung ⇒ THẮNG màn. */
+function onFrameCleared() {
+  if (frameNo < framesTotal - 1) advanceFrame();
+  else winLevel();
+}
+
+/* Khung hiện tại trượt lên biến mất → dựng khung kế trượt lên từ chồng phía sau */
+function advanceFrame() {
+  advancing = true;
+  trayEl.classList.remove('in');
+  trayEl.classList.add('out');
+  setTimeout(() => {
+    frameNo++;
+    buildTray();
+    updateHud();
+    trayEl.classList.remove('out');
+    void trayEl.offsetWidth;            // ép reflow để chạy lại animation
+    trayEl.classList.add('in');
+    setTimeout(() => trayEl.classList.remove('in'), 380);
+    advancing = false;
+  }, 300);
+}
+
+/* Thắng màn: bắn event lên native (app hiện popup Next/Retry). Level cuối ⇒ victory.
+   Game KHÔNG tự vẽ modal (game-common §1.1). Mở bằng browser thường (không native)
+   thì tự qua màn kế sau 1 nhịp cho dễ chơi/test. */
+function winLevel() {
+  advancing = true;   // khoá thao tác trong lúc chờ app / chuyển màn
+  if (currentLevelIdx === LEVELS.length - 1) sendMessage('victory');
+  else sendMessage('game_result', { result: 'win', showModal: true });
+  if (!isNative()) {
+    setTimeout(() => {
+      const next = currentLevelIdx < LEVELS.length - 1 ? currentLevelIdx + 1 : 0;
+      loadLevel(next);
+    }, 750);
+  }
+}
+
+/* =====================================================================
+ * 6. HUD màn/khung + lưu tiến độ (game-common §1.2)
+ * ===================================================================== */
+function persist() { saveData({ levelIdx: currentLevelIdx, seen: tutorialSeen }); }
+function updateHud() {
+  document.getElementById('level-num').textContent = String(currentLevelIdx + 1);
+  document.getElementById('frame-num').textContent = (frameNo + 1) + '/' + framesTotal;
+}
+
+/* ── Tim (lượt chơi): 3 tim/lần. Chạm ô bị chặn ⇒ mất 1 tim; hết tim ⇒ thua ── */
+const HEART_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" ' +
+  'd="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09' +
+  'C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
+function renderLives() {
+  livesEl.innerHTML = '';
+  for (let i = 0; i < MAX_HEARTS; i++) {
+    const h = document.createElement('span');
+    h.className = 'heart' + (i < hearts ? '' : ' empty');
+    h.innerHTML = HEART_SVG;
+    livesEl.appendChild(h);
+  }
+}
+function loseHeart() {
+  if (advancing || hearts <= 0) return;
+  hearts--;
+  renderLives();
+  const el = livesEl.children[hearts];   // trái tim vừa mất
+  if (el) el.classList.add('lose');
+  if (hearts <= 0) loseGame();
+}
+/* Thua hết tim: báo native (app hiện popup) rồi CHƠI LẠI ĐÚNG MÀN ĐÓ (đầy tim).
+   game-common §1.1 — game KHÔNG tự vẽ modal; app gọi window.onRetryLevel. */
+function loseGame() {
+  advancing = true;      // khoá thao tác chờ app
+  sendMessage('game_result', { result: 'lose', showModal: true });
+  if (!isNative()) setTimeout(() => loadLevel(currentLevelIdx), 900);   // browser: tự chơi lại màn đó
+}
+
+/* ── Coach tooltip (lần đầu chơi) ─────────────────────────────────── */
+function showCoach() {
+  document.getElementById('coach-text').textContent = t('tut');
+  coachEl.classList.remove('hidden');
+}
+function dismissCoach() {
+  coachEl.classList.add('hidden');
+  if (!tutorialSeen) { tutorialSeen = true; persist(); }
+}
+
+/* =====================================================================
+ * 7. Tap input (KHÔNG pan/zoom — khay đứng yên)
+ * ===================================================================== */
+trayEl.addEventListener('click', (e) => {
+  const t = e.target.closest('.tile');
+  if (!t) return;
+  tapCell(Number(t.dataset.r), Number(t.dataset.c));
+});
+
+/* =====================================================================
+ * 8. Sizing — khay vừa vùng sân khấu, ô vuông, canh giữa
+ * ===================================================================== */
+function computeSizing() {
+  const maxW = Math.min(window.innerWidth, 560);
+  // đo tới đáy hàng Frame (nằm dưới topbar + thanh tim) ⇒ trừ đủ toàn bộ phần HUD
+  const usedTop = document.querySelector('.frame-row').getBoundingClientRect().bottom;
+  viewW = maxW - 20;
+  viewH = Math.max(240, window.innerHeight - usedTop - 30);
+  // Chừa gutter cho ">>>" gợi ý ló ra ngoài ô sát mép (~0.7 ô mỗi phía) ⇒ bàn nhỏ lại
+  // để chevron luôn nằm trong màn hình (2 bên) và không chui lên topbar (phía trên).
+  const CHEV = 0.7;
+  // chừa chỗ dưới cho các "khay chờ" + gờ 3D ló ra (~78px) và lề trong PAD ở 4 cạnh
+  CELL = Math.floor(Math.min(
+    (viewW - 2 * PAD) / (COLS + 2 * CHEV),
+    (viewH - 78 - 2 * PAD) / (ROWS + CHEV)));
+  CELL = Math.max(34, CELL);
+  document.documentElement.style.setProperty('--cell', CELL + 'px');
+  document.documentElement.style.setProperty('--pad', PAD + 'px');
+  deckEl.style.width = (COLS * CELL + 2 * PAD) + 'px';    // khay = lưới ô + lề khung 2 bên
+  deckEl.style.height = (ROWS * CELL + 2 * PAD) + 'px';
+}
+/* Đổi cỡ màn hình: tính lại CELL rồi đặt lại vị trí ô hiện có */
+function relayout() {
+  computeSizing();
+  for (const [k, tl] of live) {
+    if (!tl.el) continue;
+    const i = k.indexOf(',');
+    const r = +k.slice(0, i), c = +k.slice(i + 1);
+    tl.el.style.left = (PAD + c * CELL) + 'px';
+    tl.el.style.top = (PAD + r * CELL) + 'px';
+  }
+  styleBlocks();   // CELL đổi ⇒ tính lại bán kính bo góc khối
+}
+
+/* =====================================================================
+ * 9. Nạp màn / chơi lại
+ * ===================================================================== */
+/* Nạp 1 màn: đặt kích thước map theo màn, reset về khung đầu, dựng khung + HUD. */
+function loadLevel(idx) {
+  currentLevelIdx = Math.max(0, Math.min(idx, LEVELS.length - 1));
+  const lv = LEVELS[currentLevelIdx];
+  COLS = lv.cols; ROWS = lv.rows; framesTotal = lv.frames;
+  frameNo = 0;
+  hearts = MAX_HEARTS;        // mỗi màn có đủ 3 tim (thua ⇒ loadLevel lại ⇒ đầy tim)
+  advancing = false;
+  trayEl.classList.remove('out', 'in');
+  computeSizing();
+  buildTray();
+  renderLives();
+  updateHud();
+  persist();                 // lưu tiến độ (levelIdx) — resume đúng màn
+  // Tutorial CHỈ hiện ở màn 1 lần đầu chơi (chưa từng xem) — các màn/lần sau ẩn.
+  if (!tutorialSeen && currentLevelIdx === 0) showCoach();
+  else coachEl.classList.add('hidden');
+}
+
+/* =====================================================================
+ * 10. HUD buttons + native callbacks
+ * ===================================================================== */
+document.getElementById('back-btn').addEventListener('click', (e) => {
+  e.stopPropagation(); sendMessage('quit');
+});
+// Nút Restart: dựng lại màn hiện tại (game-common §1.6 — KHÔNG bắn event).
+document.getElementById('restart-btn').addEventListener('click', (e) => {
+  e.stopPropagation(); loadLevel(currentLevelIdx);
+});
+window.onAppPause = function () { /* no-op — game tĩnh, không loop/timer */ };
+// App gọi khi bấm Next Level trên popup → qua màn kế.
+window.onNextLevel = function () {
+  if (currentLevelIdx < LEVELS.length - 1) loadLevel(currentLevelIdx + 1);
+};
+// App gọi khi bấm Retry/Play Again → chơi lại màn hiện tại (đầy 3 tim).
+window.onRetryLevel = function () { loadLevel(currentLevelIdx); };
+
+/* =====================================================================
+ * 11. Boot
+ * ===================================================================== */
+function applyStaticI18n() {
+  document.getElementById('level-label').textContent = t('level');
+  document.getElementById('frame-label').textContent = t('frame');
+}
+function applyStatusBarPad() {
+  const sb = getStatusBarHeight();
+  document.getElementById('topbar').style.paddingTop =
+    'calc(max(' + sb + 'px, env(safe-area-inset-top)) + 8px)';
+}
+function boot() {
+  LANG = getLanguage();
+  applyUiFont(LANG);
+  applyStatusBarPad();
+  applyStaticI18n();
+  const saved = getInitialSaved();
+  tutorialSeen = saved.seen;
+  loadLevel(getInitialLevelIdx());   // vào đúng màn native truyền (mặc định màn 1); loadLevel tự nạp 3 tim
+}
+
+window.addEventListener('resize', () => { relayout(); });
+
+// Đợi native inject (chống race) — game-common §3
+(function waitForNativeInjection() {
+  const start = Date.now();
+  (function check() {
+    if (typeof window.currentLevel === 'number' ||
+        typeof window.language === 'string' ||
+        typeof window.data === 'string' ||
+        Date.now() - start > 200) {
+      boot();
+    } else {
+      setTimeout(check, 10);
+    }
+  })();
+})();
+</script>
