@@ -1,0 +1,24 @@
+{
+  "title": "Cursed Knives",
+  "packageName": "com.falcon.cursedknives",
+  "engine": "HTML5",
+  "version": "1.1.0",
+  "category": "ARCADE",
+  "tags": ["knife", "throw", "arcade", "timing", "dark"],
+  "description": "Hurl arcane daggers into a spinning cursed totem. Dodge the blades already planted, strike soul gems, and shatter endless totems — every 5th one is a boss.",
+  "controls": "Tap to throw a dagger",
+  "aiContext": "",
+  "aiBuildLink": "",
+  "demoUrl": "",
+  "storeLinks": {
+    "googlePlay": { "url": "", "downloads": 0 },
+    "iosAppStore": { "url": "", "downloads": 0 },
+    "steam": { "url": "", "downloads": 0 }
+  },
+  "entry": "index.html",
+  "coverImages": {
+    "landscape16x9": "cover-landscape-1920x1080.png",
+    "portrait2x3": "cover-portrait-800x1200.png",
+    "square1x1": "cover-square-800x800.png"
+  }
+}

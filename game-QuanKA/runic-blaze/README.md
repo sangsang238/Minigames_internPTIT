@@ -84,8 +84,19 @@ Ví dụ: L1 ≈ 20 moves / 2 000 · L5 ≈ 18 / 3 500 · L10 ≈ 16-17 / 5 200 
 - HUD: chip Score (count-up) · progress bar goal (shimmer, nhấp nháy khi ≥80%) · chip Moves (đỏ khi ≤5)
 
 ### Âm thanh (WebAudio synthesize 100%, không file ngoài)
-- BGM arpeggio giai điệu thứ, lookahead scheduler chống dồn nốt khi resume
-- ~16 SFX: select/swap/invalid/pop (pitch tăng theo chain)/forge/beam/nova/prism/zap/shuffle/hint/win/lose/rush/button
+- **BGM dark cinematic** (Rê thứ): tiến trình **Dm → Gm → E♭ → A** — i · iv · **♭II Neapolitan**
+  (màu Phrygian tối) · V; mỗi hợp âm giữ 16 bước (~7.3s), vòng ~29s @ **66 BPM**
+- **String bed**: pad là **2 saw lệch nhẹ qua lowpass động** (attack ~kéo vĩ) → thân đàn dây
+  trầm & sử thi thay cho sine ngọt; lõi sine mỏng cho mượt
+- **Pedal Rê liên tục** dưới mọi hợp âm → nghịch nhẹ ở E♭/A tạo trọng lực & sức nặng phim
+- **Trống trầm sử thi** ("nhịp tim") mỗi lần đổi hợp âm + **1 swell cao thưa** giữa mỗi hợp âm
+  (thay arp giai điệu — bỏ hẳn để không bị "vui") + **chuông vọng trầm** cuối mỗi vòng; **gió rít nền**
+- **Cân bằng âm lượng**: mọi SFX qua **bus `sfxOut` riêng** (một núm SFX↔BGM, chặn cascade
+  cộng dồn vỡ tiếng); thang peak thống nhất UI ~.05 · phản hồi ~.07 · nổ ~.10–.11 · cao trào
+  (nova/win) ~.17 — xoá chênh lệch cũ (nova .4 vs button .06 ≈ 16 dB)
+- **Lookahead scheduler** chống dồn nốt khi resume; **ducking** — BGM tự nhún khi fanfare thắng/thua rồi bò lại
+- **18 SFX**: select/swap/invalid/pop (pitch tăng theo chain)/forge/beam/nova/prism/zap/shuffle/hint/win (power-chord Rê anh hùng)/lose/rush/button/**intro màn**/**cảnh báo còn 5 lượt**
+- Mute persist qua `save_data`; audio suspend khi pause/app nền, unlock ở chạm đầu tiên (autoplay policy)
 
 ---
 

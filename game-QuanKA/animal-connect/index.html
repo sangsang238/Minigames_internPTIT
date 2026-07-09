@@ -577,6 +577,12 @@ body {
 
 .ico-diamond { width: 58%; height: 58%; display: block; }
 
+#menu-corner-right { display: flex; gap: 8px; }
+.snd-ico { width: 58%; height: 58%; display: block; }
+.snd-slash { display: none; }
+#sound-btn.muted .snd-waves { display: none; }
+#sound-btn.muted .snd-slash { display: block; }
+
 /* ── Info panel (document ngắn: thông tin + cách chơi) ────────── */
 #info-panel {
   position: fixed;
@@ -811,15 +817,28 @@ body {
         </svg>
       </span>
     </div>
-    <!-- hình thoi trong hình tròn → mở panel thông tin -->
-    <div class="btn3d btn-icon" id="info-btn" role="button" aria-label="Info" tabindex="0">
-      <span class="btn3d-shadow"></span>
-      <span class="btn3d-surface">
-        <svg class="ico-diamond" viewBox="0 0 100 100" aria-hidden="true">
-          <circle cx="50" cy="50" r="38" fill="none" stroke="currentColor" stroke-width="8"/>
-          <rect x="36" y="36" width="28" height="28" rx="4" fill="currentColor" transform="rotate(45 50 50)"/>
-        </svg>
-      </span>
+    <div id="menu-corner-right">
+      <!-- nút loa: bật/tắt SFX -->
+      <div class="btn3d btn-icon" id="sound-btn" role="button" aria-label="Sound" tabindex="0">
+        <span class="btn3d-shadow"></span>
+        <span class="btn3d-surface">
+          <svg class="snd-ico" viewBox="0 0 100 100" aria-hidden="true">
+            <path fill="currentColor" d="M14 38 v24 h16 l21 18 V20 L30 38 Z"/>
+            <path class="snd-waves" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round" d="M62 36 q9 14 0 28 M73 27 q15 23 0 46"/>
+            <path class="snd-slash" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" d="M63 35 L86 65 M86 35 L63 65"/>
+          </svg>
+        </span>
+      </div>
+      <!-- hình thoi trong hình tròn → mở panel thông tin -->
+      <div class="btn3d btn-icon" id="info-btn" role="button" aria-label="Info" tabindex="0">
+        <span class="btn3d-shadow"></span>
+        <span class="btn3d-surface">
+          <svg class="ico-diamond" viewBox="0 0 100 100" aria-hidden="true">
+            <circle cx="50" cy="50" r="38" fill="none" stroke="currentColor" stroke-width="8"/>
+            <rect x="36" y="36" width="28" height="28" rx="4" fill="currentColor" transform="rotate(45 50 50)"/>
+          </svg>
+        </span>
+      </div>
     </div>
   </div>
 
@@ -997,7 +1016,7 @@ const I18N = {
         infoShift:'Tiles slide together after every match',
         infoTimer:'Clear all pairs before time runs out',
         infoTools:'Hint marks a pair; Shuffle remixes the board',
-        menu:'Menu', confirmMenu:'Back to menu?' },
+        menu:'Menu', confirmMenu:'Back to menu?', sound:'Sound' },
   vi: { title:'ANIMAL CONNECT', level:'Màn', score:'ĐIỂM', time:'THỜI GIAN', pairs:'CẶP',
         hint:'Gợi ý', shuffle:'Xáo trộn', noMoves:'Hết nước đi — xáo lại bàn',
         tapResume:'Chạm để chơi tiếp', back:'Thoát', restart:'Chơi lại',
@@ -1009,7 +1028,7 @@ const I18N = {
         infoShift:'Sau mỗi lần nối, tile sẽ dồn lại',
         infoTimer:'Dọn sạch bàn trước khi hết giờ',
         infoTools:'Gợi ý chỉ 1 cặp; Xáo trộn đảo lại bàn',
-        menu:'Menu', confirmMenu:'Về menu chính?' },
+        menu:'Menu', confirmMenu:'Về menu chính?', sound:'Âm thanh' },
   'zh-Hans': { title:'动物连连看', level:'关卡', score:'得分', time:'时间', pairs:'配对',
         hint:'提示', shuffle:'洗牌', noMoves:'没有可连的了，自动洗牌',
         tapResume:'点击继续', back:'返回', restart:'重玩',
@@ -1936,6 +1955,7 @@ function handleTap(r, c) {
     if (path) { doMatch([sr, sc], [r, c], path); return; }
   }
   // Không nối được / khác loại → rung nhẹ cả hai, chuyển chọn sang tile mới
+  SND.bad();
   shakeTile(sr, sc); shakeTile(r, c);
   deselect();
   select(r, c);
@@ -1944,6 +1964,7 @@ function handleTap(r, c) {
 function select(r, c) {
   selected = { r, c };
   tiles[r][c].el.classList.add('selected');
+  SND.select();
 }
 
 function deselect() {
@@ -1977,6 +1998,7 @@ async function doMatch(a, b, path) {
     lastMatchAt = now;
     const pts = 10 + (comboStreak - 1) * 5;
     score += pts;
+    SND.match(comboStreak);
     if (comboStreak >= 2) showComboBadge(comboStreak);
 
     drawLink(path);
@@ -2014,6 +2036,7 @@ async function doMatch(a, b, path) {
     // Deadlock → tự xáo (miễn phí)
     if (!hasMoves()) {
       showToast(t('noMoves'));
+      SND.shuffle();
       await sleep(500);
       if (ep !== levelEpoch || ended) return;
       await reshuffleBoard();
@@ -2043,6 +2066,7 @@ document.getElementById('hint-btn').addEventListener('click', () => {
   clearHint();
   hintPair = pair;
   for (const [r, c] of pair) tiles[r][c].el.classList.add('hint');
+  SND.hint();
   updateToolButtons();
   saveCurrentState();
 });
@@ -2055,6 +2079,7 @@ document.getElementById('shuffle-btn').addEventListener('click', async () => {
   try {
     shufflesLeft--;
     updateToolButtons();
+    SND.shuffle();
     await reshuffleBoard();
     if (ep !== levelEpoch) return;
     saveCurrentState();
@@ -2157,6 +2182,7 @@ function updateLabels() {
   document.getElementById('menu-play-label').textContent = t('play');
   document.getElementById('menu-tut-label').textContent  = t('tutorial');
   document.getElementById('menu-back').setAttribute('aria-label', t('back'));
+  document.getElementById('sound-btn').setAttribute('aria-label', t('sound'));
   document.getElementById('tut-skip-label').textContent  = t('skip');
   document.getElementById('info-title').textContent = t('howTo');
   document.getElementById('info-b1').textContent = t('tut1');
@@ -2217,6 +2243,7 @@ function showToast(msg) {
  * ================================================================ */
 let lastTs = null;
 let timerUiAcc = 1;   // ≥0.2 để frame active đầu tiên render ngay
+let lastTickSec = -1; // tiếng tick mỗi giây trong 10s cuối
 
 /* dt tính bằng GIÂY (đã clamp ở mainLoop) — độc lập refresh rate */
 function tickTimer(dt) {
@@ -2230,6 +2257,9 @@ function tickTimer(dt) {
       renderTimer();          // trạng thái chốt hiện ngay
       return;
     }
+    // Tick cảnh báo mỗi giây trong 10s cuối
+    const s = Math.ceil(timeLeft);
+    if (s !== lastTickSec) { lastTickSec = s; if (s <= 10) SND.tick(); }
     // DOM đồng hồ/thanh giờ chỉ ghi ~5 lần/s (transition width .3s làm mượt
     // phần còn lại) — ở 120/144Hz không tốn style-recalc mỗi frame
     timerUiAcc += dt;
@@ -2264,9 +2294,10 @@ function winLevel() {
   updateHUD();
   if (bonus > 0) spawnScoreFly(ROWS / 2 - .5, COLS / 2 - .5, bonus);
 
+  SND.win();
   const newIdx = Math.min(currentLevelIdx + 1, MAX_LEVEL_IDX);
-  saveData({ levelIdx: newIdx, tutorialSeen });      // nhẹ → native (§1.2)
-  saveLocal({ levelIdx: newIdx, tutorialSeen });     // xoá snapshot ván dở
+  saveData({ levelIdx: newIdx, tutorialSeen, muted });   // nhẹ → native (§1.2)
+  saveLocal({ levelIdx: newIdx, tutorialSeen, muted });  // xoá snapshot ván dở
   maybeRequestAds();
 
   clearTimeout(resultTimer);
@@ -2281,7 +2312,8 @@ function loseLevel() {
   ended = true;
   deselect(); clearHint();
   renderTimer();
-  saveLocal({ levelIdx: currentLevelIdx, tutorialSeen });  // bỏ snapshot, retry ván mới
+  SND.lose();
+  saveLocal({ levelIdx: currentLevelIdx, tutorialSeen, muted });  // bỏ snapshot, retry ván mới
   maybeRequestAds();
   clearTimeout(resultTimer);
   resultTimer = setTimeout(() => {
@@ -2303,6 +2335,7 @@ function saveCurrentState() {
   saveLocal({
     levelIdx: currentLevelIdx,
     tutorialSeen,
+    muted,
     game: {
       grid: grid.map(row => row.slice()),
       timeLeft: Math.floor(timeLeft),
@@ -2461,8 +2494,8 @@ function finishTutorial() {
     loadLevel(currentLevelIdx);
   }
 
-  saveData({ levelIdx: currentLevelIdx, tutorialSeen: true });  // nhẹ → native
-  saveCurrentState();                                           // local kèm cờ mới
+  saveData({ levelIdx: currentLevelIdx, tutorialSeen: true, muted });  // nhẹ → native
+  saveCurrentState();                                                  // local kèm cờ mới
   if (tutorialReturnToMenu) openMenu();
 }
 
@@ -2541,6 +2574,7 @@ function pauseGame() {
   if (paused || ended || menuOpen) return;   // ở menu thì không có gì để pause
   paused = true;
   saveCurrentState();
+  SND.suspend();
   document.getElementById('pause-veil').classList.remove('hidden');
 }
 
@@ -2548,13 +2582,15 @@ function resumeGame() {
   if (!paused) return;
   paused = false;
   lastTs = null; // bỏ khoảng thời gian đã pause khỏi đồng hồ
+  SND.resume();
   document.getElementById('pause-veil').classList.add('hidden');
 }
 
 document.getElementById('pause-veil').addEventListener('pointerdown', resumeGame);
 
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) pauseGame();
+  if (document.hidden) { pauseGame(); SND.suspend(); }  // app ra nền → im tiếng
+  else SND.resume();
 });
 
 /* ── Back (§1.4) + Restart (§1.6) ─────────────────────────────── */
@@ -2640,6 +2676,97 @@ function mainLoop(ts) {
 }
 
 /* ================================================================
+ * §20b. Âm thanh — Web Audio API, tự tổng hợp (không file ngoài)
+ * Chỉ SFX (không nhạc nền). Mở khoá ở cử chỉ đầu tiên (luật autoplay
+ * của WebView); nút loa trong menu bật/tắt, cờ `muted` persist trong
+ * save nhẹ; app ra nền là im tiếng.
+ * ================================================================ */
+let muted = false;
+
+const SND = (function () {
+  let ctx = null, sfxGain = null;
+
+  function ensure() {
+    if (muted) return null;
+    try {
+      if (!ctx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        ctx = new AC();
+        sfxGain = ctx.createGain(); sfxGain.gain.value = .5;  sfxGain.connect(ctx.destination);
+      }
+      if (ctx.state === 'suspended') ctx.resume();
+      return ctx;
+    } catch (e) { return null; }
+  }
+
+  /* 1 nốt với envelope decay */
+  function tone(freq, dur, type, vol, opts) {
+    const c = ensure(); if (!c) return;
+    opts = opts || {};
+    try {
+      const t = c.currentTime;
+      const o = c.createOscillator(), g = c.createGain();
+      o.type = type || 'triangle';
+      o.frequency.setValueAtTime(freq, t);
+      if (opts.slideTo) o.frequency.exponentialRampToValueAtTime(opts.slideTo, t + dur);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+      o.connect(g); g.connect(sfxGain);
+      o.start(t); o.stop(t + dur + .02);
+    } catch (e) { /* ignore */ }
+  }
+
+  return {
+    suspend() { try { if (ctx) ctx.suspend(); } catch (e) {} },
+    resume()  { if (!muted) ensure(); },
+    ui()      { tone(600, .07, 'triangle', .16); },
+    select()  { tone(520, .06, 'triangle', .2); },
+    match(n)  {           // n = comboStreak → cao dần theo chuỗi
+      const base = [523.25, 587.33, 659.26, 784.0, 880.0, 1046.5];
+      const k = Math.min(Math.max(n, 1) - 1, base.length - 1);   // 0..5
+      const f = base[k];
+      // Tần số cao tai nghe "to" hơn ở cùng biên độ (đường đẳng âm) → hạ biên
+      // độ tổng theo tỉ lệ tần số để cảm giác âm lượng giữ nguyên khi combo lên.
+      const comp = base[0] / f;
+      // Hài quãng năm làm tiếng "sáng"/chói — càng lên cao càng gắt nên mờ dần.
+      const bright = 1 - (k / (base.length - 1)) * 0.7;          // 1.0 → 0.3
+      tone(f, .16, 'triangle', .3 * comp);
+      tone(f * 1.5, .24, 'sine', .16 * comp * bright);
+    },
+    bad()     { tone(185, .12, 'square', .09, { slideTo: 140 }); },
+    hint()    { tone(740, .09, 'sine', .2); setTimeout(() => tone(980, .13, 'sine', .2), 90); },
+    shuffle() { tone(900, .26, 'sawtooth', .09, { slideTo: 210 }); },
+    tick()    { tone(1050, .045, 'square', .1); },
+    win()     { [523.25, 659.26, 784.0, 1046.5].forEach((f, i) =>
+                  setTimeout(() => tone(f, .22, 'triangle', .26), i * 110)); },
+    lose()    { tone(392, .3, 'triangle', .22, { slideTo: 330 });
+                setTimeout(() => tone(294, .45, 'triangle', .22, { slideTo: 240 }), 260); },
+  };
+})();
+
+function setMuted(m, skipSave) {
+  muted = m;
+  document.getElementById('sound-btn').classList.toggle('muted', m);
+  if (m) SND.suspend();
+  else SND.resume();
+  if (!skipSave) saveCurrentState();
+}
+
+document.getElementById('sound-btn').addEventListener('click', () => setMuted(!muted));
+
+/* Mở khoá audio ở cử chỉ đầu tiên (autoplay policy) */
+document.addEventListener('pointerdown', function () {
+  SND.resume();
+}, { once: true, passive: true });
+
+/* Click nhẹ cho mọi nút btn3d (Hint/Shuffle có tiếng riêng) */
+document.addEventListener('pointerdown', e => {
+  const b = e.target && e.target.closest ? e.target.closest('.btn3d') : null;
+  if (b && b.id !== 'hint-btn' && b.id !== 'shuffle-btn') SND.ui();
+}, { capture: true, passive: true });
+
+/* ================================================================
  * §21. Boot (game-common §3 waitForNativeInjection)
  * ================================================================ */
 function bootGame() {
@@ -2647,6 +2774,7 @@ function bootGame() {
   applyUiFont(LANG);
 
   let startIdx = getInitialLevelIdx();
+  let nativeHasMuted = false;
 
   // data nhẹ từ native ưu tiên (game-common §4 + §1.2)
   const raw = getInitialData();
@@ -2657,14 +2785,17 @@ function bootGame() {
         startIdx = Math.min(Math.floor(obj.levelIdx), MAX_LEVEL_IDX);
       }
       if (obj.tutorialSeen === true) tutorialSeen = true;
+      if (typeof obj.muted === 'boolean') { muted = obj.muted; nativeHasMuted = true; }
     } catch (e) { /* data hỏng → mặc định */ }
   }
 
-  // tutorialSeen cũng có thể nằm ở localStorage (chưa từng sync lên native)
+  // tutorialSeen/muted cũng có thể nằm ở localStorage (chưa sync lên native)
   try {
     const lobj = JSON.parse(readLocal() || 'null');
     if (lobj && lobj.tutorialSeen === true) tutorialSeen = true;
+    if (!nativeHasMuted && lobj && typeof lobj.muted === 'boolean') muted = lobj.muted;
   } catch (e) { /* ignore */ }
+  document.getElementById('sound-btn').classList.toggle('muted', muted);
 
   initBgItems();
 

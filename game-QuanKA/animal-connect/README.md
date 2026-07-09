@@ -29,6 +29,10 @@
 - **Độc lập refresh rate**: mọi chuyển động theo `dt` (nền lá chuẩn hoá 60fps,
   đồng hồ trừ theo giây thật, clamp dt 0.25s chống stall); DOM đồng hồ chỉ ghi
   ~5 lần/s — test giả lập 30fps vs 144fps cho kết quả giống hệt nhau.
+- **SFX tổng hợp Web Audio** (không file ngoài, không nhạc nền): chọn/nối (cao
+  dần theo combo)/sai cặp/hint/xáo/tick 10s cuối/thắng/thua + click nút. Nút loa
+  trong menu (cờ `muted` persist qua save nhẹ); mở khoá sau cử chỉ đầu (autoplay
+  policy), app ra nền / pause là suspend toàn bộ.
 - **Tutorial tương tác 3 bước** (nối cặp kề → đường rẽ 2 lần → đường vòng ra
   ngoài bàn) — **bắt buộc lần đầu mở game** (cờ `tutorialSeen` persist qua
   `save_data` + localStorage), có nút Skip, mở lại được từ menu.
@@ -70,7 +74,6 @@ Deterministic theo số màn (hash, retry ra đúng màn đó); xếp tile rando
 
 ## 📋 Backlog
 
-- [ ] Sound FX (Web Audio): tap, match, combo, tick 10s cuối
 - [ ] Confetti khi thắng màn; thêm mặt thú mới (voi, sư tử…)
 - [ ] Sao 1–3 theo thời gian còn lại → meta progression qua `save_data`
 - [ ] Daily challenge seed cố định (app truyền seed qua `data`)

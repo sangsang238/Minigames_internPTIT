@@ -1,0 +1,2960 @@
+<!DOCTYPE html>
+<!--
+  CURSED KNIVES — Knife-Hit dark fantasy (game điểm cao / endless, KHÔNG level)
+  Tuân thủ: .claude/game-common.md (bridge, statusBarHeight, data, i18n 23 ngôn ngữ)
+            .claude/popup-common.md (popup Game Over / New Best tự vẽ, btn3d)
+            .claude/zip-common.md   (single-file index.html)
+  Cơ chế: totem đá xoay — chạm để phóng dao găm; trúng dao đã cắm = thua;
+  cắm đủ dao = totem vỡ → stage kế (vô hạn, sinh deterministic theo stageConfig).
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Cursed Knives</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap" rel="stylesheet" />
+<style>
+/* ── Reset chung (game-common §UI) ───────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent; /* tắt ô xanh dương khi chạm */
+  -webkit-touch-callout: none;              /* tắt menu giữ-để-chọn */
+}
+
+:root {
+  --ui-font: 'Google Sans Flex', system-ui, sans-serif;
+  --bg-a: #05070f;
+  --bg-b: #0b1424;
+  --bg-c: #060a16;
+  --text: #eaf2ff;
+  --text-soft: #8ea6c8;
+  --glass: rgba(255,255,255,.06);
+  --glass-border: rgba(255,255,255,.11);
+  --accent: #52ff9d;       /* xanh nguyền — accent chính */
+  --steel: #6fd8ff;        /* thép lạnh — lưỡi dao */
+  --gold: #ffd23f;         /* BEST (popup-common §7 — cố định) */
+  --danger: #ff3d5a;
+  --sat: env(safe-area-inset-top, 0px);
+}
+
+html, body {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: var(--ui-font);
+  font-weight: 700;
+  color: var(--text);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(30,150,95,.30), transparent),
+    linear-gradient(170deg, var(--bg-a) 0%, var(--bg-b) 55%, var(--bg-c) 100%);
+}
+
+/* Chữ Ả Rập là chữ nối — bỏ letter-spacing trên MỌI phần tử kẻo vỡ chữ */
+body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
+
+/* ── Canvas layers ───────────────────────────────────────────── */
+#bg-canvas   { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+#game-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ── btn3d (game-common §1.4 / popup-common §6 — bản kính phẳng) ── */
+.btn3d {
+  --radius: 12px;
+  --surface-color: rgba(255,255,255,.08);
+  --surface-text: var(--text);
+  --surface-height: 42px;
+  --surface-width: auto;
+  --surface-padding-x: 16px;
+  --surface-font-size: 18px;
+  position: relative;
+  display: inline-block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.btn3d-shadow { display: none; }
+
+.btn3d-surface {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: var(--surface-height);
+  width: var(--surface-width);
+  padding: 0 var(--surface-padding-x);
+  border-radius: var(--radius);
+  background: var(--surface-color);
+  border: 1px solid var(--glass-border);
+  color: var(--surface-text);
+  font-family: var(--ui-font);
+  font-size: var(--surface-font-size);
+  font-weight: 700;
+  letter-spacing: .5px;
+  transition: transform .09s ease-out, background .1s;
+}
+
+.btn3d:active { transform: scale(.94); }
+.btn3d:active .btn3d-surface { background: rgba(255,255,255,.14); }
+
+.btn3d.btn-icon {
+  --surface-height: 42px;
+  --surface-width: 42px;
+  --surface-padding-x: 0;
+}
+
+/* CTA amber (Play) — popup-common §6, màu cố định */
+.btn3d.cta {
+  --surface-height: 54px;
+  --surface-padding-x: 44px;
+  --surface-color: #ffb02e;
+  --surface-text: #3a2400;
+  --surface-font-size: 19px;
+  --radius: 16px;
+}
+.btn3d.cta .btn3d-surface { border: none; box-shadow: 0 6px 22px rgba(255,150,30,.35); }
+.btn3d.cta:active .btn3d-surface { background: var(--surface-color); }
+
+/* Nút Play Again trên popup (popup-common §6) */
+.btn3d.play {
+  --surface-height: 52px;
+  --surface-padding-x: 34px;
+  --surface-color: #ffb02e;
+  --surface-text: #3a2400;
+  --surface-font-size: 17px;
+  --radius: 14px;
+}
+.btn3d.play .btn3d-surface { border: none; }
+.btn3d.play:active .btn3d-surface { background: var(--surface-color); }
+
+/* nút mini (Skip trong tutorial) */
+.btn3d.mini {
+  --surface-height: 30px;
+  --surface-padding-x: 12px;
+  --surface-font-size: 13px;
+  --radius: 9px;
+}
+
+.back-ico  { width: 52%; height: 52%; fill: currentColor; display: block; }
+.sound-ico { width: 58%; height: 58%; fill: currentColor; display: block; }
+.help-ico  { width: 58%; height: 58%; fill: currentColor; display: block; }
+#sound-btn .ico-off { display: none; }
+#sound-btn.muted .ico-on  { display: none; }
+#sound-btn.muted .ico-off { display: block; }
+#menu-sound .ico-off { display: none; }
+#menu-sound.muted .ico-on  { display: none; }
+#menu-sound.muted .ico-off { display: block; }
+
+/* ── Topbar HUD ──────────────────────────────────────────────── */
+#topbar {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 520px;
+  z-index: 5;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 0 max(10px, env(safe-area-inset-right)) 0 max(10px, env(safe-area-inset-left));
+  pointer-events: none;          /* không nuốt tap gameplay */
+}
+#topbar .btn3d { pointer-events: auto; }
+
+#hud-center { text-align: center; flex: 1; min-width: 0; }
+#hud-score {
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 1.05;
+  color: #fff;
+  text-shadow: 0 0 18px rgba(82,255,157,.35), 0 2px 8px rgba(0,0,0,.6);
+}
+#hud-stage {
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#hud-stage.boss { color: #ff5d76; animation: bossPulse 1s ease-in-out infinite; }
+@keyframes bossPulse { 50% { opacity: .55; } }
+
+#hud-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.hud-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 56px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+}
+.hud-chip .k { font-family: system-ui, sans-serif; font-size: 9px; letter-spacing: 1.5px; color: var(--text-soft); font-weight: 800; }
+.hud-chip .v { font-size: 15px; color: var(--gold); }
+
+/* ── Banner tutorial ─────────────────────────────────────────── */
+#tut-banner {
+  position: fixed;
+  bottom: 13%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  width: min(86%, 420px);
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: rgba(8,14,26,.85);
+  border: 1px solid var(--glass-border);
+  text-align: center;
+  transition: opacity .25s;
+}
+#tut-banner.hidden { opacity: 0; pointer-events: none; }
+#tut-text { font-size: 15px; line-height: 1.35; }
+#tut-skip { margin-top: 8px; }
+
+/* ── Popup kết quả (popup-common.md — game điểm cao TỰ vẽ) ───── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(3,9,24,.7);
+  opacity: 1;
+  transition: opacity .25s;
+}
+.overlay.hidden { opacity: 0; pointer-events: none; }
+
+.card {
+  width: min(82%, 360px);
+  padding: 26px;
+  text-align: center;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #172a4a, #0b1530);   /* gradient theo theme (popup-common §7) */
+  border: 2px solid rgba(120,160,255,.22);
+  box-shadow: 0 18px 50px rgba(0,0,0,.5);
+  transform: scale(1);
+  transition: transform .25s;
+}
+.overlay.hidden .card { transform: scale(.9); }
+
+.card-title { color: #fff; font-size: 30px; margin-bottom: 14px; }
+
+.sb { display: flex; justify-content: center; gap: 30px; margin-bottom: 18px; }
+.sb .k { font-family: system-ui, sans-serif; font-size: 11px; letter-spacing: 2px; color: #8fb4ff; font-weight: 800; }
+.sb .v { font-size: 32px; color: #fff; }
+.sb .v.best { color: #ffd23f; }
+
+.ov-menu-row { margin-top: 10px; }
+
+/* ── Menu chính ──────────────────────────────────────────────── */
+#menu {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  overflow: auto;
+  background:
+    radial-gradient(ellipse 90% 55% at 50% -12%, rgba(30,160,100,.38), transparent),
+    linear-gradient(170deg, rgba(5,8,16,.86) 0%, rgba(10,20,34,.68) 55%, rgba(5,8,16,.88) 100%);
+  opacity: 1;
+  transition: opacity .25s;
+}
+#menu.hidden { opacity: 0; pointer-events: none; }
+
+#menu-corner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0 12px;
+}
+#menu-right { display: flex; gap: 8px; }
+
+.menu-mascots { display: flex; align-items: flex-end; gap: 20px; margin-bottom: 4px; }
+.mascot { width: 56px; height: 100px; filter: drop-shadow(0 6px 16px rgba(0,0,0,.55)); animation: mascotFloat 3.4s ease-in-out infinite; }
+.mascot:nth-child(1) { transform: rotate(-9deg);  animation-delay: 0s; }
+.mascot:nth-child(2) { width: 66px; height: 118px; transform: rotate(2deg); animation-delay: .5s; }
+.mascot:nth-child(3) { transform: rotate(9deg);   animation-delay: 1s; }
+.mascot svg { width: 100%; height: 100%; display: block; }
+@keyframes mascotFloat { 50% { translate: 0 -12px; } }
+/* WebView cũ (Chromium < 104) drop thuộc tính translate → fallback offset
+   tương đối (không đụng transform rotate, không làm bơm layout flex) */
+@supports not (translate: 0 0) {
+  .mascot { position: relative; top: 0; }
+  @keyframes mascotFloat { 50% { top: -12px; } }
+}
+
+#menu-title {
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-align: center;
+  line-height: 1.08;
+  background: linear-gradient(180deg, #fff 12%, #b8ffd9 42%, #52ff9d 68%, #1e9a60 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 22px rgba(82,255,157,.35)) drop-shadow(0 3px 6px rgba(0,0,0,.5));
+}
+#menu-tagline {
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-soft);
+  text-align: center;
+  padding: 0 24px;
+  margin-bottom: 8px;
+}
+#menu-deepest {
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  text-align: center;
+  min-height: 15px;
+  margin-top: -4px;
+  margin-bottom: 4px;
+}
+
+/* ── How to play ─────────────────────────────────────────────── */
+#info-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4,2,12,.72);
+  opacity: 1;
+  transition: opacity .25s;
+}
+#info-overlay.hidden { opacity: 0; pointer-events: none; }
+
+.doc-card {
+  position: relative;
+  width: min(88%, 400px);
+  max-height: 76%;
+  overflow-y: auto;
+  padding: 20px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #10253d, #081222);
+  border: 1.5px solid rgba(110,220,170,.28);
+  box-shadow: 0 18px 60px rgba(0,0,0,.6);
+  transform: scale(1);
+  transition: transform .25s;
+}
+#info-overlay.hidden .doc-card { transform: scale(.92); }
+
+.doc-card h2 { font-size: 20px; text-align: center; margin-bottom: 12px; }
+.info-row { display: flex; align-items: center; gap: 12px; margin: 10px 0; }
+.info-ico { width: 56px; height: 56px; flex: 0 0 56px; border-radius: 12px; background: var(--glass); border: 1px solid var(--glass-border); }
+.info-txt { font-family: system-ui, sans-serif; font-size: 13px; font-weight: 600; color: #cfe3ff; line-height: 1.35; }
+#info-close { position: absolute; top: 10px; right: 10px; --surface-height: 34px; --surface-width: 34px; --surface-font-size: 16px; }
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 380px) {
+  .btn3d.btn-icon { --surface-height: 36px; --surface-width: 36px; }
+  #hud-score { font-size: 34px; }
+  #menu-title { font-size: 36px; }
+}
+@media (max-height: 640px) {
+  .btn3d.cta { --surface-height: 46px; }
+  #menu-title { font-size: 34px; }
+  .menu-mascots { display: none; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<canvas id="game-canvas"></canvas>
+
+<!-- HUD trên -->
+<div id="topbar">
+  <div class="btn3d btn-icon" id="back-btn" role="button" aria-label="Back" tabindex="0">
+    <span class="btn3d-shadow"></span>
+    <span class="btn3d-surface">
+      <svg class="back-ico" viewBox="0 0 447.243 447.243" aria-hidden="true">
+        <path fill="currentColor" d="M420.361 192.229a31.967 31.967 0 0 0-5.535-.41H99.305l6.88-3.2a63.998 63.998 0 0 0 18.08-12.8l88.48-88.48c11.653-11.124 13.611-29.019 4.64-42.4-10.441-14.259-30.464-17.355-44.724-6.914a32.018 32.018 0 0 0-3.276 2.754l-160 160c-12.504 12.49-12.515 32.751-.025 45.255l.025.025 160 160c12.514 12.479 32.775 12.451 45.255-.063a32.084 32.084 0 0 0 2.745-3.137c8.971-13.381 7.013-31.276-4.64-42.4l-88.32-88.64a64.002 64.002 0 0 0-16-11.68l-9.6-4.32h314.24c16.347.607 30.689-10.812 33.76-26.88 2.829-17.445-9.019-33.88-26.464-36.71z"/>
+      </svg>
+    </span>
+  </div>
+  <div id="hud-center">
+    <div id="hud-score">0</div>
+    <div id="hud-stage">Stage 1</div>
+  </div>
+  <div id="hud-right">
+    <div class="btn3d btn-icon" id="sound-btn" role="button" aria-label="Sound" tabindex="0">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="sound-ico ico-on" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        <svg class="sound-ico ico-off" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3 3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4 9.91 6.09 12 8.18V4z"/></svg>
+      </span>
+    </div>
+    <div class="hud-chip">
+      <span class="k" id="hud-best-label">BEST</span>
+      <span class="v" id="hud-best">0</span>
+    </div>
+  </div>
+</div>
+
+<!-- Banner tutorial -->
+<div id="tut-banner" class="hidden">
+  <div id="tut-text"></div>
+  <button class="btn3d mini" id="tut-skip" type="button">
+    <span class="btn3d-shadow"></span><span class="btn3d-surface" id="tut-skip-text">Skip</span>
+  </button>
+</div>
+
+<!-- Popup kết quả (popup-common.md — game điểm cao tự vẽ) -->
+<div id="overlay" class="overlay hidden"><div class="card">
+  <div class="card-title" id="ov-title">Game Over</div>
+  <div class="sb">
+    <div><div class="k" id="ov-lbl-score">SCORE</div><div class="v"      id="ov-score">0</div></div>
+    <div><div class="k" id="ov-lbl-best">BEST</div> <div class="v best" id="ov-best">0</div></div>
+  </div>
+  <button class="btn3d play" id="ov-btn" type="button">
+    <span class="btn3d-shadow"></span><span class="btn3d-surface" id="ov-btn-text">Play Again</span>
+  </button>
+  <div class="ov-menu-row">
+    <button class="btn3d" id="ov-menu-btn" type="button">
+      <span class="btn3d-shadow"></span><span class="btn3d-surface" id="ov-menu-text">Menu</span>
+    </button>
+  </div>
+</div></div>
+
+<!-- Menu chính -->
+<div id="menu">
+  <div id="menu-corner">
+    <div class="btn3d btn-icon" id="menu-back" role="button" aria-label="Back" tabindex="0">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="back-ico" viewBox="0 0 447.243 447.243" aria-hidden="true">
+          <path fill="currentColor" d="M420.361 192.229a31.967 31.967 0 0 0-5.535-.41H99.305l6.88-3.2a63.998 63.998 0 0 0 18.08-12.8l88.48-88.48c11.653-11.124 13.611-29.019 4.64-42.4-10.441-14.259-30.464-17.355-44.724-6.914a32.018 32.018 0 0 0-3.276 2.754l-160 160c-12.504 12.49-12.515 32.751-.025 45.255l.025.025 160 160c12.514 12.479 32.775 12.451 45.255-.063a32.084 32.084 0 0 0 2.745-3.137c8.971-13.381 7.013-31.276-4.64-42.4l-88.32-88.64a64.002 64.002 0 0 0-16-11.68l-9.6-4.32h314.24c16.347.607 30.689-10.812 33.76-26.88 2.829-17.445-9.019-33.88-26.464-36.71z"/>
+        </svg>
+      </span>
+    </div>
+    <div id="menu-right">
+      <div class="btn3d btn-icon" id="menu-sound" role="button" aria-label="Sound" tabindex="0">
+        <span class="btn3d-shadow"></span>
+        <span class="btn3d-surface">
+          <svg class="sound-ico ico-on" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+          <svg class="sound-ico ico-off" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3 3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4 9.91 6.09 12 8.18V4z"/></svg>
+        </span>
+      </div>
+      <div class="btn3d btn-icon" id="menu-info" role="button" aria-label="How to play" tabindex="0">
+        <span class="btn3d-shadow"></span>
+        <span class="btn3d-surface">
+          <svg class="help-ico" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 17h-2v-2h2v2zm2.07-7.75-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26A2 2 0 1 0 10 9H8a4 4 0 1 1 7.07 2.25z"/></svg>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="menu-mascots" aria-hidden="true">
+    <div class="mascot"><svg viewBox="0 0 64 128">
+      <path d="M32 6 L42 62 L32 74 L22 62 Z" fill="#101726" stroke="#6fd8ff" stroke-width="7" opacity=".26" stroke-linejoin="round"/>
+      <path d="M32 6 L42 62 L32 74 L22 62 Z" fill="#1b2740" stroke="#6fd8ff" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M32 14 L32 62" stroke="#fff" stroke-width="1.6" opacity=".85" stroke-linecap="round"/>
+      <rect x="18" y="72" width="28" height="7" rx="3.5" fill="#0d1524" stroke="#6fd8ff" stroke-width="2"/>
+      <rect x="26" y="80" width="12" height="34" rx="6" fill="#141026" stroke="#3a3358" stroke-width="2"/>
+      <circle cx="32" cy="119" r="6" fill="#0d1524" stroke="#6fd8ff" stroke-width="2"/>
+      <circle cx="32" cy="119" r="2" fill="#fff"/>
+    </svg></div>
+    <div class="mascot"><svg viewBox="0 0 64 128">
+      <path d="M32 4 L43 64 L32 77 L21 64 Z" fill="#101726" stroke="#52ff9d" stroke-width="7" opacity=".26" stroke-linejoin="round"/>
+      <path d="M32 4 L43 64 L32 77 L21 64 Z" fill="#152b22" stroke="#52ff9d" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M32 13 L32 64" stroke="#fff" stroke-width="1.6" opacity=".85" stroke-linecap="round"/>
+      <rect x="17" y="75" width="30" height="7" rx="3.5" fill="#0d1a14" stroke="#52ff9d" stroke-width="2"/>
+      <rect x="25" y="83" width="14" height="36" rx="7" fill="#141026" stroke="#3a3358" stroke-width="2"/>
+      <circle cx="32" cy="122" r="6" fill="#0d1a14" stroke="#52ff9d" stroke-width="2"/>
+      <circle cx="32" cy="122" r="2" fill="#fff"/>
+    </svg></div>
+    <div class="mascot"><svg viewBox="0 0 64 128">
+      <path d="M32 6 L42 62 L32 74 L22 62 Z" fill="#101726" stroke="#c060ff" stroke-width="7" opacity=".26" stroke-linejoin="round"/>
+      <path d="M32 6 L42 62 L32 74 L22 62 Z" fill="#241535" stroke="#c060ff" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M32 14 L32 62" stroke="#fff" stroke-width="1.6" opacity=".85" stroke-linecap="round"/>
+      <rect x="18" y="72" width="28" height="7" rx="3.5" fill="#190f26" stroke="#c060ff" stroke-width="2"/>
+      <rect x="26" y="80" width="12" height="34" rx="6" fill="#141026" stroke="#3a3358" stroke-width="2"/>
+      <circle cx="32" cy="119" r="6" fill="#190f26" stroke="#c060ff" stroke-width="2"/>
+      <circle cx="32" cy="119" r="2" fill="#fff"/>
+    </svg></div>
+  </div>
+
+  <div id="menu-title">CURSED KNIVES</div>
+  <div id="menu-tagline">Throw daggers · Dodge steel · Shatter the totem</div>
+  <div id="menu-deepest"></div>
+
+  <button class="btn3d cta" id="menu-play" type="button">
+    <span class="btn3d-shadow"></span><span class="btn3d-surface" id="menu-play-text">Play</span>
+  </button>
+  <button class="btn3d" id="menu-tutorial" type="button">
+    <span class="btn3d-shadow"></span><span class="btn3d-surface" id="menu-tut-text">Tutorial</span>
+  </button>
+</div>
+
+<!-- How to play -->
+<div id="info-overlay" class="hidden"><div class="doc-card">
+  <div class="btn3d btn-icon" id="info-close" role="button" aria-label="Close" tabindex="0">
+    <span class="btn3d-shadow"></span><span class="btn3d-surface">✕</span>
+  </div>
+  <h2 id="info-title">How to play</h2>
+  <div class="info-row"><canvas class="info-ico" id="ico-throw" width="112" height="112"></canvas><div class="info-txt" id="info-txt-throw"></div></div>
+  <div class="info-row"><canvas class="info-ico" id="ico-avoid" width="112" height="112"></canvas><div class="info-txt" id="info-txt-avoid"></div></div>
+  <div class="info-row"><canvas class="info-ico" id="ico-gem"   width="112" height="112"></canvas><div class="info-txt" id="info-txt-gem"></div></div>
+  <div class="info-row"><canvas class="info-ico" id="ico-break" width="112" height="112"></canvas><div class="info-txt" id="info-txt-break"></div></div>
+  <div class="info-row"><canvas class="info-ico" id="ico-boss"  width="112" height="112"></canvas><div class="info-txt" id="info-txt-boss"></div></div>
+</div></div>
+
+<script>
+'use strict';
+/* ================================================================
+ * §0. i18n — 23 ngôn ngữ INLINE (game-common §5), fallback 'en'
+ * ================================================================ */
+const SUPPORTED_LANGS = [
+  'en','vi','zh-Hans','zh-Hant','ja','ko','es','es-MX','es-AR',
+  'pt-BR','pt','fr','de','it','nl','pl','ru','tr','ar','hi','th','id','fil',
+];
+const LATIN_LANGS = new Set([
+  'en','vi','es','es-MX','es-AR','pt-BR','pt','fr','de','it','nl','pl','tr','id','fil',
+]);
+const DEFAULT_LANG = 'en';
+
+const I18N = {
+  en: { title:'CURSED KNIVES', score:'SCORE', best:'BEST', stage:'Stage', boss:'BOSS',
+    playAgain:'Play Again', gameOver:'Game Over', newBest:'New Best!', tapToResume:'Tap to resume',
+    back:'Back', play:'Play', tutorial:'Tutorial', howToPlay:'How to play', menu:'Menu',
+    sound:'Sound', close:'Close', skip:'Skip', stageClear:'Shattered!', closeCall:'Close!', tapCue:'TAP!',
+    razor:'Razor!', needle:'Needle!', overkill:'OVERKILL!', uncharted:'New depth!', deepest:'Deepest', echoBroken:'Echo broken!', missedBy:'Missed by {n}°',
+    tagline:'Throw daggers · Dodge steel · Shatter the totem',
+    tut1:'Tap to throw a dagger into the totem!',
+    tut2:'Never hit a dagger already stuck!',
+    tutRetry:'Careful! Try again',
+    tut3:'Spend every dagger to shatter the totem!',
+    tutDone:'You’re ready!',
+    infoThrow:'Tap to throw a dagger into the spinning totem',
+    infoAvoid:'Hit a stuck dagger and the run is over',
+    infoGem:'Strike soul gems for +5 points',
+    infoBreak:'Land every dagger to shatter the totem and advance',
+    infoBoss:'Every 5th totem is a BOSS — shatter it for a big bonus' },
+  vi: { title:'CURSED KNIVES', score:'ĐIỂM', best:'CAO NHẤT', stage:'Màn', boss:'TRÙM',
+    playAgain:'Chơi lại', gameOver:'Thua rồi', newBest:'Kỷ lục mới!', tapToResume:'Chạm để chơi tiếp',
+    back:'Thoát', play:'Chơi', tutorial:'Hướng dẫn', howToPlay:'Cách chơi', menu:'Menu',
+    sound:'Âm thanh', close:'Đóng', skip:'Bỏ qua', stageClear:'Vỡ tan!', closeCall:'Sát nút!', tapCue:'CHẠM!',
+    razor:'Sát lưỡi!', needle:'Xỏ kim!', overkill:'KẾT LIỄU!', uncharted:'Mốc sâu mới!', deepest:'Sâu nhất', echoBroken:'Vượt bóng xưa!', missedBy:'Hụt {n}°',
+    tagline:'Phóng dao · Né lưỡi thép · Đập vỡ totem',
+    tut1:'Chạm để phóng dao vào totem!',
+    tut2:'Đừng phóng trúng dao đã cắm!',
+    tutRetry:'Cẩn thận! Thử lại nhé',
+    tut3:'Cắm hết dao để đập vỡ totem!',
+    tutDone:'Sẵn sàng rồi!',
+    infoThrow:'Chạm để phóng dao vào totem đang xoay',
+    infoAvoid:'Trúng dao đã cắm là thua ngay',
+    infoGem:'Phóng trúng ngọc hồn được +5 điểm',
+    infoBreak:'Cắm đủ dao để đập vỡ totem và qua màn',
+    infoBoss:'Mỗi màn thứ 5 là TRÙM — đập vỡ nhận thưởng lớn' },
+  'zh-Hans': { title:'CURSED KNIVES', score:'分数', best:'最高', stage:'关卡', boss:'首领',
+    playAgain:'再玩一次', gameOver:'游戏结束', newBest:'新纪录！', tapToResume:'点击继续',
+    back:'返回', play:'开始', tutorial:'教程', howToPlay:'玩法说明', menu:'菜单',
+    sound:'声音', close:'关闭', skip:'跳过', stageClear:'粉碎！', closeCall:'好险！', tapCue:'点！',
+    razor:'惊险擦刃！', needle:'穿针！', overkill:'致命一击！', uncharted:'更深一层！', deepest:'最深', echoBroken:'打破残影！', missedBy:'差 {n}°',
+    tagline:'飞刀出手 · 避开利刃 · 击碎图腾',
+    tut1:'点击屏幕，把飞刀掷向图腾！',
+    tut2:'千万别击中已插上的飞刀！',
+    tutRetry:'小心！再试一次',
+    tut3:'掷出全部飞刀，击碎图腾！',
+    tutDone:'准备就绪！',
+    infoThrow:'点击屏幕，将飞刀掷向旋转的图腾',
+    infoAvoid:'击中已插上的飞刀即告失败',
+    infoGem:'击中魂玉可得 +5 分',
+    infoBreak:'插满全部飞刀即可击碎图腾进入下一关',
+    infoBoss:'每第 5 关是首领图腾——击碎有大奖励' },
+  'zh-Hant': { title:'CURSED KNIVES', score:'分數', best:'最高', stage:'關卡', boss:'首領',
+    playAgain:'再玩一次', gameOver:'遊戲結束', newBest:'新紀錄！', tapToResume:'點擊繼續',
+    back:'返回', play:'開始', tutorial:'教學', howToPlay:'玩法說明', menu:'選單',
+    sound:'聲音', close:'關閉', skip:'跳過', stageClear:'粉碎！', closeCall:'好險！', tapCue:'點！',
+    razor:'驚險擦刃！', needle:'穿針！', overkill:'致命一擊！', uncharted:'更深一層！', deepest:'最深', echoBroken:'打破殘影！', missedBy:'差 {n}°',
+    tagline:'飛刀出手 · 避開利刃 · 擊碎圖騰',
+    tut1:'點擊螢幕，把飛刀擲向圖騰！',
+    tut2:'千萬別擊中已插上的飛刀！',
+    tutRetry:'小心！再試一次',
+    tut3:'擲出全部飛刀，擊碎圖騰！',
+    tutDone:'準備就緒！',
+    infoThrow:'點擊螢幕，將飛刀擲向旋轉的圖騰',
+    infoAvoid:'擊中已插上的飛刀即告失敗',
+    infoGem:'擊中魂玉可得 +5 分',
+    infoBreak:'插滿全部飛刀即可擊碎圖騰進入下一關',
+    infoBoss:'每第 5 關是首領圖騰——擊碎有大獎勵' },
+  ja: { title:'CURSED KNIVES', score:'スコア', best:'ベスト', stage:'ステージ', boss:'ボス',
+    playAgain:'もう一度', gameOver:'ゲームオーバー', newBest:'新記録！', tapToResume:'タップで再開',
+    back:'戻る', play:'プレイ', tutorial:'チュートリアル', howToPlay:'遊び方', menu:'メニュー',
+    sound:'サウンド', close:'閉じる', skip:'スキップ', stageClear:'粉砕！', closeCall:'ギリギリ！', tapCue:'タップ！',
+    razor:'紙一重！', needle:'針の穴！', overkill:'オーバーキル！', uncharted:'最深記録！', deepest:'最深', echoBroken:'残響を破った！', missedBy:'あと{n}°',
+    tagline:'ダガーを投げ · 刃を避け · トーテムを砕け',
+    tut1:'タップしてダガーをトーテムに投げよう！',
+    tut2:'刺さっているダガーに当てないで！',
+    tutRetry:'危ない！もう一度',
+    tut3:'ダガーを全部刺してトーテムを砕こう！',
+    tutDone:'準備完了！',
+    infoThrow:'タップして回転するトーテムにダガーを投げる',
+    infoAvoid:'刺さったダガーに当たるとゲームオーバー',
+    infoGem:'ソウルジェムに当てると +5 点',
+    infoBreak:'全てのダガーを刺すとトーテムが砕けて次へ',
+    infoBoss:'5 ステージごとにボス登場 — 砕けば大ボーナス' },
+  ko: { title:'CURSED KNIVES', score:'점수', best:'최고', stage:'스테이지', boss:'보스',
+    playAgain:'다시 하기', gameOver:'게임 오버', newBest:'신기록!', tapToResume:'탭하여 계속',
+    back:'뒤로', play:'플레이', tutorial:'튜토리얼', howToPlay:'게임 방법', menu:'메뉴',
+    sound:'소리', close:'닫기', skip:'건너뛰기', stageClear:'파괴!', closeCall:'아슬아슬!', tapCue:'탭!',
+    razor:'아찔한 스침!', needle:'바늘구멍!', overkill:'오버킬!', uncharted:'최고 깊이!', deepest:'최고 깊이', echoBroken:'메아리 격파!', missedBy:'{n}° 차이',
+    tagline:'단검을 던져 · 칼날을 피해 · 토템을 부숴라',
+    tut1:'탭해서 토템에 단검을 던지세요!',
+    tut2:'이미 꽂힌 단검을 맞히면 안 돼요!',
+    tutRetry:'조심! 다시 시도',
+    tut3:'단검을 모두 꽂아 토템을 부수세요!',
+    tutDone:'준비 완료!',
+    infoThrow:'탭하여 회전하는 토템에 단검 던지기',
+    infoAvoid:'꽂힌 단검에 맞으면 게임 오버',
+    infoGem:'소울 젬을 맞히면 +5점',
+    infoBreak:'단검을 모두 꽂으면 토템이 부서지고 다음 단계로',
+    infoBoss:'5번째 토템마다 보스 등장 — 부수면 큰 보너스' },
+  es: { title:'CURSED KNIVES', score:'PUNTOS', best:'RÉCORD', stage:'Fase', boss:'JEFE',
+    playAgain:'Jugar otra vez', gameOver:'Fin del juego', newBest:'¡Nuevo récord!', tapToResume:'Toca para continuar',
+    back:'Salir', play:'Jugar', tutorial:'Tutorial', howToPlay:'Cómo jugar', menu:'Menú',
+    sound:'Sonido', close:'Cerrar', skip:'Omitir', stageClear:'¡Destrozado!', closeCall:'¡Por poco!', tapCue:'¡TOCA!',
+    razor:'¡Al filo!', needle:'¡Enhebrada!', overkill:'¡REMATE!', uncharted:'¡Nueva profundidad!', deepest:'Más profundo', echoBroken:'¡Eco roto!', missedBy:'Por {n}°',
+    tagline:'Lanza dagas · Esquiva el acero · Rompe el tótem',
+    tut1:'¡Toca para lanzar una daga al tótem!',
+    tut2:'¡No golpees una daga ya clavada!',
+    tutRetry:'¡Cuidado! Inténtalo de nuevo',
+    tut3:'¡Clava todas las dagas para romper el tótem!',
+    tutDone:'¡Listo!',
+    infoThrow:'Toca para lanzar una daga al tótem giratorio',
+    infoAvoid:'Si golpeas una daga clavada, pierdes',
+    infoGem:'Golpea las gemas de alma: +5 puntos',
+    infoBreak:'Clava todas las dagas para romper el tótem y avanzar',
+    infoBoss:'Cada 5.º tótem es un JEFE: gran bonificación' },
+  'es-MX': { title:'CURSED KNIVES', score:'PUNTOS', best:'RÉCORD', stage:'Fase', boss:'JEFE',
+    playAgain:'Jugar otra vez', gameOver:'Fin del juego', newBest:'¡Nuevo récord!', tapToResume:'Toca para continuar',
+    back:'Salir', play:'Jugar', tutorial:'Tutorial', howToPlay:'Cómo jugar', menu:'Menú',
+    sound:'Sonido', close:'Cerrar', skip:'Omitir', stageClear:'¡Destrozado!', closeCall:'¡Por poquito!', tapCue:'¡TOCA!',
+    razor:'¡Al filo!', needle:'¡Enhebrada!', overkill:'¡REMATE!', uncharted:'¡Nueva profundidad!', deepest:'Más profundo', echoBroken:'¡Eco roto!', missedBy:'Por {n}°',
+    tagline:'Lanza dagas · Esquiva el acero · Rompe el tótem',
+    tut1:'¡Toca para lanzar una daga al tótem!',
+    tut2:'¡No le pegues a una daga ya clavada!',
+    tutRetry:'¡Aguas! Inténtalo de nuevo',
+    tut3:'¡Clava todas las dagas para romper el tótem!',
+    tutDone:'¡Listo!',
+    infoThrow:'Toca para lanzar una daga al tótem giratorio',
+    infoAvoid:'Si le pegas a una daga clavada, pierdes',
+    infoGem:'Pégale a las gemas de alma: +5 puntos',
+    infoBreak:'Clava todas las dagas para romper el tótem y avanzar',
+    infoBoss:'Cada 5.º tótem es un JEFE: gran bonificación' },
+  'es-AR': { title:'CURSED KNIVES', score:'PUNTOS', best:'RÉCORD', stage:'Fase', boss:'JEFE',
+    playAgain:'Jugar otra vez', gameOver:'Fin del juego', newBest:'¡Nuevo récord!', tapToResume:'Tocá para continuar',
+    back:'Salir', play:'Jugar', tutorial:'Tutorial', howToPlay:'Cómo jugar', menu:'Menú',
+    sound:'Sonido', close:'Cerrar', skip:'Omitir', stageClear:'¡Destrozado!', closeCall:'¡Por poco!', tapCue:'¡TOCÁ!',
+    razor:'¡Al filo!', needle:'¡Enhebrada!', overkill:'¡REMATE!', uncharted:'¡Nueva profundidad!', deepest:'Más profundo', echoBroken:'¡Eco roto!', missedBy:'Por {n}°',
+    tagline:'Lanzá dagas · Esquivá el acero · Rompé el tótem',
+    tut1:'¡Tocá para lanzar una daga al tótem!',
+    tut2:'¡No golpees una daga ya clavada!',
+    tutRetry:'¡Cuidado! Probá de nuevo',
+    tut3:'¡Clavá todas las dagas para romper el tótem!',
+    tutDone:'¡Listo!',
+    infoThrow:'Tocá para lanzar una daga al tótem giratorio',
+    infoAvoid:'Si golpeás una daga clavada, perdés',
+    infoGem:'Golpeá las gemas de alma: +5 puntos',
+    infoBreak:'Clavá todas las dagas para romper el tótem y avanzar',
+    infoBoss:'Cada 5.º tótem es un JEFE: gran bonificación' },
+  'pt-BR': { title:'CURSED KNIVES', score:'PONTOS', best:'RECORDE', stage:'Fase', boss:'CHEFE',
+    playAgain:'Jogar de novo', gameOver:'Fim de jogo', newBest:'Novo recorde!', tapToResume:'Toque para continuar',
+    back:'Sair', play:'Jogar', tutorial:'Tutorial', howToPlay:'Como jogar', menu:'Menu',
+    sound:'Som', close:'Fechar', skip:'Pular', stageClear:'Despedaçado!', closeCall:'Por pouco!', tapCue:'TOQUE!',
+    razor:'No fio!', needle:'Na agulha!', overkill:'ESMAGADO!', uncharted:'Nova profundidade!', deepest:'Mais fundo', echoBroken:'Eco quebrado!', missedBy:'Por {n}°',
+    tagline:'Arremesse adagas · Desvie do aço · Quebre o totem',
+    tut1:'Toque para arremessar uma adaga no totem!',
+    tut2:'Não acerte uma adaga já cravada!',
+    tutRetry:'Cuidado! Tente de novo',
+    tut3:'Crave todas as adagas para quebrar o totem!',
+    tutDone:'Pronto!',
+    infoThrow:'Toque para arremessar uma adaga no totem giratório',
+    infoAvoid:'Acertar uma adaga cravada encerra a partida',
+    infoGem:'Acerte as gemas de alma: +5 pontos',
+    infoBreak:'Crave todas as adagas para quebrar o totem e avançar',
+    infoBoss:'A cada 5 totens surge um CHEFE — bônus enorme' },
+  pt: { title:'CURSED KNIVES', score:'PONTOS', best:'RECORDE', stage:'Fase', boss:'CHEFE',
+    playAgain:'Jogar novamente', gameOver:'Fim do jogo', newBest:'Novo recorde!', tapToResume:'Toque para continuar',
+    back:'Sair', play:'Jogar', tutorial:'Tutorial', howToPlay:'Como jogar', menu:'Menu',
+    sound:'Som', close:'Fechar', skip:'Saltar', stageClear:'Despedaçado!', closeCall:'Por pouco!', tapCue:'TOQUE!',
+    razor:'No fio!', needle:'Na agulha!', overkill:'ESMAGADO!', uncharted:'Nova profundidade!', deepest:'Mais fundo', echoBroken:'Eco quebrado!', missedBy:'Por {n}°',
+    tagline:'Lance adagas · Desvie do aço · Quebre o totem',
+    tut1:'Toque para lançar uma adaga contra o totem!',
+    tut2:'Não acerte numa adaga já cravada!',
+    tutRetry:'Cuidado! Tente novamente',
+    tut3:'Crave todas as adagas para quebrar o totem!',
+    tutDone:'Pronto!',
+    infoThrow:'Toque para lançar uma adaga contra o totem giratório',
+    infoAvoid:'Acertar numa adaga cravada termina a partida',
+    infoGem:'Acerte nas gemas de alma: +5 pontos',
+    infoBreak:'Crave todas as adagas para quebrar o totem e avançar',
+    infoBoss:'A cada 5 totens surge um CHEFE — bónus enorme' },
+  fr: { title:'CURSED KNIVES', score:'SCORE', best:'RECORD', stage:'Niveau', boss:'BOSS',
+    playAgain:'Rejouer', gameOver:'Partie terminée', newBest:'Nouveau record !', tapToResume:'Touchez pour reprendre',
+    back:'Quitter', play:'Jouer', tutorial:'Tutoriel', howToPlay:'Comment jouer', menu:'Menu',
+    sound:'Son', close:'Fermer', skip:'Passer', stageClear:'Brisé !', closeCall:'De justesse !', tapCue:'TAPEZ !',
+    razor:'Au rasoir !', needle:'Chas d’aiguille !', overkill:'COUP FATAL !', uncharted:'Nouvelle profondeur !', deepest:'Plus profond', echoBroken:'Écho brisé !', missedBy:'À {n}° près',
+    tagline:'Lancez des dagues · Évitez l’acier · Brisez le totem',
+    tut1:'Touchez pour lancer une dague sur le totem !',
+    tut2:'Ne touchez jamais une dague déjà plantée !',
+    tutRetry:'Attention ! Réessayez',
+    tut3:'Plantez toutes les dagues pour briser le totem !',
+    tutDone:'Vous êtes prêt !',
+    infoThrow:'Touchez pour lancer une dague sur le totem qui tourne',
+    infoAvoid:'Toucher une dague plantée met fin à la partie',
+    infoGem:'Touchez les gemmes d’âme : +5 points',
+    infoBreak:'Plantez toutes les dagues pour briser le totem et avancer',
+    infoBoss:'Un totem sur 5 est un BOSS : gros bonus' },
+  de: { title:'CURSED KNIVES', score:'PUNKTE', best:'REKORD', stage:'Stufe', boss:'BOSS',
+    playAgain:'Nochmal spielen', gameOver:'Game Over', newBest:'Neuer Rekord!', tapToResume:'Tippen zum Fortsetzen',
+    back:'Zurück', play:'Spielen', tutorial:'Tutorial', howToPlay:'Spielanleitung', menu:'Menü',
+    sound:'Ton', close:'Schließen', skip:'Überspringen', stageClear:'Zerschmettert!', closeCall:'Knapp!', tapCue:'TIPP!',
+    razor:'Haarscharf!', needle:'Nadelöhr!', overkill:'OVERKILL!', uncharted:'Neue Tiefe!', deepest:'Tiefster', echoBroken:'Echo zerbrochen!', missedBy:'Um {n}° verfehlt',
+    tagline:'Wirf Dolche · Weiche dem Stahl aus · Zerschmettere das Totem',
+    tut1:'Tippe, um einen Dolch aufs Totem zu werfen!',
+    tut2:'Triff nie einen bereits steckenden Dolch!',
+    tutRetry:'Vorsicht! Versuch es nochmal',
+    tut3:'Setze alle Dolche, um das Totem zu zerschmettern!',
+    tutDone:'Bereit!',
+    infoThrow:'Tippe, um einen Dolch auf das drehende Totem zu werfen',
+    infoAvoid:'Triffst du einen steckenden Dolch, ist der Lauf vorbei',
+    infoGem:'Triff Seelenjuwelen für +5 Punkte',
+    infoBreak:'Setze alle Dolche, um das Totem zu zerschmettern',
+    infoBoss:'Jedes 5. Totem ist ein BOSS — großer Bonus' },
+  it: { title:'CURSED KNIVES', score:'PUNTI', best:'RECORD', stage:'Livello', boss:'BOSS',
+    playAgain:'Gioca ancora', gameOver:'Game Over', newBest:'Nuovo record!', tapToResume:'Tocca per riprendere',
+    back:'Esci', play:'Gioca', tutorial:'Tutorial', howToPlay:'Come si gioca', menu:'Menu',
+    sound:'Suono', close:'Chiudi', skip:'Salta', stageClear:'In frantumi!', closeCall:'Per un pelo!', tapCue:'TOCCA!',
+    razor:'Sul filo!', needle:'Cruna!', overkill:'COLPO FATALE!', uncharted:'Nuova profondità!', deepest:'Più profondo', echoBroken:'Eco infranta!', missedBy:'Mancato di {n}°',
+    tagline:'Lancia pugnali · Schiva l’acciaio · Frantuma il totem',
+    tut1:'Tocca per lanciare un pugnale sul totem!',
+    tut2:'Non colpire un pugnale già conficcato!',
+    tutRetry:'Attento! Riprova',
+    tut3:'Conficca tutti i pugnali per frantumare il totem!',
+    tutDone:'Sei pronto!',
+    infoThrow:'Tocca per lanciare un pugnale sul totem rotante',
+    infoAvoid:'Colpire un pugnale conficcato termina la partita',
+    infoGem:'Colpisci le gemme dell’anima: +5 punti',
+    infoBreak:'Conficca tutti i pugnali per frantumare il totem',
+    infoBoss:'Ogni 5° totem è un BOSS: grande bonus' },
+  nl: { title:'CURSED KNIVES', score:'SCORE', best:'RECORD', stage:'Level', boss:'BAAS',
+    playAgain:'Opnieuw spelen', gameOver:'Game over', newBest:'Nieuw record!', tapToResume:'Tik om verder te gaan',
+    back:'Terug', play:'Spelen', tutorial:'Tutorial', howToPlay:'Zo speel je', menu:'Menu',
+    sound:'Geluid', close:'Sluiten', skip:'Overslaan', stageClear:'Versplinterd!', closeCall:'Net niet!', tapCue:'TIK!',
+    razor:'Op het randje!', needle:'Door het oog!', overkill:'GENADEKLAP!', uncharted:'Nieuwe diepte!', deepest:'Diepste', echoBroken:'Echo verbroken!', missedBy:'{n}° gemist',
+    tagline:'Werp dolken · Ontwijk het staal · Versplinter de totem',
+    tut1:'Tik om een dolk naar de totem te werpen!',
+    tut2:'Raak nooit een vastzittende dolk!',
+    tutRetry:'Voorzichtig! Probeer opnieuw',
+    tut3:'Gebruik alle dolken om de totem te versplinteren!',
+    tutDone:'Klaar!',
+    infoThrow:'Tik om een dolk naar de draaiende totem te werpen',
+    infoAvoid:'Een vastzittende dolk raken beëindigt de run',
+    infoGem:'Raak zielstenen voor +5 punten',
+    infoBreak:'Plant alle dolken om de totem te versplinteren',
+    infoBoss:'Elke 5e totem is een BAAS — grote bonus' },
+  pl: { title:'CURSED KNIVES', score:'WYNIK', best:'REKORD', stage:'Etap', boss:'BOSS',
+    playAgain:'Zagraj ponownie', gameOver:'Koniec gry', newBest:'Nowy rekord!', tapToResume:'Dotknij, aby wznowić',
+    back:'Wyjdź', play:'Graj', tutorial:'Samouczek', howToPlay:'Jak grać', menu:'Menu',
+    sound:'Dźwięk', close:'Zamknij', skip:'Pomiń', stageClear:'Roztrzaskany!', closeCall:'O włos!', tapCue:'TAP!',
+    razor:'Po brzytwie!', needle:'Ucho igielne!', overkill:'DOBICIE!', uncharted:'Nowa głębia!', deepest:'Najgłębiej', echoBroken:'Echo przełamane!', missedBy:'Zabrakło {n}°',
+    tagline:'Rzucaj sztylety · Unikaj stali · Roztrzaskaj totem',
+    tut1:'Dotknij, aby rzucić sztylet w totem!',
+    tut2:'Nie trafiaj w już wbity sztylet!',
+    tutRetry:'Ostrożnie! Spróbuj jeszcze raz',
+    tut3:'Wbij wszystkie sztylety, aby roztrzaskać totem!',
+    tutDone:'Gotowe!',
+    infoThrow:'Dotknij, aby rzucić sztylet w wirujący totem',
+    infoAvoid:'Trafienie we wbity sztylet kończy grę',
+    infoGem:'Trafiaj w klejnoty dusz: +5 punktów',
+    infoBreak:'Wbij wszystkie sztylety, aby roztrzaskać totem',
+    infoBoss:'Co 5. totem to BOSS — duża premia' },
+  ru: { title:'CURSED KNIVES', score:'СЧЁТ', best:'РЕКОРД', stage:'Этап', boss:'БОСС',
+    playAgain:'Играть снова', gameOver:'Игра окончена', newBest:'Новый рекорд!', tapToResume:'Коснитесь, чтобы продолжить',
+    back:'Выход', play:'Играть', tutorial:'Обучение', howToPlay:'Как играть', menu:'Меню',
+    sound:'Звук', close:'Закрыть', skip:'Пропустить', stageClear:'Вдребезги!', closeCall:'Едва не задел!', tapCue:'ТАП!',
+    razor:'На волоске!', needle:'В игольное ушко!', overkill:'ДОБИВАНИЕ!', uncharted:'Новая глубина!', deepest:'Глубже всего', echoBroken:'Эхо разбито!', missedBy:'Не хватило {n}°',
+    tagline:'Метай кинжалы · Избегай стали · Разбей тотем',
+    tut1:'Коснитесь, чтобы метнуть кинжал в тотем!',
+    tut2:'Не попадайте в уже воткнутый кинжал!',
+    tutRetry:'Осторожно! Попробуйте ещё раз',
+    tut3:'Воткните все кинжалы, чтобы разбить тотем!',
+    tutDone:'Вы готовы!',
+    infoThrow:'Коснитесь, чтобы метнуть кинжал во вращающийся тотем',
+    infoAvoid:'Попадание в воткнутый кинжал — конец игры',
+    infoGem:'Попадайте в самоцветы душ: +5 очков',
+    infoBreak:'Воткните все кинжалы, чтобы разбить тотем',
+    infoBoss:'Каждый 5-й тотем — БОСС, большой бонус' },
+  tr: { title:'CURSED KNIVES', score:'SKOR', best:'REKOR', stage:'Bölüm', boss:'BOSS',
+    playAgain:'Tekrar oyna', gameOver:'Oyun bitti', newBest:'Yeni rekor!', tapToResume:'Devam etmek için dokun',
+    back:'Çık', play:'Oyna', tutorial:'Eğitim', howToPlay:'Nasıl oynanır', menu:'Menü',
+    sound:'Ses', close:'Kapat', skip:'Atla', stageClear:'Paramparça!', closeCall:'Kıl payı!', tapCue:'DOKUN!',
+    razor:'Ustura gibi!', needle:'İğne deliği!', overkill:'EZİCİ DARBE!', uncharted:'Yeni derinlik!', deepest:'En derin', echoBroken:'Yankı kırıldı!', missedBy:'{n}° farkla',
+    tagline:'Hançer fırlat · Çelikten kaç · Totemi parçala',
+    tut1:'Toteme hançer fırlatmak için dokun!',
+    tut2:'Saplanmış bir hançere asla çarpma!',
+    tutRetry:'Dikkat! Tekrar dene',
+    tut3:'Totemi parçalamak için tüm hançerleri sapla!',
+    tutDone:'Hazırsın!',
+    infoThrow:'Dönen toteme hançer fırlatmak için dokun',
+    infoAvoid:'Saplı bir hançere çarparsan oyun biter',
+    infoGem:'Ruh taşlarını vur: +5 puan',
+    infoBreak:'Tüm hançerleri saplayınca totem parçalanır',
+    infoBoss:'Her 5. totem BOSS — büyük ödül' },
+  ar: { title:'CURSED KNIVES', score:'النقاط', best:'الأفضل', stage:'مرحلة', boss:'الزعيم',
+    playAgain:'العب مجددًا', gameOver:'انتهت اللعبة', newBest:'رقم قياسي جديد!‏', tapToResume:'انقر للمتابعة',
+    back:'خروج', play:'العب', tutorial:'تعليمي', howToPlay:'طريقة اللعب', menu:'القائمة',
+    sound:'الصوت', close:'إغلاق', skip:'تخطٍّ', stageClear:'تحطّم!‏', closeCall:'كاد يصيب!‏', tapCue:'انقر!‏',
+    razor:'حدّ الشفرة!‏', needle:'ثقب الإبرة!‏', overkill:'ضربة قاضية!‏', uncharted:'عمق جديد!‏', deepest:'الأعمق', echoBroken:'تحطّم الصدى!‏', missedBy:'بفارق {n}°',
+    tagline:'ارمِ الخناجر · تجنّب النصال · حطّم الطوطم',
+    tut1:'انقر لرمي خنجر نحو الطوطم!‏',
+    tut2:'لا تُصب خنجرًا مغروسًا!‏',
+    tutRetry:'انتبه! حاول مجددًا',
+    tut3:'اغرس كل الخناجر لتحطيم الطوطم!‏',
+    tutDone:'أنت جاهز!‏',
+    infoThrow:'انقر لرمي خنجر نحو الطوطم الدوّار',
+    infoAvoid:'إصابة خنجر مغروس تُنهي الجولة',
+    infoGem:'أصب جواهر الأرواح لتحصل على +5 نقاط',
+    infoBreak:'اغرس كل الخناجر لتحطيم الطوطم والتقدّم',
+    infoBoss:'كل طوطم خامس هو زعيم — مكافأة كبيرة' },
+  hi: { title:'CURSED KNIVES', score:'स्कोर', best:'सर्वश्रेष्ठ', stage:'चरण', boss:'बॉस',
+    playAgain:'फिर खेलें', gameOver:'खेल समाप्त', newBest:'नया रिकॉर्ड!', tapToResume:'जारी रखने के लिए टैप करें',
+    back:'वापस', play:'खेलें', tutorial:'ट्यूटोरियल', howToPlay:'कैसे खेलें', menu:'मेनू',
+    sound:'ध्वनि', close:'बंद करें', skip:'छोड़ें', stageClear:'चकनाचूर!', closeCall:'बाल-बाल!', tapCue:'टैप!',
+    razor:'धार से!', needle:'सुई की नोक!', overkill:'प्रचंड प्रहार!', uncharted:'नई गहराई!', deepest:'सबसे गहरा', echoBroken:'प्रतिध्वनि टूटी!', missedBy:'{n}° से चूके',
+    tagline:'कटार फेंको · धार से बचो · टोटेम तोड़ो',
+    tut1:'टोटेम पर कटार फेंकने के लिए टैप करें!',
+    tut2:'पहले से गड़ी कटार पर मत मारो!',
+    tutRetry:'सावधान! फिर कोशिश करें',
+    tut3:'सारी कटारें गाड़कर टोटेम तोड़ो!',
+    tutDone:'आप तैयार हैं!',
+    infoThrow:'घूमते टोटेम पर कटार फेंकने के लिए टैप करें',
+    infoAvoid:'गड़ी कटार से टकराने पर खेल समाप्त',
+    infoGem:'सोल जेम पर निशाना लगाएँ: +5 अंक',
+    infoBreak:'सभी कटारें गाड़ने पर टोटेम टूटता है',
+    infoBoss:'हर 5वाँ टोटेम बॉस है — बड़ा बोनस' },
+  th: { title:'CURSED KNIVES', score:'คะแนน', best:'สูงสุด', stage:'ด่าน', boss:'บอส',
+    playAgain:'เล่นอีกครั้ง', gameOver:'จบเกม', newBest:'สถิติใหม่!', tapToResume:'แตะเพื่อเล่นต่อ',
+    back:'ออก', play:'เล่น', tutorial:'สอนเล่น', howToPlay:'วิธีเล่น', menu:'เมนู',
+    sound:'เสียง', close:'ปิด', skip:'ข้าม', stageClear:'แตกกระจาย!', closeCall:'เฉียดฉิว!', tapCue:'แตะ!',
+    razor:'เฉียดคม!', needle:'สอดรูเข็ม!', overkill:'จัดหนัก!', uncharted:'ลึกสุดใหม่!', deepest:'ลึกที่สุด', echoBroken:'ทำลายเงาสะท้อน!', missedBy:'พลาดไป {n}°',
+    tagline:'ขว้างมีด · หลบคมเหล็ก · ทุบโทเท็มให้แตก',
+    tut1:'แตะเพื่อขว้างมีดใส่โทเท็ม!',
+    tut2:'อย่าขว้างโดนมีดที่ปักอยู่!',
+    tutRetry:'ระวัง! ลองใหม่อีกครั้ง',
+    tut3:'ปักมีดให้ครบเพื่อทุบโทเท็ม!',
+    tutDone:'พร้อมแล้ว!',
+    infoThrow:'แตะเพื่อขว้างมีดใส่โทเท็มที่หมุนอยู่',
+    infoAvoid:'ขว้างโดนมีดที่ปักอยู่ = จบเกม',
+    infoGem:'ขว้างโดนอัญมณีวิญญาณ รับ +5 คะแนน',
+    infoBreak:'ปักมีดครบทุกเล่มเพื่อทุบโทเท็มแล้วไปต่อ',
+    infoBoss:'ทุกด่านที่ 5 คือบอส — โบนัสก้อนโต' },
+  id: { title:'CURSED KNIVES', score:'SKOR', best:'TERBAIK', stage:'Tahap', boss:'BOS',
+    playAgain:'Main lagi', gameOver:'Permainan usai', newBest:'Rekor baru!', tapToResume:'Ketuk untuk lanjut',
+    back:'Keluar', play:'Main', tutorial:'Tutorial', howToPlay:'Cara bermain', menu:'Menu',
+    sound:'Suara', close:'Tutup', skip:'Lewati', stageClear:'Hancur!', closeCall:'Nyaris!', tapCue:'KETUK!',
+    razor:'Setipis silet!', needle:'Lubang jarum!', overkill:'TELAK!', uncharted:'Kedalaman baru!', deepest:'Terdalam', echoBroken:'Gema pecah!', missedBy:'Meleset {n}°',
+    tagline:'Lempar belati · Hindari baja · Hancurkan totem',
+    tut1:'Ketuk untuk melempar belati ke totem!',
+    tut2:'Jangan kena belati yang sudah menancap!',
+    tutRetry:'Hati-hati! Coba lagi',
+    tut3:'Tancapkan semua belati untuk menghancurkan totem!',
+    tutDone:'Siap!',
+    infoThrow:'Ketuk untuk melempar belati ke totem yang berputar',
+    infoAvoid:'Mengenai belati yang menancap = kalah',
+    infoGem:'Kenai permata jiwa untuk +5 poin',
+    infoBreak:'Tancapkan semua belati untuk menghancurkan totem',
+    infoBoss:'Setiap totem ke-5 adalah BOS — bonus besar' },
+  fil: { title:'CURSED KNIVES', score:'ISKOR', best:'PINAKAMATAAS', stage:'Yugto', boss:'BOSS',
+    playAgain:'Maglaro ulit', gameOver:'Tapos na', newBest:'Bagong rekord!', tapToResume:'I-tap para magpatuloy',
+    back:'Bumalik', play:'Maglaro', tutorial:'Tutorial', howToPlay:'Paano maglaro', menu:'Menu',
+    sound:'Tunog', close:'Isara', skip:'Laktawan', stageClear:'Nadurog!', closeCall:'Muntik na!', tapCue:'TAP!',
+    razor:'Sagad sa talim!', needle:'Butas ng karayom!', overkill:'WASAK!', uncharted:'Bagong lalim!', deepest:'Pinakamalalim', echoBroken:'Basag ang alingawngaw!', missedBy:'Lamang ng {n}°',
+    tagline:'Maghagis ng punyal · Iwasan ang talim · Durugin ang totem',
+    tut1:'I-tap para maghagis ng punyal sa totem!',
+    tut2:'Huwag tamaan ang nakabaon nang punyal!',
+    tutRetry:'Ingat! Subukan ulit',
+    tut3:'Ibaon lahat ng punyal para madurog ang totem!',
+    tutDone:'Handa ka na!',
+    infoThrow:'I-tap para maghagis ng punyal sa umiikot na totem',
+    infoAvoid:'Pagtama sa nakabaon na punyal = talo',
+    infoGem:'Tamaan ang soul gem para sa +5 puntos',
+    infoBreak:'Ibaon lahat ng punyal para madurog ang totem',
+    infoBoss:'Bawat ika-5 totem ay BOSS — malaking bonus' },
+};
+
+let LANG = DEFAULT_LANG;
+function t(key) {
+  const v = (I18N[LANG] && I18N[LANG][key]);
+  return (v !== undefined ? v : (I18N.en[key] !== undefined ? I18N.en[key] : key));
+}
+
+function getLanguage() {
+  const fromWin = typeof window.language === 'string' ? window.language : null;
+  const fromUrl = new URLSearchParams(window.location.search).get('language');
+  const raw = fromWin != null ? fromWin : fromUrl;
+  return SUPPORTED_LANGS.includes(raw) ? raw : DEFAULT_LANG;
+}
+
+function applyUiFont(lang) {
+  if (!LATIN_LANGS.has(lang)) {
+    document.documentElement.style.setProperty('--ui-font', 'system-ui, sans-serif');
+    CANVAS_FONT_STACK = 'system-ui, sans-serif';
+  }
+  if (lang === 'ar') document.body.classList.add('lang-ar');
+}
+
+/* Font cho chữ vẽ lên canvas (canvas không đọc CSS var) */
+let CANVAS_FONT_STACK = "'Google Sans Flex', system-ui, sans-serif";
+
+/* ================================================================
+ * §1. Native bridge (game-common) — game KHÔNG level → level: null
+ * ================================================================ */
+function post(msg) {
+  try {
+    if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+      window.ReactNativeWebView.postMessage(JSON.stringify(msg));
+    } else {
+      console.log('[cursed-knives → native]', msg);
+    }
+  } catch (e) { /* ignore */ }
+}
+
+function sendMessage(type, opts) {
+  opts = opts || {};
+  post({
+    type,
+    level: null,                        // game không có level → luôn null
+    result: opts.result ?? null,
+    data: opts.data ?? null,
+    showModal: opts.showModal === true,
+  });
+}
+
+function saveData(payload) {
+  const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
+  sendMessage('save_data', { data });
+}
+
+/* ── statusBarHeight (game-common §2 — URL ưu tiên) ───────────── */
+function getStatusBarHeight() {
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = params.get('statusBarHeight');
+  const fromWin = typeof window.statusBarHeight !== 'undefined' ? window.statusBarHeight : null;
+  let h = Number(fromUrl != null ? fromUrl : fromWin);
+  if (Number.isNaN(h) || h < 0) h = 0;
+  return h;
+}
+
+/* ── data (game-common §4 — window ưu tiên) ───────────────────── */
+function getInitialData() {
+  const fromWin = typeof window.data === 'string' ? window.data : null;
+  const fromUrl = new URLSearchParams(window.location.search).get('data');
+  return fromWin != null ? fromWin : (fromUrl || '');
+}
+
+/* ── localStorage 2 tầng (game-common §1.2) ───────────────────── */
+const LS_KEY = 'cursed_knives_v1';
+
+function saveLocal(payload) {
+  try {
+    const s = typeof payload === 'string' ? payload : JSON.stringify(payload);
+    localStorage.setItem(LS_KEY, s);
+  } catch (e) { /* private mode / quota */ }
+}
+function readLocal() {
+  try { return localStorage.getItem(LS_KEY) || ''; } catch (e) { return ''; }
+}
+
+/** Gộp data native + localStorage: số lấy MAX, cờ lấy OR — không bao giờ mất best.
+ *  Cặp echo (eS/eK) phải đi CÙNG NHAU: lấy từ nguồn có best cao hơn (echo gắn với run best).
+ *  skipNative: ?reset=1 phải bỏ qua window.data/?data= (payload cũ còn trong session). */
+function loadSaved(skipNative) {
+  const out = { best: 0, tut: 0, muted: 0, mutedSet: false, deep: -1, eS: -1, eK: -1 };
+  const pick = raw => {
+    try {
+      const o = JSON.parse(raw || 'null');
+      if (o) {
+        const b = Number.isFinite(+o.best) ? Math.floor(+o.best) : -1;
+        if (b >= out.best) {             // nguồn thắng best → mang theo cặp echo của nó
+          if (Number.isFinite(+o.eS)) out.eS = Math.floor(+o.eS);
+          if (Number.isFinite(+o.eK)) out.eK = Math.floor(+o.eK);
+        }
+        if (b > 0) out.best = Math.max(out.best, b);
+        if (Number.isFinite(+o.deep)) out.deep = Math.max(out.deep, Math.floor(+o.deep));
+        if (o.tut) out.tut = 1;
+        if (typeof o.muted !== 'undefined') { out.muted = o.muted ? 1 : 0; out.mutedSet = true; }
+      }
+    } catch (e) { /* data bẩn → bỏ qua */ }
+  };
+  if (!skipNative) pick(getInitialData());
+  pick(readLocal());      // local đọc sau → thắng cho cờ muted (người chơi vừa chỉnh)
+  return out;
+}
+
+/** Data NHẸ → native + localStorage (best/tut/muted/deep/echo — game-common §1.2). */
+function persistSaved() {
+  const light = { best, tut: tutSeen ? 1 : 0, muted: muted ? 1 : 0, deep, eS: echoS, eK: echoK };
+  saveData(light);
+  saveLocal(light);
+}
+
+/* ================================================================
+ * §2. Hằng số gameplay
+ * ================================================================ */
+const KNIFE_LEN = 104;      // chiều dài dao (px logic)
+const KNIFE_TIP = 50;       // mũi dao cách tâm sprite (px logic)
+const EMBED = 30;           // độ lún của mũi dao vào totem
+const THROW_V = 3.3;        // tốc độ phóng (px logic / ms) — bay ~0.12s
+const KNIFE_GAP = 0.105;    // khoảng cách góc tối thiểu giữa 2 dao (rad) — chạm là thua
+const GEM_ARC = 0.165;      // bán cung trúng ngọc (rad)
+const NEAR_MISS = 0.17;     // sượt qua dao khác trong cung này → +2 "Sát nút!"
+const ADS_EVERY = 3;        // mỗi 3 ván thua → xin app hiện quảng cáo (game-common §1.7)
+const SPAWN_MS = 340;       // totem mới phóng to vào (easeOutBack)
+const BREAK_MS = 680;       // thời gian mảnh vỡ bay trước khi totem kế vào
+const GEM_SCORE = 5;
+const STAGE_BONUS = 2;      // thưởng phá totem thường
+const BOSS_BONUS = 10;      // thưởng phá totem TRÙM
+
+/* Bảng màu accent theo stage (boss luôn đỏ) */
+const ACCENTS = ['#35e0ff', '#52ff9d', '#c060ff', '#ffb830'];
+const BOSS_ACCENT = '#ff3d5a';
+
+/* ================================================================
+ * §3. State
+ * ================================================================ */
+let state = 'ready';        // 'ready' | 'playing' | 'over'
+let paused = false;
+let timeMs = 0, lastTs = 0; // đồng hồ game — ĐÓNG BĂNG khi pause (mọi anim key theo timeMs)
+let score = 0, best = 0, bestStart = 0;
+let muted = false, tutSeen = false;
+let runsEnded = 0;
+let stageIdx = 0;           // 0-indexed nội bộ; hiển thị = idx+1 (chỉ để hiển thị, KHÔNG gửi native)
+let cfg = null;             // stageConfig hiện tại
+let phase = 'aim';          // 'aim' | 'break' | 'spawn' — pha trong 1 stage
+let stageT = 0;             // giây từ lúc stage bắt đầu (cho pattern xoay)
+let disc = { x: 0, y: 0, R: 150, rot: 0, w: 0, sprite: null, spriteR: 0 };
+let prevRot = 0;            // rot của frame trước — nội suy sub-frame lúc va chạm
+let stuck = [];             // dao đã cắm: {a: góc trên totem (rad), pre: có sẵn từ đầu}
+let gems = [];              // ngọc hồn: {a}
+let knivesLeft = 0;
+let flying = null;          // dao đang bay: {y}
+let deadKnife = null;       // dao văng khi thua: {x,y,vx,vy,rot,vr}
+let pendingBreakAt = 0;     // timeMs sẽ phá totem (sau khi dao cuối cắm)
+let spawnT0 = 0, breakT0 = 0;
+let shards = [], debris = [], floatTexts = [], rings = [], sparks = [];
+let flash = 0, shakeAmp = 0;
+let stagePulseT0 = -9999;   // totem nhún nhẹ khi dao cắm
+let overTimer = null;
+let tutorial = null;        // {step, need} — null = không ở tutorial
+let tutFromMenu = false;
+let menuOpen = true;
+let infoOpen = false;
+
+/* ── v1.1 ─────────────────────────────────────────────────────── */
+let timeScale = 1;          // slow-mo toàn cục — nhân vào dt MỘT chỗ duy nhất ở loop()
+let realMs = 0;             // đồng hồ THẬT không scale (kill-cam / breath dùng)
+let breath = false;         // Executioner's Breath: dao cuối bay trong slow-mo
+let killCam = null;         // kill-cam: {until, zoomStart, x, y, killerA, missDeg}
+let riskyCount = 0;         // số cú liều (Razor/Close/Needle) trong stage — thưởng lúc vỡ
+let wraths = [];            // Skull Tithe: các cơn thịnh nộ đã lên lịch {start, end}
+let lastWrathEnd = 0;
+let wrathDir = 1;
+let lastStand = null;       // boss dao cuối: {t0, mult}
+let stallRing = 0;          // vòng anti-stall Last Stand [0..1]
+let spikesGrown = 0;        // gai xương đã mọc (max 2)
+let overkillPending = false;
+let omenGlow = 0;           // độ sáng telegraph đảo chiều/vọt tốc [0..1]
+let omenFiredAt = -1;       // event index đã kêu riser (không kêu lặp)
+let deep = -1;              // Deepest Descent: stage sâu nhất từng phá (persist)
+let echoS = -1, echoK = -1; // Echo Wraith: stage & số dao lúc chết ở run best (persist)
+let echoLive = false, echoBrokenRun = false;
+let echoDissolveT0 = 0;
+
+/* ================================================================
+ * §4. Stage vô hạn — sinh deterministic theo idx (như runic-blaze).
+ *  Cùng idx luôn ra cùng cấu hình; Math.random chỉ dùng cho FX.
+ * ================================================================ */
+/** splitmix-lite: hash (idx, salt) → [0,1) ổn định giữa các lần chạy. */
+function hash01(idx, salt) {
+  let x = (idx * 374761393 + salt * 668265263 + 0x9E3779B9) | 0;
+  x = Math.imul(x ^ (x >>> 16), 0x21F0AAAD);
+  x = Math.imul(x ^ (x >>> 15), 0x735A2D97);
+  x = (x ^ (x >>> 15)) >>> 0;
+  return x / 4294967296;
+}
+
+/** Config 1 stage: dao cần cắm 6→9 (boss +2), tốc độ 1.8→trần 3.4 rad/s,
+ *  pattern mở khóa dần (steady → wobble → flip → burst) — nhanh ngay từ
+ *  đầu, ngẫu nhiên theo stage để đánh lạc nhịp, nhưng có trần độ khó. */
+function stageConfig(idx) {
+  const boss = (idx + 1) % 5 === 0;
+  const h1 = hash01(idx, 1), h2 = hash01(idx, 2), h3 = hash01(idx, 3);
+  const h4 = hash01(idx, 4), h5 = hash01(idx, 5);
+  const knives = Math.min(6 + (idx >> 1), 9) + (boss ? 2 : 0);
+  const speed = Math.min(1.8 + idx * 0.14, 3.4) * (0.92 + h1 * 0.16);
+  const dir = h2 < 0.5 ? -1 : 1;
+  const pool = ['steady'];
+  if (idx >= 2) pool.push('wobble', 'wobble');
+  if (idx >= 4) pool.push('flip', 'flip');
+  if (idx >= 6) pool.push('burst', 'burst');
+  let pattern = pool[Math.min(pool.length - 1, Math.floor(h3 * pool.length))];
+  if (boss && idx >= 4) pattern = ['wobble', 'flip', 'burst'][Math.floor(h3 * 3) % 3];
+  const maxPre = idx < 2 ? 0 : Math.min(3, Math.floor(idx / 3) + 1);
+  const nPre = Math.min(maxPre, Math.floor(h4 * (maxPre + 1)));
+  // boss: 3 ngọc-sọ (Skull Tithe) — tham thì giàu, tham nữa thì totem nổi giận
+  const nGems = boss ? 3 : (idx === 0 ? 1 : (h5 < 0.22 ? 0 : (h5 < 0.72 ? 1 : 2)));
+  const placed = placeAngles(idx, nPre, nGems);
+  return {
+    boss, knives, speed, dir, pattern,
+    period: 1.6 + h1 * 1.0,          // chu kỳ wobble (s)
+    flipT: 1.5 + h2 * 1.2,           // nhịp đảo chiều (s)
+    phase0: h3 * Math.PI * 2,
+    pre: placed.pre, gems: placed.gems,
+    accent: boss ? BOSS_ACCENT : ACCENTS[Math.floor(h4 * ACCENTS.length) % ACCENTS.length],
+    sigil: boss ? 5 : Math.floor(h5 * 5) % 5,
+  };
+}
+
+/** Rải góc dao-cắm-sẵn + ngọc trên totem, deterministic, giữ khe hở công
+ *  bằng (dao cách dao ≥.5 rad; ngọc cách dao ≥.36 để trúng ngọc không chết oan). */
+function placeAngles(idx, nPre, nGems) {
+  const pre = [], gemA = [];
+  let s = 100;
+  const farFrom = (a, list, gap) => list.every(b => angDiff(a, b) >= gap);
+  for (let i = 0; i < nPre; i++) {
+    for (let tr = 0; tr < 40; tr++) {
+      const a = hash01(idx, s++) * Math.PI * 2;
+      if (farFrom(a, pre, 0.5)) { pre.push(a); break; }
+    }
+  }
+  for (let i = 0; i < nGems; i++) {
+    for (let tr = 0; tr < 40; tr++) {
+      const a = hash01(idx, s++) * Math.PI * 2;
+      if (farFrom(a, pre, 0.36) && farFrom(a, gemA, 0.5)) { gemA.push(a); break; }
+    }
+  }
+  return { pre, gems: gemA };
+}
+
+/* Chuẩn hoá góc về [0, 2π) và khoảng cách góc ngắn nhất */
+function normAng(a) {
+  a %= Math.PI * 2;
+  return a < 0 ? a + Math.PI * 2 : a;
+}
+function angDiff(a, b) {
+  let d = Math.abs(normAng(a) - normAng(b));
+  return d > Math.PI ? Math.PI * 2 - d : d;
+}
+/* ================================================================
+ * §5. Âm thanh — WebAudio tổng hợp, không file ngoài (như runic-blaze)
+ * ================================================================ */
+let audioCtx = null, audioMaster = null, bgmOut = null, sfxOut = null;
+let bgmLp = null;           // lowpass BGM — Executioner's Breath sweep 1500→400Hz
+let bgmTimer = null, bgmNextT = 0, bgmStep = 0;
+
+function audioEnsure() {
+  if (audioCtx) return true;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return false;
+    audioCtx = new AC();
+    const comp = audioCtx.createDynamicsCompressor();
+    comp.threshold.value = -14; comp.knee.value = 22; comp.ratio.value = 9;
+    audioMaster = audioCtx.createGain();
+    audioMaster.gain.value = muted ? 0 : 0.9;
+    audioMaster.connect(comp); comp.connect(audioCtx.destination);
+    /* bus SFX riêng — một núm cân bằng SFX↔BGM, cộng dồn không clip */
+    sfxOut = audioCtx.createGain();
+    sfxOut.gain.value = 0.9;
+    sfxOut.connect(audioMaster);
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 1500;   // tối màu (taste: dark/low)
+    bgmLp = lp;
+    bgmOut = audioCtx.createGain();
+    bgmOut.gain.value = 0.16;
+    bgmOut.connect(lp); lp.connect(audioMaster);
+    startBgm();
+    return true;
+  } catch (e) { return false; }
+}
+
+function audioUnlock() {
+  if (!audioEnsure()) return;
+  if (audioCtx.state === 'suspended') { audioCtx.resume().catch(() => {}); }
+}
+document.addEventListener('pointerdown', audioUnlock, { passive: true });
+
+function setMuted(v) {
+  muted = v;
+  if (audioMaster) audioMaster.gain.value = muted ? 0 : 0.9;
+  document.getElementById('sound-btn').classList.toggle('muted', muted);
+  document.getElementById('menu-sound').classList.toggle('muted', muted);
+  persistSaved();
+}
+
+/** 1 nốt đơn: osc + envelope. dest mặc định = master. */
+function tone(o) {
+  if (!audioCtx || muted) return;
+  const t0 = audioCtx.currentTime + (o.at || 0);
+  const osc = audioCtx.createOscillator();
+  osc.type = o.type || 'sine';
+  osc.frequency.setValueAtTime(o.freq, t0);
+  if (o.slide) osc.frequency.exponentialRampToValueAtTime(Math.max(30, o.slide), t0 + (o.d || 0.15));
+  const g = audioCtx.createGain();
+  const a = o.a || 0.006, d = o.d || 0.15, peak = o.peak || 0.15;
+  g.gain.setValueAtTime(0, t0);
+  g.gain.linearRampToValueAtTime(peak, t0 + a);
+  g.gain.exponentialRampToValueAtTime(0.0004, t0 + a + d);
+  osc.connect(g); g.connect(o.dest || sfxOut || audioMaster);
+  osc.start(t0); osc.stop(t0 + a + d + 0.05);
+}
+
+/** Noise burst qua bandpass (whoosh / va chạm). */
+function noiseBurst(o) {
+  if (!audioCtx || muted) return;
+  const t0 = audioCtx.currentTime + (o.at || 0);
+  const d = o.d || 0.2;
+  const len = Math.max(1, Math.floor(audioCtx.sampleRate * d));
+  const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+  const ch = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) ch[i] = Math.random() * 2 - 1;
+  const src = audioCtx.createBufferSource();
+  src.buffer = buf;
+  const bp = audioCtx.createBiquadFilter();
+  bp.type = 'bandpass';
+  bp.frequency.setValueAtTime(o.f0 || 900, t0);
+  if (o.f1) bp.frequency.exponentialRampToValueAtTime(o.f1, t0 + d);
+  bp.Q.value = o.q || 1.1;
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(o.peak || 0.12, t0);
+  g.gain.exponentialRampToValueAtTime(0.0004, t0 + d);
+  src.connect(bp); bp.connect(g); g.connect(sfxOut || audioMaster);
+  src.start(t0); src.stop(t0 + d + 0.02);
+}
+
+/* SFX — hành động lặp nhiều (phóng/cắm) dùng âm mềm, KHÔNG noise burst thô */
+function sButton()  { tone({ freq: 700, d: .05, peak: .06 }); }
+function sThrow()   {
+  noiseBurst({ f0: 1100, f1: 2400, d: .1, peak: .05, q: 3 });   // swish hẹp dải, êm
+  tone({ freq: 480, slide: 920, type: 'sine', d: .09, peak: .05 });
+}
+function sStick()   {
+  // Dao ghim vào THÂN GỖ — modal synthesis: va chạm là NHIỄU cộng hưởng (không
+  // phải cao độ), nên dùng noise qua bandpass ở các mode gỗ. Q vừa phải để mode
+  // rộng & to (nghe rõ trên loa phone), năng lượng dồn 250-1500Hz. Tắt nhanh.
+  noiseBurst({ f0: 2600, f1: 1200, d: .018, peak: .62, q: 0.8 });  // click tiếp xúc (sắc, cực ngắn)
+  noiseBurst({ f0: 300,  d: .075, peak: 1.15, q: 2.2 });           // thân gỗ "thock" (mid thấp, rộng)
+  noiseBurst({ f0: 520,  d: .05,  peak: .7,  q: 3 });              // mode gỗ thứ 2 (chất thớ cây)
+  noiseBurst({ f0: 900,  d: .03,  peak: .4,  q: 3 });              // mode gỗ cao (độ "khô")
+}
+function sGem()     {
+  // Đâm trúng NGỌC PHA LÊ — modal: hoạ âm NGHỊCH HÒA tắt so le (chất thuỷ tinh
+  // thật), KHÔNG chime major. Nền mid mạnh + chút sparkle cao cho lấp lánh (không CHÓI).
+  const base = 760, r = [1, 2.76, 5.2];           // fundamental + 2 mode (nghịch hòa)
+  const pk = [.13, .05, .03], dc = [.5, .3, .18];
+  for (let i = 0; i < r.length; i++)
+    tone({ freq: base * r[i], type: 'sine', a: .001, d: dc[i], peak: pk[i] });
+  noiseBurst({ f0: 4200, f1: 6400, d: .024, peak: .04, q: 1.3 });  // sparkle tiếp xúc thuỷ tinh
+}
+function sClose()   { tone({ freq: 660, type: 'triangle', d: .09, peak: .07 }); }
+/* Razor/Needle: sting sắc dần theo độ liều — cao hơn sClose, vẫn tròn tiếng */
+function sRazor()   {
+  tone({ freq: 880, type: 'triangle', d: .07, peak: .09 });
+  tone({ freq: 1320, at: .03, type: 'sine', d: .06, peak: .05 });
+}
+function sNeedle()  {
+  tone({ freq: 990, type: 'triangle', d: .08, peak: .1 });
+  tone({ freq: 1480, at: .05, type: 'sine', d: .1, peak: .06 });
+}
+/* Omen: riser 70ms — điềm báo pattern sắp trở mặt */
+function sOmen()    { tone({ freq: 300, slide: 520, type: 'sine', d: .07, peak: .05 }); }
+/* Ngọc-sọ vỡ: rít tối + saw tụt — totem sắp nổi giận */
+function sShriek()  {
+  noiseBurst({ f0: 1800, f1: 600, d: .3, peak: .08, q: 2.5 });
+  tone({ freq: 660, slide: 220, type: 'sawtooth', d: .3, peak: .05 });
+}
+/* Last Stand: stinger trầm — boss giãy chết */
+function sLastStand() {
+  tone({ freq: 110, type: 'sawtooth', d: .6, peak: .1 });
+  tone({ freq: 165, at: .15, type: 'sawtooth', d: .5, peak: .08 });
+  noiseBurst({ f0: 500, f1: 150, d: .4, peak: .06, q: 1 });
+}
+/* Breath: nhịp tim nén — thế giới nín thở theo dao cuối */
+function sBreath()  {
+  tone({ freq: 220, slide: 110, type: 'sine', d: .22, peak: .1 });
+  noiseBurst({ f0: 350, d: .18, peak: .04, q: 1 });
+}
+/* Echo Wraith tan: hơi thở ma + glide sáng dần */
+function sEcho()    {
+  noiseBurst({ f0: 1400, f1: 500, d: .35, peak: .05, q: 1.5 });
+  tone({ freq: 520, slide: 780, type: 'sine', d: .3, peak: .05 });
+}
+/* Overkill: dập trầm + arpeggio thắng ngắn */
+function sOverkill() {
+  tone({ freq: 160, slide: 70, type: 'sine', d: .3, peak: .2 });
+  noiseBurst({ f0: 900, f1: 250, d: .25, peak: .12, q: 1 });
+  [392, 523, 659].forEach((f, i) => tone({ freq: f, at: .12 + i * .07, type: 'triangle', d: .16, peak: .08 }));
+}
+/* Gai xương Last Stand nứt ra khỏi vành */
+function sSpike()   { noiseBurst({ f0: 420, d: .12, peak: .12, q: 2 }); }
+function sClash()   {
+  noiseBurst({ f0: 3400, f1: 800, d: .26, peak: .16, q: 2 });
+  tone({ freq: 196, type: 'sawtooth', d: .3, peak: .1 });
+  tone({ freq: 185, at: .02, type: 'sawtooth', d: .34, peak: .08 });
+  [330, 262, 196].forEach((f, i) => tone({ freq: f, at: .3 + i * .16, type: 'sawtooth', d: .24, peak: .06 }));
+}
+function sShatter() {
+  noiseBurst({ f0: 420, f1: 90, d: .45, peak: .2, q: .8 });
+  tone({ freq: 72, slide: 36, type: 'sine', d: .5, peak: .22 });
+  [523, 659, 784].forEach((f, i) => tone({ freq: f, at: .1 + i * .08, type: 'triangle', d: .18, peak: .09 }));
+}
+function sBoss()    {
+  tone({ freq: 110, type: 'sawtooth', d: .5, peak: .11 });
+  tone({ freq: 155.6, at: .12, type: 'sawtooth', d: .5, peak: .09 });   // tritone — điềm gở
+}
+function sTutOk()   { [523, 659, 784, 1046].forEach((f, i) => tone({ freq: f, at: i * .1, type: 'triangle', d: .28, peak: .12 })); }
+
+/* BGM — dark & epic theo taste đã duyệt: TIMBRE quyết định độ tối, không
+   phải hợp âm. Bed dây saw detune qua lowpass + drone chủ âm A giữ suốt +
+   màu Neapolitan ♭II (Am→Dm→B♭→E), KHÔNG arpeggio — chỉ 1 swell mỗi hợp
+   âm + timpani mềm khi đổi hợp âm; ~6.5s/hợp âm. Lookahead chống dồn nốt. */
+const BGM_CHORD_S = 6.5;
+const BGM_CHORDS = [                       // voicing trầm (B2–A3)
+  [110.00, 130.81, 164.81],                // Am  (A2 C3 E3)
+  [146.83, 174.61, 220.00],                // Dm  (D3 F3 A3)
+  [116.54, 146.83, 174.61],                // B♭  (♭II — Neapolitan)
+  [123.47, 164.81, 207.65],                // E   (V — sức căng chức năng)
+];
+
+function scheduleBgmChord(at) {
+  const ch = BGM_CHORDS[bgmStep % BGM_CHORDS.length];
+  /* drone chủ âm — giữ A suốt vòng cho sức nặng cinematic */
+  tone({ freq: 55,  type: 'sine',     at, a: 1.2, d: BGM_CHORD_S + 0.8, peak: .1,  dest: bgmOut });
+  tone({ freq: 110, type: 'sawtooth', at, a: 1.5, d: BGM_CHORD_S + 0.8, peak: .05, dest: bgmOut });
+  /* bed dây — mỗi nốt 2 saw detune ±0.3% */
+  for (const f of ch) {
+    tone({ freq: f * 1.003, type: 'sawtooth', at, a: 1.4, d: BGM_CHORD_S * 0.85, peak: .028, dest: bgmOut });
+    tone({ freq: f * 0.997, type: 'sawtooth', at, a: 1.4, d: BGM_CHORD_S * 0.85, peak: .028, dest: bgmOut });
+  }
+  /* swell đơn giữa hợp âm (thay cho arpeggio) */
+  tone({ freq: ch[0] * 2, type: 'sine', at: at + BGM_CHORD_S * 0.45, a: 1.1, d: 2.2, peak: .05, dest: bgmOut });
+  /* timpani mềm ở nhịp đổi hợp âm */
+  tone({ freq: 150, slide: 68, type: 'sine', at, a: .005, d: .5, peak: .17, dest: bgmOut });
+}
+
+function startBgm() {
+  if (bgmTimer || !audioCtx) return;
+  bgmNextT = audioCtx.currentTime + 0.15;
+  bgmStep = 0;
+  bgmTimer = setInterval(() => {
+    if (!audioCtx || audioCtx.state !== 'running' || muted) return;
+    const now = audioCtx.currentTime;
+    if (bgmNextT < now - 0.4) bgmNextT = now + 0.1;      // chống dồn sau khi resume
+    while (bgmNextT < now + 1.0) {
+      scheduleBgmChord(bgmNextT - now);
+      bgmNextT += BGM_CHORD_S;
+      bgmStep++;
+    }
+  }, 250);
+}
+
+/* ================================================================
+ * §6. Canvas + layout — không gian logic LW cố định (như hamster-jump)
+ * ================================================================ */
+const $ = id => document.getElementById(id);
+const canvas = $('game-canvas'), ctx = canvas.getContext('2d');
+const bgCanvas = $('bg-canvas'), bgCtx = bgCanvas.getContext('2d');
+let LW = 720, LH = 0, scale = 1;
+let knifeIdleY = 0;         // vị trí dao chờ (logic)
+let envSafeTop = 0;
+
+function measureEnvSafeTop() {
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:fixed;top:0;left:0;height:env(safe-area-inset-top,0px);width:1px;pointer-events:none;visibility:hidden';
+  document.body.appendChild(probe);
+  envSafeTop = probe.offsetHeight || 0;
+  probe.remove();
+}
+
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  const cssW = window.innerWidth, cssH = window.innerHeight;
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  canvas.style.width = cssW + 'px';
+  canvas.style.height = cssH + 'px';
+  if (cssW <= cssH) {                    // dọc: khớp bề rộng 720
+    LW = 720; scale = cssW / LW; LH = cssH / scale;
+  } else {                               // ngang: khớp chiều cao 1180, thế giới rộng ra
+    LH = 1180; scale = cssH / LH; LW = cssW / scale;
+  }
+  ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+
+  /* bg canvas vẽ theo px CSS, DPR hạ 1.5 cho nhẹ (nền mờ — không cần nét) */
+  const bdpr = Math.min(dpr, 1.5);
+  bgCanvas.width = Math.round(cssW * bdpr);
+  bgCanvas.height = Math.round(cssH * bdpr);
+  bgCanvas.style.width = cssW + 'px';
+  bgCanvas.style.height = cssH + 'px';
+  bgCtx.setTransform(bdpr, 0, 0, bdpr, 0, 0);
+  initBgItems();
+
+  /* HUD chừa status bar (game-common §2) */
+  measureEnvSafeTop();
+  const topPad = Math.max(getStatusBarHeight(), envSafeTop) + 8;
+  $('topbar').style.paddingTop = topPad + 'px';
+  $('menu-corner').style.paddingTop = topPad + 'px';
+
+  /* Hình học màn chơi: totem trên, dao chờ dưới, luôn đủ đường bay */
+  const topbarLg = (topPad + 70) / scale;          // đáy HUD (logic)
+  disc.x = LW / 2;
+  disc.R = Math.min(158, LW * 0.3, LH * 0.235);
+  knifeIdleY = LH - Math.max(120, LH * 0.135);
+  disc.y = Math.max(topbarLg + disc.R + 24, Math.min(LH * 0.34, knifeIdleY - KNIFE_LEN - 130 - disc.R));
+  /* màn quá lùn → thu nhỏ totem để giữ khoảng bay tối thiểu */
+  const gap = (knifeIdleY - KNIFE_TIP) - (disc.y + disc.R);
+  if (gap < 90) disc.R = Math.max(64, disc.R - (90 - gap));
+  if (cfg) buildDiscSprite();                       // R đổi → dựng lại sprite
+}
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 120));
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => resize());
+try { if (document.fonts) document.fonts.load("800 22px 'Google Sans Flex'"); } catch (e) {}
+
+/* ================================================================
+ * §7. Art — sprite vẽ sẵn (không shadowBlur per-frame — đắt trên WebView)
+ * ================================================================ */
+const SS = 2;               // supersample sprite ×2 cho nét
+
+/** Sigil khắc phát sáng — 3 lớp stroke: bloom mờ / màu chính / lõi trắng
+ *  nóng. Thẩm mỹ dark fantasy như runic-blaze: nét khắc arcane trên đá
+ *  obsidian, KHÔNG bóng kẹo. */
+function strokeSigil(c, path, hex, w) {
+  c.lineCap = 'round'; c.lineJoin = 'round';
+  c.strokeStyle = hex; c.globalAlpha = .28; c.lineWidth = w * 2.2; c.stroke(path);
+  c.globalAlpha = 1;   c.lineWidth = w;      c.stroke(path);
+  c.strokeStyle = '#fff'; c.globalAlpha = .85; c.lineWidth = Math.max(1.2, w * .36); c.stroke(path);
+  c.globalAlpha = 1;
+}
+
+/* 6 sigil (viewBox 100×100): 5 thường + 1 TRÙM (sọ quỷ) */
+const SIGIL_D = [
+  'M50 12 L63 35 L55 42 L69 58 L50 88 L31 58 L45 42 L37 35 Z',                          // ngọn lửa gãy khúc
+  'M50 14 L50 86 M30 32 L70 68 M70 32 L30 68 M50 14 L38 26 M50 14 L62 26',              // sao băng rune
+  'M18 50 C32 22, 68 22, 82 50 C68 78, 32 78, 18 50 Z M50 38 A12 12 0 1 0 50 62 A12 12 0 1 0 50 38', // con mắt
+  'M50 12 A38 38 0 1 0 50 88 A28 28 0 1 1 50 12 Z',                                     // trăng khuyết
+  'M50 10 L58 40 L88 40 L64 58 L73 88 L50 70 L27 88 L36 58 L12 40 L42 40 Z',            // tinh tú gai
+  'M32 24 A24 24 0 0 1 68 24 L70 52 L60 60 L60 74 L52 66 L48 66 L40 74 L40 60 L30 52 Z M40 42 A5 5 0 1 0 40 43 M60 42 A5 5 0 1 0 60 43', // sọ quỷ (TRÙM)
+];
+
+/* ── Sprite dao găm ─────────────────────────────────────────────
+ * Vẽ 1 lần vào offscreen canvas rồi drawImage xoay — mũi dao hướng LÊN,
+ * tâm sprite = tâm dao. 3 biến thể: thép (dao của mình), tím mờ (dao cắm
+ * sẵn), pip (mờ để đếm đạn — dùng chung sprite thép).
+ */
+const KNIFE_SPR_W = 44, KNIFE_SPR_H = 120;   // px logic (sprite ×SS)
+let knifeSpr = null, preKnifeSpr = null, redKnifeSpr = null;
+let echoSigPath = null;     // Path2D sọ quỷ cho Echo Wraith (cache 1 lần)
+
+function buildKnifeSprite(edgeHex, bodyFill, handleFill) {
+  const cv = document.createElement('canvas');
+  cv.width = KNIFE_SPR_W * SS; cv.height = KNIFE_SPR_H * SS;
+  const c = cv.getContext('2d');
+  c.scale(SS, SS);
+  const cx = KNIFE_SPR_W / 2;                  // 22
+  /* lưỡi: mũi (cx,8) → vai (cx±7.5, 62) — hơi thon */
+  const blade = new Path2D(`M ${cx} 8 L ${cx + 7.5} 60 L ${cx + 6} 64 L ${cx - 6} 64 L ${cx - 7.5} 60 Z`);
+  c.fillStyle = bodyFill;
+  c.fill(blade);
+  strokeSigil(c, blade, edgeHex, 3.6);
+  /* rãnh máu — lõi trắng mảnh giữa lưỡi */
+  const fuller = new Path2D(`M ${cx} 16 L ${cx} 56`);
+  c.strokeStyle = '#fff'; c.globalAlpha = .8; c.lineWidth = 1.4; c.lineCap = 'round';
+  c.stroke(fuller); c.globalAlpha = 1;
+  /* chắn tay */
+  const guard = new Path2D();
+  guard.roundRect ? guard.roundRect(cx - 13, 64, 26, 7, 3.5)
+                  : guard.rect(cx - 13, 64, 26, 7);
+  c.fillStyle = '#0d1524';
+  c.fill(guard);
+  c.strokeStyle = edgeHex; c.lineWidth = 2; c.stroke(guard);
+  /* cán quấn da */
+  const grip = new Path2D();
+  grip.roundRect ? grip.roundRect(cx - 6, 71, 12, 33, 6) : grip.rect(cx - 6, 71, 12, 33);
+  c.fillStyle = handleFill;
+  c.fill(grip);
+  c.strokeStyle = '#3a3358'; c.lineWidth = 2; c.stroke(grip);
+  c.strokeStyle = 'rgba(255,255,255,.18)'; c.lineWidth = 1.4;
+  for (let y = 77; y <= 98; y += 7) {
+    c.beginPath(); c.moveTo(cx - 5, y); c.lineTo(cx + 5, y + 3); c.stroke();
+  }
+  /* chuôi ngọc */
+  c.beginPath(); c.arc(cx, 109, 6, 0, Math.PI * 2);
+  c.fillStyle = '#0d1524'; c.fill();
+  c.strokeStyle = edgeHex; c.lineWidth = 2; c.stroke();
+  c.beginPath(); c.arc(cx, 109, 2.2, 0, Math.PI * 2);
+  c.fillStyle = '#fff'; c.fill();
+  return cv;
+}
+
+function buildKnifeSprites() {
+  knifeSpr = buildKnifeSprite('#6fd8ff', '#1b2740', '#141026');
+  preKnifeSpr = buildKnifeSprite('#8a6cd8', '#221a38', '#181226');
+  redKnifeSpr = buildKnifeSprite('#ff3d5a', '#2a1220', '#1a0d16');   // kill-cam: dao thủ phạm
+}
+
+/** Vẽ dao tại (x,y) tâm sprite, xoay rot (0 = mũi hướng lên), scale s. */
+function drawKnife(spr, x, y, rot, s, alpha) {
+  ctx.save();
+  ctx.translate(x, y);
+  if (rot) ctx.rotate(rot);
+  if (alpha != null) ctx.globalAlpha = alpha;
+  const w = KNIFE_SPR_W * (s || 1), h = KNIFE_SPR_H * (s || 1);
+  ctx.drawImage(spr, -w / 2, -h / 2, w, h);
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+/* ── Sprite totem ───────────────────────────────────────────────
+ * Đĩa obsidian + vành sáng accent + vòng arcane đứt nét + sigil giữa.
+ * Dựng lại mỗi stage (accent/sigil đổi); xoay bằng drawImage.
+ */
+function buildDiscSprite() {
+  const R = disc.R;
+  const pad = 14;                              // chừa viền glow
+  const size = Math.ceil((R + pad) * 2);
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = size * SS;
+  const c = cv.getContext('2d');
+  c.scale(SS, SS);
+  c.translate(size / 2, size / 2);
+  const ac = cfg.accent;
+
+  /* thân đá obsidian */
+  const g = c.createRadialGradient(0, -R * 0.25, R * 0.1, 0, 0, R);
+  g.addColorStop(0, cfg.boss ? '#2a1220' : '#1c2434');
+  g.addColorStop(0.75, cfg.boss ? '#170a12' : '#101624');
+  g.addColorStop(1, '#07090f');
+  c.fillStyle = g;
+  c.beginPath(); c.arc(0, 0, R, 0, Math.PI * 2); c.fill();
+
+  /* vân nứt đá — chord mờ, seed theo stage (ổn định giữa các frame) */
+  c.strokeStyle = 'rgba(255,255,255,.05)';
+  c.lineWidth = 1.5;
+  for (let i = 0; i < 7; i++) {
+    const a1 = hash01(stageIdx, 40 + i) * Math.PI * 2;
+    const a2 = a1 + 0.9 + hash01(stageIdx, 50 + i) * 1.6;
+    c.beginPath();
+    c.moveTo(Math.cos(a1) * R * 0.95, Math.sin(a1) * R * 0.95);
+    c.lineTo(Math.cos(a2) * R * 0.6, Math.sin(a2) * R * 0.6);
+    c.stroke();
+  }
+
+  /* vành ngoài: glow accent + mép sáng */
+  c.beginPath(); c.arc(0, 0, R - 5, 0, Math.PI * 2);
+  c.strokeStyle = ac; c.globalAlpha = .16; c.lineWidth = 10; c.stroke();
+  c.beginPath(); c.arc(0, 0, R - 1.5, 0, Math.PI * 2);
+  c.globalAlpha = .8; c.lineWidth = 2.5; c.stroke();
+  c.globalAlpha = 1;
+
+  /* vòng arcane đứt nét + nan hoa mờ */
+  c.setLineDash([10, 14]);
+  c.beginPath(); c.arc(0, 0, R - 26, 0, Math.PI * 2);
+  c.strokeStyle = ac; c.globalAlpha = .2; c.lineWidth = 9; c.stroke();
+  c.globalAlpha = .55; c.lineWidth = 3; c.stroke();
+  c.setLineDash([]);
+  c.globalAlpha = .12;
+  c.lineWidth = 2;
+  for (let i = 0; i < 6; i++) {
+    const a = i / 6 * Math.PI * 2;
+    c.beginPath();
+    c.moveTo(Math.cos(a) * (R - 34), Math.sin(a) * (R - 34));
+    c.lineTo(Math.cos(a) * (R - 62), Math.sin(a) * (R - 62));
+    c.stroke();
+  }
+  c.globalAlpha = 1;
+
+  /* sigil giữa — 3 lớp stroke, scale vào ~54% totem */
+  const sig = new Path2D(SIGIL_D[cfg.sigil]);
+  const k = (R * 1.08) / 100;
+  c.save();
+  c.scale(k, k);
+  c.translate(-50, -50);
+  strokeSigil(c, sig, ac, 5);
+  c.restore();
+
+  disc.sprite = cv;
+  disc.spriteR = size / 2;
+}
+
+/** Ngọc hồn — lục giác xanh nguyền, vẽ live (pulse theo timeMs).
+ *  Ngọc-sọ (boss, Skull Tithe): đỏ, to hơn — ăn là totem nổi giận. */
+function drawGem(gm) {
+  const th = disc.rot + gm.a;
+  const gr = disc.R + 13;
+  const x = disc.x + Math.cos(th) * gr;
+  const y = disc.y + Math.sin(th) * gr;
+  const pulse = 0.72 + 0.28 * Math.sin(timeMs * 0.005 + gm.a * 7);
+  const gemCol = gm.skull ? '#ff5d76' : '#52ff9d';
+  const gemFill = gm.skull ? 'rgba(255,93,118,.18)' : 'rgba(82,255,157,.16)';
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(th + Math.PI / 2);                // đỉnh ngọc hướng ra ngoài
+  ctx.beginPath();
+  const r = gm.skull ? 15 : 13;
+  for (let i = 0; i < 6; i++) {
+    const a = -Math.PI / 2 + i / 6 * Math.PI * 2;
+    const rr2 = i % 2 ? r * 0.82 : r;
+    ctx[i ? 'lineTo' : 'moveTo'](Math.cos(a) * rr2, Math.sin(a) * rr2);
+  }
+  ctx.closePath();
+  ctx.fillStyle = gemFill;
+  ctx.fill();
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = gemCol;
+  ctx.globalAlpha = .3 * pulse; ctx.lineWidth = 6; ctx.stroke();
+  ctx.globalAlpha = pulse;      ctx.lineWidth = 2.4; ctx.stroke();
+  ctx.strokeStyle = '#fff';
+  ctx.globalAlpha = .8 * pulse; ctx.lineWidth = 1;   ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, -r * 0.5); ctx.lineTo(r * 0.36, 0); ctx.lineTo(0, r * 0.5); ctx.lineTo(-r * 0.36, 0);
+  ctx.closePath();
+  ctx.strokeStyle = 'rgba(255,255,255,.4)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.restore();
+}
+
+/* ── Nền sao + hồn lửa xanh (bg-canvas, px CSS) ────────────────── */
+let bgStars = [], bgWisps = [];
+let wispSprite = null;      // sprite vẽ sẵn — không shadowBlur per-frame
+
+function makeWispSprite() {
+  wispSprite = document.createElement('canvas');
+  wispSprite.width = 32; wispSprite.height = 32;
+  const c = wispSprite.getContext('2d');
+  const g = c.createRadialGradient(16, 16, 0, 16, 16, 16);
+  g.addColorStop(0, 'rgba(140,255,190,.9)');
+  g.addColorStop(0.35, 'rgba(60,220,140,.45)');
+  g.addColorStop(1, 'rgba(40,200,120,0)');
+  c.fillStyle = g;
+  c.fillRect(0, 0, 32, 32);
+}
+
+function initBgItems() {
+  if (!wispSprite) makeWispSprite();
+  const W = window.innerWidth, H = window.innerHeight;
+  const nStars = Math.min(90, Math.floor(W * H / 9000));
+  bgStars = Array.from({ length: nStars }, () => ({
+    x: Math.random() * W, y: Math.random() * H,
+    r: Math.random() * 1.4 + 0.3,
+    vy: Math.random() * 8 + 2,
+    op: Math.random() * 0.45 + 0.1,
+    ph: Math.random() * Math.PI * 2,
+    col: `hsl(${Math.round(150 + Math.random() * 80)},85%,78%)`,   // string tính sẵn
+  }));
+  bgWisps = Array.from({ length: 12 }, () => ({
+    x: Math.random() * W, y: Math.random() * H,
+    vy: Math.random() * 24 + 12,
+    wob: Math.random() * Math.PI * 2,
+    r: Math.random() * 2.2 + 1.2,
+  }));
+}
+
+function stepBg(dt) {
+  const W = window.innerWidth, H = window.innerHeight;
+  const s = dt / 1000;
+  bgCtx.clearRect(0, 0, W, H);
+  const tw = timeMs * 0.001;
+  for (const p of bgStars) {
+    p.y -= p.vy * s;
+    if (p.y < -4) { p.y = H + 4; p.x = Math.random() * W; }
+    bgCtx.globalAlpha = p.op * (0.65 + 0.35 * Math.sin(tw * 2 + p.ph));
+    bgCtx.fillStyle = p.col;
+    bgCtx.beginPath();
+    bgCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    bgCtx.fill();
+  }
+  for (const e of bgWisps) {
+    e.y -= e.vy * s;
+    e.wob += s * 2.2;
+    e.x += Math.sin(e.wob) * 14 * s;
+    if (e.y < -6) { e.y = H + 6; e.x = Math.random() * W; }
+    bgCtx.globalAlpha = 0.3 + 0.2 * Math.sin(e.wob * 1.7);
+    const d = e.r * 7;
+    bgCtx.drawImage(wispSprite, e.x - d / 2, e.y - d / 2, d, d);
+  }
+  bgCtx.globalAlpha = 1;
+}
+/* ================================================================
+ * §8. Gameplay
+ * ================================================================ */
+function easeOutBack(k) {
+  const c = 1.70158;
+  return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2);
+}
+
+/** Cơn thịnh nộ Skull Tithe còn hiệu lực? (dọn các cơn đã hết hạn) */
+function wrathActive() {
+  if (wraths.length && timeMs >= wraths[0].end) wraths = wraths.filter(w => timeMs < w.end);
+  return wraths.some(w => timeMs >= w.start);
+}
+
+/** Độ sáng telegraph cơn thịnh nộ sắp nổ [0..1] — vẽ vignette đỏ dâng dần. */
+function wrathTele() {
+  for (const w of wraths) {
+    if (timeMs < w.start && w.start - timeMs <= 400) return 1 - (w.start - timeMs) / 400;
+  }
+  return 0;
+}
+
+/** Tắt slow-mo dao cuối (Executioner's Breath) + trả lowpass BGM về chỗ cũ. */
+function endBreath() {
+  if (!breath) return;
+  breath = false;
+  if (bgmLp && audioCtx) {
+    try { bgmLp.frequency.setTargetAtTime(1500, audioCtx.currentTime, 0.08); } catch (e) {}
+  }
+}
+
+/** Tốc độ xoay mục tiêu (rad/s) theo pattern stage — mượt hoá ở update
+ *  (không snap) để giữ tính liên tục chuyển động. */
+function patternOmega() {
+  const base = cfg.speed, dir = cfg.dir;
+  switch (cfg.pattern) {
+    case 'wobble':                       // phồng-xẹp, thi thoảng khựng nhẹ
+      return base * dir * (0.45 + 0.55 * Math.sin(Math.PI * 2 * stageT / cfg.period + cfg.phase0));
+    case 'flip':                         // đảo chiều theo nhịp
+      return base * dir * (Math.floor(stageT / cfg.flipT) % 2 === 0 ? 1 : -1);
+    case 'burst':                        // bò chậm rồi vọt nhanh
+      return base * dir * ((stageT % 1.7) < 0.95 ? 0.45 : 1.55);
+    default:
+      return base * dir;
+  }
+}
+
+/** Vào stage idx: dựng totem mới (quiet = totem trang trí cho menu). */
+function spawnStage(idx, quiet) {
+  stageIdx = Math.min(idx, 9998);        // chặn giá trị vô lý
+  cfg = stageConfig(stageIdx);
+  stuck = cfg.pre.map(a => ({ a, pre: true }));
+  gems = cfg.gems.map(a => ({ a, skull: cfg.boss }));   // boss → ngọc-sọ +8
+  knivesLeft = cfg.knives;
+  stageT = 0;
+  disc.w = cfg.speed * cfg.dir * 0.6;
+  buildDiscSprite();
+  phase = 'spawn';
+  spawnT0 = timeMs;
+  pendingBreakAt = 0;
+  flying = null;
+  /* reset state v1.1 theo stage */
+  riskyCount = 0;
+  wraths = []; lastWrathEnd = 0;
+  lastStand = null; stallRing = 0; spikesGrown = 0; overkillPending = false;
+  omenFiredAt = -1; omenGlow = 0;
+  endBreath();
+  echoLive = !quiet && !tutorial && echoS >= 1 && stageIdx === echoS && !echoBrokenRun;
+  echoDissolveT0 = 0;
+  if (!quiet) {
+    if (cfg.boss) {
+      sBoss();
+      floatTexts.push({ x: LW / 2, y: disc.y - disc.R - 46, born: timeMs, life: 1300, size: 46, color: BOSS_ACCENT, text: t('boss') });
+    } else {
+      floatTexts.push({ x: LW / 2, y: disc.y - disc.R - 46, born: timeMs, life: 1000, size: 38, color: cfg.accent, text: t('stage') + ' ' + (stageIdx + 1) });
+    }
+  }
+  updateStageHud();
+}
+
+/** Dao chạm vành totem — nội suy rot tại đúng thời điểm chạm (sub-frame). */
+function resolveImpact(rotAt) {
+  const a = normAng(Math.PI / 2 - rotAt);
+  endBreath();                           // slow-mo dao cuối kết thúc ĐÚNG khoảnh khắc chạm
+
+  /* ngọc hồn: dao xuyên qua ngọc rồi vẫn cắm vào totem. Ngọc-sọ (boss) +8
+     nhưng chọc thủng là totem NỔI GIẬN — vọt tốc 0.5s sau telegraph 0.4s */
+  for (let i = gems.length - 1; i >= 0; i--) {
+    if (angDiff(a, gems[i].a) < GEM_ARC) {
+      const gm = gems[i];
+      const th = disc.rot + gm.a;
+      const gx = disc.x + Math.cos(th) * (disc.R + 13);
+      const gy = disc.y + Math.sin(th) * (disc.R + 13);
+      const val = gm.skull ? 8 : GEM_SCORE;
+      gems.splice(i, 1);
+      if (gm.skull) {
+        sShriek();
+        const start = Math.max(timeMs + 400, lastWrathEnd);
+        wraths.push({ start, end: start + 500 });
+        lastWrathEnd = start + 500;
+        wrathDir = disc.w >= 0 ? 1 : -1;
+      } else {
+        sGem();
+      }
+      if (!tutorial) {
+        addScore(val);
+        floatTexts.push({ x: gx, y: gy - 16, born: timeMs, life: 800, size: 30, color: gm.skull ? '#ff5d76' : '#52ff9d', text: '+' + val });
+      }
+      for (let s2 = 0; s2 < 6; s2++) sparks.push({ x: gx, y: gy, born: timeMs });
+      rings.push({ x: gx, y: gy, born: timeMs, col: gm.skull ? '#ff5d76' : '#52ff9d' });
+    }
+  }
+
+  /* dao gần nhất HAI PHÍA (cho Needle) — bỏ qua gai xương đang mọc (vô hại) */
+  let dCW = Infinity, dCCW = Infinity, killerA = 0, nearest = Infinity;
+  for (const k of stuck) {
+    if (k.grow0 && timeMs - k.grow0 < 600) continue;
+    const d = normAng(k.a - a);
+    if (d > Math.PI) { if (Math.PI * 2 - d < dCCW) dCCW = Math.PI * 2 - d; }
+    else { if (d < dCW) dCW = d; }
+    const ad = angDiff(a, k.a);
+    if (ad < nearest) { nearest = ad; killerA = k.a; }
+  }
+  if (nearest < KNIFE_GAP) {
+    if (tutorial) { tutorialBounce(); return; }
+    clashDeath(killerA, nearest);
+    return;
+  }
+
+  /* cắm ngọt */
+  stuck.push({ a, pre: false });
+  stagePulseT0 = timeMs;
+  flying = null;
+  knivesLeft--;
+  sStick();
+  shakeAmp = Math.max(shakeAmp, 3.5);
+  if (!tutorial) {
+    /* thang thưởng liều: Needle (lọt giữa 2 dao) > Razor (sát lưỡi) > Close */
+    let gain = 1, tag = null;
+    if (dCW < 0.30 && dCCW < 0.30) {
+      gain += 6; tag = t('needle'); riskyCount++; sNeedle();
+    } else if (nearest < 0.135) {
+      gain += 4; tag = t('razor'); riskyCount++; sRazor();
+    } else if (nearest < NEAR_MISS) {
+      gain += 2; tag = t('closeCall'); riskyCount++; sClose();
+    }
+    if (tag) {
+      floatTexts.push({ x: LW / 2, y: disc.y + disc.R + 58, born: timeMs, life: 800, size: tag === t('needle') ? 30 : 24, color: '#ffd23f', text: tag });
+    }
+    addScore(gain);
+    floatTexts.push({ x: LW / 2, y: disc.y + disc.R + 30, born: timeMs, life: 750, size: 28, color: '#fff', text: '+' + gain });
+
+    /* Echo Wraith: vượt qua đúng chỗ run best đã gục → bóng vọng tan */
+    if (echoLive && (cfg.knives - knivesLeft) >= echoK + 1) {
+      echoLive = false;
+      echoBrokenRun = true;
+      echoDissolveT0 = timeMs;
+      addScore(5);
+      sEcho();
+      floatTexts.push({ x: disc.x + disc.R + 40, y: disc.y - disc.R * 0.35, born: timeMs, life: 1000, size: 26, color: '#b8ffd9', text: t('echoBroken') + ' +5' });
+    }
+
+    if (knivesLeft <= 0) {
+      /* Last Stand: kết liễu boss trong pha NHANH của cú giãy chết → OVERKILL */
+      if (lastStand && lastStand.mult > 1) overkillPending = true;
+      pendingBreakAt = timeMs + 140;     // để dao cuối kịp hiện rồi mới vỡ
+    }
+  } else {
+    tutorialOnStick();
+  }
+}
+
+/** Trúng dao đã cắm → thua: kill-cam soi thủ phạm, dao văng, popup sau 0.7s. */
+function clashDeath(killerA, nearest) {
+  sClash();
+  flash = 1;
+  shakeAmp = 16;
+  /* kill-cam "The Culprit": slow-mo 8% trong 560ms THẬT, zoom vào điểm va
+     chạm, dao thủ phạm phát sáng đỏ + "hụt N°" — chết phải hiểu vì sao */
+  killCam = {
+    until: realMs + 560,
+    zoomStart: realMs,
+    x: LW / 2, y: disc.y + disc.R,
+    killerA: killerA,
+    missDeg: Math.max(1, Math.ceil((KNIFE_GAP - nearest) * 180 / Math.PI)),
+  };
+  deadKnife = {
+    x: LW / 2, y: flying ? flying.y : knifeIdleY,
+    vx: (Math.random() < 0.5 ? -1 : 1) * (0.15 + Math.random() * 0.12),
+    vy: -0.55, rot: 0,
+    vr: (Math.random() < 0.5 ? -1 : 1) * 0.013,
+  };
+  flying = null;
+  endRun();
+}
+
+function endRun() {
+  state = 'over';
+  runsEnded++;
+  /* Echo Wraith: run này lập kỷ lục mới → ghi lại đúng chỗ nó gục ngã
+     (stage nào, đã cắm mấy dao) làm bóng vọng cho các run sau */
+  if (score > bestStart && stageIdx >= 1 && cfg) {
+    echoS = stageIdx;
+    echoK = cfg.knives - knivesLeft;
+  }
+  persistSaved();                        // best đã persist live trong addScore — chốt lại lần cuối
+
+  const isNew = score > bestStart;
+  $('ov-title').textContent = isNew ? t('newBest') : t('gameOver');
+  $('ov-score').textContent = String(score);
+  $('ov-best').textContent = String(best);
+  fitScores();
+  updateBestHud();                       // HUD Best chỉ refresh khi hết màn (game-common §1.2)
+
+  sendMessage('game_result');            // không level: result=null, showModal=false
+  if (runsEnded % ADS_EVERY === 0) sendMessage('ads');
+
+  /* delay cho animation thua chạy rồi mới hiện popup (popup-common §5).
+     Guard state: native có thể gọi onRetryLevel trong cửa sổ này */
+  clearTimeout(overTimer);
+  overTimer = setTimeout(() => {
+    if (state === 'over') $('overlay').classList.remove('hidden');
+  }, 700);
+}
+
+/** Totem vỡ: mảnh đá + dao văng thừa hưởng vận tốc xoay (không snap). */
+function breakDisc() {
+  phase = 'break';
+  breakT0 = timeMs;
+  sShatter();
+  shakeAmp = Math.max(shakeAmp, 9);
+  rings.push({ x: disc.x, y: disc.y, born: timeMs, col: cfg.accent });
+
+  const N = 9, arc = Math.PI * 2 / N;
+  const tang = disc.w * disc.R / 1000;   // vận tốc tiếp tuyến tại vành (px/ms)
+  for (let i = 0; i < N; i++) {
+    const mid = disc.rot + (i + 0.5) * arc;
+    const sp = 0.13 + Math.random() * 0.12;
+    shards.push({
+      x: disc.x, y: disc.y,
+      vx: Math.cos(mid) * sp - Math.sin(mid) * tang * 0.6,
+      vy: Math.sin(mid) * sp + Math.cos(mid) * tang * 0.6 - 0.1,
+      rot: disc.rot, vr: disc.w / 1000 + (Math.random() - 0.5) * 0.006,
+      a0: i * arc, a1: (i + 1) * arc,
+      born: timeMs, col: cfg.accent, R: disc.R * 0.94,
+    });
+  }
+  for (const k of stuck) {
+    const th = disc.rot + k.a;
+    const cd = disc.R - EMBED + KNIFE_TIP;
+    debris.push({
+      x: disc.x + Math.cos(th) * cd, y: disc.y + Math.sin(th) * cd,
+      vx: Math.cos(th) * 0.18 - Math.sin(th) * tang,
+      vy: Math.sin(th) * 0.18 + Math.cos(th) * tang - 0.12,
+      rot: th - Math.PI / 2, vr: disc.w / 1000 + (Math.random() - 0.5) * 0.01,
+      born: timeMs, spr: k.pre ? preKnifeSpr : knifeSpr,
+    });
+  }
+  for (const gm of gems) {
+    const th = disc.rot + gm.a;
+    const gx = disc.x + Math.cos(th) * (disc.R + 13), gy = disc.y + Math.sin(th) * (disc.R + 13);
+    for (let s2 = 0; s2 < 4; s2++) sparks.push({ x: gx, y: gy, born: timeMs });
+  }
+  stuck = [];
+  gems = [];
+
+  if (!tutorial) {
+    /* Unblemished Shatter: thưởng vỡ totem cộng dồn theo số cú liều trong
+       stage; boss kết liễu trong pha nhanh (Last Stand) → OVERKILL gấp đôi */
+    const base = cfg.boss ? (overkillPending ? BOSS_BONUS * 2 : BOSS_BONUS) : STAGE_BONUS;
+    const cap = cfg.boss ? (overkillPending ? 30 : 25) : 10;
+    const b = Math.min(cap, base + (cfg.boss ? 3 : 2) * riskyCount);
+    if (overkillPending) {
+      sOverkill();
+      floatTexts.push({ x: LW / 2, y: disc.y - 52, born: timeMs, life: 1300, size: 44, color: '#ff5d76', text: t('overkill') });
+    }
+    addScore(b);
+    floatTexts.push({ x: LW / 2, y: disc.y, born: timeMs, life: 1100, size: 36, color: riskyCount > 0 ? '#ffd23f' : cfg.accent, text: t('stageClear') + '  +' + b });
+    /* Deepest Descent: phá sâu hơn mọi run trước → +5 mốc mới */
+    if (stageIdx > deep) {
+      deep = stageIdx;
+      addScore(5);
+      floatTexts.push({ x: LW / 2, y: disc.y + 46, born: timeMs, life: 1200, size: 26, color: '#52ff9d', text: t('uncharted') + ' +5' });
+      persistSaved();
+      updateMenuDeepest();
+    }
+  } else {
+    tutorial.stage = 'done';
+    tutorial.doneUntil = timeMs + 1500;
+    setTutText(t('tutDone'));
+    sTutOk();
+  }
+  lastStand = null;
+  overkillPending = false;
+}
+
+function addScore(n) {
+  score += n;
+  updateScoreHud();
+  if (score > best) {                    // best persist NGAY khi đổi (game-common §1.2)
+    best = score;
+    persistSaved();
+  }
+}
+
+/** Ván mới (Play / Play Again / onRetryLevel). */
+function newRun() {
+  clearTimeout(overTimer);               // hủy popup đang chờ hiện của ván trước
+  closeInfo();                           // không để run mới chạy dưới panel how-to
+  $('overlay').classList.add('hidden');
+  $('menu').classList.add('hidden');
+  menuOpen = false;
+  tutorial = null;
+  hideTutBanner();
+  score = 0;
+  bestStart = best;
+  shards = []; debris = []; floatTexts = []; rings = []; sparks = [];
+  deadKnife = null; flash = 0; shakeAmp = 0;
+  killCam = null; timeScale = 1; endBreath();
+  echoBrokenRun = false;                 // bóng vọng sống lại mỗi run mới
+  updateScoreHud();
+  updateBestHud();
+  state = 'playing';
+  paused = false;
+  spawnStage(0, false);
+}
+
+function toMenu() {
+  clearTimeout(overTimer);
+  $('overlay').classList.add('hidden');
+  tutorial = null;
+  hideTutBanner();
+  killCam = null; timeScale = 1; endBreath();
+  state = 'ready';
+  openMenu();
+}
+
+function openMenu() {
+  menuOpen = true;
+  $('menu').classList.remove('hidden');
+  updateMenuDeepest();
+  // totem trang trí xoay sau lớp menu mờ (phase 'break' = totem vừa vỡ → dựng lại)
+  if (!cfg || phase === 'break') spawnStage(0, true);
+}
+
+/* ================================================================
+ * §9. Tutorial — 3 bước tương tác, KHÔNG thể thua (như hamster-jump)
+ * ================================================================ */
+const TUT_CFGS = [
+  { knives: 2, speed: 0.9, dir: 1,  pre: [],               gems: [] },          // tut1: phóng dao
+  { knives: 3, speed: 1.1, dir: -1, pre: [-1.2, 0.4, 2.2], gems: [] },          // tut2: né dao cắm
+  { knives: 3, speed: 1.2, dir: 1,  pre: [2.6],            gems: [0.9] },       // tut3: phá totem
+];
+
+function tutCfg(i) {
+  const c = TUT_CFGS[i];
+  return {
+    boss: false, knives: c.knives, speed: c.speed, dir: c.dir, pattern: 'steady',
+    period: 2, flipT: 2, phase0: 0,
+    pre: c.pre.map(normAng), gems: c.gems.map(normAng),
+    accent: '#35e0ff', sigil: i % 5,
+  };
+}
+
+function startTutorial(fromMenu) {
+  tutFromMenu = fromMenu;
+  closeInfo();
+  $('menu').classList.add('hidden');
+  menuOpen = false;
+  clearTimeout(overTimer);
+  $('overlay').classList.add('hidden');
+  shards = []; debris = []; floatTexts = []; rings = []; sparks = [];
+  deadKnife = null; flash = 0; shakeAmp = 0;
+  killCam = null; timeScale = 1; endBreath();
+  score = 0;
+  bestStart = best;
+  updateScoreHud();
+  state = 'playing';
+  paused = false;
+  tutorial = { step: 0, stage: 'play', doneUntil: 0, retryUntil: 0 };
+  loadTutStep(0);
+}
+
+function loadTutStep(i) {
+  tutorial.step = i;
+  tutorial.stage = 'play';
+  cfg = tutCfg(i);
+  stuck = cfg.pre.map(a => ({ a, pre: true }));
+  gems = cfg.gems.map(a => ({ a }));
+  knivesLeft = cfg.knives;
+  stageT = 0;
+  disc.w = cfg.speed * cfg.dir * 0.6;
+  buildDiscSprite();
+  phase = 'spawn';
+  spawnT0 = timeMs;
+  pendingBreakAt = 0;
+  flying = null;
+  riskyCount = 0;
+  wraths = []; lastWrathEnd = 0;
+  lastStand = null; stallRing = 0; spikesGrown = 0; overkillPending = false;
+  omenFiredAt = -1; omenGlow = 0;
+  echoLive = false;
+  setTutText(t(['tut1', 'tut2', 'tut3'][i]));
+  $('tut-banner').classList.remove('hidden');
+  updateStageHud();
+}
+
+function tutorialOnStick() {
+  if (knivesLeft > 0) return;
+  if (tutorial.step < 2) loadTutStep(tutorial.step + 1);
+  else pendingBreakAt = timeMs + 140;
+}
+
+/** Trong tutorial va dao KHÔNG thua — dao nảy ra, nhắc thử lại, không tốn dao. */
+function tutorialBounce() {
+  sClose();
+  flash = 0.35;
+  shakeAmp = 6;
+  debris.push({
+    x: LW / 2, y: flying ? flying.y : knifeIdleY,
+    vx: (Math.random() < 0.5 ? -1 : 1) * 0.12, vy: -0.4,
+    rot: 0, vr: 0.015, born: timeMs, spr: knifeSpr,
+  });
+  flying = null;
+  setTutText(t('tutRetry'));
+  tutorial.retryUntil = timeMs + 1400;
+}
+
+function finishTutorial() {
+  const fromMenu = tutFromMenu;
+  tutSeen = true;
+  persistSaved();
+  tutorial = null;
+  hideTutBanner();
+  if (fromMenu) { state = 'ready'; openMenu(); }
+  else newRun();
+}
+
+function setTutText(s) { $('tut-text').textContent = s; }
+function hideTutBanner() { $('tut-banner').classList.add('hidden'); }
+
+/* ================================================================
+ * §10. Update — dt tính bằng ms (đã clamp), mọi anim key theo timeMs
+ * ================================================================ */
+function update(dt) {
+  if (paused) return;                    // pause đóng băng toàn bộ thế giới
+
+  flash = Math.max(0, flash - dt / 450);
+  shakeAmp *= Math.exp(-dt / 110);
+
+  /* totem xoay — mượt hoá về tốc độ mục tiêu (giữ liên tục chuyển động) */
+  if (cfg) {
+    stageT += dt / 1000;
+    if (state === 'over') {
+      disc.w *= Math.pow(0.9992, dt);    // thua: totem chậm dần, không khựng
+    } else {
+      let target = state === 'ready' ? 0.6 * (cfg.dir || 1) : patternOmega();
+      if (state === 'playing' && !tutorial) {
+        /* Last Stand: boss dao cuối — sau 800ms telegraph, totem giãy chết
+           (dao động 0.25×→1.35×); ưu tiên trên mọi pattern/wrath */
+        if (lastStand && timeMs >= lastStand.t0 + 800) {
+          const lsT = (timeMs - lastStand.t0 - 800) / 1000;
+          lastStand.mult = 0.8 + 0.55 * Math.sin(Math.PI * 2 * lsT / 1.1);
+          target = cfg.speed * cfg.dir * lastStand.mult;
+        } else if (wrathActive()) {
+          /* Skull Tithe: cơn thịnh nộ — vọt tốc theo MỘT chiều cố định
+             (đè pattern để flip không cộng dồn thành spike vô lý) */
+          target = cfg.speed * wrathDir * 1.6;
+        }
+      }
+      const k = 1 - Math.pow(0.82, dt / 16.667);
+      disc.w += (target - disc.w) * k;
+    }
+    prevRot = disc.rot;
+    disc.rot += disc.w * dt / 1000;
+  }
+
+  /* Last Stand: kích hoạt khi boss còn đúng 1 dao */
+  if (state === 'playing' && !tutorial && cfg && cfg.boss && phase === 'aim' &&
+      knivesLeft === 1 && !lastStand) {
+    lastStand = { t0: timeMs, mult: 1 };
+    sLastStand();
+  }
+
+  /* Anti-stall Last Stand: rình pha chậm mãi → gai xương mọc dần (max 2).
+     Vòng chỉ chạy khi KHÔNG có dao đang bay (không tick oan giữa cú ném). */
+  if (lastStand && state === 'playing' && phase === 'aim' && !flying) {
+    stallRing += dt / 6000;
+    if (stallRing >= 1 && spikesGrown < 2) {
+      stallRing = 0;
+      for (let tr = 0; tr < 40; tr++) {
+        const a = hash01(stageIdx, 300 + spikesGrown * 40 + tr) * Math.PI * 2;
+        const okS = stuck.every(k => angDiff(a, k.a) >= 0.25);
+        const okG = gems.every(g => angDiff(a, g.a) >= 0.3);
+        if (okS && okG) {
+          stuck.push({ a, pre: true, grow0: timeMs });
+          spikesGrown++;
+          sSpike();
+          break;
+        }
+      }
+    }
+  }
+
+  /* Omen Flick: 120ms trước khi flip đảo chiều / burst vọt tốc — sigil lóe
+     + riser. Cố ý QUÁ NGẮN để phản ứng (dao bay ~120ms): kịch tính chứ
+     không phải aim-assist. */
+  omenGlow = 0;
+  if (state === 'playing' && !tutorial && phase === 'aim' && cfg &&
+      !lastStand && !wrathActive()) {
+    let dtE = -1, evIdx = -1;
+    if (cfg.pattern === 'flip') {
+      evIdx = Math.floor(stageT / cfg.flipT) + 1;
+      dtE = evIdx * cfg.flipT - stageT;
+    } else if (cfg.pattern === 'burst') {
+      const pos = stageT % 1.7;
+      dtE = pos < 0.95 ? 0.95 - pos : 1.7 - pos + 0.95;
+      evIdx = Math.floor((stageT + dtE) / 1.7) * 2 + 1;
+    }
+    if (dtE >= 0 && dtE <= 0.12) {
+      omenGlow = 1 - dtE / 0.12;
+      if (omenFiredAt !== evIdx) { omenFiredAt = evIdx; sOmen(); }
+    }
+  }
+
+  /* Breath an toàn: dao không còn bay mà slow-mo chưa tắt → tắt */
+  if (breath && !flying) endBreath();
+
+  /* pha spawn → aim */
+  if (phase === 'spawn' && timeMs - spawnT0 >= SPAWN_MS) phase = 'aim';
+
+  /* pha break → stage kế (tutorial thì đứng chờ tutDone) */
+  if (phase === 'break' && timeMs - breakT0 >= BREAK_MS && !tutorial && state === 'playing') {
+    spawnStage(stageIdx + 1, false);
+  }
+
+  /* dao cuối vừa cắm → vỡ totem */
+  if (phase === 'aim' && pendingBreakAt && timeMs >= pendingBreakAt) {
+    pendingBreakAt = 0;
+    breakDisc();
+  }
+
+  /* tutorial: khôi phục banner sau nhắc "thử lại" / kết thúc sau tutDone */
+  if (tutorial) {
+    if (tutorial.retryUntil && timeMs >= tutorial.retryUntil) {
+      tutorial.retryUntil = 0;
+      setTutText(t(['tut1', 'tut2', 'tut3'][tutorial.step]));
+    }
+    if (tutorial.stage === 'done' && timeMs >= tutorial.doneUntil) {
+      finishTutorial();
+      return;
+    }
+  }
+
+  /* dao đang bay — dò chạm vành bằng nội suy sub-frame */
+  if (flying && state === 'playing') {
+    const prevTip = flying.y - KNIFE_TIP;
+    flying.y -= THROW_V * dt;
+    const tipY = flying.y - KNIFE_TIP;
+    const rimY = disc.y + disc.R;
+    if (phase === 'aim' && tipY <= rimY) {
+      if (prevTip > rimY) {
+        const f = (prevTip - tipY) > 0 ? (prevTip - rimY) / (prevTip - tipY) : 1;
+        resolveImpact(prevRot + (disc.rot - prevRot) * f);
+      } else {
+        // resize/xoay máy giữa lúc dao bay dịch vành qua mũi dao → xử lý ngay
+        resolveImpact(disc.rot);
+      }
+    } else if (flying && flying.y < -KNIFE_LEN) {
+      flying = null;                     // phòng vệ — không bao giờ nên xảy ra
+    }
+  }
+
+  /* vật lý mảnh vỡ / dao văng / dao chết (px/ms, trọng lực nhẹ) */
+  const G = 0.0022;
+  for (const s of shards) {
+    s.x += s.vx * dt; s.y += s.vy * dt; s.vy += G * dt; s.rot += s.vr * dt;
+  }
+  shards = shards.filter(s => timeMs - s.born < 1100);
+  for (const d of debris) {
+    d.x += d.vx * dt; d.y += d.vy * dt; d.vy += G * dt; d.rot += d.vr * dt;
+  }
+  debris = debris.filter(d => d.y < LH + 200 && timeMs - d.born < 2500);
+  if (deadKnife) {
+    deadKnife.x += deadKnife.vx * dt;
+    deadKnife.y += deadKnife.vy * dt;
+    deadKnife.vy += G * dt;
+    deadKnife.rot += deadKnife.vr * dt;
+    if (deadKnife.y > LH + 200) deadKnife = null;
+  }
+
+  floatTexts = floatTexts.filter(f => timeMs - f.born < (f.life || 800));
+  rings = rings.filter(r => timeMs - r.born < 450);
+  sparks = sparks.filter(s => timeMs - s.born < 500);
+}
+
+/* ================================================================
+ * §11. Render
+ * ================================================================ */
+function render() {
+  ctx.clearRect(0, 0, LW + 2, LH + 2);
+  ctx.save();
+  if (shakeAmp > 0.3) {
+    ctx.translate(Math.sin(timeMs * 0.09) * shakeAmp, Math.cos(timeMs * 0.11) * shakeAmp * 0.7);
+  }
+  /* kill-cam: nghiêng camera vào điểm va chạm (zoom 1→1.35, đo bằng giờ THẬT) */
+  if (killCam) {
+    const zp = Math.min(1, (realMs - killCam.zoomStart) / 240);
+    const z = 1 + 0.35 * (1 - Math.pow(1 - zp, 3));
+    ctx.translate(killCam.x, killCam.y);
+    ctx.scale(z, z);
+    ctx.translate(-killCam.x, -killCam.y);
+  }
+
+  /* mảnh totem vỡ */
+  for (const s of shards) {
+    const p = (timeMs - s.born) / 1100;
+    ctx.save();
+    ctx.translate(s.x, s.y);
+    ctx.rotate(s.rot);
+    ctx.globalAlpha = 1 - p;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, s.R, s.a0, s.a1);
+    ctx.closePath();
+    ctx.fillStyle = '#101624';
+    ctx.fill();
+    ctx.strokeStyle = s.col;
+    ctx.globalAlpha = (1 - p) * 0.5;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+
+  /* dao văng (debris) */
+  for (const d of debris) drawKnife(d.spr, d.x, d.y, d.rot, 1, Math.min(1, 2.5 - (timeMs - d.born) / 1000));
+
+  /* totem + dao cắm + ngọc */
+  if (cfg && phase !== 'break') {
+    let sc = 1;
+    if (phase === 'spawn') sc = easeOutBack(Math.min(1, (timeMs - spawnT0) / SPAWN_MS));
+    const pp = (timeMs - stagePulseT0) / 180;
+    if (pp >= 0 && pp < 1) sc *= 1 + 0.03 * Math.sin(pp * Math.PI);   // nhún khi dao cắm
+
+    ctx.save();
+    ctx.translate(disc.x, disc.y);
+    ctx.scale(sc, sc);
+    ctx.rotate(disc.rot);
+    const d2 = disc.spriteR * 2;
+    ctx.drawImage(disc.sprite, -disc.spriteR, -disc.spriteR, d2, d2);
+    ctx.restore();
+
+    /* Omen Flick: vòng accent lóe 120ms trước khi pattern trở mặt */
+    if (omenGlow > 0) {
+      ctx.beginPath();
+      ctx.arc(disc.x, disc.y, (disc.R - 20) * sc, 0, Math.PI * 2);
+      ctx.strokeStyle = cfg.accent;
+      ctx.globalAlpha = omenGlow * 0.6;
+      ctx.lineWidth = 6;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    /* Last Stand: telegraph strobe 800ms + vòng anti-stall đỏ dâng dần */
+    if (lastStand && state === 'playing') {
+      const tele = timeMs - lastStand.t0;
+      if (tele < 800) {
+        ctx.beginPath();
+        ctx.arc(disc.x, disc.y, (disc.R + 8) * sc, 0, Math.PI * 2);
+        ctx.strokeStyle = BOSS_ACCENT;
+        ctx.globalAlpha = 0.25 + 0.35 * Math.abs(Math.sin(tele * 0.025));
+        ctx.lineWidth = 5;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+      if (stallRing > 0.02 && spikesGrown < 2) {
+        ctx.beginPath();
+        ctx.arc(disc.x, disc.y, (disc.R + 22) * sc, -Math.PI / 2, -Math.PI / 2 + stallRing * Math.PI * 2);
+        ctx.strokeStyle = '#ff3d5a';
+        ctx.globalAlpha = 0.5;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    for (const gm of gems) drawGemScaled(gm, sc);
+    for (const k of stuck) {
+      const th = disc.rot + k.a;
+      /* gai xương Last Stand mọc dần 600ms (vô hại khi chưa mọc xong) */
+      const gk = k.grow0 ? Math.min(1, (timeMs - k.grow0) / 600) : 1;
+      const cd = (disc.R - EMBED * gk + KNIFE_TIP * gk) * sc;
+      drawKnife(k.pre ? preKnifeSpr : knifeSpr,
+        disc.x + Math.cos(th) * cd, disc.y + Math.sin(th) * cd, th - Math.PI / 2, sc * gk, gk < 1 ? 0.4 + 0.6 * gk : 1);
+    }
+
+    /* kill-cam: soi dao thủ phạm — sprite đỏ pulse 6Hz + cung cấm ±KNIFE_GAP */
+    if (killCam) {
+      const th = disc.rot + killCam.killerA;
+      const cd = disc.R - EMBED + KNIFE_TIP;
+      const pulse = 0.5 + 0.5 * Math.sin(realMs * 0.038);
+      drawKnife(redKnifeSpr, disc.x + Math.cos(th) * cd, disc.y + Math.sin(th) * cd, th - Math.PI / 2, 1, 0.45 + 0.55 * pulse);
+      ctx.beginPath();
+      ctx.arc(disc.x, disc.y, disc.R + 6, th - KNIFE_GAP, th + KNIFE_GAP);
+      ctx.strokeStyle = '#ff3d5a';
+      ctx.globalAlpha = 0.55 + 0.35 * pulse;
+      ctx.lineWidth = 5;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    /* Echo Wraith: bóng vọng của run best lảng vảng đúng stage nó đã gục */
+    if ((echoLive || echoDissolveT0) && state === 'playing' && !tutorial) {
+      const dis = echoDissolveT0 ? Math.min(1, (timeMs - echoDissolveT0) / 600) : 0;
+      if (dis >= 1) { echoDissolveT0 = 0; }
+      else {
+        const bob = Math.sin(timeMs * 0.003) * 8;
+        const wx = disc.x + disc.R + 40;
+        const wy = disc.y - disc.R * 0.35 + bob - dis * 60;
+        const al = (0.22 + 0.12 * Math.sin(timeMs * 0.005)) * (1 - dis);
+        ctx.save();
+        ctx.translate(wx, wy);
+        ctx.scale(0.5, 0.5);
+        ctx.translate(-50, -50);
+        if (!echoSigPath) echoSigPath = new Path2D(SIGIL_D[5]);   // cache — không alloc mỗi frame
+        const sig = echoSigPath;
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.strokeStyle = '#b88cff';
+        ctx.globalAlpha = al;
+        ctx.lineWidth = 5;
+        ctx.stroke(sig);
+        ctx.strokeStyle = '#fff';
+        ctx.globalAlpha = al * 0.7;
+        ctx.lineWidth = 1.8;
+        ctx.stroke(sig);
+        ctx.restore();
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
+  /* dao chết văng xoay */
+  if (deadKnife) drawKnife(knifeSpr, deadKnife.x, deadKnife.y, deadKnife.rot, 1, 1);
+
+  /* dao đang bay / dao chờ + đạn còn lại */
+  if (state === 'playing') {
+    if (flying) {
+      drawKnife(knifeSpr, LW / 2, flying.y, 0, 1, 1);
+    } else if (phase === 'aim' && knivesLeft > 0 && !paused) {
+      const bob = Math.sin(timeMs * 0.004) * 6;
+      drawKnife(knifeSpr, LW / 2, knifeIdleY + bob, 0, 1, 1);
+      if (tutorial && tutorial.step === 0 && tutorial.stage === 'play') {
+        ctx.textAlign = 'center';
+        ctx.globalAlpha = 0.55 + 0.45 * Math.sin(timeMs * 0.008);
+        ctx.fillStyle = '#fff';
+        ctx.font = '800 30px ' + CANVAS_FONT_STACK;
+        ctx.fillText(t('tapCue'), LW / 2 + 96, knifeIdleY + 8);
+        ctx.globalAlpha = 1;
+      }
+    }
+    drawPips();
+  }
+
+  drawFx();
+  ctx.restore();
+
+  /* Executioner's Breath: màn tối nhẹ khi thế giới nín thở */
+  if (timeScale < 0.95 && breath) {
+    ctx.fillStyle = 'rgba(3,6,14,' + ((1 - timeScale) * 0.3).toFixed(3) + ')';
+    ctx.fillRect(0, 0, LW, LH);
+  }
+
+  /* Skull Tithe: vignette đỏ dâng dần 400ms trước cơn thịnh nộ */
+  const wt = (state === 'playing' && !paused) ? wrathTele() : 0;
+  if (wt > 0) {
+    ctx.fillStyle = 'rgba(255,60,60,' + (wt * 0.1).toFixed(3) + ')';
+    ctx.fillRect(0, 0, LW, LH);
+  }
+
+  /* flash đỏ khi chết */
+  if (flash > 0) {
+    ctx.fillStyle = 'rgba(255,45,80,' + (flash * 0.3).toFixed(3) + ')';
+    ctx.fillRect(0, 0, LW, LH);
+  }
+
+  /* kill-cam: "hụt N°" — vẽ screen-space cho nét (không dính zoom/slow-mo) */
+  if (killCam) {
+    const ka = Math.min(1, (realMs - killCam.zoomStart) / 160);
+    ctx.textAlign = 'center';
+    ctx.font = '800 30px ' + CANVAS_FONT_STACK;
+    ctx.globalAlpha = ka;
+    ctx.strokeStyle = 'rgba(5,10,20,.85)';
+    ctx.lineWidth = 5;
+    const txt = t('missedBy').replace('{n}', killCam.missDeg);
+    ctx.strokeText(txt, LW / 2, disc.y + disc.R + 78);
+    ctx.fillStyle = '#ff6b81';
+    ctx.fillText(txt, LW / 2, disc.y + disc.R + 78);
+    ctx.globalAlpha = 1;
+  }
+
+  /* màn mờ khi pause */
+  if (paused && state === 'playing') {
+    ctx.fillStyle = 'rgba(6,10,20,.5)';
+    ctx.fillRect(0, 0, LW, LH);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff';
+    ctx.font = '700 32px ' + CANVAS_FONT_STACK;
+    ctx.fillText(t('tapToResume'), LW / 2, LH / 2);
+  }
+}
+
+/** Ngọc hồn có scale spawn (bám theo totem đang phóng to). */
+function drawGemScaled(gm, sc) {
+  if (sc === 1) { drawGem(gm); return; }
+  ctx.save();
+  ctx.translate(disc.x, disc.y);
+  ctx.scale(sc, sc);
+  ctx.translate(-disc.x, -disc.y);
+  drawGem(gm);
+  ctx.restore();
+}
+
+/** Cột dao còn lại (đạn) — mờ dần khi đã dùng. */
+function drawPips() {
+  if (!cfg) return;
+  const total = Math.min(cfg.knives, 12);
+  const x = Math.max(28, LW / 2 - 320);
+  const y0 = LH - 64;
+  for (let i = 0; i < total; i++) {
+    drawKnife(knifeSpr, x, y0 - i * 30, 0, 0.3, i < knivesLeft ? 0.95 : 0.16);
+  }
+}
+
+function drawFx() {
+  const now = timeMs;
+  for (const r of rings) {
+    const p = (now - r.born) / 450;
+    if (p >= 1) continue;
+    ctx.globalAlpha = 1 - p;
+    ctx.strokeStyle = r.col || '#fff';
+    ctx.lineWidth = 4 * (1 - p);
+    ctx.beginPath();
+    ctx.arc(r.x, r.y, 22 + p * 70, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  for (const s of sparks) {
+    const p = (now - s.born) / 500;
+    if (p >= 1) continue;
+    ctx.globalAlpha = 1 - p;
+    ctx.fillStyle = '#b8ffd9';
+    ctx.save();
+    ctx.translate(s.x + Math.sin(s.born + s.x) * p * 26, s.y - p * 34);
+    ctx.rotate(p * 1.5);
+    const r2 = 7 * (1 - p * 0.5);
+    ctx.fillRect(-r2, -1.4, r2 * 2, 2.8);
+    ctx.fillRect(-1.4, -r2, 2.8, r2 * 2);
+    ctx.restore();
+  }
+  ctx.textAlign = 'center';
+  for (const f of floatTexts) {
+    const p = (now - f.born) / (f.life || 800);
+    if (p >= 1) continue;
+    ctx.globalAlpha = 1 - p;
+    ctx.font = '800 ' + (f.size || 30) + 'px ' + CANVAS_FONT_STACK;
+    ctx.fillStyle = f.color || '#fff';
+    ctx.strokeStyle = 'rgba(5,10,20,.8)';
+    ctx.lineWidth = 5;
+    const y = f.y - p * 46;
+    ctx.strokeText(f.text, f.x, y);
+    ctx.fillText(f.text, f.x, y);
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* ================================================================
+ * §12. Vòng lặp chính — timeMs đóng băng khi pause (như hamster-jump)
+ * ================================================================ */
+function loop(ts) {
+  if (!lastTs) lastTs = ts;
+  let rawDt = ts - lastTs;
+  lastTs = ts;
+  if (rawDt > 100) rawDt = 100;          // tab ngủ / khựng dài → kẹp lại
+  if (rawDt < 0) rawDt = 0;
+  realMs += rawDt;                       // đồng hồ THẬT — kill-cam/breath đo bằng cái này
+
+  /* timeScale: kill-cam snap 8%; breath lịm về 35% trong ~60ms; hết → về 1.
+     Nhân vào dt ở MỘT chỗ duy nhất — totem, dao, timer, particle cùng chậm
+     đồng bộ (slow-mo thuần kịch tính, KHÔNG đổi kết quả cú ném). */
+  if (killCam) {
+    if (realMs >= killCam.until) { killCam = null; timeScale = 1; }
+    else timeScale = 0.08;
+  } else {
+    const targetTs = breath ? 0.35 : 1;
+    timeScale += (targetTs - timeScale) * Math.min(1, rawDt / 60);
+    if (Math.abs(timeScale - targetTs) < 0.01) timeScale = targetTs;
+  }
+  const dt = rawDt * timeScale;
+
+  if (!paused) timeMs += dt;
+  stepBg(dt);
+  update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+
+/* ================================================================
+ * §13. HUD + popup + menu + info
+ * ================================================================ */
+function updateScoreHud() { $('hud-score').textContent = String(score); }
+function updateBestHud()  { $('hud-best').textContent = String(best); }
+
+function updateStageHud() {
+  const el = $('hud-stage');
+  if (tutorial) {
+    el.textContent = t('tutorial');
+    el.classList.remove('boss');
+  } else {
+    let txt = cfg && cfg.boss ? t('boss') : t('stage') + ' ' + (stageIdx + 1);
+    if (deep >= 0 && stageIdx === deep) txt += ' ✦';   // rìa vùng đã biết (Deepest)
+    el.textContent = txt;
+    el.classList.toggle('boss', !!(cfg && cfg.boss));
+  }
+}
+
+/** Dòng "Sâu nhất · Màn N" trên menu — mặc màu accent của đúng totem đó. */
+function updateMenuDeepest() {
+  const el = $('menu-deepest');
+  if (deep >= 0) {
+    el.textContent = t('deepest') + ' · ' + t('stage') + ' ' + (deep + 1);
+    el.style.color = stageConfig(deep).accent;
+  } else {
+    el.textContent = '';
+  }
+}
+
+/* Tự co cỡ điểm cho vừa card khi điểm ≥ 6 chữ số (popup-common §5b) */
+function fitScores() {
+  var r = document.querySelector('.sb');
+  if (!r) return;
+  var card = r.closest('.card');
+  var vals = r.querySelectorAll('.v');
+  vals.forEach(function (v) { v.style.fontSize = ''; });
+  var pad = parseFloat(getComputedStyle(card).paddingLeft) || 26;
+  var max = card.clientWidth - 2 * pad;
+  var fz = parseFloat(getComputedStyle(vals[0]).fontSize) || 32;
+  while (r.scrollWidth > max && fz > 14) {
+    fz -= 1;
+    vals.forEach(function (v) { v.style.fontSize = fz + 'px'; });
+  }
+}
+
+function openInfo()  { infoOpen = true;  $('info-overlay').classList.remove('hidden'); }
+function closeInfo() { infoOpen = false; $('info-overlay').classList.add('hidden'); }
+
+/** Icon how-to-play vẽ bằng chính renderer của game — art luôn khớp. */
+function buildInfoIcons() {
+  const icon = (id, draw) => {
+    const cv = $(id), c = cv.getContext('2d');
+    c.setTransform(2, 0, 0, 2, 0, 0);            // canvas 112 thật / 56 CSS
+    c.clearRect(0, 0, 56, 56);
+    draw(c);
+  };
+  const miniKnife = (c, x, y, rot, s, spr) => {
+    c.save();
+    c.translate(x, y);
+    c.rotate(rot);
+    c.drawImage(spr || knifeSpr, -KNIFE_SPR_W * s / 2, -KNIFE_SPR_H * s / 2, KNIFE_SPR_W * s, KNIFE_SPR_H * s);
+    c.restore();
+  };
+  const miniDisc = (c, x, y, r, accent, sigil) => {
+    const g = c.createRadialGradient(x, y - r * .3, r * .1, x, y, r);
+    g.addColorStop(0, '#1c2434'); g.addColorStop(1, '#07090f');
+    c.fillStyle = g;
+    c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = accent; c.globalAlpha = .8; c.lineWidth = 1.6;
+    c.beginPath(); c.arc(x, y, r - 1, 0, Math.PI * 2); c.stroke();
+    c.globalAlpha = 1;
+    const sig = new Path2D(SIGIL_D[sigil]);
+    c.save();
+    c.translate(x - r * .62, y - r * .62);
+    c.scale(r * 1.24 / 100, r * 1.24 / 100);
+    strokeSigil(c, sig, accent, 6);
+    c.restore();
+  };
+  icon('ico-throw', c => {
+    miniDisc(c, 28, 14, 12, '#35e0ff', 0);
+    miniKnife(c, 28, 44, 0, 0.24);
+    c.strokeStyle = '#fff'; c.globalAlpha = .7; c.lineWidth = 2; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(28, 33); c.lineTo(28, 27); c.stroke();
+    c.beginPath(); c.moveTo(24, 30); c.lineTo(28, 26); c.lineTo(32, 30); c.stroke();
+    c.globalAlpha = 1;
+  });
+  icon('ico-avoid', c => {
+    miniDisc(c, 28, 18, 14, '#c060ff', 1);
+    miniKnife(c, 28, 38, 0, 0.24, preKnifeSpr);
+    miniKnife(c, 33, 40, 0.3, 0.24);
+    c.strokeStyle = '#ff3d5a'; c.lineWidth = 2.4; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(40, 34); c.lineTo(50, 44); c.moveTo(50, 34); c.lineTo(40, 44); c.stroke();
+  });
+  icon('ico-gem', c => {
+    c.save();
+    c.translate(28, 28);
+    c.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = -Math.PI / 2 + i / 6 * Math.PI * 2;
+      const rr2 = i % 2 ? 13 : 16;
+      c[i ? 'lineTo' : 'moveTo'](Math.cos(a) * rr2, Math.sin(a) * rr2);
+    }
+    c.closePath();
+    c.fillStyle = 'rgba(82,255,157,.16)'; c.fill();
+    c.lineJoin = 'round';
+    c.strokeStyle = '#52ff9d'; c.globalAlpha = .3; c.lineWidth = 6; c.stroke();
+    c.globalAlpha = 1; c.lineWidth = 2.4; c.stroke();
+    c.strokeStyle = '#fff'; c.globalAlpha = .8; c.lineWidth = 1; c.stroke();
+    c.globalAlpha = 1;
+    c.fillStyle = '#fff';
+    c.font = '800 11px system-ui';
+    c.textAlign = 'center';
+    c.fillText('+5', 0, 4);
+    c.restore();
+  });
+  icon('ico-break', c => {
+    const cx = 28, cy = 28;
+    for (let i = 0; i < 5; i++) {
+      const a0 = i / 5 * Math.PI * 2, a1 = a0 + Math.PI * 2 / 5 - 0.12;
+      const mid = (a0 + a1) / 2, off = 5;
+      c.save();
+      c.translate(cx + Math.cos(mid) * off, cy + Math.sin(mid) * off);
+      c.beginPath();
+      c.moveTo(0, 0);
+      c.arc(0, 0, 15, a0, a1);
+      c.closePath();
+      c.fillStyle = '#101624'; c.fill();
+      c.strokeStyle = '#ffb830'; c.globalAlpha = .6; c.lineWidth = 1.6; c.stroke();
+      c.globalAlpha = 1;
+      c.restore();
+    }
+  });
+  icon('ico-boss', c => {
+    miniDisc(c, 28, 28, 20, BOSS_ACCENT, 5);
+  });
+}
+
+/** Áp toàn bộ label theo ngôn ngữ (gọi 1 lần lúc boot). */
+function updateLabels() {
+  $('menu-title').textContent = t('title');
+  $('menu-tagline').textContent = t('tagline');
+  $('menu-play-text').textContent = t('play');
+  $('menu-tut-text').textContent = t('tutorial');
+  $('hud-best-label').textContent = t('best');
+  $('ov-lbl-score').textContent = t('score');
+  $('ov-lbl-best').textContent = t('best');
+  $('ov-btn-text').textContent = t('playAgain');
+  $('ov-menu-text').textContent = t('menu');
+  $('tut-skip-text').textContent = t('skip');
+  $('info-title').textContent = t('howToPlay');
+  $('info-txt-throw').textContent = t('infoThrow');
+  $('info-txt-avoid').textContent = t('infoAvoid');
+  $('info-txt-gem').textContent = t('infoGem');
+  $('info-txt-break').textContent = t('infoBreak');
+  $('info-txt-boss').textContent = t('infoBoss');
+  $('back-btn').setAttribute('aria-label', t('back'));
+  $('menu-back').setAttribute('aria-label', t('back'));
+  $('sound-btn').setAttribute('aria-label', t('sound'));
+  $('menu-sound').setAttribute('aria-label', t('sound'));
+  $('menu-info').setAttribute('aria-label', t('howToPlay'));
+  $('info-close').setAttribute('aria-label', t('close'));
+  updateStageHud();
+}
+
+/* ================================================================
+ * §14. Input
+ * ================================================================ */
+function onTap() {
+  if (killCam) { killCam = null; timeScale = 1; return; }  // tap skip kill-cam ngay
+  if (state !== 'playing') return;
+  if (paused) { paused = false; audioUnlock(); return; }   // tap đầu chỉ resume
+  if (phase !== 'aim' || flying || knivesLeft <= 0) return;
+  if (tutorial && tutorial.stage === 'done') return;
+  flying = { y: knifeIdleY };
+  /* Executioner's Breath: dao CUỐI trên vành đông (≥6 dao) → thế giới nín
+     thở. Kích hoạt SAU khi đã ném — số phận cú ném không đổi, chỉ kịch tính. */
+  if (!tutorial && knivesLeft === 1 && stuck.length >= 6) {
+    breath = true;
+    sBreath();
+    if (bgmLp && audioCtx) {
+      try { bgmLp.frequency.setTargetAtTime(400, audioCtx.currentTime, 0.05); } catch (e) {}
+    }
+  }
+  sThrow();
+}
+
+canvas.addEventListener('pointerdown', function (e) { e.preventDefault(); onTap(); });
+
+window.addEventListener('keydown', function (e) {
+  if (e.code !== 'Space' && e.code !== 'Enter') return;
+  if (state === 'over') return;                     // để nút Play Again nhận phím
+  if (e.target && e.target.closest && e.target.closest('.btn3d')) return;
+  e.preventDefault();
+  if (infoOpen) return;                             // panel how-to đang mở → không Play chồng
+  if (menuOpen) { playPressed(); return; }          // Space ở menu = Play
+  onTap();
+});
+
+/** Nút bấm: click + Enter/Space, chặn lan xuống canvas. */
+function onBtn(id, fn) {
+  const el = $(id);
+  el.addEventListener('click', e => { e.stopPropagation(); fn(); });
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); fn(); }
+  });
+}
+
+/* Overlay ẩn bằng opacity nên nút vẫn giữ focus bàn phím → mọi handler
+   phải tự guard theo state, kẻo Space/Enter giữa trận kích nút vô hình. */
+function playPressed() {
+  if (!menuOpen) return;
+  sButton();
+  if (!tutSeen) startTutorial(false);    // lần đầu chơi → tutorial trước
+  else newRun();
+}
+
+onBtn('back-btn', () => { sButton(); sendMessage('quit'); });
+onBtn('menu-back', () => { if (!menuOpen) return; sButton(); sendMessage('quit'); });
+onBtn('sound-btn', () => { setMuted(!muted); sButton(); });
+onBtn('menu-sound', () => { if (!menuOpen) return; setMuted(!muted); sButton(); });
+onBtn('menu-info', () => { if (!menuOpen) return; sButton(); openInfo(); });
+onBtn('info-close', () => { sButton(); closeInfo(); });
+onBtn('menu-play', playPressed);
+onBtn('menu-tutorial', () => { if (!menuOpen) return; sButton(); startTutorial(true); });
+onBtn('tut-skip', () => { if (!tutorial) return; sButton(); finishTutorial(); });
+$('ov-btn').addEventListener('click', function (e) {
+  e.stopPropagation();
+  if (state !== 'over') return;
+  sButton();
+  sendMessage('retry_level');            // game tự xử lý chơi lại (game-common §1.3)
+  newRun();
+});
+$('ov-menu-btn').addEventListener('click', function (e) {
+  e.stopPropagation();
+  if (state !== 'over') return;
+  sButton();
+  toMenu();                              // về menu — không bắn event (không chơi lại)
+});
+$('info-overlay').addEventListener('pointerdown', function (e) {
+  if (e.target === this) closeInfo();
+}, { passive: true });
+
+/* ================================================================
+ * §15. Native callbacks (game-common §1.3) + boot
+ * ================================================================ */
+window.onAppPause = function () {
+  if (state === 'playing' && !paused) {
+    paused = true;
+    if (audioCtx && audioCtx.state === 'running') audioCtx.suspend().catch(() => {});
+  } else if (audioCtx && audioCtx.state === 'running') {
+    audioCtx.suspend().catch(() => {});
+  }
+};
+window.onNextLevel = function () { /* game không level — no-op */ };
+window.onRetryLevel = function () {
+  if (state === 'over' || state === 'playing') newRun();
+};
+
+/* app chuyển nền khi chạy trong browser thường → cũng pause */
+document.addEventListener('visibilitychange', function () {
+  if (document.hidden) window.onAppPause();
+});
+
+function boot() {
+  LANG = getLanguage();
+  applyUiFont(LANG);
+  document.documentElement.lang = LANG;
+
+  /* ?reset=1 — xoá save khi playtest (native không bao giờ gửi).
+     Phải bỏ qua cả window.data/?data= cũ, kẻo loadSaved merge lại best cũ. */
+  const didReset = new URLSearchParams(window.location.search).get('reset') === '1';
+  if (didReset) {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    saveData({ best: 0, tut: 0, muted: 0, deep: -1, eS: -1, eK: -1 });
+  }
+
+  const sv = loadSaved(didReset);
+  best = sv.best;
+  tutSeen = !!sv.tut;
+  if (sv.mutedSet) muted = !!sv.muted;
+  deep = sv.deep;
+  echoS = sv.eS;
+  echoK = sv.eK;
+  $('sound-btn').classList.toggle('muted', muted);
+  $('menu-sound').classList.toggle('muted', muted);
+
+  buildKnifeSprites();
+  resize();
+  updateLabels();
+  updateScoreHud();
+  updateBestHud();
+  buildInfoIcons();
+  openMenu();
+  requestAnimationFrame(loop);
+}
+
+/* Đợi native inject (chống race) — fallback 200ms (game-common §3) */
+(function waitForNativeInjection() {
+  const start = Date.now();
+  (function check() {
+    const injected = typeof window.language === 'string' || typeof window.data === 'string';
+    if (injected || Date.now() - start > 200) {
+      boot();
+    } else {
+      setTimeout(check, 10);
+    }
+  })();
+})();
+</script>
+</body>
+</html>

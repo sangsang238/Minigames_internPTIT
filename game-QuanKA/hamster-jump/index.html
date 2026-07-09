@@ -98,6 +98,20 @@ html, body {
   100% { transform: scale(1); }
 }
 
+/* độ cao tháp (trong ván): số + icon 2 phô mai chồng lên nhau */
+#height-ind {
+  margin-top: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #7a5a2e;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .65);
+}
+#height-ind.hidden { display: none; }
+.stack-ico { width: 19px; height: 19px; display: block; }
+
 #hud-right {
   display: flex;
   flex-direction: column;
@@ -204,8 +218,23 @@ html, body {
   color: #e8842c;
   text-shadow: 0 3px 0 rgba(255, 255, 255, .85), 0 8px 18px rgba(190, 110, 30, .3);
   padding: 0 24px;
-  margin-bottom: 26px;
+  margin-bottom: 18px;
 }
+/* kỷ lục tháp cao nhất trên menu */
+#menu-high {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 22px;
+  padding: 6px 15px;
+  background: rgba(255, 255, 255, .5);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  color: #6a4e2a;
+}
+#menu-high .stack-ico { width: 21px; height: 21px; }
+#menu-high-lbl { font-size: 13px; letter-spacing: 1.5px; font-weight: 700; opacity: .75; }
+#menu-high-val { font-size: 18px; font-weight: 800; color: #e8842c; }
 #menu .btn-row { margin-top: 14px; }
 #play-btn {
   --surface-height: 56px;
@@ -228,6 +257,18 @@ html, body {
   top: calc(max(var(--sbh), env(safe-area-inset-top, 0px)) + 132px);
 }
 .diamond-ico { width: 60%; height: 60%; display: block; }
+
+/* nút âm thanh: dưới nút Back (trái), luôn hiện; gạch chéo khi tắt */
+#snd-btn {
+  position: fixed;
+  left: 12px;
+  top: calc(max(var(--sbh), env(safe-area-inset-top, 0px)) + 62px);
+  z-index: 5;
+}
+.snd-ico { width: 58%; height: 58%; display: block; }
+#snd-btn .ico-off { display: none; }
+#snd-btn.muted .ico-on { display: none; }
+#snd-btn.muted .ico-off { display: block; }
 
 /* ── Tutorial: gợi ý + nhắc bấm ───────────────────────────────── */
 #tut-hint {
@@ -411,6 +452,7 @@ body.lang-ar .btn3d-surface { letter-spacing: 0; }
   #score-label { font-size: 10px; }
   #streak { font-size: 13px; }
   #info-btn { right: 10px; }
+  #snd-btn { left: 10px; }
 }
 
 @media (max-height: 600px) {
@@ -450,6 +492,18 @@ body.lang-ar .btn3d-surface { letter-spacing: 0; }
     <div id="hud-mid">
       <div id="score-label">SCORE</div>
       <div id="score-num">0</div>
+      <div id="height-ind" class="hidden">
+        <svg class="stack-ico" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3" y="13" width="18" height="7" rx="2.2" fill="#e0a02a"/>
+          <rect x="3" y="12.2" width="18" height="2.4" rx="1.2" fill="#f2be47"/>
+          <rect x="5.5" y="6" width="13" height="7" rx="2.2" fill="#ffcf4d"/>
+          <rect x="5.5" y="5.2" width="13" height="2.4" rx="1.2" fill="#ffe08a"/>
+          <circle cx="9" cy="16.6" r="1.1" fill="#bd7d1c"/>
+          <circle cx="14.3" cy="17" r="0.9" fill="#bd7d1c"/>
+          <circle cx="11" cy="9.2" r="1" fill="#dd9c28"/>
+        </svg>
+        <span id="height-num">0</span>
+      </div>
       <div id="streak" class="hidden">Perfect ×2</div>
     </div>
 
@@ -470,9 +524,37 @@ body.lang-ar .btn3d-surface { letter-spacing: 0; }
     </div>
   </div>
 
+  <!-- Bật/tắt âm thanh — dưới nút Back, luôn hiện (menu lẫn trong ván) -->
+  <div class="btn3d btn-icon" id="snd-btn" role="button" aria-label="Sound" tabindex="0">
+    <span class="btn3d-shadow"></span>
+    <span class="btn3d-surface">
+      <svg class="snd-ico ico-on" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="M3 9v6h4l5 4.5v-15L7 9H3z"/>
+        <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M15.5 8.8a4.5 4.5 0 0 1 0 6.4M18.2 6.1a8.3 8.3 0 0 1 0 11.8"/>
+      </svg>
+      <svg class="snd-ico ico-off" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="M3 9v6h4l5 4.5v-15L7 9H3z"/>
+        <path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M15.5 9.5l5 5m0-5l-5 5"/>
+      </svg>
+    </span>
+  </div>
+
   <!-- Menu chờ: tiêu đề + Play + Tutorial; nút hướng dẫn (thoi trong tròn) góc phải -->
   <div id="menu">
     <div id="start-title">HAMSTER JUMP</div>
+    <div id="menu-high">
+      <svg class="stack-ico" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3" y="13" width="18" height="7" rx="2.2" fill="#e0a02a"/>
+        <rect x="3" y="12.2" width="18" height="2.4" rx="1.2" fill="#f2be47"/>
+        <rect x="5.5" y="6" width="13" height="7" rx="2.2" fill="#ffcf4d"/>
+        <rect x="5.5" y="5.2" width="13" height="2.4" rx="1.2" fill="#ffe08a"/>
+        <circle cx="9" cy="16.6" r="1.1" fill="#bd7d1c"/>
+        <circle cx="14.3" cy="17" r="0.9" fill="#bd7d1c"/>
+        <circle cx="11" cy="9.2" r="1" fill="#dd9c28"/>
+      </svg>
+      <span id="menu-high-lbl">HIGHEST</span>
+      <span id="menu-high-val">0</span>
+    </div>
     <div class="btn-row">
       <div class="btn3d" id="play-btn" role="button" tabindex="0">
         <span class="btn3d-shadow"></span>
@@ -563,7 +645,7 @@ const I18N = {
         infoMold:"Don't jump! Let it pass (+2)",
         infoGift:'+3 coins',
         infoDouble:'Pick one!',
-        infoStreak:'Streak: +5 → +10 → +15…', menu:'Menu' },
+        infoStreak:'Streak: +5 → +10 → +15…', menu:'Menu', sound:'Sound', highest:'Highest' },
   vi: { title:'HAMSTER JUMP', score:'ĐIỂM', best:'CAO NHẤT', tapToStart:'Chạm để bắt đầu',
         tapToResume:'Chạm để chơi tiếp', playAgain:'Chơi lại', gameOver:'Thua rồi',
         newBest:'Kỷ lục mới!', perfect:'Tuyệt hảo!', back:'Thoát',
@@ -582,67 +664,67 @@ const I18N = {
         infoMold:'Đừng nhảy! Cho nó qua (+2)',
         infoGift:'+3 xu',
         infoDouble:'Chọn 1 miếng!',
-        infoStreak:'Chuỗi: +5 → +10 → +15…', menu:'Menu' },
+        infoStreak:'Chuỗi: +5 → +10 → +15…', menu:'Menu', sound:'Âm thanh', highest:'Cao nhất' },
   'zh-Hans': { title:'仓鼠跳跳', score:'分数', best:'最高', tapToStart:'点击开始',
         tapToResume:'点击继续', playAgain:'再玩一次', gameOver:'游戏结束',
         newBest:'新纪录！', perfect:'完美！', back:'返回',
         play:'开始', tutorial:'教程', howToPlay:'玩法说明', tutTap:'跳！',
         tutJump:'奶酪靠近时点击跳跃！', tutPerfect:'落在正中间即可获得完美！',
-        tutRetry:'差一点！再试一次', tutDone:'准备好了！', menu:'菜单' },
+        tutRetry:'差一点！再试一次', tutDone:'准备好了！', menu:'菜单', sound:'声音', highest:'最高' },
   'zh-Hant': { title:'倉鼠跳跳', score:'分數', best:'最高', tapToStart:'點擊開始',
         tapToResume:'點擊繼續', playAgain:'再玩一次', gameOver:'遊戲結束',
         newBest:'新紀錄！', perfect:'完美！', back:'返回',
         play:'開始', tutorial:'教學', howToPlay:'玩法說明', tutTap:'跳！',
         tutJump:'起司靠近時點擊跳躍！', tutPerfect:'落在正中間即可獲得完美！',
-        tutRetry:'差一點！再試一次', tutDone:'準備好了！', menu:'選單' },
+        tutRetry:'差一點！再試一次', tutDone:'準備好了！', menu:'選單', sound:'聲音', highest:'最高' },
   ja: { title:'ハムスタージャンプ', score:'スコア', best:'ベスト', tapToStart:'タップでスタート',
         tapToResume:'タップで再開', playAgain:'もう一度', gameOver:'ゲームオーバー',
         newBest:'新記録！', perfect:'パーフェクト！', back:'戻る',
         play:'プレイ', tutorial:'チュートリアル', howToPlay:'遊び方', tutTap:'タップ！',
         tutJump:'チーズが近づいたらタップでジャンプ！', tutPerfect:'真ん中に着地でパーフェクト！',
-        tutRetry:'おしい！もう一回', tutDone:'準備完了！', menu:'メニュー' },
+        tutRetry:'おしい！もう一回', tutDone:'準備完了！', menu:'メニュー', sound:'サウンド', highest:'最高' },
   ko: { title:'햄스터 점프', score:'점수', best:'최고', tapToStart:'탭하여 시작',
         tapToResume:'탭하여 계속', playAgain:'다시하기', gameOver:'게임 오버',
         newBest:'신기록!', perfect:'퍼펙트!', back:'뒤로',
         play:'플레이', tutorial:'튜토리얼', howToPlay:'게임 방법', tutTap:'탭!',
         tutJump:'치즈가 가까워지면 탭해서 점프!', tutPerfect:'한가운데 착지하면 퍼펙트!',
-        tutRetry:'아쉬워요! 다시 시도', tutDone:'준비 완료!', menu:'메뉴' },
+        tutRetry:'아쉬워요! 다시 시도', tutDone:'준비 완료!', menu:'메뉴', sound:'소리', highest:'최고' },
   es: { title:'HAMSTER JUMP', score:'PUNTOS', best:'RÉCORD', tapToStart:'Toca para empezar',
         tapToResume:'Toca para continuar', playAgain:'Jugar otra vez', gameOver:'Fin del juego',
         newBest:'¡Nuevo récord!', perfect:'¡Perfecto!', back:'Atrás',
         play:'Jugar', tutorial:'Tutorial', howToPlay:'Cómo jugar', tutTap:'¡SALTA!',
         tutJump:'¡Toca para saltar cuando el queso se acerque!',
         tutPerfect:'¡Aterriza en el centro para un Perfecto!',
-        tutRetry:'¡Casi! Inténtalo otra vez', tutDone:'¡Listo!', menu:'Menú' },
+        tutRetry:'¡Casi! Inténtalo otra vez', tutDone:'¡Listo!', menu:'Menú', sound:'Sonido', highest:'Máximo' },
   'es-MX': { title:'HAMSTER JUMP', score:'PUNTOS', best:'RÉCORD', tapToStart:'Toca para empezar',
         tapToResume:'Toca para continuar', playAgain:'Jugar otra vez', gameOver:'Fin del juego',
         newBest:'¡Nuevo récord!', perfect:'¡Perfecto!', back:'Atrás',
         play:'Jugar', tutorial:'Tutorial', howToPlay:'Cómo jugar', tutTap:'¡SALTA!',
         tutJump:'¡Toca para saltar cuando el queso se acerque!',
         tutPerfect:'¡Aterriza en el centro para un Perfecto!',
-        tutRetry:'¡Casi! Inténtalo otra vez', tutDone:'¡Listo!', menu:'Menú' },
+        tutRetry:'¡Casi! Inténtalo otra vez', tutDone:'¡Listo!', menu:'Menú', sound:'Sonido', highest:'Máximo' },
   'es-AR': { title:'HAMSTER JUMP', score:'PUNTOS', best:'RÉCORD', tapToStart:'Tocá para empezar',
         tapToResume:'Tocá para continuar', playAgain:'Jugar otra vez', gameOver:'Fin del juego',
         newBest:'¡Nuevo récord!', perfect:'¡Perfecto!', back:'Atrás',
         play:'Jugar', tutorial:'Tutorial', howToPlay:'Cómo jugar', tutTap:'¡SALTÁ!',
         tutJump:'¡Tocá para saltar cuando el queso se acerque!',
         tutPerfect:'¡Aterrizá en el centro para un Perfecto!',
-        tutRetry:'¡Casi! Probá de nuevo', tutDone:'¡Listo!', menu:'Menú' },
+        tutRetry:'¡Casi! Probá de nuevo', tutDone:'¡Listo!', menu:'Menú', sound:'Sonido', highest:'Máximo' },
   'pt-BR': { title:'HAMSTER JUMP', score:'PONTOS', best:'RECORDE', tapToStart:'Toque para começar',
         tapToResume:'Toque para continuar', playAgain:'Jogar de novo', gameOver:'Fim de jogo',
         newBest:'Novo recorde!', perfect:'Perfeito!', back:'Voltar',
         play:'Jogar', tutorial:'Tutorial', howToPlay:'Como jogar', tutTap:'PULE!',
         tutJump:'Toque para pular quando o queijo chegar perto!',
         tutPerfect:'Caia bem no meio para um Perfeito!',
-        tutRetry:'Quase! Tente de novo', tutDone:'Pronto!', menu:'Menu' },
+        tutRetry:'Quase! Tente de novo', tutDone:'Pronto!', menu:'Menu', sound:'Som', highest:'Máximo' },
   pt: { title:'HAMSTER JUMP', score:'PONTOS', best:'RECORDE', tapToStart:'Toca para começar',
         tapToResume:'Toca para continuar', playAgain:'Jogar novamente', gameOver:'Fim do jogo',
         newBest:'Novo recorde!', perfect:'Perfeito!', back:'Voltar',
         play:'Jogar', tutorial:'Tutorial', howToPlay:'Como jogar', tutTap:'SALTA!',
         tutJump:'Toca para saltar quando o queijo se aproximar!',
         tutPerfect:'Aterra bem no meio para um Perfeito!',
-        tutRetry:'Quase! Tenta outra vez', tutDone:'Pronto!', menu:'Menu' },
-  fr: { title:'HAMSTER JUMP', score:'SCORE', best:'RECORD', tapToStart:'Touchez pour commencer',
+        tutRetry:'Quase! Tenta outra vez', tutDone:'Pronto!', menu:'Menu', sound:'Som', highest:'Máximo' },
+  fr: { sound:'Son', highest:'Plus haut', title:'HAMSTER JUMP', score:'SCORE', best:'RECORD', tapToStart:'Touchez pour commencer',
         tapToResume:'Touchez pour reprendre', playAgain:'Rejouer', gameOver:'Partie terminée',
         newBest:'Nouveau record !', perfect:'Parfait !', back:'Retour',
         play:'Jouer', tutorial:'Tutoriel', howToPlay:'Comment jouer', tutTap:'SAUTE !',
@@ -655,43 +737,43 @@ const I18N = {
         play:'Spielen', tutorial:'Tutorial', howToPlay:'Spielanleitung', tutTap:'SPRING!',
         tutJump:'Tippe zum Springen, wenn der Käse naht!',
         tutPerfect:'Lande genau mittig für ein Perfekt!',
-        tutRetry:"Fast! Versuch's nochmal", tutDone:'Bereit!', menu:'Menü' },
+        tutRetry:"Fast! Versuch's nochmal", tutDone:'Bereit!', menu:'Menü', sound:'Ton', highest:'Höchste' },
   it: { title:'HAMSTER JUMP', score:'PUNTI', best:'RECORD', tapToStart:'Tocca per iniziare',
         tapToResume:'Tocca per riprendere', playAgain:'Gioca ancora', gameOver:'Partita finita',
         newBest:'Nuovo record!', perfect:'Perfetto!', back:'Indietro',
         play:'Gioca', tutorial:'Tutorial', howToPlay:'Come si gioca', tutTap:'SALTA!',
         tutJump:'Tocca per saltare quando il formaggio si avvicina!',
         tutPerfect:'Atterra al centro per un Perfetto!',
-        tutRetry:'Quasi! Riprova', tutDone:'Pronto!', menu:'Menu' },
+        tutRetry:'Quasi! Riprova', tutDone:'Pronto!', menu:'Menu', sound:'Suono', highest:'Massimo' },
   nl: { title:'HAMSTER JUMP', score:'SCORE', best:'RECORD', tapToStart:'Tik om te starten',
         tapToResume:'Tik om verder te gaan', playAgain:'Opnieuw spelen', gameOver:'Game over',
         newBest:'Nieuw record!', perfect:'Perfect!', back:'Terug',
         play:'Spelen', tutorial:'Tutorial', howToPlay:'Speluitleg', tutTap:'TIK!',
         tutJump:'Tik om te springen als de kaas dichtbij komt!',
         tutPerfect:'Land in het midden voor een Perfect!',
-        tutRetry:'Bijna! Probeer opnieuw', tutDone:'Klaar!', menu:'Menu' },
+        tutRetry:'Bijna! Probeer opnieuw', tutDone:'Klaar!', menu:'Menu', sound:'Geluid', highest:'Hoogste' },
   pl: { title:'HAMSTER JUMP', score:'WYNIK', best:'REKORD', tapToStart:'Dotknij, aby zagrać',
         tapToResume:'Dotknij, aby wznowić', playAgain:'Zagraj ponownie', gameOver:'Koniec gry',
         newBest:'Nowy rekord!', perfect:'Idealnie!', back:'Wstecz',
         play:'Graj', tutorial:'Samouczek', howToPlay:'Jak grać', tutTap:'SKOK!',
         tutJump:'Dotknij, aby skoczyć, gdy ser się zbliży!',
         tutPerfect:'Wyląduj na środku, aby zdobyć Idealnie!',
-        tutRetry:'Prawie! Spróbuj jeszcze raz', tutDone:'Gotowe!', menu:'Menu' },
+        tutRetry:'Prawie! Spróbuj jeszcze raz', tutDone:'Gotowe!', menu:'Menu', sound:'Dźwięk', highest:'Najwyżej' },
   ru: { title:'ПРЫЖОК ХОМЯКА', score:'СЧЁТ', best:'РЕКОРД', tapToStart:'Нажмите, чтобы начать',
         tapToResume:'Нажмите, чтобы продолжить', playAgain:'Играть снова', gameOver:'Игра окончена',
         newBest:'Новый рекорд!', perfect:'Идеально!', back:'Назад',
         play:'Играть', tutorial:'Обучение', howToPlay:'Как играть', tutTap:'ПРЫГАЙ!',
         tutJump:'Нажмите, чтобы прыгнуть, когда сыр приблизится!',
         tutPerfect:'Приземлитесь по центру — будет «Идеально»!',
-        tutRetry:'Почти! Попробуйте ещё раз', tutDone:'Готово!', menu:'Меню' },
+        tutRetry:'Почти! Попробуйте ещё раз', tutDone:'Готово!', menu:'Меню', sound:'Звук', highest:'Максимум' },
   tr: { title:'HAMSTER JUMP', score:'SKOR', best:'REKOR', tapToStart:'Başlamak için dokun',
         tapToResume:'Devam etmek için dokun', playAgain:'Tekrar Oyna', gameOver:'Oyun Bitti',
         newBest:'Yeni Rekor!', perfect:'Mükemmel!', back:'Geri',
         play:'Oyna', tutorial:'Eğitim', howToPlay:'Nasıl Oynanır', tutTap:'ZIPLA!',
         tutJump:'Peynir yaklaşınca zıplamak için dokun!',
         tutPerfect:'Tam ortaya inersen Mükemmel olur!',
-        tutRetry:'Az kaldı! Tekrar dene', tutDone:'Hazırsın!', menu:'Menü' },
-  ar: { title:'قفزة الهمستر', score:'النقاط', best:'الأفضل', tapToStart:'انقر للبدء',
+        tutRetry:'Az kaldı! Tekrar dene', tutDone:'Hazırsın!', menu:'Menü', sound:'Ses', highest:'En Yüksek' },
+  ar: { sound:'الصوت', highest:'الأعلى', title:'قفزة الهمستر', score:'النقاط', best:'الأفضل', tapToStart:'انقر للبدء',
         tapToResume:'انقر للمتابعة', playAgain:'العب مجددًا', gameOver:'انتهت اللعبة',
         /* ‏ (RLM) để dấu ! đứng đúng phía trong ngữ cảnh LTR (DOM + canvas) */
         newBest:'رقم قياسي جديد!‏', perfect:'ممتاز!‏', back:'رجوع',
@@ -705,28 +787,28 @@ const I18N = {
         play:'खेलें', tutorial:'ट्यूटोरियल', howToPlay:'खेलने का तरीका', tutTap:'कूदो!',
         tutJump:'पनीर पास आए तो कूदने के लिए टैप करें!',
         tutPerfect:'बीच में उतरें और परफेक्ट पाएं!',
-        tutRetry:'लगभग! फिर कोशिश करें', tutDone:'तैयार!', menu:'मेनू' },
+        tutRetry:'लगभग! फिर कोशिश करें', tutDone:'तैयार!', menu:'मेनू', sound:'ध्वनि', highest:'सर्वोच्च' },
   th: { title:'แฮมสเตอร์ จัมพ์', score:'คะแนน', best:'สูงสุด', tapToStart:'แตะเพื่อเริ่ม',
         tapToResume:'แตะเพื่อเล่นต่อ', playAgain:'เล่นอีกครั้ง', gameOver:'จบเกม',
         newBest:'สถิติใหม่!', perfect:'เพอร์เฟกต์!', back:'กลับ',
         play:'เล่น', tutorial:'สอนเล่น', howToPlay:'วิธีเล่น', tutTap:'แตะ!',
         tutJump:'แตะเพื่อกระโดดเมื่อชีสเข้ามาใกล้!',
         tutPerfect:'ลงกลางก้อนเพื่อรับเพอร์เฟกต์!',
-        tutRetry:'เกือบแล้ว! ลองอีกครั้ง', tutDone:'พร้อมแล้ว!', menu:'เมนู' },
+        tutRetry:'เกือบแล้ว! ลองอีกครั้ง', tutDone:'พร้อมแล้ว!', menu:'เมนู', sound:'เสียง', highest:'สูงสุด' },
   id: { title:'HAMSTER JUMP', score:'SKOR', best:'TERBAIK', tapToStart:'Ketuk untuk mulai',
         tapToResume:'Ketuk untuk lanjut', playAgain:'Main Lagi', gameOver:'Permainan Berakhir',
         newBest:'Rekor Baru!', perfect:'Sempurna!', back:'Kembali',
         play:'Main', tutorial:'Tutorial', howToPlay:'Cara Main', tutTap:'LOMPAT!',
         tutJump:'Ketuk untuk melompat saat keju mendekat!',
         tutPerfect:'Mendarat tepat di tengah untuk Sempurna!',
-        tutRetry:'Hampir! Coba lagi', tutDone:'Siap!', menu:'Menu' },
+        tutRetry:'Hampir! Coba lagi', tutDone:'Siap!', menu:'Menu', sound:'Suara', highest:'Tertinggi' },
   fil: { title:'HAMSTER JUMP', score:'ISKOR', best:'PINAKAMATAAS', tapToStart:'I-tap para magsimula',
         tapToResume:'I-tap para magpatuloy', playAgain:'Maglaro Muli', gameOver:'Tapos ang Laro',
         newBest:'Bagong Rekord!', perfect:'Perpekto!', back:'Bumalik',
         play:'Maglaro', tutorial:'Tutorial', howToPlay:'Paano Maglaro', tutTap:'TALON!',
         tutJump:'I-tap para tumalon kapag palapit na ang keso!',
         tutPerfect:'Tumapat sa gitna para sa Perpekto!',
-        tutRetry:'Muntik na! Subukan muli', tutDone:'Handa ka na!', menu:'Menu' },
+        tutRetry:'Muntik na! Subukan muli', tutDone:'Handa ka na!', menu:'Menu', sound:'Tunog', highest:'Pinakamataas' },
 };
 
 let LANG = DEFAULT_LANG;
@@ -809,22 +891,407 @@ function getInitialData() {
   return fromWin != null ? fromWin : (fromUrl || '');
 }
 
-/** Đọc {best, coins, tut} từ native (ưu tiên) + localStorage; lấy max để không mất dữ liệu. */
+/** Đọc {best, coins, tut, mute} từ native (ưu tiên) + localStorage; lấy max để không mất dữ liệu. */
 function loadSaved() {
-  const out = { best: 0, coins: 0, tut: 0 };
+  const out = { best: 0, coins: 0, tut: 0, mute: 0, bh: 0 };
   const pick = raw => {
     try {
       const o = JSON.parse(raw || 'null');
       if (o) {
         if (Number.isFinite(+o.best)) out.best = Math.max(out.best, Math.floor(+o.best));
         if (Number.isFinite(+o.coins)) out.coins = Math.max(out.coins, Math.floor(+o.coins));
+        if (Number.isFinite(+o.bh)) out.bh = Math.max(out.bh, Math.floor(+o.bh));
         if (o.tut) out.tut = 1;
+        if (o.mute) out.mute = 1;
       }
     } catch (e) { /* data bẩn → bỏ qua */ }
   };
   pick(getInitialData());
   pick(readLocal());
   return out;
+}
+
+/* ============================================================
+ * §1b. Âm thanh — WebAudio synth toàn bộ, không file ngoài.
+ *      Thiết kế "ấm & mềm": mọi giọng đi qua lowpass riêng rồi
+ *      lowpass master trước khi ra loa → không bao giờ gắt/chói.
+ *      Mở khoá ở cử chỉ đầu tiên (autoplay policy); nút loa tắt/bật,
+ *      trạng thái lưu cùng save_data ({mute}).
+ * ============================================================ */
+let audioCtx = null, audioMaster = null, bgmOut = null;
+let bgmTimer = null, bgmNextT = 0, bgmStep = 0;
+let muted = false;
+
+/* nội bộ block này */
+let sfxBus = null, masterLP = null, masterHP = null, noiseBuf = null;
+const VOL = 0.72;                // âm lượng master (đã hạ cho êm hơn)
+
+/* Dựng đồ thị: voice → (sfxBus|bgmOut) → masterLP → masterHP
+   → audioMaster(VOL) → compressor → destination. */
+function audioEnsure() {
+  if (audioCtx) return true;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return false;
+    audioCtx = new AC();
+
+    const comp = audioCtx.createDynamicsCompressor();
+    comp.threshold.value = -18; comp.knee.value = 24;
+    comp.ratio.value = 4; comp.attack.value = 0.01; comp.release.value = 0.18;
+
+    audioMaster = audioCtx.createGain();
+    audioMaster.gain.value = muted ? 0 : VOL;
+    audioMaster.connect(comp);
+    comp.connect(audioCtx.destination);
+
+    masterLP = audioCtx.createBiquadFilter();
+    masterLP.type = 'lowpass'; masterLP.frequency.value = 2800; masterLP.Q.value = 0.5;
+
+    masterHP = audioCtx.createBiquadFilter();
+    masterHP.type = 'highpass'; masterHP.frequency.value = 100; masterHP.Q.value = 0.4;
+
+    masterLP.connect(masterHP);
+    masterHP.connect(audioMaster);
+
+    sfxBus = audioCtx.createGain();
+    sfxBus.gain.value = 1.0;
+    sfxBus.connect(masterLP);
+
+    bgmOut = audioCtx.createGain();
+    bgmOut.gain.value = 0.1;                 // BGM luôn nằm dưới SFX
+    bgmOut.connect(masterLP);
+
+    noiseBuf = audioCtx.createBuffer(1, audioCtx.sampleRate, audioCtx.sampleRate);
+    const nd = noiseBuf.getChannelData(0);
+    for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+
+    startBgm();
+    return true;
+  } catch (e) { return false; }
+}
+
+function audioUnlock() {
+  if (!audioEnsure()) return;
+  if (audioCtx.state === 'suspended') { audioCtx.resume().catch(function () {}); }
+}
+
+function setMuted(v) {
+  muted = v;
+  if (audioMaster) audioMaster.gain.value = muted ? 0 : VOL;
+  $('snd-btn').classList.toggle('muted', muted);
+  persistSaved();
+}
+
+/* voice() — 1 giọng có bao êm (attack ≥ 8ms, tắt mượt bằng setTargetAtTime).
+   Ấm nhờ detune + hài âm 2 (body) + quãng tám dưới (sub). Mỗi giọng có
+   lowpass riêng nên luôn tròn tiếng. */
+function voice(o) {
+  if (!audioCtx) return;
+  o = o || {};
+  const t = audioCtx.currentTime + (o.at || 0);
+  const type = o.type || 'sine';
+  const f0 = o.freq || 440;
+  const dur = o.dur || 0.18;
+  const peak = (o.peak == null ? 0.07 : o.peak);
+  const atk = Math.max(0.008, o.attack || 0.012);
+  const rel = Math.max(0.06, o.release || 0.11);
+  const bus = o.bus || sfxBus;
+
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(peak, t + atk);
+  const relStart = Math.max(t + atk + 0.005, t + dur);
+  g.gain.setTargetAtTime(0.0001, relStart, rel / 3);
+  const stop = relStart + rel * 4 + 0.05;
+
+  const lp = audioCtx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = o.lp || 1500;
+  lp.Q.value = (o.q == null ? 0.7 : o.q);
+  g.connect(lp); lp.connect(bus);
+
+  let lfo = null, lg = null;
+  if (o.vib) {
+    lfo = audioCtx.createOscillator(); lfo.type = 'sine';
+    lfo.frequency.value = o.vib.rate || 6;
+    lg = audioCtx.createGain(); lg.gain.value = o.vib.depth || 8;
+    lfo.connect(lg); lfo.start(t); lfo.stop(stop);
+  }
+
+  function mkOsc(freq, detune, gscale, tp) {
+    const node = audioCtx.createOscillator();
+    node.type = tp || type;
+    node.frequency.setValueAtTime(freq, t);
+    if (o.slide) {
+      node.frequency.exponentialRampToValueAtTime(
+        Math.max(20, o.slide * (freq / f0)), t + dur);
+    }
+    if (detune) node.detune.value = detune;
+    if (lg) lg.connect(node.detune);
+    if (gscale != null && gscale !== 1) {
+      const ng = audioCtx.createGain(); ng.gain.value = gscale;
+      node.connect(ng); ng.connect(g);
+    } else {
+      node.connect(g);
+    }
+    node.start(t); node.stop(stop);
+  }
+
+  mkOsc(f0, -(o.detune || 0));
+  if (o.detune) mkOsc(f0, o.detune);
+  if (o.body) mkOsc(f0 * 2, 0, o.body, 'sine');
+  if (o.sub)  mkOsc(f0 / 2, 0, 0.5, 'sine');
+}
+
+/* noiseVoice() — noise trắng LỌC THẤP mạnh (thud/tap/poof), không bao giờ
+   bandpass rít. Ngắn & nhỏ. */
+function noiseVoice(o) {
+  if (!audioCtx || !noiseBuf) return;
+  o = o || {};
+  const t = audioCtx.currentTime + (o.at || 0);
+  const dur = o.dur || 0.2;
+  const peak = (o.peak == null ? 0.05 : o.peak);
+  const rel = Math.max(0.05, o.release || 0.12);
+
+  const src = audioCtx.createBufferSource();
+  src.buffer = noiseBuf; src.loop = true;
+
+  const lp = audioCtx.createBiquadFilter();
+  lp.type = 'lowpass'; lp.frequency.value = o.lp || 500; lp.Q.value = o.q || 0.5;
+
+  const g = audioCtx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(peak, t + Math.max(0.008, o.attack || 0.01));
+  const relStart = Math.max(t + 0.02, t + dur);
+  g.gain.setTargetAtTime(0.0001, relStart, rel / 3);
+
+  src.connect(lp); lp.connect(g); g.connect(o.bus || sfxBus);
+  src.start(t); src.stop(relStart + rel * 4 + 0.05);
+}
+
+/* ---- BGM: "Toy-Chip March" — polka đồ chơi vui nhộn, ẤM & MỀM (C trưởng, ~128 BPM).
+   Bass oom-pah + giai điệu music-box hỏi/đáp; 3 biến tấu giai điệu xoay vòng (chu kỳ
+   thật ~24 nhịp ≈ 45s) để không nhàm. Mọi nốt qua bgmOut (đã lọc), peak nhỏ, ≤ D5. ---- */
+const NT = {
+  F2: 87.31, G2: 98.00, A2: 110.00,
+  C3: 130.81, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196.00, A3: 220.00, B3: 246.94,
+  C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.00, A4: 440.00, B4: 493.88,
+  C5: 523.25, D5: 587.33
+};
+const STEP_DUR      = 0.2344;    // móc đơn @ ~128 BPM
+const SWING         = 0.028;     // trễ nhẹ phách lẻ → nảy/springy
+const STEPS_PER_BAR = 8;
+const BARS          = 8;         // 1 vòng = 8 nhịp (A: hỏi, B: đáp)
+const TOTAL_STEPS   = STEPS_PER_BAR * BARS;
+let   bgmVariant    = 0;         // 0/1/2 → MEL_A/B/C, xoay mỗi vòng
+
+/* Hợp âm 8 nhịp: C Am F G | C F G C. root/fifth = oom-pah; pah = 3 nốt đệm ngắn. */
+const PROG = [
+  { root: 'C3', fifth: 'G3', pah: ['C4', 'E4', 'G4'] },
+  { root: 'A2', fifth: 'E3', pah: ['A3', 'C4', 'E4'] },
+  { root: 'F2', fifth: 'C3', pah: ['F3', 'A3', 'C4'] },
+  { root: 'G2', fifth: 'D3', pah: ['G3', 'B3', 'D4'] },
+  { root: 'C3', fifth: 'G3', pah: ['C4', 'E4', 'G4'] },
+  { root: 'F2', fifth: 'C3', pah: ['F3', 'A3', 'C4'] },
+  { root: 'G2', fifth: 'D3', pah: ['G3', 'B3', 'D4'] },
+  { root: 'C3', fifth: 'G3', pah: ['C4', 'E4', 'G4'] }
+];
+/* null = LẶNG (chừa khoảng thở). Đỉnh cao nhất D5 → không chói. */
+const MEL_A = [
+  ['E4', 'G4', 'C5', null, 'G4', null, 'E4', null],
+  ['D4', 'F4', 'A4', null, 'F4', null, 'D4', null],
+  ['C4', 'F4', 'A4', null, 'C5', null, 'A4', 'G4'],
+  ['G4', null, 'D4', null, 'G4', null, null, null],
+  ['G4', 'A4', 'B4', 'C5', null, 'B4', 'G4', null],
+  ['A4', null, 'F4', 'A4', 'C5', null, 'A4', null],
+  ['B4', null, 'G4', 'B4', 'D5', null, 'B4', 'A4'],
+  ['C5', null, 'G4', null, 'E4', null, 'C4', null]
+];
+const MEL_B = [
+  ['G4', 'E4', 'G4', 'C5', null, 'E4', 'G4', null],
+  ['A4', 'E4', 'A4', null, 'C5', null, 'E4', null],
+  ['A4', 'C5', 'A4', 'F4', null, 'A4', 'G4', null],
+  ['B4', null, 'G4', 'D4', null, 'G4', null, null],
+  ['C5', 'B4', 'G4', 'E4', 'G4', null, 'C5', null],
+  ['C5', null, 'A4', 'F4', 'A4', null, 'C5', null],
+  ['D5', null, 'B4', 'G4', 'B4', null, 'D5', 'B4'],
+  ['C5', 'G4', 'E4', null, 'C4', null, null, null]
+];
+const MEL_C = [
+  ['C5', 'G4', 'E4', 'G4', null, 'C5', null, 'G4'],
+  ['C5', 'A4', 'E4', null, 'A4', null, 'C5', null],
+  ['A4', 'F4', 'C5', null, 'A4', 'F4', null, 'G4'],
+  ['D4', 'G4', 'B4', null, 'D5', null, 'B4', null],
+  ['E4', 'G4', 'C5', 'E4', 'G4', null, 'C5', null],
+  ['F4', 'A4', 'C5', null, 'A4', null, 'F4', null],
+  ['G4', 'B4', 'D5', null, 'B4', 'G4', 'D4', null],
+  ['E4', 'G4', 'C5', null, 'G4', null, 'C4', null]
+];
+const MELS = [MEL_A, MEL_B, MEL_C];
+
+/* nốt giai điệu: MARIMBA/MUSIC-BOX ấm — sine tròn + hài âm quãng tám nhẹ (body),
+   gảy mềm rồi ngân dịu; dễ nghe hơn hẳn tiếng triangle "chip" cũ. */
+function chip(name, at, dur, peak) {
+  const f = NT[name]; if (f == null) return;
+  voice({ freq: f, type: 'sine', dur: dur * 0.7, peak: peak,
+    attack: .008, release: .2, lp: 2200, q: .5, body: .3, detune: 2, at: at, bus: bgmOut });
+}
+/* bass oom: sine tròn trầm ngắn (không sub — dưới ~100Hz bị masterHP cắt). */
+function oom(name, at, peak) {
+  const f = NT[name]; if (f == null) return;
+  voice({ freq: f, type: 'sine', dur: .17, peak: peak,
+    attack: .010, release: .17, lp: 380, q: .5, at: at, bus: bgmOut });
+}
+/* "pah": chùm 3 nốt đệm ngắn êm (sine tròn) — cú nảy đặc trưng polka. */
+function pah(names, at, peak) {
+  for (let i = 0; i < names.length; i++) {
+    const f = NT[names[i]]; if (f == null) continue;
+    voice({ freq: f, type: 'sine', dur: .1, peak: peak,
+      attack: .012, release: .12, lp: 1200, q: .5, body: .12, detune: 3, at: at, bus: bgmOut });
+  }
+}
+/* tick trầm MỜ cực nhỏ ở phách mạnh — cảm giác bước chân, không hi-hat chói. */
+function bgmTick(at) {
+  noiseVoice({ lp: 800, dur: .05, peak: .010, attack: .008, release: .06, at: at, bus: bgmOut });
+}
+
+/* Lên lịch 1 móc đơn. at = độ trễ (giây) từ audioCtx.currentTime. */
+function scheduleStep(step, at) {
+  const bar = Math.floor(step / STEPS_PER_BAR) % BARS;
+  const slot = step % STEPS_PER_BAR;
+  const chord = PROG[bar];
+  const mel = MELS[bgmVariant][bar];
+  const swung = (slot % 2 === 1) ? SWING : 0;
+
+  if (slot === 0)                    oom(chord.root,  at, .070);
+  else if (slot === 4)               oom(chord.fifth, at, .060);
+  else if (slot === 2 || slot === 6) pah(chord.pah,   at, .026);
+  if (slot === 0 || slot === 4) bgmTick(at);
+
+  const note = mel[slot];
+  if (note) chip(note, at + swung, STEP_DUR * 1.1, .055);
+}
+
+function startBgm() {
+  if (bgmTimer || !audioCtx) return;
+  bgmNextT = audioCtx.currentTime + 0.15;
+  bgmStep = 0;
+  bgmVariant = 0;
+  bgmTimer = setInterval(function () {
+    if (!audioCtx || audioCtx.state !== 'running' || muted) return;
+    const now = audioCtx.currentTime;
+    if (bgmNextT < now - 0.5) bgmNextT = now + 0.05;   // bù trễ sau resume, không dồn
+    const horizon = now + 0.9;
+    while (bgmNextT < horizon) {
+      scheduleStep(bgmStep, bgmNextT - now);
+      bgmStep++;
+      if (bgmStep >= TOTAL_STEPS) { bgmStep = 0; bgmVariant = (bgmVariant + 1) % MELS.length; }
+      bgmNextT += STEP_DUR;
+    }
+  }, 200);
+}
+
+/* ============================================================
+ * SFX — mềm, ngắn, tròn. Đỉnh nhỏ để chồng nhau vẫn êm.
+ * ============================================================ */
+
+// Nút UI: blip sine rất dịu.
+function sButton() {
+  voice({ freq: 520, type: 'sine', dur: .08, peak: .04, lp: 1500, release: .09, body: .15 });
+}
+
+/* NHẢY & ĐÁP dùng CHUNG một tiếng "pop/tap" tự nhiên, mềm (ý người dùng: 1 sound).
+   Sine trượt xuống nhanh + một chạm noise lọc thấp rất khẽ = tiếng chạm thật mà êm. */
+function sPop() {
+  voice({ freq: 336, slide: 178, type: 'sine', dur: .1, peak: .05, lp: 1050, attack: .009, release: .1, body: .12, sub: true });
+  noiseVoice({ lp: 620, dur: .028, peak: .013, attack: .008, release: .05 });
+}
+function sJump() { sPop(); }
+function sLand() { sPop(); }
+
+// Nhảy lò xo: nảy hơn, cao hơn, dài hơn + vibrato → khác rõ tiếng pop thường.
+function sBoing() {
+  voice({ freq: 170, slide: 640, type: 'sine', dur: .26, peak: .075, lp: 1500, release: .16, sub: true, vib: { rate: 7, depth: 12 } });
+}
+
+// Đáp chính giữa (streak n): ngũ cung dâng nhẹ theo n, ĐỈNH luôn êm (≤988Hz).
+function sPerfect(n) {
+  n = Math.max(1, n | 0);
+  const sc = [523.25, 587.33, 659.25, 783.99, 880.00, 987.77];
+  const f = sc[Math.min(n - 1, sc.length - 1)];
+  voice({ freq: f, type: 'sine', dur: .16, peak: .055, lp: 2200, release: .14, detune: 5 });
+  voice({ freq: f / 2, type: 'triangle', dur: .18, peak: .03, lp: 1000, release: .16 });
+  voice({ freq: Math.min(f * 1.18, 1050), type: 'sine', at: .06, dur: .14, peak: .038, lp: 2200, release: .12 });
+}
+
+// NHẶT XU: ding rất dịu & NHỎ; throttle 70ms để nhiều lần nhặt xu sát nhau
+// (quà + chuỗi Perfect + xu rơi) KHÔNG chồng tiếng thành to gấp đôi.
+let lastCoinT = -1;
+function sCoin() {
+  if (!audioCtx || muted) return;
+  const nowT = audioCtx.currentTime;
+  if (nowT - lastCoinT < 0.07) return;
+  lastCoinT = nowT;
+  voice({ freq: 880.00, type: 'sine', dur: .07, peak: .017, lp: 2200, release: .08, body: .08 });
+  voice({ freq: 1174.7, type: 'sine', at: .05, dur: .10, peak: .015, lp: 2200, release: .1, body: .06 });
+}
+
+// Nhặt lò xo: gợi ý tích cực kín đáo.
+function sArm() {
+  voice({ freq: 440, type: 'sine', dur: .1, peak: .042, lp: 1600, release: .1, body: .15 });
+  voice({ freq: 660, type: 'sine', at: .07, dur: .14, peak: .038, lp: 1800, release: .12 });
+}
+
+// Chới với ở mép: rung nhẹ, mềm, KHÔNG gắt.
+function sStumble() {
+  voice({ freq: 300, type: 'sine', dur: .22, peak: .04, lp: 1200, release: .16, vib: { rate: 9, depth: 22 } });
+}
+
+// Né miếng mốc (+2): blip tích cực nhẹ.
+function sDodge() {
+  voice({ freq: 620, type: 'sine', dur: .07, peak: .042, lp: 1800, release: .08, body: .15 });
+  voice({ freq: 840, type: 'sine', at: .06, dur: .1, peak: .038, lp: 2000, release: .1 });
+}
+
+// Nhảy vọt qua → MẤT 5 TẦNG: chuỗi nốt rơi dần (rõ ràng) + "whump" trầm mềm.
+function sCrash() {
+  const desc = [523.25, 440.00, 349.23, 293.66, 233.08];  // 5 nốt rơi = 5 tầng đổ
+  desc.forEach(function (f, i) {
+    voice({ freq: f, type: 'triangle', at: i * 0.075, dur: .12, peak: .07, lp: 1600, release: .12, body: .12 });
+  });
+  voice({ freq: 150, slide: 60, type: 'sine', at: .05, dur: .42, peak: .09, lp: 420, release: .32, sub: true });
+  noiseVoice({ lp: 320, dur: .34, peak: .04, attack: .01, release: .28, q: .4, at: .05 });
+}
+
+// Bị hất khỏi tháp → bắt đầu thua: cú va trầm, ngắn.
+function sKnock() {
+  voice({ freq: 180, slide: 80, type: 'sine', dur: .2, peak: .09, lp: 500, release: .16, sub: true });
+  noiseVoice({ lp: 350, dur: .1, peak: .026, release: .1 });
+}
+
+// Dù bung sau khi bị hất: "phù" thoáng, dịu.
+function sChute() {
+  noiseVoice({ lp: 900, dur: .28, peak: .04, attack: .04, release: .2, q: .3 });
+  voice({ freq: 420, slide: 520, type: 'sine', dur: .2, peak: .034, lp: 1400, release: .16, body: .1 });
+}
+
+// Popup kết quả: best → fanfare vui nhỏ; không → nhịp "tiếc nuối" dịu.
+function sOver(isBest) {
+  if (isBest) {
+    [523.25, 659.25, 783.99, 1046.5].forEach(function (f, i) {
+      voice({ freq: f, type: 'sine', at: i * 0.12, dur: .2, peak: .05, lp: 2400, release: .18, body: .18, detune: 5 });
+    });
+    voice({ freq: 261.63, type: 'triangle', dur: .6, peak: .034, lp: 900, release: .4 });
+  } else {
+    [523.25, 466.16, 392.00].forEach(function (f, i) {
+      voice({ freq: f, type: 'sine', at: i * 0.16, dur: .28, peak: .046, lp: 1800, release: .22, body: .15, detune: 4 });
+    });
+  }
+}
+
+// Gợi ý "TAP!" trong tutorial: blip thân thiện.
+function sTutTap() {
+  voice({ freq: 700, type: 'sine', dur: .1, peak: .045, lp: 1800, release: .1, body: .18 });
 }
 
 /* ================================================================
@@ -852,7 +1319,7 @@ const ADS_EVERY = 3;        // mỗi 3 ván thua → xin app hiện quảng cáo
 
 /* Miếng phô mai đặc biệt */
 const MINI_W = 80;          // mini: bề rộng ~60% — khó đáp, điểm ×2
-const GOLD_SPEED = 1.45;    // vàng: chạy nhanh hơn hẳn, đáp được +8 xu
+const GOLD_SPEED = 1.25;    // vàng: chạy nhanh hơn (không quá gắt), đáp được +8 xu
 const SPRING_MULT = 1.35;   // lò xo: cú nhảy KẾ TIẾP cao & lâu hơn 35%
 const MOLD_LIFT = 105;      // mốc: bay cao hơn mặt tháp — KHÔNG được nhảy
 const DOUBLE_FROM = 25;     // từ tầng 25: thi thoảng 2 miếng vào từ 2 phía
@@ -907,6 +1374,7 @@ let tutSeen = false;        // đã chơi qua tutorial (persist trong save_data)
 let boards = [];            // ván gỗ: {dir, yW, endX, extendT0, retractT0}
 let fallBlocks = [];        // miếng trượt hụt rơi khỏi tháp: {cx, yTop, vx, vy, rot, vr, gift, seed}
 let landBounceT0 = -1e9;    // thời điểm miếng trên cùng nhún (hamster vừa đáp)
+let landBounceOff = 0;      // hướng lệch lúc đáp (−1..1) → miếng nhún NGHIÊNG về phía đó
 let coins = [];             // xu rơi: {x, y, vy, val}
 let floatTexts = [];        // {x, y, born, text, color}
 let rings = [];             // {x, y, born}
@@ -917,6 +1385,7 @@ let score = 0;
 let best = 0;               // kỷ lục (persist ngay khi đổi — game-common §1.2)
 let bestStart = 0;          // kỷ lục lúc bắt đầu ván (HUD + so popup)
 let coinsTotal = 0;         // xu tích lũy (persist)
+let bestHeight = 0;         // tháp cao nhất từng đạt (persist) — hiện ở menu "Highest"
 let combo = 0;              // chuỗi Perfect liên tiếp
 let runsEnded = 0;
 let overTimer = 0;          // timer hiện popup — phải clear khi vào ván mới
@@ -936,6 +1405,7 @@ let timeMs = 0;             // đồng hồ animation (đứng yên khi pause)
 /* DOM refs */
 const $ = id => document.getElementById(id);
 let elScore, elBest, elCoin, elOverlay, elOvTitle, elOvScore, elOvBest;
+let elHeight, elMenuHigh;   // HUD độ cao tháp (trong ván) + kỷ lục cao nhất (menu)
 
 /* ================================================================
  * §4. Canvas & camera
@@ -1836,9 +2306,13 @@ function render() {
 
   /* nhún của miếng trên cùng khi hamster vừa đáp (impact).
      Miếng LÒ XO có nhịp riêng: nén–nhả 2 lần, tắt dần, dài gấp đôi */
-  let bSq = 0, bSqS = 0;
+  let bSq = 0, bSqS = 0, bTilt = 0;
   const bp = (timeMs - landBounceT0) / BOUNCE_MS;
-  if (bp >= 0 && bp < 1) bSq = Math.sin(bp * Math.PI);
+  if (bp >= 0 && bp < 1) {
+    bSq = Math.sin(bp * Math.PI);
+    /* NHÚNG SANG BÊN: miếng nghiêng về phía hamster vừa đáp rồi bật lại */
+    bTilt = Math.sin(bp * Math.PI) * landBounceOff * 0.15;
+  }
   const bpS = (timeMs - landBounceT0) / (BOUNCE_MS * 2);
   if (bpS >= 0 && bpS < 1) bSqS = Math.abs(Math.sin(bpS * Math.PI * 2)) * (1 - bpS * 0.55);
   const topIsSpring = (tower[tower.length - 1].kind === 'spring');
@@ -1847,23 +2321,20 @@ function render() {
   for (let i = 0; i < tower.length; i++) {
     const isTop = i === tower.length - 1;
     const kd = tower[i].kind || 'normal';
-    if (isTop && kd === 'spring' && bSqS > 0) {
-      /* lò xo TỰ NÉN bên trong — không scale cả khối */
-      drawBlock(tower[i].cx, -(i + 1) * BLOCK_H, kd,
-        tower[i].seed != null ? tower[i].seed : i, tower[i].w, bSqS);
-    } else if (isTop && kd !== 'spring' && bSq > 0) {
-      /* squash quanh mép DƯỚI của miếng: lún xuống rồi bật lại */
+    const seed = tower[i].seed != null ? tower[i].seed : i;
+    if (isTop && (bSq > 0 || bSqS > 0 || bTilt !== 0)) {
+      /* impact khi đáp: nén dọc + NGHIÊNG quanh mép DƯỚI về phía đáp (nhúng) */
       const bx = sx(tower[i].cx), byB = sy(-i * BLOCK_H);
       ctx.save();
       ctx.translate(bx, byB);
-      ctx.scale(1 + 0.10 * bSq, 1 - 0.12 * bSq);
+      if (bTilt) ctx.rotate(bTilt);
+      if (kd !== 'spring' && bSq > 0) ctx.scale(1 + 0.10 * bSq, 1 - 0.12 * bSq);
       ctx.translate(-bx, -byB);
-      drawBlock(tower[i].cx, -(i + 1) * BLOCK_H, kd,
-        tower[i].seed != null ? tower[i].seed : i, tower[i].w);
+      /* lò xo TỰ NÉN bên trong (truyền bSqS); miếng thường không cần sq */
+      drawBlock(tower[i].cx, -(i + 1) * BLOCK_H, kd, seed, tower[i].w, kd === 'spring' ? bSqS : undefined);
       ctx.restore();
     } else {
-      drawBlock(tower[i].cx, -(i + 1) * BLOCK_H, kd,
-        tower[i].seed != null ? tower[i].seed : i, tower[i].w);
+      drawBlock(tower[i].cx, -(i + 1) * BLOCK_H, kd, seed, tower[i].w);
     }
   }
 
@@ -1970,6 +2441,14 @@ function pickKind() {
 }
 
 /* Sinh 1 miếng + ván gỗ của nó (mốc bay ở làn cao hơn) */
+/* Nhịp độ đầu ván dịu hơn: 3 tầng đầu ×0.75, tăng dần lên ×1.0 tại tầng 20.
+   (Vẫn nhanh dần theo độ cao qua SPEED_INC — ramp chỉ làm mềm khúc mở đầu.) */
+function speedRamp(level) {
+  if (level <= 3) return 0.75;
+  if (level >= 20) return 1;
+  return 0.75 + (level - 3) / 17 * 0.25;
+}
+
 function spawnOne(dir, kind, extraDelay) {
   const w = kind === 'mini' ? MINI_W : BLOCK_W;
   const lift = kind === 'mold' ? MOLD_LIFT : 0;
@@ -1989,7 +2468,7 @@ function spawnOne(dir, kind, extraDelay) {
     dir, kind, w,
     /* tốc độ tăng theo tầng + jitter ngẫu nhiên từng miếng */
     speed: Math.min(MAX_SPEED * spdMul,
-      (BASE_SPEED + tower.length * SPEED_INC) * (0.85 + rand01() * SPEED_JITTER) * spdMul),
+      (BASE_SPEED + tower.length * SPEED_INC) * (0.85 + rand01() * SPEED_JITTER) * spdMul * speedRamp(tower.length)),
     seed: tower.length + (dir > 0 ? 0 : 137),  // seed cố định — đáp xuống KHÔNG đổi hình
     slideAt: timeMs + WAIT_MS * (0.8 + rand01() * 0.6) + (extraDelay || 0),
     yTopW: surfaceY() - BLOCK_H - lift,        // neo world — không nhảy tầng khi tháp cao lên
@@ -2046,6 +2525,12 @@ function retractBoards() {
 function updateScoreHud() { elScore.textContent = String(score); }
 function updateBestHud() { elBest.textContent = String(best); }
 function updateCoinHud() { elCoin.textContent = String(coinsTotal); }
+/* Độ cao tháp hiện tại (trong ván) + kỷ lục cao nhất (menu) */
+function updateHeightHud() {
+  const h = Math.max(0, tower.length - 1);
+  if (elHeight) elHeight.textContent = String(h);
+  if (elMenuHigh) elMenuHigh.textContent = String(bestHeight);
+}
 
 /* Chỉ báo "Perfect ×n" dưới điểm — hiện từ chuỗi 2, pop khi tăng */
 function updateStreakHud() {
@@ -2062,7 +2547,7 @@ function updateStreakHud() {
 }
 
 function persistSaved() {
-  const light = { best, coins: coinsTotal, tut: tutSeen ? 1 : 0 };
+  const light = { best, coins: coinsTotal, tut: tutSeen ? 1 : 0, mute: muted ? 1 : 0, bh: bestHeight };
   saveData(light);
   saveLocal(light);
 }
@@ -2082,6 +2567,7 @@ function addCoins(n, wx, wy) {
   persistSaved();
   floatTexts.push({ x: wx, y: wy, born: timeMs, text: '+' + n, color: '#ffd23f', size: 20 });
   sparkles.push({ x: wx, y: wy, born: timeMs });
+  sCoin();
 }
 
 /* Miếng phô mai dừng lại & thành tầng mới (hamster đáp lên nó) */
@@ -2123,19 +2609,28 @@ function pinSlider(s) {
     if (s.kind === 'gold') addCoins(8, s.cx, surfaceY() - 44);
     if (s.kind === 'spring') {
       springArmed = true;              // cú nhảy KẾ TIẾP cao & lâu hơn
+      sArm();
       floatTexts.push({
         x: s.cx, y: surfaceY() - 74, born: timeMs, text: '▲', color: '#9adcff', size: 28,
       });
     }
     if (s.kind === 'ice') {
-      /* mặt băng trơn — hamster trượt theo đà của miếng */
-      ham.slideVx = s.dir * Math.max(2.2, s.speed * 0.5);
+      /* mặt băng TRƠN HƠN — hamster lướt theo đà mạnh & lâu hơn (dễ trượt tới mép) */
+      ham.slideVx = s.dir * Math.max(3.6, s.speed * 0.82);
     }
   }
 
   landBounceT0 = timeMs;               // miếng trên cùng nhún nhẹ khi đáp
+  landBounceOff = Math.max(-1, Math.min(1, (ham.x - s.cx) / (s.w / 2)));  // nghiêng về phía đáp
+  if (!tutorial) {
+    const curH = tower.length - 1;     // số phô mai chồng trên đĩa gốc
+    if (curH > bestHeight) { bestHeight = curH; persistSaved(); }
+  }
+  updateHeightHud();
+  sLand();
 
   if (perfect) {
+    sPerfect(Math.max(1, combo));      // tutorial: combo = 0 → nốt đầu thang
     rings.push({ x: s.cx, y: surfaceY(), born: timeMs });
     floatTexts.push({
       x: s.cx, y: surfaceY() - 46, born: timeMs,
@@ -2151,6 +2646,7 @@ function pinSlider(s) {
       ham.state = 'stumble';
       ham.t0 = timeMs;
       ham.stumbleDir = hamRel > 0 ? -1 : 1;
+      sStumble();
     } else {
       ham.state = 'idle';
     }
@@ -2196,6 +2692,7 @@ function failRun(s, dir, fromY) {
   dropAllSliders();
   retractBoards();
 
+  sKnock();
   ham.state = 'knock';
   ham.knock = {
     x: ham.x, y: fy,
@@ -2209,6 +2706,7 @@ function failRun(s, dir, fromY) {
    đáp lên tầng thứ 6 (luôn chừa tầng gốc trên đĩa) */
 function missPenalty(dir) {
   if (tutorial) { tutorialRetry(null); return; }   // tutorial: không phạt, thử lại
+  sCrash();
   /* vị trí chân hiện tại (đang bay thì giữa trời) làm điểm bắt đầu rơi */
   let fromY = surfaceY();
   if (ham.state === 'jump') {
@@ -2233,6 +2731,7 @@ function missPenalty(dir) {
 
   score = Math.max(0, score - 5);
   updateScoreHud();
+  updateHeightHud();                   // tháp vừa mất 5 tầng
   combo = 0;
   updateStreakHud();
   floatTexts.push({
@@ -2278,7 +2777,10 @@ function endRun() {
      Guard state: native có thể gọi onRetryLevel trong cửa sổ này */
   clearTimeout(overTimer);
   overTimer = setTimeout(() => {
-    if (state === 'over') elOverlay.classList.remove('hidden');
+    if (state === 'over') {
+      elOverlay.classList.remove('hidden');
+      sOver(isNew);
+    }
   }, 700);
 }
 
@@ -2287,6 +2789,7 @@ function resetWorld() {
   boards = [];
   fallBlocks = [];
   landBounceT0 = -1e9;
+  landBounceOff = 0;
   viewZoom = 1;
   zoomTarget = 1;
   coins = [];
@@ -2310,10 +2813,12 @@ function resetWorld() {
   updateBestHud();
   updateCoinHud();
   updateStreakHud();
+  updateHeightHud();
 }
 
 function showMenu(v) {
   $('menu').classList.toggle('hidden', !v);
+  $('height-ind').classList.toggle('hidden', v);   // độ cao chỉ hiện khi đang chơi
 }
 
 /* Bấm Play: lần đầu mở game → vào tutorial trước, các lần sau vào thẳng ván */
@@ -2408,6 +2913,7 @@ function tutorialRetry(s) {
   }
   dropAllSliders();
   retractBoards();
+  sStumble();
   setTutHint(t('tutRetry'));
   setTimeout(() => {
     if (tutorial && state === 'playing') {
@@ -2483,6 +2989,7 @@ function update(dt) {
       if (s.kind === 'mold') {
         /* NÉ ĐƯỢC phô mai mốc → thưởng, chơi tiếp */
         addScore(2);
+        sDodge();
         floatTexts.push({
           x: topCx(), y: surfaceY() - 40, born: timeMs, text: '+2', color: '#bede76',
         });
@@ -2563,13 +3070,14 @@ function update(dt) {
         ham.state = 'idle';
         ham.drop = null;
         landBounceT0 = timeMs;
+        sLand();
       }
     }
 
     /* trượt trên mặt băng (phô mai băng) — trôi theo đà, tới mép thì loạng choạng */
     if (ham.slideVx && (ham.state === 'idle' || ham.state === 'stumble')) {
       ham.x += ham.slideVx * dtf;
-      ham.slideVx *= Math.pow(0.90, dtf);
+      ham.slideVx *= Math.pow(0.955, dtf);   // ma sát băng nhỏ → trượt xa hơn, khó ghìm
       const tb = tower[tower.length - 1];
       const maxOff = (tb.w || BLOCK_W) / 2 - 16;
       const rel = ham.x - tb.cx;
@@ -2580,6 +3088,7 @@ function update(dt) {
           ham.state = 'stumble';
           ham.t0 = timeMs;
           ham.stumbleDir = rel > 0 ? -1 : 1;
+          sStumble();
         }
       }
       if (Math.abs(ham.slideVx) < 0.05) ham.slideVx = 0;
@@ -2600,7 +3109,9 @@ function update(dt) {
           if (eta > 320 && eta < 640) { cue = true; break; }
         }
       }
-      $('tut-tap').classList.toggle('hidden', !cue);
+      const elTap = $('tut-tap');
+      if (cue && elTap.classList.contains('hidden')) sTutTap();   // chỉ kêu lúc hiện
+      elTap.classList.toggle('hidden', !cue);
     }
 
     /* xu rơi + nhặt xu */
@@ -2640,6 +3151,7 @@ function update(dt) {
       ham.state = 'chute';
       /* dù mở NGAY TẠI vị trí đang bay, giữ nguyên vận tốc → không giật hình */
       ham.chute = { x: k.x, y: k.y, vx: k.vx, vy: k.vy };
+      sChute();
     }
   }
   if (ham && ham.state === 'chute') {
@@ -2696,9 +3208,11 @@ function onTap() {
         springArmed = false;
         ham.jumpH = JUMP_H * SPRING_MULT;
         ham.jumpDur = JUMP_DUR * SPRING_MULT;
+        sBoing();
       } else {
         ham.jumpH = JUMP_H;
         ham.jumpDur = JUMP_DUR;
+        sJump();
       }
     }
     /* đang bay / bị ngã → tap không làm gì */
@@ -2710,6 +3224,8 @@ function onTap() {
  * ================================================================ */
 window.onAppPause = function () {
   if (state === 'playing') paused = true;
+  /* app xuống nền → im lặng; cử chỉ resume nào cũng đi qua audioUnlock */
+  if (audioCtx && audioCtx.state === 'running') audioCtx.suspend().catch(function () {});
 };
 window.onNextLevel = function () { /* game không level — no-op */ };
 window.onRetryLevel = function () {
@@ -2857,9 +3373,11 @@ function localizeDom() {
   $('tut-text').textContent = t('tutorial');
   $('info-title').textContent = t('howToPlay');
   $('info-btn').setAttribute('aria-label', t('howToPlay'));
+  $('snd-btn').setAttribute('aria-label', t('sound'));
   $('tut-tap').textContent = t('tutTap');
   $('score-label').textContent = t('score');
   $('lbl-best').textContent = t('best');
+  $('menu-high-lbl').textContent = t('highest');
   $('ov-lbl-score').textContent = t('score');
   $('ov-lbl-best').textContent = t('best');
   $('ov-btn-text').textContent = t('playAgain');
@@ -2885,6 +3403,8 @@ function boot() {
   elScore = $('score-num');
   elBest = $('hud-best');
   elCoin = $('hud-coin');
+  elHeight = $('height-num');
+  elMenuHigh = $('menu-high-val');
   elOverlay = $('overlay');
   elOvTitle = $('ov-title');
   elOvScore = $('ov-score');
@@ -2896,13 +3416,15 @@ function boot() {
   /* tiện chơi thử: ?reset=1 xoá kỷ lục + xu đã lưu (native không bao giờ gửi) */
   if (new URLSearchParams(window.location.search).get('reset') === '1') {
     try { localStorage.removeItem(LS_KEY); } catch (e) { /* ignore */ }
-    saveData({ best: 0, coins: 0, tut: 0 });
+    saveData({ best: 0, coins: 0, tut: 0, mute: 0, bh: 0 });
   }
 
   const saved = loadSaved();
   best = saved.best;
   coinsTotal = saved.coins;
   tutSeen = !!saved.tut;
+  muted = !!saved.mute;
+  bestHeight = saved.bh;
   bestStart = best;
 
   localizeDom();
@@ -2923,6 +3445,7 @@ function boot() {
   });
   $('back-btn').addEventListener('click', function (e) {
     e.stopPropagation();
+    sButton();
     sendMessage('quit');
   });
   $('back-btn').addEventListener('keydown', function (e) {
@@ -2932,35 +3455,53 @@ function boot() {
     }
   });
   $('ov-btn').addEventListener('click', function () {
+    sButton();
     sendMessage('retry_level');        // game tự xử lý chơi lại (game-common §1.3)
     newRun();
   });
   $('ov-menu-btn').addEventListener('click', function () {
+    sButton();
     toMenu();                          // về menu — không bắn event (không chơi lại)
   });
   /* menu: Play / Tutorial / panel hướng dẫn */
   $('play-btn').addEventListener('click', function (e) {
     e.stopPropagation();
+    sButton();
     onPlay();
   });
   $('tut-btn').addEventListener('click', function (e) {
     e.stopPropagation();
+    sButton();
     startTutorial();
   });
   $('info-btn').addEventListener('click', function (e) {
     e.stopPropagation();
+    sButton();
     $('info-overlay').classList.remove('hidden');
   });
   $('info-close').addEventListener('click', function () {
+    sButton();
     $('info-overlay').classList.add('hidden');
   });
   $('info-overlay').addEventListener('click', function (e) {
     if (e.target === this) this.classList.add('hidden');   // chạm nền tối để đóng
   });
 
+  /* âm thanh: WebAudio chỉ mở được sau cử chỉ đầu tiên (autoplay policy) —
+     nghe ở capture để chạy trước mọi handler khác; nút loa bật/tắt + lưu */
+  document.addEventListener('pointerdown', audioUnlock, true);
+  window.addEventListener('keydown', audioUnlock, true);
+  $('snd-btn').classList.toggle('muted', muted);
+  $('snd-btn').addEventListener('click', function (e) {
+    e.stopPropagation();
+    setMuted(!muted);
+    sButton();
+  });
+
   /* app chuyển nền khi chạy trong browser thường → cũng pause */
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) window.onAppPause();
+    else if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(function () {});
   });
 
   requestAnimationFrame(loop);
