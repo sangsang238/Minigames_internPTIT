@@ -665,10 +665,35 @@ let comboQueue = null;   // [[tile,...], ...] — combo 🌈+special: nổ theo 
 let tutorialSeen = false;         // đã xem hướng dẫn chưa (persist)
 let onboarding = false;           // đang hiện chuỗi popup onboarding (trước khi chơi)
 
-// Bom đếm ngược: cứ SPAWN_EVERY lượt sinh 1 bom, đếm BOMB_START → 0 thì NỔ & thua.
+// Bom đếm ngược: cứ vài lượt sinh 1 bom, đếm BOMB_START → 0 thì NỔ & thua.
 // Gỡ bom = cho nổ trúng 1 ô kề (trên/dưới/trái/phải) hoặc chính ô bom.
-const BOMB_START = 12;
-const SPAWN_EVERY = 10;
+// Càng về sau, tần suất sinh bom càng nhanh (SPAWN_EVERY_START → SPAWN_EVERY_MIN),
+// nhưng tối đa MAX_BOMBS bom trên bàn cùng lúc.
+const BOMB_START_MIN = 5;       // số đếm ngược bom nhỏ nhất
+const BOMB_START_MAX = 15;      // số đếm ngược bom lớn nhất
+// Mỗi bom nhận một số đếm ngược ngẫu nhiên trong [BOMB_START_MIN, BOMB_START_MAX].
+function randBombStart() {
+  return BOMB_START_MIN + ((Math.random() * (BOMB_START_MAX - BOMB_START_MIN + 1)) | 0);
+}
+const SPAWN_EVERY_START = 6;    // khoảng cách lượt sinh bom lúc đầu
+const SPAWN_EVERY_MIN = 2;      // khoảng cách lượt sinh bom nhỏ nhất (nhanh nhất)
+const SPAWN_RAMP = 10;          // cứ mỗi SPAWN_RAMP lượt, khoảng cách giảm 1
+const MAX_BOMBS = 5;            // số bom tối đa trên bàn cùng lúc
+let movesSinceBomb = 0;         // số lượt kể từ lần sinh bom gần nhất
+
+// Khoảng cách lượt để sinh bom kế tiếp — giảm dần theo tổng số lượt đã đi.
+function bombSpawnEvery() {
+  return Math.max(SPAWN_EVERY_MIN, SPAWN_EVERY_START - Math.floor(moves / SPAWN_RAMP));
+}
+// Đếm số bom hiện có trên bàn.
+function bombCount() {
+  let n = 0;
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const t = board[r][c];
+    if (t && t.bomb) n++;
+  }
+  return n;
+}
 
 const boardEl = document.getElementById('board');
 const wrapEl = document.getElementById('board-wrap');
@@ -1437,7 +1462,7 @@ async function tryMove(a, b) {
       const raPos = t1.special === 'rainbow' ? a : b;
       const kind = oth.special === 'bomb' ? 'bomb' : 'stripe';
       await rainbowSpecialCombo(raPos, oth.color, kind);
-      onMoveResolved();
+      await onMoveResolved();
       await settleAfterMove();
       busy = false;
       resetIdle();
@@ -1458,7 +1483,7 @@ async function tryMove(a, b) {
   }
 
   await cascade(pending, [a, b]);
-  onMoveResolved();          // đếm ngược bom + spawn (có thể kích nổ → thua)
+  await onMoveResolved();     // đếm ngược bom + spawn (có thể kích nổ → thua)
   await settleAfterMove();
   busy = false;
   resetIdle();
@@ -1858,7 +1883,7 @@ function defuseBombs(clr) {
 }
 
 // Gọi sau mỗi lượt hợp lệ: đếm ngược mọi bom, nổ nếu về 0, rồi spawn định kỳ.
-function onMoveResolved() {
+async function onMoveResolved() {
   if (ended) return;
   moves++;
   let boom = null;
@@ -1870,8 +1895,12 @@ function onMoveResolved() {
       else paintBomb(t);
     }
   }
-  if (boom) { explodeBomb(boom.r, boom.c); return; }   // về 0 → nổ & thua
-  if (moves % SPAWN_EVERY === 0) spawnBomb();
+  if (boom) { await explodeBomb(boom.r, boom.c); return; }   // về 0 → nổ & thua
+  movesSinceBomb++;
+  if (movesSinceBomb >= bombSpawnEvery() && bombCount() < MAX_BOMBS) {
+    movesSinceBomb = 0;
+    spawnBomb();
+  }
 }
 
 // Sinh 1 bom ở ô ngẫu nhiên (thay 1 tile thường đang có trên bàn).
@@ -1879,12 +1908,13 @@ function spawnBomb() {
   const cells = [];
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
     const t = board[r][c];
-    if (t && !t.bomb) cells.push([r, c]);
+    // chỉ thay viên thường — KHÔNG biến viên đặc biệt (sọc/gói/cầu vồng/sóng) thành bom
+    if (t && !t.bomb && !t.special && !t.wave) cells.push([r, c]);
   }
   if (!cells.length) return;
   const [r, c] = cells[(Math.random() * cells.length) | 0];
   board[r][c].el.remove();
-  const b = makeBomb(BOMB_START);
+  const b = makeBomb(randBombStart());
   board[r][c] = b;
   const p = pos(r, c);
   b.el.style.transform = p;
@@ -1896,12 +1926,15 @@ function spawnBomb() {
   if (!hasAnyMove()) reshuffle(true);  // phòng khi bom chặn hết nước đi (kèm toast + anim)
 }
 
-// Bom nổ (đếm về 0) → NỔ LỚN + Game Over.
-function explodeBomb(r, c) {
+// Bom nổ (đếm về 0) → đợi hạt nổ của lượt vừa rồi tan hết → NỔ LỚN → khựng 2s → Game Over.
+const FX_SETTLE = 550;   // ms: thời gian đợi các hạt nổ của lượt trước tan hết
+async function explodeBomb(r, c) {
   const t = board[r][c];
   const [cx, cy] = fxCenter(r, c);
   if (t) { t.el.remove(); board[r][c] = null; }
+  await sleep(FX_SETTLE);   // đợi các hạt/hiệu ứng nổ của lượt vừa rồi tan hết
   bigBoom(cx, cy);
+  await sleep(2000);        // khựng lại 2s cho người chơi thấy vụ nổ trước khi hiện màn thua
   gameOver();
 }
 // Nổ lớn (bom đếm ngược): chớp trắng + 2 vòng sốc đỏ/cam + mảnh bắn tỏa nhanh
@@ -2890,6 +2923,7 @@ function newRun() {
   busy = false;
   sel = null;
   moves = 0;
+  movesSinceBomb = 0;
   const ov = document.getElementById('overlay');
   if (ov) ov.classList.add('hidden');
   buildBoard();
