@@ -962,12 +962,12 @@ const GEM_SCORE = 5;
 const TUT_CRUISE = 2.6;                 // tốc độ xoay steady (rad/s)
 const TUT_DECEL_ARC = 20 * Math.PI / 180;   // 20° cuối: giảm tốc dần tới freeze
 const TUT_MIN_W = 0.4;                  // sàn tốc độ trong pha giảm (khỏi bò quá lâu)
-const TUT_GEM_A = 7 * Math.PI / 6;      // 210° — ngọc rơi đúng impact tại mốc 3
+const TUT_GEM_A = Math.PI / 2;          // 90° — ngọc rơi đúng impact tại mốc 3 (sau đủ 1 vòng)
 const TUT_FREEZES = [
-  0,                                    // F1 — KHÔNG xoay: phình ra đứng luôn (dao #1 @ 90°)
-  2 * Math.PI / 3,                      // F2 — +120° (dao #2 @ 330°)
-  4 * Math.PI / 3,                      // F3 — +120° (dao #3 @ 210° = TRÚNG GEM)
-  2 * Math.PI,                          // F4 — +120° (quay lại đúng dao #1 → demo chết)
+  2 * Math.PI / 3,                      // F1 — xoay 120° rồi freeze (dao #1 @ 330°)
+  4 * Math.PI / 3,                      // F2 — +120° (dao #2 @ 210°)
+  2 * Math.PI,                          // F3 — +120° (dao #3 @ 90° = TRÚNG GEM)
+  8 * Math.PI / 3,                      // F4 — +120° (quay lại đúng dao #1 → demo chết)
 ];
 const STAGE_BONUS = 2;      // thưởng phá totem thường
 const BOSS_BONUS = 10;      // thưởng phá totem TRÙM
@@ -2475,16 +2475,16 @@ function render() {
 
   /* dao đang bay / dao chờ + đạn còn lại */
   if (state === 'playing') {
-    /* tutorial: hiện dao chờ khi tới lượt tap — wait (phóng 3 dao) / death ("try") / free */
-    const idleShown = tutorial
-      ? (tutorial.mode === 'wait' || tutorial.mode === 'death' || tutorial.mode === 'free')
-      : (knivesLeft > 0);
+    /* tutorial: dao chờ HIỆN SUỐT mọi pha (kể cả lúc xoay/phình); cue "CHẠM!" chỉ
+       hiện khi thật sự tới lượt tap (wait/death/free) để không mời tap lúc đang xoay */
+    const idleShown = tutorial ? true : (knivesLeft > 0);
+    const canThrow = tutorial && (tutorial.mode === 'wait' || tutorial.mode === 'death' || tutorial.mode === 'free');
     if (flying) {
       drawKnife(knifeSpr, LW / 2, flying.y, 0, 1, 1);
-    } else if (phase === 'aim' && idleShown && !paused) {
+    } else if ((phase === 'aim' || (tutorial && phase === 'spawn')) && idleShown && !paused) {
       const bob = Math.sin(timeMs * 0.004) * 6;
       drawKnife(knifeSpr, LW / 2, knifeIdleY + bob, 0, 1, 1);
-      if (tutorial) {
+      if (canThrow) {
         ctx.textAlign = 'center';
         ctx.globalAlpha = 0.55 + 0.45 * Math.sin(timeMs * 0.008);
         ctx.fillStyle = '#fff';
