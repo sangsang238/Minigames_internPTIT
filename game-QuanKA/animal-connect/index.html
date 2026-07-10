@@ -201,7 +201,8 @@ body {
   width: 100%;
   padding: 8px;
   min-height: 0;
-  overflow: auto;           /* màn hình quá lùn vẫn cuộn tới được board */
+  overflow: hidden;         /* TUYỆT ĐỐI không cuộn (ngang lẫn dọc) — board luôn
+                               vừa khít vùng này; overlay đường nối được clip gọn */
 }
 
 #board-wrap {
@@ -1347,7 +1348,9 @@ function resize() {
                  + bottom.getBoundingClientRect().height + 20;
     const availH = window.innerHeight - usedH - 12;
     const availW = Math.min(window.innerWidth, 520) - 24 - 12;
-    cellPx = Math.max(16, Math.min(Math.floor(availW / COLS), Math.floor(availH / ROWS), 58));
+    // Chừa ~1 ô chiều cao (ROWS+1) làm chỗ cho đường nối vòng ra ngoài biên,
+    // để #board-outer overflow:hidden không cắt nét khi màn bị giới hạn chiều cao.
+    cellPx = Math.max(16, Math.min(Math.floor(availW / COLS), Math.floor(availH / (ROWS + 1)), 58));
 
     const w = cellPx * COLS, h = cellPx * ROWS;
     boardEl.style.width  = w + 'px';
