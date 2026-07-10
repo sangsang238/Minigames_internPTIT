@@ -1,0 +1,24 @@
+{
+  "title": "Tap Away",
+  "packageName": "com.falcon.tapaway",
+  "engine": "HTML5",
+  "version": "1.0.0",
+  "category": "PUZZLE",
+  "tags": ["tap", "away", "arrow", "puzzle", "levels"],
+  "description": "Tap arrow tiles to slide them out when their path to the edge is clear. Clear every tile in each frame to advance through levels that grow bigger and trickier. You get 3 hearts per level - a blocked tap costs one.",
+  "controls": "Tap a tile to slide it out along its arrow",
+  "aiContext": "",
+  "aiBuildLink": "",
+  "demoUrl": "",
+  "storeLinks": {
+    "googlePlay": { "url": "", "downloads": 0 },
+    "iosAppStore": { "url": "", "downloads": 0 },
+    "steam": { "url": "", "downloads": 0 }
+  },
+  "entry": "index.html",
+  "coverImages": {
+    "landscape16x9": "cover-landscape-1920x1080.png",
+    "portrait2x3": "cover-portrait-800x1200.png",
+    "square1x1": "cover-square-800x800.png"
+  }
+}
