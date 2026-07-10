@@ -29,8 +29,8 @@
 
   :root {
     --ui-font: 'Google Sans Flex', system-ui, sans-serif;
-    --bg-1: #eef3ff;
-    --bg-2: #dfe8ff;
+    --bg-1: #ffcf94;
+    --bg-2: #93b7f2;
     --ink: #24304d;
     --ink-soft: #5b6b8f;
     --accent: #3b5bdb;
@@ -43,7 +43,12 @@
     font-family: var(--ui-font);
     font-weight: 700;
     color: var(--ink);
-    background: var(--bg-1);   /* nền màu đều (phẳng) */
+    /* nền mix cam→xanh dương ĐẬM/TƯƠI: quầng cam trên, quầng xanh dưới + chuyển gradient */
+    background:
+      radial-gradient(90% 55% at 50% -8%, rgba(255,160,70,.75) 0%, rgba(255,160,70,0) 62%),
+      radial-gradient(100% 62% at 50% 108%, rgba(80,135,235,.8) 0%, rgba(80,135,235,0) 62%),
+      linear-gradient(180deg, var(--bg-1) 0%, #dcd7e6 50%, var(--bg-2) 100%);
+    background-attachment: fixed;
     -webkit-user-select: none;
     user-select: none;
     touch-action: none;
@@ -97,27 +102,35 @@
     color: var(--accent); text-transform: uppercase;
     max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .sc-v { font-size: 26px; color: var(--ink); max-width: 100%; white-space: nowrap; }
+  .sc-v { font-size: 26px; font-weight: 800; color: var(--ink); max-width: 100%; white-space: nowrap; }
 
-  /* ── Frame = thông tin phụ ⇒ 1 hàng riêng dưới thanh tim, nhỏ & nhạt ── */
+  /* ── Frame = thông tin phụ ⇒ 1 pill riêng dưới thanh tim, chữ canh giữa đều ── */
   .frame-row {
-    display: flex;
-    align-items: baseline;
+    display: inline-flex;                 /* pill vừa nội dung, tự canh giữa trong .app */
+    align-items: center;                  /* canh giữa theo chiều dọc ⇒ chữ đều nhau */
     justify-content: center;
-    gap: 6px;
-    padding: 2px 0 2px;
+    gap: 7px;
+    margin: 3px auto 2px;
+    padding: 3px 14px;
     color: var(--ink-soft);
+    line-height: 1;                        /* bỏ lệch do line-height mặc định */
+    background: rgba(255, 255, 255, .55);
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1px rgba(59, 91, 219, .1);
   }
-  .frame-k { font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; }
-  .frame-v { font-size: 15px; font-weight: 800; }
+  .frame-k { font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; line-height: 1; }
+  .frame-v { font-size: 14px; font-weight: 800; color: var(--accent); line-height: 1;
+    font-variant-numeric: tabular-nums; }  /* số cùng bề rộng ⇒ "1/1" không nhảy */
 
   /* ── Tim (lượt chơi) — 3 tim mỗi lần chơi ─────────────────────────── */
   .lives {
     display: flex;
+    align-items: center;
     justify-content: center;
     gap: 8px;
     width: 100%;
     max-width: 560px;
+    min-height: 32px;      /* cao ổn định dù trống/đầy ⇒ đo .stage chuẩn mọi lúc */
     padding: 2px 0 4px;
   }
   .heart { width: 26px; height: 26px; display: block; color: #ff5a72; }
@@ -172,7 +185,12 @@
     align-items: center;
     justify-content: center;
     width: 100%;
-    padding: 8px 8px 20px;
+    /* chừa safe-area đáy (thanh home iPhone) + lề 2 bên theo notch ngang (landscape) */
+    padding:
+      8px
+      calc(8px + env(safe-area-inset-right))
+      calc(20px + env(safe-area-inset-bottom))
+      calc(8px + env(safe-area-inset-left));
     overflow: visible;   /* KHÔNG cắt ">>>" gợi ý ở ô sát mép khay */
   }
   .deck {
@@ -295,11 +313,13 @@
   }
 
   .tile.slide {
-    transition: transform .32s cubic-bezier(.4, 0, .7, .2), opacity .32s ease;
-    opacity: 0;
+    transition: transform .34s cubic-bezier(.45, 0, .85, .6);
     z-index: 4;
     pointer-events: none;
   }
+  /* Cả VIÊN đổi xanh lá KHI được gỡ và bay ra (lúc trượt); mũi tên giữ trắng.
+     background của .tile-face do JS gán inline ⇒ dùng !important để phủ lúc slide. */
+  .tile.slide .tile-face { background: #37b24d !important; }
   .tile.blocked .tile-face { animation: shake .32s ease; }
   @keyframes shake {
     0%, 100% { transform: translate(0, 0); }
@@ -336,7 +356,7 @@
     height: auto;
     display: block;
     opacity: .15;
-    animation: chevWave 1.05s ease-in-out infinite;
+    animation: chevWave .6s ease-in-out infinite;
     filter: drop-shadow(0 1px 2px rgba(255, 255, 255, .7));   /* quầng sáng ⇒ mực đậm nổi rõ mọi nền */
   }
   .cv2 { animation-delay: .17s; }
@@ -541,9 +561,10 @@ function getInitialLevelIdx() {
 const DR = [-1, 0, 1, 0];
 const DC = [0, 1, 0, -1];
 const DIRS = [0, 1, 2, 3];
+// KHÔNG dùng xanh lá làm màu có sẵn (xanh lá dành riêng cho viên lúc bay ra).
 const PALETTE = [
-  '#ff6b6b', '#4dabf7', '#51cf66', '#fab005', '#b197fc', '#ff922b',
-  '#22b8cf', '#f783ac', '#748ffc', '#20c997', '#f06595', '#94d82d',
+  '#ff6b6b', '#4dabf7', '#5c7cfa', '#fab005', '#b197fc', '#ff922b',
+  '#22b8cf', '#f783ac', '#748ffc', '#e64980', '#f06595', '#ffa94d',
 ];
 const ARROW = '<path d="M50 20 L78 52 L60 52 L60 80 L40 80 L40 52 L22 52 Z" ' +
   'stroke="#ffffff" stroke-width="11" stroke-linejoin="round" stroke-linecap="round"/>';
@@ -771,9 +792,10 @@ function tapCell(r, c) {
   trayEl.appendChild(rv);
   setTimeout(() => rv.remove(), 480);
 
-  // trượt ra khỏi khay theo hướng mũi tên — chỉ cần ra khỏi mép + 2 ô rồi mờ dần
-  // (stage không còn cắt overflow ⇒ giữ quãng trượt ngắn để ô không bay ngang màn hình)
-  const dist = (distEdge(r, c, tile.dir) + 2) * CELL;
+  // trượt HẲN ra khỏi màn hình theo hướng mũi tên (không mờ dần):
+  // quãng = số ô tới mép khay + trọn kích thước viewport ⇒ chắc chắn bay khuất.
+  const dist = (distEdge(r, c, tile.dir) + 1) * CELL +
+    Math.max(window.innerWidth, window.innerHeight);
   const el = tile.el;
   el.classList.add('slide');
   requestAnimationFrame(() => {
@@ -885,19 +907,26 @@ trayEl.addEventListener('click', (e) => {
  * 8. Sizing — khay vừa vùng sân khấu, ô vuông, canh giữa
  * ===================================================================== */
 function computeSizing() {
-  const maxW = Math.min(window.innerWidth, 560);
-  // đo tới đáy hàng Frame (nằm dưới topbar + thanh tim) ⇒ trừ đủ toàn bộ phần HUD
-  const usedTop = document.querySelector('.frame-row').getBoundingClientRect().bottom;
-  viewW = maxW - 20;
-  viewH = Math.max(240, window.innerHeight - usedTop - 30);
-  // Chừa gutter cho ">>>" gợi ý ló ra ngoài ô sát mép (~0.7 ô mỗi phía) ⇒ bàn nhỏ lại
-  // để chevron luôn nằm trong màn hình (2 bên) và không chui lên topbar (phía trên).
+  // Đo TRỰC TIẾP ô nội dung của .stage (đã trừ HUD phía trên + padding safe-area).
+  // Cách này tự khớp mọi thiết bị: notch/home-indicator, thanh công cụ trình duyệt
+  // co dãn, xoay ngang/dọc… mà không cần cộng trừ thủ công theo innerHeight.
+  const stage = document.querySelector('.stage');
+  const cs = getComputedStyle(stage);
+  const rect = stage.getBoundingClientRect();
+  const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+  const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+
+  // Bề rộng bàn cap 560px (tablet/desktop) để ô không quá to; chiều cao lấy hết khả dụng.
+  viewW = Math.min(rect.width, 560) - padX;
+  viewH = Math.max(200, rect.height - padY);
+
+  // Chừa gutter cho ">>>" gợi ý ló ra ngoài ô sát mép (~0.7 ô mỗi phía).
   const CHEV = 0.7;
-  // chừa chỗ dưới cho các "khay chờ" + gờ 3D ló ra (~78px) và lề trong PAD ở 4 cạnh
+  // Chừa chỗ dưới cho các "khay chờ" + gờ 3D ló ra (~78px) và lề trong PAD ở 4 cạnh.
   CELL = Math.floor(Math.min(
     (viewW - 2 * PAD) / (COLS + 2 * CHEV),
     (viewH - 78 - 2 * PAD) / (ROWS + CHEV)));
-  CELL = Math.max(34, CELL);
+  CELL = Math.max(28, CELL);   // sàn nhỏ hơn ⇒ map lớn vẫn vừa máy nhỏ, ít tràn
   document.documentElement.style.setProperty('--cell', CELL + 'px');
   document.documentElement.style.setProperty('--pad', PAD + 'px');
   deckEl.style.width = (COLS * CELL + 2 * PAD) + 'px';    // khay = lưới ô + lề khung 2 bên
@@ -978,7 +1007,19 @@ function boot() {
   loadLevel(getInitialLevelIdx());   // vào đúng màn native truyền (mặc định màn 1); loadLevel tự nạp 3 tim
 }
 
-window.addEventListener('resize', () => { relayout(); });
+// Gộp mọi tín hiệu đổi cỡ vào 1 lần relayout/khung hình ⇒ tránh layout thrashing.
+let _relayoutRaf = 0;
+function scheduleRelayout() {
+  if (_relayoutRaf) return;
+  _relayoutRaf = requestAnimationFrame(() => { _relayoutRaf = 0; relayout(); });
+}
+window.addEventListener('resize', scheduleRelayout);
+window.addEventListener('orientationchange', scheduleRelayout);
+// visualViewport: bắt cả lúc thanh công cụ trình duyệt mobile co/dãn (innerHeight đổi mượt)
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', scheduleRelayout);
+  window.visualViewport.addEventListener('scroll', scheduleRelayout);
+}
 
 // Đợi native inject (chống race) — game-common §3
 (function waitForNativeInjection() {
