@@ -67,13 +67,13 @@ Best **persist ngay khi vượt** (không chờ hết ván) qua `save_data` + lo
 - Va chạm **nghiêm ngặt nhưng công bằng**: ngưỡng góc 0.105 rad ≈ đúng bề rộng lưỡi dao nhìn thấy; thời điểm chạm **nội suy sub-frame** (không phụ thuộc 60/90/120 Hz)
 
 ### Trợ giúp người chơi — Tutorial choreographed (1 totem, KHÔNG chuyển cảnh)
-- **Tự chạy lần mở đầu tiên**, skip được. Chỉ **1 totem duy nhất**, tự xoay tới các mốc rồi **FREEZE** để nhắc tap — **chặn touch trong lúc xoay** (chỉ nhận tap ở pha freeze):
-  1. Xoay ~2 vòng rồi freeze → **"Tap to throw a knife"** → tap **dao #1**; +120° → **dao #2**; +120° → **dao #3** ⇒ **3 dao đối xứng** (90°/210°/330°)
+- **Tự chạy lần mở đầu tiên**, skip được. Chỉ **1 totem duy nhất** xoay **STEADY** (tốc độ đều), **20° cuối mới giảm tốc từ từ** tới FREEZE — **lúc freeze mới hiện banner hướng dẫn** (đang xoay thì ẩn), xong lại speed-up lặp lại. **Chặn touch trong lúc xoay** (chỉ nhận tap ở pha freeze):
+  1. Phình ra là **đứng luôn** (mốc đầu KHÔNG xoay) → **"Tap to throw a knife"** → tap **dao #1**; xoay +120° → **dao #2**; +120° → **dao #3 trúng NGỌC HỒN** (nảy **+5**) ⇒ **3 dao đối xứng** (90°/210°/330°)
   2. Xoay thêm 120° → **dao #1 quay về đáy** → đổi chữ **"Try to throw a knife"** → người chơi tap → **phi trúng dao #1 = CHẾT** (flash đỏ + dao thủ phạm sáng đỏ + dao mình văng — demo chết THẬT, nhưng KHÔNG popup game-over)
-  3. ~1.5s sau → totem xoay tự do → **"Now throw one on your own!"** → người chơi **tự phi 1 dao an toàn** (trúng dao cắm thì chỉ nảy ra + nhắc lại) → **"You're ready!"** → chuyển cảnh vào ván thật
-- 3 dao cách đều 120° → khe an toàn rộng cho cú phi tự do; **không còn ngọc trong tutorial**
-- Cue **"CHẠM!"** nhấp nháy cạnh dao chờ ở mỗi mốc + cú tự do
-- Xoay eased (easeInOutCubic) tới từng mốc rồi dừng, coast mượt lúc kết — **không snap** (motion continuity)
+  3. ~1.5s sau → totem **vẫn xoay steady** → **"Now throw one on your own!"** → người chơi **tự phi 1 dao an toàn** (trúng dao cắm thì chỉ nảy ra + nhắc lại) → **"You're ready!"** → chuyển cảnh vào ván thật
+- 3 dao cách đều 120° → khe an toàn rộng cho cú phi tự do
+- Banner đặt **cao hơn dao chờ** (khỏi che) + cue **"CHẠM!"** nhấp nháy cạnh dao chờ ở mỗi mốc
+- Speed-up từ 0 và giảm tốc 20° cuối đều **mượt hoá** (accel/decel) — **không snap** (motion continuity)
 
 ### UI (không menu — mở game vào thẳng gameplay)
 - **Không có màn menu**: lần đầu mở = tutorial, các lần sau vào thẳng ván (yêu cầu chuẩn chung)

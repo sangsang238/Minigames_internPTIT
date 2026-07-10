@@ -441,7 +441,7 @@ body {
 /* ── Responsive — thu nút icon khi màn thấp ────────────────────── */
 @media (max-height: 640px) {
   #topbar .btn3d.btn-icon { --surface-height: 36px; --surface-width: 36px; }
-  #tut-banner { bottom: 12px; padding: 9px 12px; }
+  #tut-banner { padding: 9px 12px; }
 }
 @media (max-width: 360px) {
   .btn3d.btn-icon { --surface-height: 38px; --surface-width: 38px; }
@@ -472,7 +472,7 @@ body {
 #tut-banner {
   position: fixed;
   left: 50%;
-  bottom: 26px;
+  top: 80px;                /* JS đặt lại = ngay dưới header (giữa LEVEL-ẩn và bàn) */
   transform: translateX(-50%);
   z-index: 240;
   width: min(88%, 380px);
@@ -1369,11 +1369,19 @@ function resize() {
   topbar.style.paddingTop = topPad + 'px';
 
   requestAnimationFrame(() => {
-    // Header là overlay fixed → đẩy board xuống dưới header đúng chiều cao của nó
+    // Header là overlay fixed → đẩy board xuống dưới header đúng chiều cao của nó.
+    // Board GIỮ vị trí tự nhiên (không đẩy vì banner) — banner sẽ canh vào khoảng
+    // trống phía trên bàn để nằm CHÍNH GIỮA header & bàn.
     const headH = topbar.getBoundingClientRect().height;
     document.getElementById('board-outer').style.paddingTop = headH + 'px';
 
-    const availH = window.innerHeight - headH - 16;
+    // Tutorial: chừa chỗ cho bảng hướng dẫn phía trên bàn (bàn nhỏ lại chút) để
+    // luôn còn khoảng trống canh bảng vào chính giữa, không đè lên bàn.
+    const banner = document.getElementById('tut-banner');
+    const tutOn = tutorialMode && !banner.classList.contains('hidden');
+    const bannerReserve = tutOn ? banner.getBoundingClientRect().height + 28 : 0;
+
+    const availH = window.innerHeight - headH - 16 - bannerReserve;
     const availW = Math.min(window.innerWidth, 520) - 24 - 12;
     // Chừa ~1 ô chiều cao (ROWS+1) làm chỗ cho đường nối vòng ra ngoài biên,
     // để #board-outer overflow:hidden không cắt nét khi màn bị giới hạn chiều cao.
@@ -1394,6 +1402,14 @@ function resize() {
     linkSvg.setAttribute('viewBox', `0 0 ${(COLS + 2) * cellPx} ${(ROWS + 2) * cellPx}`);
 
     layoutAll();
+
+    // Canh bảng hướng dẫn vào CHÍNH GIỮA khoảng trống giữa đáy header & mép trên bàn
+    if (tutOn) {
+      const bwTop = wrapEl.getBoundingClientRect().top;
+      const bh = banner.getBoundingClientRect().height;
+      const top = Math.max(headH + 6, headH + (bwTop - headH - bh) / 2);
+      banner.style.top = top + 'px';
+    }
   });
 }
 
@@ -2184,6 +2200,7 @@ function loadLevel(idx) {
   // rời tutorial nếu đang dở (an toàn khi native gọi next/retry giữa chừng)
   tutorialMode = false;
   document.getElementById('tut-banner').classList.add('hidden');
+  document.getElementById('hud-sub').style.display = '';   // hiện lại LEVEL
 
   fillBoard();
   updateLabels();
@@ -2227,10 +2244,10 @@ function startTutorial() {
   grid = Array.from({ length: ROWS }, () => new Array(COLS).fill(-1));
   for (const [r, c, ty] of TUT_TILES) grid[r][c] = ty;
   buildTileDom(true);
-  resize();
+  document.getElementById('hud-sub').style.display = 'none';   // ẩn LEVEL khi tutorial
   updateHUD();
   document.getElementById('tut-banner').classList.remove('hidden');
-  setTutPhase(0);
+  setTutPhase(0);   // set text + highlight + resize (đặt bảng giữa header & bàn)
 }
 
 /* Stage 0=nối cặp được chỉ · 1=demo đường 3 rẽ · 2=dọn nốt */
@@ -2241,6 +2258,7 @@ function setTutPhase(n) {
   if (n === 0)      { txt.textContent = t('tut1');    tutTarget = TUT_CONNECT.map(p => p.slice()); highlightPair(TUT_CONNECT); }
   else if (n === 1) { txt.textContent = t('tutBend'); tutTarget = null; highlightPair(TUT_BEND); }
   else              { txt.textContent = t('tutClear'); tutTarget = null; highlightPair(findAnyPair(true)); }
+  resize();   // chữ đổi → đặt lại vị trí bảng + đẩy bàn cho khớp
 }
 
 function highlightPair(pair) {
@@ -2302,6 +2320,7 @@ function finishTutorial() {
   tutorialMode = false;
   clearHint();
   document.getElementById('tut-banner').classList.add('hidden');
+  document.getElementById('hud-sub').style.display = '';   // hiện lại LEVEL
   levelEpoch++;
 
   const lv = levelConfig(currentLevelIdx);

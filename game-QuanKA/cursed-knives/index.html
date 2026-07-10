@@ -964,10 +964,10 @@ const TUT_DECEL_ARC = 20 * Math.PI / 180;   // 20° cuối: giảm tốc dần t
 const TUT_MIN_W = 0.4;                  // sàn tốc độ trong pha giảm (khỏi bò quá lâu)
 const TUT_GEM_A = 7 * Math.PI / 6;      // 210° — ngọc rơi đúng impact tại mốc 3
 const TUT_FREEZES = [
-  4 * Math.PI,                          // F1 — sau ~2 vòng (dao #1 @ 90°)
-  4 * Math.PI + 2 * Math.PI / 3,        // F2 — +120° (dao #2 @ 330°)
-  4 * Math.PI + 4 * Math.PI / 3,        // F3 — +120° (dao #3 @ 210° = TRÚNG GEM)
-  6 * Math.PI,                          // F4 — +120° (quay lại đúng dao #1 → demo chết)
+  0,                                    // F1 — KHÔNG xoay: phình ra đứng luôn (dao #1 @ 90°)
+  2 * Math.PI / 3,                      // F2 — +120° (dao #2 @ 330°)
+  4 * Math.PI / 3,                      // F3 — +120° (dao #3 @ 210° = TRÚNG GEM)
+  2 * Math.PI,                          // F4 — +120° (quay lại đúng dao #1 → demo chết)
 ];
 const STAGE_BONUS = 2;      // thưởng phá totem thường
 const BOSS_BONUS = 10;      // thưởng phá totem TRÙM
@@ -2050,13 +2050,17 @@ function tutSpin(dt) {
   if (phase === 'spawn') { disc.w = 0; return; }    // đang phình — chưa xoay
   if (T.mode === 'spin') {
     const remaining = T.segTo - disc.rot;
-    const targetW = remaining > TUT_DECEL_ARC       // >20° còn lại → chạy đều; ≤20° → giảm dần
-      ? TUT_CRUISE
-      : Math.max(TUT_MIN_W, TUT_CRUISE * remaining / TUT_DECEL_ARC);
-    const k = 1 - Math.pow(0.82, dt / 16.667);      // mượt hoá → speed-up từ 0 mượt, giảm cũng mượt
-    disc.w += (targetW - disc.w) * k;
-    disc.rot += disc.w * dt / 1000;
-    if (disc.rot >= T.segTo - 0.004) { disc.rot = T.segTo; disc.w = 0; tutArrive(); }
+    if (remaining <= 0.004) {                       // mốc đầu (arc 0) hoặc đã tới → freeze ngay
+      disc.rot = T.segTo; disc.w = 0; tutArrive();
+    } else {
+      const targetW = remaining > TUT_DECEL_ARC     // >20° còn lại → chạy đều; ≤20° → giảm dần
+        ? TUT_CRUISE
+        : Math.max(TUT_MIN_W, TUT_CRUISE * remaining / TUT_DECEL_ARC);
+      const k = 1 - Math.pow(0.82, dt / 16.667);    // mượt hoá → speed-up từ 0 mượt, giảm cũng mượt
+      disc.w += (targetW - disc.w) * k;
+      disc.rot += disc.w * dt / 1000;
+      if (disc.rot >= T.segTo - 0.004) { disc.rot = T.segTo; disc.w = 0; tutArrive(); }
+    }
   } else if (T.mode === 'free') {                   // cú phi tự do — vẫn xoay STEADY
     const k = 1 - Math.pow(0.82, dt / 16.667);
     disc.w += (TUT_CRUISE - disc.w) * k;
