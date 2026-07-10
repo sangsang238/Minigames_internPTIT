@@ -253,10 +253,11 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   border: 1px solid var(--glass-border);
   text-align: center;
   transition: opacity .25s;
+  pointer-events: none;           /* banner phủ lên dao chờ → cho tap xuyên xuống canvas để phóng */
 }
-#tut-banner.hidden { opacity: 0; pointer-events: none; }
+#tut-banner.hidden { opacity: 0; }
 #tut-text { font-size: 15px; line-height: 1.35; }
-#tut-skip { margin-top: 8px; }
+#tut-skip { margin-top: 8px; pointer-events: auto; }   /* riêng nút Skip vẫn bấm được */
 
 /* ── Popup kết quả (popup-common.md — game điểm cao TỰ vẽ) ───── */
 .overlay {
@@ -395,6 +396,8 @@ const I18N = {
     tut2:'Never hit a dagger already stuck!',
     tutRetry:'Careful! Try again',
     tut3:'Spend every dagger to shatter the totem!',
+    tutGem:'Tap to strike the soul gem!',
+    tutFree:'Now throw one on your own!',
     tutDone:'You’re ready!',
     infoThrow:'Tap to throw a dagger into the spinning totem',
     infoAvoid:'Hit a stuck dagger and the run is over',
@@ -411,6 +414,8 @@ const I18N = {
     tut2:'Đừng phóng trúng dao đã cắm!',
     tutRetry:'Cẩn thận! Thử lại nhé',
     tut3:'Cắm hết dao để đập vỡ totem!',
+    tutGem:'Chạm để phóng trúng ngọc hồn!',
+    tutFree:'Giờ tự phóng một dao nào!',
     tutDone:'Sẵn sàng rồi!',
     infoThrow:'Chạm để phóng dao vào totem đang xoay',
     infoAvoid:'Trúng dao đã cắm là thua ngay',
@@ -427,6 +432,8 @@ const I18N = {
     tut2:'千万别击中已插上的飞刀！',
     tutRetry:'小心！再试一次',
     tut3:'掷出全部飞刀，击碎图腾！',
+    tutGem:'点击击中魂玉！',
+    tutFree:'现在自己掷一刀试试！',
     tutDone:'准备就绪！',
     infoThrow:'点击屏幕，将飞刀掷向旋转的图腾',
     infoAvoid:'击中已插上的飞刀即告失败',
@@ -443,6 +450,8 @@ const I18N = {
     tut2:'千萬別擊中已插上的飛刀！',
     tutRetry:'小心！再試一次',
     tut3:'擲出全部飛刀，擊碎圖騰！',
+    tutGem:'點擊擊中魂玉！',
+    tutFree:'現在自己擲一刀試試！',
     tutDone:'準備就緒！',
     infoThrow:'點擊螢幕，將飛刀擲向旋轉的圖騰',
     infoAvoid:'擊中已插上的飛刀即告失敗',
@@ -459,6 +468,8 @@ const I18N = {
     tut2:'刺さっているダガーに当てないで！',
     tutRetry:'危ない！もう一度',
     tut3:'ダガーを全部刺してトーテムを砕こう！',
+    tutGem:'タップして魂の宝玉を狙おう！',
+    tutFree:'今度は自分で投げてみよう！',
     tutDone:'準備完了！',
     infoThrow:'タップして回転するトーテムにダガーを投げる',
     infoAvoid:'刺さったダガーに当たるとゲームオーバー',
@@ -475,6 +486,8 @@ const I18N = {
     tut2:'이미 꽂힌 단검을 맞히면 안 돼요!',
     tutRetry:'조심! 다시 시도',
     tut3:'단검을 모두 꽂아 토템을 부수세요!',
+    tutGem:'탭해서 소울 젬을 맞히세요!',
+    tutFree:'이제 직접 던져 보세요!',
     tutDone:'준비 완료!',
     infoThrow:'탭하여 회전하는 토템에 단검 던지기',
     infoAvoid:'꽂힌 단검에 맞으면 게임 오버',
@@ -491,6 +504,8 @@ const I18N = {
     tut2:'¡No golpees una daga ya clavada!',
     tutRetry:'¡Cuidado! Inténtalo de nuevo',
     tut3:'¡Clava todas las dagas para romper el tótem!',
+    tutGem:'¡Toca para golpear la gema del alma!',
+    tutFree:'¡Ahora lanza una tú mismo!',
     tutDone:'¡Listo!',
     infoThrow:'Toca para lanzar una daga al tótem giratorio',
     infoAvoid:'Si golpeas una daga clavada, pierdes',
@@ -507,6 +522,8 @@ const I18N = {
     tut2:'¡No le pegues a una daga ya clavada!',
     tutRetry:'¡Aguas! Inténtalo de nuevo',
     tut3:'¡Clava todas las dagas para romper el tótem!',
+    tutGem:'¡Toca para pegarle a la gema del alma!',
+    tutFree:'¡Ahora avienta una tú mismo!',
     tutDone:'¡Listo!',
     infoThrow:'Toca para lanzar una daga al tótem giratorio',
     infoAvoid:'Si le pegas a una daga clavada, pierdes',
@@ -523,6 +540,8 @@ const I18N = {
     tut2:'¡No golpees una daga ya clavada!',
     tutRetry:'¡Cuidado! Probá de nuevo',
     tut3:'¡Clavá todas las dagas para romper el tótem!',
+    tutGem:'¡Tocá para pegarle a la gema del alma!',
+    tutFree:'¡Ahora lanzá una vos mismo!',
     tutDone:'¡Listo!',
     infoThrow:'Tocá para lanzar una daga al tótem giratorio',
     infoAvoid:'Si golpeás una daga clavada, perdés',
@@ -539,6 +558,8 @@ const I18N = {
     tut2:'Não acerte uma adaga já cravada!',
     tutRetry:'Cuidado! Tente de novo',
     tut3:'Crave todas as adagas para quebrar o totem!',
+    tutGem:'Toque para acertar a gema da alma!',
+    tutFree:'Agora arremesse uma você mesmo!',
     tutDone:'Pronto!',
     infoThrow:'Toque para arremessar uma adaga no totem giratório',
     infoAvoid:'Acertar uma adaga cravada encerra a partida',
@@ -555,6 +576,8 @@ const I18N = {
     tut2:'Não acerte numa adaga já cravada!',
     tutRetry:'Cuidado! Tente novamente',
     tut3:'Crave todas as adagas para quebrar o totem!',
+    tutGem:'Toque para acertar a gema da alma!',
+    tutFree:'Agora lance uma você mesmo!',
     tutDone:'Pronto!',
     infoThrow:'Toque para lançar uma adaga contra o totem giratório',
     infoAvoid:'Acertar numa adaga cravada termina a partida',
@@ -571,6 +594,8 @@ const I18N = {
     tut2:'Ne touchez jamais une dague déjà plantée !',
     tutRetry:'Attention ! Réessayez',
     tut3:'Plantez toutes les dagues pour briser le totem !',
+    tutGem:'Frappez la gemme des âmes !',
+    tutFree:'À vous de lancer une dague !',
     tutDone:'Vous êtes prêt !',
     infoThrow:'Touchez pour lancer une dague sur le totem qui tourne',
     infoAvoid:'Toucher une dague plantée met fin à la partie',
@@ -587,6 +612,8 @@ const I18N = {
     tut2:'Triff nie einen bereits steckenden Dolch!',
     tutRetry:'Vorsicht! Versuch es nochmal',
     tut3:'Setze alle Dolche, um das Totem zu zerschmettern!',
+    tutGem:'Tippe, um den Seelenstein zu treffen!',
+    tutFree:'Jetzt wirf selbst einen!',
     tutDone:'Bereit!',
     infoThrow:'Tippe, um einen Dolch auf das drehende Totem zu werfen',
     infoAvoid:'Triffst du einen steckenden Dolch, ist der Lauf vorbei',
@@ -603,6 +630,8 @@ const I18N = {
     tut2:'Non colpire un pugnale già conficcato!',
     tutRetry:'Attento! Riprova',
     tut3:'Conficca tutti i pugnali per frantumare il totem!',
+    tutGem:'Colpisci la gemma delle anime!',
+    tutFree:'Ora lancia tu un pugnale!',
     tutDone:'Sei pronto!',
     infoThrow:'Tocca per lanciare un pugnale sul totem rotante',
     infoAvoid:'Colpire un pugnale conficcato termina la partita',
@@ -619,6 +648,8 @@ const I18N = {
     tut2:'Raak nooit een vastzittende dolk!',
     tutRetry:'Voorzichtig! Probeer opnieuw',
     tut3:'Gebruik alle dolken om de totem te versplinteren!',
+    tutGem:'Tik om de zielsgem te raken!',
+    tutFree:'Werp er nu zelf een!',
     tutDone:'Klaar!',
     infoThrow:'Tik om een dolk naar de draaiende totem te werpen',
     infoAvoid:'Een vastzittende dolk raken beëindigt de run',
@@ -635,6 +666,8 @@ const I18N = {
     tut2:'Nie trafiaj w już wbity sztylet!',
     tutRetry:'Ostrożnie! Spróbuj jeszcze raz',
     tut3:'Wbij wszystkie sztylety, aby roztrzaskać totem!',
+    tutGem:'Dotknij, aby trafić w klejnot duszy!',
+    tutFree:'Teraz rzuć sam!',
     tutDone:'Gotowe!',
     infoThrow:'Dotknij, aby rzucić sztylet w wirujący totem',
     infoAvoid:'Trafienie we wbity sztylet kończy grę',
@@ -651,6 +684,8 @@ const I18N = {
     tut2:'Не попадайте в уже воткнутый кинжал!',
     tutRetry:'Осторожно! Попробуйте ещё раз',
     tut3:'Воткните все кинжалы, чтобы разбить тотем!',
+    tutGem:'Коснитесь, чтобы попасть в камень души!',
+    tutFree:'Теперь метните сами!',
     tutDone:'Вы готовы!',
     infoThrow:'Коснитесь, чтобы метнуть кинжал во вращающийся тотем',
     infoAvoid:'Попадание в воткнутый кинжал — конец игры',
@@ -667,6 +702,8 @@ const I18N = {
     tut2:'Saplanmış bir hançere asla çarpma!',
     tutRetry:'Dikkat! Tekrar dene',
     tut3:'Totemi parçalamak için tüm hançerleri sapla!',
+    tutGem:'Ruh mücevherine vurmak için dokun!',
+    tutFree:'Şimdi kendin bir tane fırlat!',
     tutDone:'Hazırsın!',
     infoThrow:'Dönen toteme hançer fırlatmak için dokun',
     infoAvoid:'Saplı bir hançere çarparsan oyun biter',
@@ -683,6 +720,8 @@ const I18N = {
     tut2:'لا تُصب خنجرًا مغروسًا!‏',
     tutRetry:'انتبه! حاول مجددًا',
     tut3:'اغرس كل الخناجر لتحطيم الطوطم!‏',
+    tutGem:'انقر لإصابة جوهرة الروح!‏',
+    tutFree:'الآن ارمِ خنجرًا بنفسك!‏',
     tutDone:'أنت جاهز!‏',
     infoThrow:'انقر لرمي خنجر نحو الطوطم الدوّار',
     infoAvoid:'إصابة خنجر مغروس تُنهي الجولة',
@@ -699,6 +738,8 @@ const I18N = {
     tut2:'पहले से गड़ी कटार पर मत मारो!',
     tutRetry:'सावधान! फिर कोशिश करें',
     tut3:'सारी कटारें गाड़कर टोटेम तोड़ो!',
+    tutGem:'सोल जेम पर मारने के लिए टैप करें!',
+    tutFree:'अब खुद एक कटार फेंको!',
     tutDone:'आप तैयार हैं!',
     infoThrow:'घूमते टोटेम पर कटार फेंकने के लिए टैप करें',
     infoAvoid:'गड़ी कटार से टकराने पर खेल समाप्त',
@@ -715,6 +756,8 @@ const I18N = {
     tut2:'อย่าขว้างโดนมีดที่ปักอยู่!',
     tutRetry:'ระวัง! ลองใหม่อีกครั้ง',
     tut3:'ปักมีดให้ครบเพื่อทุบโทเท็ม!',
+    tutGem:'แตะเพื่อโดนอัญมณีวิญญาณ!',
+    tutFree:'ตอนนี้ลองขว้างเองดู!',
     tutDone:'พร้อมแล้ว!',
     infoThrow:'แตะเพื่อขว้างมีดใส่โทเท็มที่หมุนอยู่',
     infoAvoid:'ขว้างโดนมีดที่ปักอยู่ = จบเกม',
@@ -731,6 +774,8 @@ const I18N = {
     tut2:'Jangan kena belati yang sudah menancap!',
     tutRetry:'Hati-hati! Coba lagi',
     tut3:'Tancapkan semua belati untuk menghancurkan totem!',
+    tutGem:'Ketuk untuk mengenai permata jiwa!',
+    tutFree:'Sekarang lempar sendiri satu!',
     tutDone:'Siap!',
     infoThrow:'Ketuk untuk melempar belati ke totem yang berputar',
     infoAvoid:'Mengenai belati yang menancap = kalah',
@@ -747,6 +792,8 @@ const I18N = {
     tut2:'Huwag tamaan ang nakabaon nang punyal!',
     tutRetry:'Ingat! Subukan ulit',
     tut3:'Ibaon lahat ng punyal para madurog ang totem!',
+    tutGem:'I-tap para tamaan ang soul gem!',
+    tutFree:'Ngayon, maghagis ka mismo!',
     tutDone:'Handa ka na!',
     infoThrow:'I-tap para maghagis ng punyal sa umiikot na totem',
     infoAvoid:'Pagtama sa nakabaon na punyal = talo',
@@ -885,6 +932,17 @@ const ADS_EVERY = 3;        // mỗi 3 ván thua → xin app hiện quảng cáo
 const SPAWN_MS = 1000;      // totem mới PHÌNH TỪ TÂM ra trong ~1s (chặn touch tới khi xong)
 const BREAK_MS = 100;       // vỡ xong → mảnh bung ra là lòi ngay totem trong (nested reveal)
 const GEM_SCORE = 5;
+/* Tutorial choreograph (1 totem, KHÔNG chuyển cảnh) — totem xoay tới các góc
+   rồi FREEZE để người chơi tap. dir +1. 3 mốc đầu cách nhau 120° → 3 dao ĐỐI
+   XỨNG (90°/330°/210°); mốc thứ 4 quay lại đúng DAO #1 (90°) → người chơi phi
+   trúng dao cũ = CHẾT (demo), rồi tự phi cú an toàn. */
+const TUT_CRUISE = 2.6;                 // tốc độ xoay tutorial (rad/s)
+const TUT_FREEZES = [
+  4 * Math.PI,                          // F1 — sau đúng 2 vòng (dao #1 @ 90°)
+  4 * Math.PI + 2 * Math.PI / 3,        // F2 — +120° (dao #2 @ 330°)
+  4 * Math.PI + 4 * Math.PI / 3,        // F3 — +120° (dao #3 @ 210°)
+  6 * Math.PI,                          // F4 — +120° (quay lại đúng dao #1 → demo chết)
+];
 const STAGE_BONUS = 2;      // thưởng phá totem thường
 const BOSS_BONUS = 10;      // thưởng phá totem TRÙM
 
@@ -1283,6 +1341,9 @@ function resize() {
   const gap = (knifeIdleY - KNIFE_TIP) - (disc.y + disc.R);
   if (gap < 90) disc.R = Math.max(64, disc.R - (90 - gap));
   if (cfg) buildDiscSprite();                       // R đổi → dựng lại sprite
+  /* dao "ma" của demo tutorial lưu y tuyệt đối — resize dời rim/knifeIdleY thì
+     nó thành lệch (hit oan, mất animation); reset cho nó bay lại từ vị trí mới */
+  if (tutorial && tutorial.demo && !tutorial.demo.hit) tutorial.demo.y = knifeIdleY;
 }
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', () => setTimeout(resize, 120));
@@ -1624,12 +1685,9 @@ function spawnStage(idx, quiet) {
   endBreath();
   echoLive = !quiet && !tutorial && echoS >= 1 && stageIdx === echoS && !echoBrokenRun;
   echoDissolveT0 = 0;
-  // Không còn "Stage N" — totem thường vào lặng lẽ (phình ra là đủ tín hiệu);
-  // chỉ TRÙM mới báo hiệu.
-  if (!quiet && cfg.boss) {
-    sBoss();
-    floatTexts.push({ x: LW / 2, y: disc.y - disc.R - 46, born: timeMs, life: 1300, size: 46, color: BOSS_ACCENT, text: t('boss') });
-  }
+  // Không còn "Stage N" LẪN chữ "BOSS" — totem vào lặng lẽ (phình ra là đủ tín
+  // hiệu); TRÙM chỉ báo bằng ÂM THANH + sigil sọ đỏ, không hiện chữ.
+  if (!quiet && cfg.boss) sBoss();
   updateStageHud();
 }
 
@@ -1660,6 +1718,9 @@ function resolveImpact(rotAt) {
       if (!tutorial) {
         addScore(val);
         floatTexts.push({ x: gx, y: gy - 16, born: timeMs, life: 800, size: 30, color: gm.skull ? '#ff5d76' : '#52ff9d', text: '+' + val });
+      } else {
+        // tutorial: chỉ hiện +5 (không cộng điểm thật để không đụng Best)
+        floatTexts.push({ x: gx, y: gy - 16, born: timeMs, life: 950, size: 32, color: '#52ff9d', text: '+' + GEM_SCORE });
       }
       for (let s2 = 0; s2 < 6; s2++) sparks.push({ x: gx, y: gy, born: timeMs });
       rings.push({ x: gx, y: gy, born: timeMs, col: gm.skull ? '#ff5d76' : '#52ff9d' });
@@ -1677,7 +1738,12 @@ function resolveImpact(rotAt) {
     if (ad < nearest) { nearest = ad; killerA = k.a; }
   }
   if (nearest < KNIFE_GAP) {
-    if (tutorial) { tutorialBounce(); return; }
+    if (tutorial) {
+      // pha 'death' (dao #1 ở đáy): cố ý cho CHẾT để dạy; còn lại chỉ nảy ra
+      if (tutorial.mode === 'death') tutorialDeath(killerA);
+      else tutorialBounce();
+      return;
+    }
     clashDeath(killerA, nearest);
     return;
   }
@@ -1840,7 +1906,7 @@ function breakDisc() {
       persistSaved();
     }
   } else {
-    tutorial.stage = 'done';
+    tutorial.mode = 'done';
     tutorial.doneUntil = timeMs + 1500;
     setTutText(t('tutDone'));
     sTutOk();
@@ -1880,21 +1946,15 @@ function newRun() {
 }
 
 /* ================================================================
- * §9. Tutorial — 3 bước tương tác, KHÔNG thể thua (như hamster-jump)
+ * §9. Tutorial — 1 TOTEM DUY NHẤT, choreograph freeze theo góc quay
+ *   (không chuyển cảnh; xoay-tới-mốc rồi đứng im chờ tap — chặn touch
+ *    trong lúc xoay). mode: spin→wait×3→death→deathWait→free→done.
  * ================================================================ */
-const TUT_CFGS = [
-  { knives: 2, speed: 0.9, dir: 1,  pre: [],               gems: [] },          // tut1: phóng dao
-  { knives: 3, speed: 1.1, dir: -1, pre: [-1.2, 0.4, 2.2], gems: [] },          // tut2: né dao cắm
-  { knives: 3, speed: 1.2, dir: 1,  pre: [2.6],            gems: [0.9] },       // tut3: phá totem
-];
-
-function tutCfg(i) {
-  const c = TUT_CFGS[i];
+function tutCfg() {
   return {
-    boss: false, knives: c.knives, speed: c.speed, dir: c.dir, pattern: 'steady',
-    period: 2, flipT: 2, phase0: 0,
-    pre: c.pre.map(normAng), gems: c.gems.map(normAng),
-    accent: '#35e0ff', sigil: i % 5,
+    boss: false, knives: 99, speed: TUT_CRUISE, dir: 1, pattern: 'steady',
+    period: 2, flipT: 2, phase0: 0, pre: [], gems: [],
+    accent: '#35e0ff', sigil: 2,
   };
 }
 
@@ -1909,41 +1969,117 @@ function startTutorial() {
   updateScoreHud();
   state = 'playing';
   paused = false;
-  tutorial = { step: 0, stage: 'play', doneUntil: 0, retryUntil: 0 };
-  loadTutStep(0);
-}
-
-function loadTutStep(i) {
-  tutorial.step = i;
-  tutorial.stage = 'play';
-  cfg = tutCfg(i);
-  stuck = cfg.pre.map(a => ({ a, pre: true }));
-  gems = cfg.gems.map(a => ({ a }));
-  knivesLeft = cfg.knives;
+  tutorial = {
+    mode: 'spin', fi: 0, F: TUT_FREEZES.slice(), hintKey: 'tut1',
+    seg0: 0, segFrom: 0, segTo: 0, segDur: 1,
+    retryUntil: 0, doneUntil: 0, deathUntil: 0,
+  };
+  cfg = tutCfg();
+  disc.rot = 0;
+  disc.w = 0;
+  stuck = [];
+  gems = [];                              // tutorial mới: không có ngọc
+  knivesLeft = 99;                        // tutorial không đếm đạn (pips ẩn)
   stageT = 0;
-  disc.w = cfg.speed * cfg.dir * 0.6;
-  buildDiscSprite();
-  phase = 'spawn';
-  spawnT0 = timeMs;
-  pendingBreakAt = 0;
-  flying = null;
   riskyCount = 0;
   wraths = []; lastWrathEnd = 0;
   lastStand = null; stallRing = 0; spikesGrown = 0; overkillPending = false;
   omenFiredAt = -1; omenGlow = 0;
   echoLive = false;
-  setTutText(t(['tut1', 'tut2', 'tut3'][i]));
+  buildDiscSprite();
+  phase = 'spawn';                        // totem phình ra trước, rồi mới xoay
+  spawnT0 = timeMs;
+  pendingBreakAt = 0;
+  flying = null;
+  setTutText(t('tut1'));
   $('tut-banner').classList.remove('hidden');
   updateStageHud();
 }
 
-function tutorialOnStick() {
-  if (knivesLeft > 0) return;
-  if (tutorial.step < 2) loadTutStep(tutorial.step + 1);
-  else pendingBreakAt = timeMs + 140;
+/** Bắt đầu 1 đoạn xoay eased tới góc toRot rồi freeze (arrive). */
+function tutStartSpin(toRot) {
+  const T = tutorial;
+  T.mode = 'spin';
+  T.seg0 = timeMs;
+  T.segFrom = disc.rot;
+  T.segTo = toRot;
+  const arc = Math.abs(toRot - disc.rot);
+  T.segDur = Math.max(700, arc / TUT_CRUISE * 1000);
 }
 
-/** Trong tutorial va dao KHÔNG thua — dao nảy ra, nhắc thử lại, không tốn dao. */
+/** Xoay tới mốc: F0..F2 = freeze chờ tap phóng 3 dao; F3 = "Try to throw" → chết. */
+function tutArrive() {
+  const T = tutorial;
+  if (T.fi < 3) {
+    T.mode = 'wait';                                // 3 dao đối xứng — cùng lời "tap to throw"
+    T.hintKey = 'tut1';
+    setTutText(t('tut1'));
+  } else {
+    T.mode = 'death';                               // F4: dao #1 về đúng đáy — mời phi vào rồi CHẾT
+    T.hintKey = 'tutTry';
+    setTutText(t('tutTry'));
+  }
+}
+
+/** Xoay choreograph cho tutorial (thay cho pattern/wrath). */
+function tutSpin(dt) {
+  const T = tutorial;
+  prevRot = disc.rot;
+  if (phase === 'spawn') { disc.w = 0; return; }    // đang phình — chưa xoay
+  if (T.mode === 'spin') {
+    const p = T.segDur > 0 ? Math.min(1, (timeMs - T.seg0) / T.segDur) : 1;
+    const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;   // easeInOutCubic
+    disc.rot = T.segFrom + (T.segTo - T.segFrom) * e;
+    disc.w = dt > 0 ? (disc.rot - prevRot) / (dt / 1000) : 0;
+    if (p >= 1) { disc.rot = T.segTo; disc.w = 0; tutArrive(); }
+  } else if (T.mode === 'free') {                   // cú phi tự do — xoay đều
+    const k = 1 - Math.pow(0.82, dt / 16.667);
+    disc.w += (TUT_CRUISE - disc.w) * k;
+    disc.rot += disc.w * dt / 1000;
+  } else if (T.mode === 'done') {                   // xong — coast mượt tới dừng (không khựng)
+    disc.w *= Math.pow(0.9965, dt);
+    disc.rot += disc.w * dt / 1000;
+  } else {
+    disc.w = 0;                                     // wait / death / deathWait → đóng băng cứng
+  }
+}
+
+/** Dao cắm xong trong tutorial → sang mốc kế (hoặc kết thúc nếu là cú tự do). */
+function tutorialOnStick() {
+  const T = tutorial;
+  if (T.mode === 'wait') {
+    T.fi++;
+    tutStartSpin(T.F[T.fi]);              // xoay tới mốc tiếp theo
+  } else if (T.mode === 'free') {
+    T.mode = 'done';
+    T.doneUntil = timeMs + 1500;
+    T.retryUntil = 0;                     // huỷ timer "thử lại" đang treo — kẻo nó đè "Sẵn sàng!"
+    T.hintKey = 'tutDone';
+    setTutText(t('tutDone'));
+    sTutOk();
+  }
+}
+
+/** F4 tutorial: người chơi phi trúng dao #1 → CHẾT (demo thật, KHÔNG game-over).
+ *  Dao thủ phạm sáng đỏ + dao mình văng ra + flash; ~1.5s sau chuyển sang cú tự do. */
+function tutorialDeath(killerA) {
+  sClash();
+  flash = 1;
+  shakeAmp = 16;
+  deadKnife = {
+    x: LW / 2, y: flying ? flying.y : knifeIdleY,
+    vx: (Math.random() < 0.5 ? -1 : 1) * (0.15 + Math.random() * 0.12),
+    vy: -0.55, rot: 0, vr: (Math.random() < 0.5 ? -1 : 1) * 0.013,
+  };
+  flying = null;
+  rings.push({ x: LW / 2, y: disc.y + disc.R, born: timeMs, col: '#ff3d5a' });
+  floatTexts.push({ x: LW / 2, y: disc.y + disc.R + 50, born: timeMs, life: 1400, size: 44, color: '#ff5d76', text: '✗' });
+  tutorial.deathA = killerA;              // dao thủ phạm — render sáng đỏ trong lúc deathWait
+  tutorial.mode = 'deathWait';
+  tutorial.deathUntil = timeMs + 1500;
+}
+
+/** Trong tutorial va dao KHÔNG thua — dao nảy ra, nhắc thử lại (chỉ ở cú tự do). */
 function tutorialBounce() {
   sClose();
   flash = 0.35;
@@ -1983,9 +2119,13 @@ function update(dt) {
     stageT += dt / 1000;
     if (state === 'over') {
       disc.w *= Math.pow(0.9992, dt);    // thua: totem chậm dần, không khựng
+      prevRot = disc.rot;
+      disc.rot += disc.w * dt / 1000;
+    } else if (tutorial) {
+      tutSpin(dt);                       // choreograph: xoay-tới-mốc rồi freeze
     } else {
       let target = patternOmega();
-      if (state === 'playing' && !tutorial) {
+      if (state === 'playing') {
         /* Last Stand: boss dao cuối — sau 800ms telegraph, totem giãy chết
            (dao động 0.25×→1.35×); ưu tiên trên mọi pattern/wrath */
         if (lastStand && timeMs >= lastStand.t0 + 800) {
@@ -2001,9 +2141,9 @@ function update(dt) {
       }
       const k = 1 - Math.pow(0.82, dt / 16.667);
       disc.w += (target - disc.w) * k;
+      prevRot = disc.rot;
+      disc.rot += disc.w * dt / 1000;
     }
-    prevRot = disc.rot;
-    disc.rot += disc.w * dt / 1000;
   }
 
   /* Last Stand: kích hoạt khi boss còn đúng 1 dao */
@@ -2058,8 +2198,11 @@ function update(dt) {
   /* Breath an toàn: dao không còn bay mà slow-mo chưa tắt → tắt */
   if (breath && !flying) endBreath();
 
-  /* pha spawn → aim */
-  if (phase === 'spawn' && timeMs - spawnT0 >= SPAWN_MS) phase = 'aim';
+  /* pha spawn → aim (tutorial: phình xong mới bắt đầu xoay tới mốc F1) */
+  if (phase === 'spawn' && timeMs - spawnT0 >= SPAWN_MS) {
+    phase = 'aim';
+    if (tutorial && tutorial.mode === 'spin') tutStartSpin(tutorial.F[tutorial.fi]);
+  }
 
   /* pha break → stage kế (tutorial thì đứng chờ tutDone) */
   if (phase === 'break' && timeMs - breakT0 >= BREAK_MS && !tutorial && state === 'playing') {
@@ -2072,13 +2215,22 @@ function update(dt) {
     breakDisc();
   }
 
-  /* tutorial: khôi phục banner sau nhắc "thử lại" / kết thúc sau tutDone */
+  /* tutorial: khôi phục hint sau "thử lại" · hồi sau demo chết · kết thúc sau tutDone */
   if (tutorial) {
     if (tutorial.retryUntil && timeMs >= tutorial.retryUntil) {
       tutorial.retryUntil = 0;
-      setTutText(t(['tut1', 'tut2', 'tut3'][tutorial.step]));
+      // chỉ khôi phục hint khi còn ở pha chờ tap — không đè banner 'done'
+      if (tutorial.mode === 'wait' || tutorial.mode === 'free') setTutText(t(tutorial.hintKey || 'tut1'));
     }
-    if (tutorial.stage === 'done' && timeMs >= tutorial.doneUntil) {
+    /* sau demo CHẾT (~1.5s) → cho người chơi TỰ phi cú an toàn */
+    if (tutorial.mode === 'deathWait' && tutorial.deathUntil && timeMs >= tutorial.deathUntil) {
+      tutorial.deathUntil = 0;
+      tutorial.deathA = undefined;
+      tutorial.mode = 'free';
+      tutorial.hintKey = 'tutFree';
+      setTutText(t('tutFree'));
+    }
+    if (tutorial.mode === 'done' && tutorial.doneUntil && timeMs >= tutorial.doneUntil) {
       finishTutorial();
       return;
     }
@@ -2246,6 +2398,14 @@ function render() {
       ctx.globalAlpha = 1;
     }
 
+    /* tutorial demo chết: dao thủ phạm (dao #1) sáng đỏ để người chơi hiểu vì sao chết */
+    if (tutorial && tutorial.mode === 'deathWait' && tutorial.deathA !== undefined) {
+      const th = disc.rot + tutorial.deathA;
+      const cd = (disc.R - EMBED + KNIFE_TIP) * sc;
+      const pulse = 0.5 + 0.5 * Math.sin(timeMs * 0.02);
+      drawKnife(redKnifeSpr, disc.x + Math.cos(th) * cd, disc.y + Math.sin(th) * cd, th - Math.PI / 2, sc, 0.5 + 0.5 * pulse);
+    }
+
   }
 
   /* Echo Wraith: bóng vọng của run best lảng vảng đúng stage nó đã gục.
@@ -2284,12 +2444,16 @@ function render() {
 
   /* dao đang bay / dao chờ + đạn còn lại */
   if (state === 'playing') {
+    /* tutorial: hiện dao chờ khi tới lượt tap — wait (phóng 3 dao) / death ("try") / free */
+    const idleShown = tutorial
+      ? (tutorial.mode === 'wait' || tutorial.mode === 'death' || tutorial.mode === 'free')
+      : (knivesLeft > 0);
     if (flying) {
       drawKnife(knifeSpr, LW / 2, flying.y, 0, 1, 1);
-    } else if (phase === 'aim' && knivesLeft > 0 && !paused) {
+    } else if (phase === 'aim' && idleShown && !paused) {
       const bob = Math.sin(timeMs * 0.004) * 6;
       drawKnife(knifeSpr, LW / 2, knifeIdleY + bob, 0, 1, 1);
-      if (tutorial && tutorial.step === 0 && tutorial.stage === 'play') {
+      if (tutorial) {
         ctx.textAlign = 'center';
         ctx.globalAlpha = 0.55 + 0.45 * Math.sin(timeMs * 0.008);
         ctx.fillStyle = '#fff';
@@ -2362,7 +2526,7 @@ function drawGemScaled(gm, sc) {
 
 /** Cột dao còn lại (đạn) — mờ dần khi đã dùng. */
 function drawPips() {
-  if (!cfg) return;
+  if (!cfg || tutorial) return;          // tutorial không đếm đạn
   const total = Math.min(cfg.knives, 12);
   const x = Math.max(28, LW / 2 - 320);
   const y0 = LH - 64;
@@ -2449,13 +2613,13 @@ function loop(ts) {
 function updateScoreHud() { $('hud-score').textContent = String(score); }
 function updateBestHud()  { $('hud-best').textContent = String(best); }
 
-/* Không còn nhãn "Stage" — dòng này giờ chỉ báo TRÙM (ẩn hẳn lúc thường/tutorial). */
+/* Không còn nhãn "Stage" LẪN "BOSS" — dòng này ẩn hẳn (totem TRÙM tự phân biệt
+   bằng sigil sọ đỏ + ngọc-sọ + âm báo, không cần chữ). */
 function updateStageHud() {
   const el = $('hud-stage');
-  const showBoss = !tutorial && cfg && cfg.boss;
-  el.textContent = showBoss ? t('boss') : '';
-  el.classList.toggle('boss', !!showBoss);
-  el.style.display = showBoss ? '' : 'none';
+  el.textContent = '';
+  el.classList.remove('boss');
+  el.style.display = 'none';
 }
 
 /* Tự co cỡ điểm cho vừa card khi điểm ≥ 6 chữ số (popup-common §5b) */
@@ -2494,8 +2658,14 @@ function onTap() {
   if (killCam) { killCam = null; timeScale = 1; return; }  // tap skip kill-cam ngay
   if (state !== 'playing') return;
   if (paused) { paused = false; audioUnlock(); return; }   // tap đầu chỉ resume
-  if (phase !== 'aim' || flying || knivesLeft <= 0) return;
-  if (tutorial && tutorial.stage === 'done') return;
+  if (phase !== 'aim' || flying) return;
+  if (tutorial) {
+    // nhận tap ở: wait (phóng 3 dao) · death (phi vào dao #1 = chết) · free (tự phi)
+    const m = tutorial.mode;
+    if (m !== 'wait' && m !== 'death' && m !== 'free') return;
+  } else if (knivesLeft <= 0) {
+    return;
+  }
   flying = { y: knifeIdleY };
   /* Executioner's Breath: dao CUỐI trên vành đông (≥6 dao) → thế giới nín
      thở. Kích hoạt SAU khi đã ném — số phận cú ném không đổi, chỉ kịch tính. */

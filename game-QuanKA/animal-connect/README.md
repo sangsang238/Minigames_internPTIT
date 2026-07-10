@@ -16,40 +16,43 @@
 - Nối 2 tile **cùng con thú** bằng đường ≤ 3 đoạn thẳng (**≤ 2 lần rẽ**) qua ô
   trống; đường được vòng ra ngoài biên. Nối đúng → line phát sáng + tile nổ.
 - Sau mỗi match, tile còn lại **dồn theo hướng của level** (none/down/up/left/
-  right/in/out). Sạch bàn trước khi hết giờ = thắng; hết giờ = thua.
-- **Điểm**: +10/cặp, combo trong 4s +5×(n−1), thắng +2/giây còn lại.
-- **Trợ giúp mỗi màn**: 3 Hint, 2 Shuffle; hết nước đi tự xáo miễn phí.
+  right/in/out). **Sạch bàn = thắng màn** (không có đồng hồ → không thua).
+- **Điểm = số NGÔI SAO** ★ (đặc trưng game): mỗi lần nối, sao xuất hiện **dọc
+  đường connect** (mỗi ~1 cạnh tile 1 sao, từ điểm đầu → điểm cuối) rồi **bay
+  lên ô SCORE**. Đường càng dài → càng nhiều sao → càng nhiều điểm (10đ/sao).
+- **Không có Time / Hint / Shuffle** trong match. Thay vào đó **~5s không thao
+  tác** mà chưa nối được thì game **tự nháy 1 cặp** nối được (auto-hint); hết
+  nước đi vẫn tự xáo miễn phí.
 - **14 mặt thú** vẽ inline SVG; theme đồng cỏ pastel, lá + dấu chân trôi trên canvas.
 - **Không có menu** — mở app là vào thẳng scene gameplay. Lần đầu chơi tự vào
   **tutorial** trước rồi mới sang màn 1.
-- **Header chuẩn** (theo mẫu app): **Back** (trái) · **SCORE · BEST** (2 pill giữa,
-  BEST = điểm cao nhất từng đạt, accent vàng) · **Volume** (phải, bật/tắt SFX).
-  Back = lưu ván dở rồi bắn `quit`.
-- **HUD phụ**: Level · thanh Time · Pairs còn lại. `BEST` persist qua `save_data`
-  + localStorage; ván dở tự lưu, mở lại chơi tiếp.
-- **HUD responsive**: font/pill/chip theo `clamp()`, media query gọn hoá khi màn
-  thấp (≤640px/≤480px), board tự cuộn khi thiếu chỗ.
+- **Header chuẩn** (theo `cursed-knives`): overlay `position:fixed` — **Back**
+  (trái) · **SCORE ★ · BEST ♛** (2 pill bằng nhau, icon ghim trái, BEST accent
+  vàng) · **Volume** (phải, bật/tắt SFX); dưới là **LEVEL**. Back = lưu ván dở +
+  `quit`. `BEST` = điểm cao nhất, persist qua `save_data` + localStorage.
+- **Layout**: board nằm gọn dưới header (padding-top = chiều cao header), **không
+  cuộn ngang/dọc** (`#board-outer overflow:hidden`), chừa nửa ô cho đường vòng biên.
 - **Độc lập refresh rate**: mọi chuyển động theo `dt` (nền lá chuẩn hoá 60fps,
-  đồng hồ trừ theo giây thật, clamp dt 0.25s chống stall); DOM đồng hồ chỉ ghi
-  ~5 lần/s — test giả lập 30fps vs 144fps cho kết quả giống hệt nhau.
+  clamp dt 0.25s chống stall) — test 30fps vs 144fps kết quả giống nhau.
 - **SFX tổng hợp Web Audio** (không file ngoài, không nhạc nền): chọn/nối (cao
-  dần theo combo, bù loudness khi lên cao)/sai cặp/hint/xáo/tick 10s cuối/thắng/
-  thua + click nút. Nút loa ở header (cờ `muted` persist qua save nhẹ); mở khoá
-  sau cử chỉ đầu (autoplay policy), app ra nền / pause là suspend toàn bộ.
-- **Tutorial tương tác 3 bước** (nối cặp kề → đường rẽ 2 lần → đường vòng ra
-  ngoài bàn) — **bắt buộc lần đầu mở game** (cờ `tutorialSeen` persist qua
-  `save_data` + localStorage), có nút Skip.
+  dần theo combo, bù loudness khi lên cao)/sai cặp/auto-hint/xáo/thắng + click
+  nút. Nút loa ở header (cờ `muted` persist); mở khoá sau cử chỉ đầu (autoplay
+  policy), app ra nền / pause là suspend toàn bộ.
+- **Tutorial 1 BÀN, không chuyển cảnh** — bước 0 nối 2 con **giống nhau** → bước
+  1 **thử nối 2 con khác nhau** (học rằng khác loại **không nối được**) → bước 2
+  dọn sạch bàn. **Bắt buộc lần đầu mở game** (cờ `tutorialSeen` persist), có nút
+  Skip. Tutorial **không tính điểm**. `?reset=1` xoá state để xem lại từ đầu.
 
 ### Level sinh theo công thức — `levelConfig(idx)`
 
 Deterministic theo số màn (hash, retry ra đúng màn đó); xếp tile random mỗi lần chơi.
 
 - **Bàn**: ramp 6×6 → 8×9 trong 8 màn đầu, sau đó xoay vòng bàn lớn (tối đa 8×10, tổng ô luôn chẵn).
-- **Thời gian**: `số cặp × (8.5 − 0.35×idx)` giây, sàn **5.0 s/cặp**.
 - **Dồn tile**: 7 màn đầu đi đủ tour các mode, sau đó bốc theo hash (bỏ `none`).
 - **Loại thú**: 12 → 13 → 14 từ màn 3 (nhiều loại để ít cặp trùng).
+- (Trường `time`/`hints`/`shuffles` trong `levelConfig` còn nhưng **không dùng** — đã bỏ Time/Hint/Shuffle.)
 - Vô hạn → **không có màn cuối, không bắn `victory`**; thắng luôn gửi
-  `game_result win` + `save_data {levelIdx: n+1}`.
+  `game_result win` + `save_data {levelIdx: n+1, best}`.
 
 ## Tuân thủ quy ước chung
 

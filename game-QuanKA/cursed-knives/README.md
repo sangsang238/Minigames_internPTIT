@@ -28,7 +28,7 @@
 2. Dao cắm vào vành totem và **xoay theo totem**; một số totem có **dao cắm sẵn** (màu tím)
 3. **Phóng trúng dao đã cắm → thua ngay** (dao văng, flash đỏ, popup sau 0.7s)
 4. Cắm đủ số dao (cột đạn bên trái) → **totem vỡ tan** (mảnh đá bung ra ngoài + dao văng thừa hưởng vận tốc xoay) → **totem TRONG phình từ tâm ra trong ~1s** (nested reveal: phá lớp ngoài lòi lớp trong), **chặn touch tới khi phình xong**
-5. Chơi **vô hạn** — thua thì chơi lại từ đầu, ganh điểm Best. **Không có bộ đếm "Stage/Level"** — chỉ mạch totem nối tiếp nhau (dòng nhỏ dưới header chỉ báo **BOSS**)
+5. Chơi **vô hạn** — thua thì chơi lại từ đầu, ganh điểm Best. **Không có bộ đếm "Stage/Level" LẪN chữ "BOSS"** — chỉ mạch totem nối tiếp nhau (totem TRÙM tự phân biệt bằng **sigil sọ đỏ + ngọc-sọ + âm báo**, không hiện chữ)
 
 ### Điểm (v1.1 — ranh giới chết là thang thưởng)
 | Hành động | Điểm |
@@ -66,13 +66,20 @@ Best **persist ngay khi vượt** (không chờ hết ván) qua `save_data` + lo
 - **TRÙM mỗi 5 stage**: sigil sọ quỷ đỏ, thêm dao, pattern dữ hơn, thưởng +10
 - Va chạm **nghiêm ngặt nhưng công bằng**: ngưỡng góc 0.105 rad ≈ đúng bề rộng lưỡi dao nhìn thấy; thời điểm chạm **nội suy sub-frame** (không phụ thuộc 60/90/120 Hz)
 
-### Trợ giúp người chơi
-- **Tutorial tương tác 3 bước, không thể thua** (phóng dao → né dao cắm sẵn (dao nảy ra + nhắc thử lại) → phá totem) — **tự chạy ở lần mở đầu tiên**, skip được
-- Cue **"CHẠM!"** nhấp nháy ở bước tutorial đầu
+### Trợ giúp người chơi — Tutorial choreographed (1 totem, KHÔNG chuyển cảnh)
+- **Không thể thua**, **tự chạy lần mở đầu tiên**, skip được. Chỉ **1 totem duy nhất** (có 1 ngọc hồn), totem tự xoay tới các mốc rồi **FREEZE** để nhắc tap — **chặn touch trong lúc xoay** (chỉ nhận tap ở pha freeze / cú phi tự do):
+  1. Xoay **2 vòng** rồi freeze cách ngọc 120° → tap phóng **dao #1**
+  2. Xoay thêm 120° → freeze → tap **dao #2**
+  3. Xoay thêm 120° → freeze **ngay ngọc hồn** → tap trúng ngọc (nảy **+5**)
+  4. Xoay thêm 120° → về đúng **dao #1** → **tự minh hoạ thua**: cung đỏ cảnh báo + dao "ma" bay lên **nảy ra** (dạy: trúng dao đã cắm = thua) — không input
+  5. Totem xoay tự do → **người chơi TỰ phi 1 dao** (trúng dao cắm thì nảy ra + nhắc thử lại, không thua) → "Sẵn sàng!" → vào ván thật
+- 3 dao cắm cách đều 120° (90°/210°/330°) → khe an toàn rộng cho cú phi tự do
+- Cue **"CHẠM!"** nhấp nháy cạnh dao chờ ở mỗi mốc freeze + cú tự do
+- Xoay eased (easeInOutCubic) tới từng mốc rồi dừng, kết thúc coast mượt — **không snap** (motion continuity)
 
 ### UI (không menu — mở game vào thẳng gameplay)
 - **Không có màn menu**: lần đầu mở = tutorial, các lần sau vào thẳng ván (yêu cầu chuẩn chung)
-- **Header chuẩn chung**: nút **Back** (quit) trái · pill **SCORE ★** + pill **BEST ♛** (vàng) giữa · nút **Volume** phải; dòng nhỏ dưới header chỉ hiện **BOSS** (không có bộ đếm stage/level)
+- **Header chuẩn chung**: nút **Back** (quit) trái · pill **SCORE ★** + pill **BEST ♛** (vàng) giữa · nút **Volume** phải; **không có dòng phụ nào dưới header** (bỏ cả bộ đếm stage/level lẫn chữ BOSS — `#hud-stage` ẩn hẳn)
 - Popup kết quả **tự vẽ theo popup-common**: một tiêu đề đổi chữ `New Best!` / `Game Over`, SCORE trắng / BEST vàng, nút Play Again amber (bắn `retry_level`), `fitScores()` chống tràn điểm to
 - Pause vẽ trên canvas ("Chạm để chơi tiếp") — `timeMs` đóng băng nên **toàn bộ thế giới tự đứng im**, tap đầu chỉ resume không phóng dao
 

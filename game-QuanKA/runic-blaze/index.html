@@ -1,12 +1,16 @@
 <!--
   Runic Blaze — QuanKA
-  Match-3 swap game, dark-fantasy rune theme. Single-file HTML (CSS + JS inline).
-  Board: 7×7 | Runes: 5–6 màu theo level | Win: đạt score goal trong số moves cho phép
-  LEVEL VÔ HẠN — levelConfig(idx) sinh deterministic, không có level cuối (không bắn victory)
-  Specials: Match-4 → Blaze Rune (nổ nguyên hàng/cột) · L/T → Nova Rune (nổ 3×3, nổ 2 lần)
-            Match-5 → Prism Rune (đốt toàn bộ 1 màu) · swap 2 special → combo riêng
-  Engine: single rAF loop + tween engine dt-based (mượt ở mọi refresh rate 60/90/120/144Hz)
-  Tuân thủ .claude/game-common.md (bridge, level, i18n 23 ngôn ngữ), popup-common.md, zip-common.md.
+  Match-3 ENDLESS HIGH-SCORE (score-attack), dark-fantasy. Single-file HTML (CSS + JS inline).
+  Board: 7×7 | Runes: 5–6 màu | Base match-3 thoả mãn kiểu skydom (nổ liên hoàn), KHÔNG level, KHÔNG giới hạn lượt.
+  HAZARD "Hắc Ấn" (cursed rune): định kỳ sinh 1 ô nguyền có SỐ đếm ngược, bất động/không ghép/không đổi;
+    mỗi lượt −1; ghép/nổ CẠNH nó (4 hướng) → phá (+250). Về 0 mà chưa phá → detonate → THUA.
+    Càng về sau: ngòi ngắn dần (7→3) + dày hơn + tối đa 2 cùng lúc.
+  EVENTS: Arcane Surge (mốc 5k → tặng 1 Prism) · Blaze Storm (mốc 12k → biến vài ô thành Blaze rồi nổ dây chuyền).
+  Specials: Match-4 → Blaze (nổ hàng/cột) · L/T → Nova (3×3, nổ 2 lần) · Match-5 → Prism (đốt 1 màu) · swap 2 special → combo.
+  Khung header + vòng điểm-cao (self-popup, best live, Play Again→retry_level) mô phỏng skydom (HaND);
+  thẩm mỹ + cơ chế Hắc Ấn/Events là của riêng runic-blaze. Onboarding carousel phủ lên board (1 scene, không chuyển cảnh).
+  Engine: single rAF loop + tween engine dt-based (mượt 60/90/120/144Hz)
+  Tuân thủ .claude/game-common.md (bridge §1.1 điểm-cao, i18n 23 ngôn ngữ), popup-common.md, zip-common.md.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -81,52 +85,54 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   align-items: center;
 }
 
-/* ── Topbar: [Back, ?] — title — [Sound, Home, Restart] ───────── */
+/* ── Header (khung skydom): Back | SCORE · BEST | Volume ───────── */
 #topbar {
   width: 100%;
   max-width: 520px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
+  gap: 8px;
   padding: 0 max(10px, env(safe-area-inset-right)) 0 max(10px, env(safe-area-inset-left));
   /* padding-top do JS bơm = max(statusBarHeight, env-safe) + 8 */
 }
 
-#topbar-left, #topbar-right {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-#hud-center {
+/* Thanh điểm giữa (khung skydom, skin dark-fantasy: obsidian glass) */
+.scorebar {
   flex: 1;
   min-width: 0;
   display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 6px;
+}
+.sc-box {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 150px;
+  display: flex;
   flex-direction: column;
   align-items: center;
-  line-height: 1.15;
-  gap: 1px;
-}
-
-#game-title {
-  font-size: 10px;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  color: var(--text-soft);
-  white-space: nowrap;
+  justify-content: center;
+  line-height: 1.04;
+  padding: 5px 12px 7px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 4px 14px rgba(0,0,0,.4);
   overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
 }
-
-#level-num {
-  font-size: 18px;
-  letter-spacing: .5px;
-  color: var(--text);
-  white-space: nowrap;
+.sc-k {
+  font-size: 10px; letter-spacing: 1.5px; font-weight: 800;
+  color: var(--text-soft); text-transform: uppercase;
+  max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.sc-v {
+  font-size: 25px; color: var(--text);
+  max-width: 100%; white-space: nowrap;
+  text-shadow: 0 2px 6px rgba(0,0,0,.5);
+}
+.sc-v.best { color: #ffd23f; }   /* BEST vàng (chuẩn header) */
 
 /* ── Mid section: HUD strip + board (đổi trục khi landscape) ──── */
 #mid {
@@ -137,85 +143,6 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   flex-direction: column;
   align-items: center;
 }
-
-/* ── Score strip ───────────────────────────────────────────────── */
-#score-strip {
-  width: 100%;
-  max-width: 520px;
-  padding: 6px 14px 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.hud-chip {
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  border-radius: 12px;
-  padding: 4px 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 56px;
-}
-
-.hud-chip .lbl {
-  font-size: 9px;
-  letter-spacing: 1.8px;
-  text-transform: uppercase;
-  color: var(--text-soft);
-  white-space: nowrap;
-}
-
-.hud-chip .val {
-  font-size: 17px;
-  color: var(--text);
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
-#progress-wrap {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-#progress-labels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-  color: var(--text-soft);
-  padding: 0 1px;
-}
-
-#progress-bar-bg {
-  position: relative;
-  height: 10px;
-  background: rgba(255,255,255,.08);
-  border-radius: 5px;
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,.1);
-}
-
-#progress-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #8040ff, #ff3d5a, #ffb830);
-  background-size: 200% 100%;
-  border-radius: 5px;
-  width: 0%;
-  transition: width .45s cubic-bezier(.22,1,.36,1);
-  animation: barShimmer 2.5s linear infinite;
-}
-
-@keyframes barShimmer {
-  0%   { background-position: 100% 0; }
-  100% { background-position: -100% 0; }
-}
-
-/* nhấp nháy khi gần đạt goal */
-#progress-bar-fill.near-goal { animation: barShimmer 1s linear infinite; }
 
 /* ── Board ─────────────────────────────────────────────────────── */
 #board-outer {
@@ -327,6 +254,21 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   background: linear-gradient(145deg,#1b1430,#0b0718);
   border: 1.5px solid rgba(216,180,255,.65);
   box-shadow: 0 0 16px rgba(190,140,255,.35), inset 0 0 12px rgba(190,140,255,.14);
+}
+
+/* Cursed rune — ấn nguyền đỏ máu với số đếm ngược (không ghép/đổi được) */
+.tile-cursed .tile-inner {
+  background: radial-gradient(circle at 50% 42%, #2a0a16, #0a0410);
+  border: 1.5px solid rgba(255,60,90,.6);
+  box-shadow: 0 0 14px rgba(255,40,80,.4), inset 0 0 12px rgba(255,40,80,.2);
+  cursor: default;
+}
+.tile-cursed .tile-inner::after { display: none; }   /* bỏ gloss */
+.tile-cursed .tile-inner svg { width: 86%; height: 86%; }
+.tile-cursed.cursed-urgent .tile-inner { animation: cursePulse .5s ease-in-out infinite; }
+@keyframes cursePulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(255,40,80,.5),  inset 0 0 12px rgba(255,40,80,.25); }
+  50%      { box-shadow: 0 0 24px rgba(255,40,80,1),   inset 0 0 14px rgba(255,70,100,.55); filter: brightness(1.2); }
 }
 
 /* Special: glow thở */
@@ -480,45 +422,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 }
 #toast.show { opacity: 1; }
 
-/* ── Level intro banner ────────────────────────────────────────── */
-#level-intro {
-  position: fixed;
-  top: 40%;
-  left: 50%;
-  transform: translate(-50%,-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  z-index: 210;
-  pointer-events: none;
-  opacity: 0;
-}
-#li-level {
-  font-size: 34px;
-  font-weight: 800;
-  letter-spacing: 2px;
-  background: linear-gradient(180deg, #fff, #ffd9a0);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  text-shadow: 0 0 30px rgba(255,170,60,.45);
-}
-#li-goal {
-  font-size: 14px;
-  color: var(--text-soft);
-  letter-spacing: 1px;
-}
-@keyframes introPop {
-  0%   { opacity: 0; transform: translate(-50%,-50%) scale(.6); }
-  18%  { opacity: 1; transform: translate(-50%,-50%) scale(1.06); }
-  30%  { transform: translate(-50%,-50%) scale(1); }
-  78%  { opacity: 1; transform: translate(-50%,-50%) scale(1); }
-  100% { opacity: 0; transform: translate(-50%,-56%) scale(.94); }
-}
-#level-intro.show { animation: introPop 1.5s ease-out forwards; }
-
-/* Banner Level Clear / thua */
+/* Banner kết quả (Game Over flash) */
 #result-banner {
   position: fixed;
   top: 40%;
@@ -597,18 +501,6 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   --surface-padding-x: 0;
 }
 
-/* CTA amber (Play) — theo popup-common §6 */
-.btn3d.cta {
-  --surface-height: 54px;
-  --surface-padding-x: 44px;
-  --surface-color: #ffb02e;
-  --surface-text: #3a2400;
-  --surface-font-size: 19px;
-  --radius: 16px;
-}
-.btn3d.cta .btn3d-surface { border: none; box-shadow: 0 6px 22px rgba(255,150,30,.35); }
-.btn3d.cta:active .btn3d-surface { background: var(--surface-color); }
-
 /* nút mini (Skip trong tutorial) */
 .btn3d.mini {
   --surface-height: 30px;
@@ -626,9 +518,6 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 #sound-btn .ico-off { display: none; }
 #sound-btn.muted .ico-on  { display: none; }
 #sound-btn.muted .ico-off { display: block; }
-#menu-sound .ico-off { display: none; }
-#menu-sound.muted .ico-on  { display: none; }
-#menu-sound.muted .ico-off { display: block; }
 
 /* ── Moves danger flash ────────────────────────────────────────── */
 @keyframes dangerPulse {
@@ -637,276 +526,112 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 }
 .moves-danger { animation: dangerPulse .6s ease-in-out infinite; }
 
-/* ── Menu screen ───────────────────────────────────────────────── */
-#menu-screen {
-  position: fixed;
-  inset: 0;
-  z-index: 260;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  overflow: auto;
-  background:
-    radial-gradient(ellipse 90% 55% at 50% -12%, rgba(120,50,210,.5), transparent),
-    linear-gradient(170deg, #0b0718 0%, #1c0d36 55%, #0e0822 100%);
-  opacity: 1;
-  transition: opacity .25s;
-}
-#menu-screen.hidden { opacity: 0; pointer-events: none; }
-
-#menu-corner {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  display: flex;
-  justify-content: space-between;
-  padding: 0 max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left));
-  /* padding-top JS bơm */
-}
-#menu-corner-right { display: flex; gap: 8px; }
-
-.menu-mascots {
-  display: flex;
-  gap: 14px;
-  margin-bottom: 4px;
-}
-.menu-mascot {
-  width: 74px;
-  height: 74px;
-  border-radius: 15px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: mascotFloat 3.2s ease-in-out infinite;
-}
-.menu-mascot svg { width: 72%; height: 72%; }
-.menu-mascot:nth-child(1) { transform: rotate(-7deg); animation-delay: 0s; }
-.menu-mascot:nth-child(2) { transform: rotate(2deg) translateY(-8px); animation-delay: .6s; width: 84px; height: 84px; }
-.menu-mascot:nth-child(3) { transform: rotate(7deg); animation-delay: 1.2s; }
-@keyframes mascotFloat {
-  0%, 100% { translate: 0 0; }
-  50%       { translate: 0 -7px; }
-}
-
-#menu-title {
-  font-size: 40px;
-  font-weight: 800;
-  letter-spacing: 3px;
-  text-align: center;
-  background: linear-gradient(180deg, #fff 20%, #ffd9a0 55%, #ff7a4d 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 0 24px rgba(255,140,50,.35));
-  padding: 0 16px;
-}
-
-#menu-tagline {
-  font-size: 13px;
-  color: var(--text-soft);
-  letter-spacing: 1px;
-  margin-top: -8px;
-  text-align: center;
-  padding: 0 24px;
-}
-
-#menu-play { margin-top: 14px; }
-
-/* ── Info / How-to-play panel ──────────────────────────────────── */
-#info-panel {
+/* ── Game Over popup (game điểm-cao tự vẽ — popup-common §1.1) ─── */
+.overlay {
   position: fixed;
   inset: 0;
   z-index: 280;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 24px;
   background: rgba(4,2,12,.72);
   opacity: 1;
-  transition: opacity .22s;
+  transition: opacity .25s;
 }
-#info-panel.hidden { opacity: 0; pointer-events: none; }
-
-.doc-card {
-  position: relative;
-  width: min(88%, 400px);
-  max-height: 76%;
-  overflow-y: auto;
-  border-radius: 20px;
-  padding: 20px 18px 16px;
+.overlay.hidden { opacity: 0; pointer-events: none; }
+.ov-card {
+  width: min(84%, 340px);
+  padding: 26px 24px 22px;
+  text-align: center;
+  border-radius: 22px;
   background: linear-gradient(180deg, #221040, #0e0822);
-  border: 1.5px solid rgba(170,110,255,.30);
+  border: 1.5px solid rgba(170,110,255,.3);
   box-shadow: 0 18px 60px rgba(0,0,0,.6);
   transform: scale(1);
-  transition: transform .22s;
-  text-align: left;
+  transition: transform .25s;
 }
-#info-panel.hidden .doc-card { transform: scale(.92); }
+.overlay.hidden .ov-card { transform: scale(.9); }
+.ov-title {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  margin-bottom: 16px;
+  color: #ffcf6b;
+  text-shadow: 0 0 18px rgba(255,140,50,.5), 0 2px 4px rgba(0,0,0,.6);
+}
+.ov-title.newbest { color: #ffe27a; text-shadow: 0 0 22px rgba(255,200,60,.75), 0 2px 4px rgba(0,0,0,.6); }
+.ov-scores { display: flex; justify-content: center; gap: 30px; margin-bottom: 20px; }
+.ov-k { font-size: 11px; letter-spacing: 2px; color: var(--text-soft); font-weight: 800; text-transform: uppercase; }
+.ov-v { font-size: 32px; color: #fff; font-weight: 800; text-shadow: 0 2px 8px rgba(0,0,0,.5); white-space: nowrap; }
+.ov-v.best { color: #ffd23f; }
+.btn3d.ov-play {
+  --surface-height: 52px;
+  --surface-padding-x: 34px;
+  --surface-font-size: 18px;
+  --surface-color: #ffb02e;
+  --surface-text: #3a2400;
+  --radius: 16px;
+}
+.btn3d.ov-play .btn3d-surface { border: none; box-shadow: 0 6px 22px rgba(255,150,30,.35); }
+.btn3d.ov-play:active .btn3d-surface { background: var(--surface-color); }
 
-.doc-card h2 {
-  font-size: 21px;
-  margin: 0 34px 12px 2px;
-  color: #fff;
-}
-
-#info-close {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  --surface-height: 34px;
-  --surface-width: 34px;
-  --surface-font-size: 16px;
-}
-
-.info-fig {
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 14px;
-  padding: 8px;
-  margin-bottom: 6px;
-}
-.info-fig svg { width: 100%; height: auto; display: block; }
-
-.info-cap {
-  font-family: system-ui, sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.45;
-  color: rgba(237,222,255,.8);
-  margin: 2px 2px 12px;
-}
-
-.info-grid2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-.spec-card {
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 14px;
-  padding: 8px 6px 7px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  text-align: center;
-}
-.spec-card svg { width: 46px; height: 46px; }
-.spec-card .sc-name {
-  font-size: 11px;
-  letter-spacing: .4px;
-  color: #ffe9b0;
-}
-.spec-card .sc-how {
-  font-family: system-ui, sans-serif;
-  font-size: 10.5px;
-  font-weight: 500;
-  line-height: 1.3;
-  color: rgba(237,222,255,.65);
-}
-
-.info-chips {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.info-chip {
-  flex: 1;
-  min-width: 100px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 11px;
-  padding: 7px 9px;
-}
-.info-chip svg { width: 30px; height: 22px; flex-shrink: 0; }
-.info-chip span {
-  font-family: system-ui, sans-serif;
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: .5px;
-  text-transform: uppercase;
-  color: rgba(237,222,255,.7);
-  line-height: 1.25;
-}
-
-/* ── Confirm panel (Home → về menu?) ───────────────────────────── */
-#confirm-panel {
+/* ── Onboarding carousel (phủ lên board — 1 scene, không chuyển cảnh) ── */
+#onboard {
   position: fixed;
   inset: 0;
-  z-index: 290;
+  z-index: 250;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(4,2,12,.66);
+  padding: 24px;
+  background: rgba(4,2,12,.78);
   opacity: 1;
-  transition: opacity .2s;
+  transition: opacity .25s;
 }
-#confirm-panel.hidden { opacity: 0; pointer-events: none; }
-
-.confirm-card {
-  width: min(80%, 300px);
-  border-radius: 18px;
-  padding: 22px 18px 18px;
-  background: linear-gradient(180deg, #221040, #0e0822);
-  border: 1.5px solid rgba(170,110,255,.30);
-  box-shadow: 0 16px 50px rgba(0,0,0,.6);
+#onboard.hidden { opacity: 0; pointer-events: none; }
+.ob-card {
+  width: min(90%, 360px);
+  padding: 20px 22px 18px;
   text-align: center;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #221040, #0e0822);
+  border: 1.5px solid rgba(170,110,255,.3);
+  box-shadow: 0 18px 55px rgba(0,0,0,.6);
   transform: scale(1);
-  transition: transform .2s;
+  transition: transform .25s;
 }
-#confirm-panel.hidden .confirm-card { transform: scale(.92); }
-
-#confirm-text { font-size: 17px; color: #fff; margin-bottom: 16px; }
-
-.confirm-btns { display: flex; justify-content: center; gap: 14px; }
-.confirm-btns .btn3d { --surface-width: 74px; --surface-height: 44px; --surface-font-size: 20px; }
-#confirm-yes { --surface-color: #ffb02e; --surface-text: #3a2400; }
-#confirm-yes:active .btn3d-surface { background: var(--surface-color); }
-
-/* ── Tutorial banner + bàn tay hướng dẫn ───────────────────────── */
-#tut-banner {
-  position: fixed;
-  left: 50%;
-  bottom: 12%;
-  transform: translateX(-50%);
-  z-index: 240;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  max-width: min(92vw, 460px);
-  background: rgba(24,12,48,.94);
-  border: 1px solid rgba(190,130,255,.4);
-  border-radius: 16px;
-  padding: 12px 16px;
-  box-shadow: 0 10px 34px rgba(0,0,0,.5);
-  opacity: 1;
-  transition: opacity .25s, transform .25s;
+#onboard.hidden .ob-card { transform: scale(.92); }
+.ob-illo {
+  height: 96px;
+  margin-bottom: 12px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 14px;
 }
-#tut-banner.hidden { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(12px); }
-#tut-text {
-  font-size: 14px;
-  line-height: 1.4;
-  color: #fff;
-  font-weight: 700;
+.ob-illo svg { width: 100%; height: 100%; display: block; }
+.ob-title {
+  font-size: 21px; font-weight: 800; letter-spacing: .5px;
+  color: #ffcf6b; text-shadow: 0 0 14px rgba(255,140,50,.4);
+  margin-bottom: 6px;
 }
-
-#tut-hand {
-  position: fixed;
-  z-index: 235;
-  width: 44px;
-  height: 44px;
-  pointer-events: none;
-  opacity: 0;
-  filter: drop-shadow(0 3px 8px rgba(0,0,0,.6));
-  transition: opacity .2s;
+.ob-desc {
+  font-family: system-ui, sans-serif;
+  font-size: 13px; font-weight: 500; line-height: 1.5;
+  color: rgba(237,222,255,.82);
+  min-height: 58px;
+  margin-bottom: 10px;
 }
-#tut-hand.show { opacity: 1; }
-#tut-hand svg { width: 100%; height: 100%; }
+.ob-dots { display: flex; justify-content: center; gap: 7px; margin-bottom: 14px; }
+.ob-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.22); transition: background .2s, transform .2s; }
+.ob-dot.on { background: #ffb02e; transform: scale(1.25); }
+.ob-nav { display: flex; gap: 12px; justify-content: center; }
+.btn3d.ob-skip-btn {
+  --surface-height: 46px; --surface-padding-x: 22px; --surface-font-size: 15px;
+  --surface-color: #3a2b56; --surface-border-color: #2a1f40; --shadow-color: #17102a;
+  --surface-highlight: rgba(150,120,220,.3); --surface-deep: rgba(10,6,20,.5);
+}
 
 /* ── Pause veil ────────────────────────────────────────────────── */
 #pause-veil {
@@ -931,38 +656,12 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 /* ── Responsive ────────────────────────────────────────────────── */
 @media (max-width: 380px) {
   .btn3d.btn-icon { --surface-height: 36px; --surface-width: 36px; }
-  #level-num { font-size: 15px; }
-  #game-title { font-size: 9px; letter-spacing: 2px; }
-  .hud-chip { min-width: 48px; padding: 3px 8px; }
-  .hud-chip .val { font-size: 15px; }
-  #menu-title { font-size: 32px; }
+  .sc-v { font-size: 21px; }
+  .sc-k { font-size: 9px; }
 }
 
-@media (max-height: 620px) {
-  #menu-title { font-size: 30px; }
-  .menu-mascots { transform: scale(.8); margin-bottom: -6px; }
-  #menu-screen { gap: 10px; }
-  .btn3d.cta { --surface-height: 46px; }
-  .doc-card { max-height: 88%; }
-}
-
-/* Landscape: HUD strip dựng dọc bên trái board */
-body.landscape #mid {
-  flex-direction: row;
-  justify-content: center;
-  gap: 4px;
-  padding: 0 max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left));
-}
-body.landscape #score-strip {
-  width: auto;
-  max-width: 150px;
-  flex-direction: column;
-  align-items: stretch;
-  padding: 6px 4px;
-  gap: 8px;
-}
-body.landscape #progress-wrap { min-width: 110px; }
-body.landscape #board-outer { padding: 4px; flex: 0 1 auto; }
+/* Landscape: chỉ căn board (không còn sub-strip) */
+body.landscape #board-outer { padding: 4px; }
 </style>
 </head>
 <body>
@@ -984,90 +683,45 @@ body.landscape #board-outer { padding: 4px; flex: 0 1 auto; }
 
 <div id="app">
 
-  <!-- Topbar: [Back, ?] | Level | [Sound, Home, Restart] -->
+  <!-- Header (khung skydom): Back | SCORE · BEST | Volume -->
   <div id="topbar">
-    <div id="topbar-left">
-      <div class="btn3d btn-icon" id="back-btn" role="button" aria-label="Back" tabindex="0">
-        <span class="btn3d-shadow"></span>
-        <span class="btn3d-surface">
-          <svg class="back-ico" viewBox="0 0 447.243 447.243" aria-hidden="true">
-            <path fill="currentColor" d="M420.361 192.229a31.967 31.967 0 0 0-5.535-.41H99.305l6.88-3.2a63.998 63.998 0 0 0 18.08-12.8l88.48-88.48c11.653-11.124 13.611-29.019 4.64-42.4-10.441-14.259-30.464-17.355-44.724-6.914a32.018 32.018 0 0 0-3.276 2.754l-160 160c-12.504 12.49-12.515 32.751-.025 45.255l.025.025 160 160c12.514 12.479 32.775 12.451 45.255-.063a32.084 32.084 0 0 0 2.745-3.137c8.971-13.381 7.013-31.276-4.64-42.4l-88.32-88.64a64.002 64.002 0 0 0-16-11.68l-9.6-4.32h314.24c16.347.607 30.689-10.812 33.76-26.88 2.829-17.445-9.019-33.88-26.464-36.71z"/>
-          </svg>
-        </span>
+    <div class="btn3d btn-icon" id="back-btn" role="button" aria-label="Back" tabindex="0">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="back-ico" viewBox="0 0 447.243 447.243" aria-hidden="true">
+          <path fill="currentColor" d="M420.361 192.229a31.967 31.967 0 0 0-5.535-.41H99.305l6.88-3.2a63.998 63.998 0 0 0 18.08-12.8l88.48-88.48c11.653-11.124 13.611-29.019 4.64-42.4-10.441-14.259-30.464-17.355-44.724-6.914a32.018 32.018 0 0 0-3.276 2.754l-160 160c-12.504 12.49-12.515 32.751-.025 45.255l.025.025 160 160c12.514 12.479 32.775 12.451 45.255-.063a32.084 32.084 0 0 0 2.745-3.137c8.971-13.381 7.013-31.276-4.64-42.4l-88.32-88.64a64.002 64.002 0 0 0-16-11.68l-9.6-4.32h314.24c16.347.607 30.689-10.812 33.76-26.88 2.829-17.445-9.019-33.88-26.464-36.71z"/>
+        </svg>
+      </span>
+    </div>
+
+    <div class="scorebar" id="scorebar">
+      <div class="sc-box">
+        <div class="sc-k" id="score-k">SCORE</div>
+        <div class="sc-v" id="score-val">0</div>
       </div>
-      <!-- nút mở How-to-play ngay trong trận -->
-      <div class="btn3d btn-icon" id="help-btn" role="button" aria-label="How to play" tabindex="0">
-        <span class="btn3d-shadow"></span>
-        <span class="btn3d-surface">
-          <svg class="help-ico" viewBox="0 0 100 100" aria-hidden="true">
-            <path fill="currentColor" d="M50 8C30 8 16 20 15 37h16c.7-8 7.5-13.6 18.4-13.6 10.3 0 17.6 5.4 17.6 13.2 0 6.6-3.6 10.3-12.3 15.5-9.6 5.6-13.7 11.4-13.2 20.6l.1 3.9h15.8v-3.3c0-6.7 2.5-10.1 11.6-15.4C78.9 52.4 84 45.9 84 36.4 84 19.9 70 8 50 8zM49.7 92c5.8 0 10.4-4.4 10.4-10s-4.6-10-10.4-10c-5.7 0-10.3 4.4-10.3 10s4.6 10 10.3 10z"/>
-          </svg>
-        </span>
+      <div class="sc-box">
+        <div class="sc-k" id="best-k">BEST</div>
+        <div class="sc-v best" id="best-val">0</div>
       </div>
     </div>
 
-    <div id="hud-center">
-      <div id="game-title">Runic Blaze</div>
-      <div id="level-num">Level 1</div>
-    </div>
-
-    <div id="topbar-right">
-      <div class="btn3d btn-icon" id="sound-btn" role="button" aria-label="Sound" tabindex="0">
-        <span class="btn3d-shadow"></span>
-        <span class="btn3d-surface">
-          <svg class="sound-ico ico-on" viewBox="0 0 100 100" aria-hidden="true">
-            <path fill="currentColor" d="M14 38v24h16l20 17V21L30 38H14z"/>
-            <path fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" d="M62 36c5 3.5 8 8.5 8 14s-3 10.5-8 14M72 26c9 6 14 14.6 14 24s-5 18-14 24"/>
-          </svg>
-          <svg class="sound-ico ico-off" viewBox="0 0 100 100" aria-hidden="true">
-            <path fill="currentColor" d="M14 38v24h16l20 17V21L30 38H14z"/>
-            <path fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" d="M64 38 88 62M88 38 64 62"/>
-          </svg>
-        </span>
-      </div>
-      <!-- Nút Home — mở hộp xác nhận về menu chính -->
-      <div class="btn3d btn-icon" id="menu-btn" role="button" aria-label="Menu" tabindex="0">
-        <span class="btn3d-shadow"></span>
-        <span class="btn3d-surface">
-          <svg class="home-ico" viewBox="0 0 100 100" aria-hidden="true">
-            <path fill="currentColor" d="M50 14 L88 46 L78 46 L78 82 A6 6 0 0 1 72 88 L58 88 L58 64 L42 64 L42 88 L28 88 A6 6 0 0 1 22 82 L22 46 L12 46 Z"/>
-          </svg>
-        </span>
-      </div>
-      <div class="btn3d btn-icon" id="restart-btn" role="button" aria-label="Restart" tabindex="0">
-        <span class="btn3d-shadow"></span>
-        <span class="btn3d-surface">
-          <svg class="restart-ico" viewBox="0 0 100 100" aria-hidden="true">
-            <path fill="currentColor" d="m50.7 19.003 4.793-4.793c2.696-2.697 2.696-6.991 0-9.688s-6.991-2.696-9.687 0L29.327 21.001a6.812 6.812 0 0 0 0 9.687l16.479 16.478a6.9 6.9 0 0 0 4.793 1.998c1.798 0 3.496-.7 4.794-1.998a6.812 6.812 0 0 0 0-9.687l-4.794-4.794c13.682.4 24.768 11.685 24.768 25.467 0 14.081-11.485 25.466-25.467 25.466S24.534 72.233 24.534 58.252c0-3.096.599-6.192 1.597-8.989 1.299-3.495-.4-7.49-3.994-8.788-3.496-1.298-7.49.4-8.789 3.995-1.698 4.394-2.496 9.088-2.496 13.882C10.852 79.923 28.428 97.5 50 97.5s39.148-17.577 39.148-39.148c0-21.472-17.177-38.95-38.449-39.349z"/>
-          </svg>
-        </span>
-      </div>
+    <div class="btn3d btn-icon" id="sound-btn" role="button" aria-label="Sound" tabindex="0">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="sound-ico ico-on" viewBox="0 0 100 100" aria-hidden="true">
+          <path fill="currentColor" d="M14 38v24h16l20 17V21L30 38H14z"/>
+          <path fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" d="M62 36c5 3.5 8 8.5 8 14s-3 10.5-8 14M72 26c9 6 14 14.6 14 24s-5 18-14 24"/>
+        </svg>
+        <svg class="sound-ico ico-off" viewBox="0 0 100 100" aria-hidden="true">
+          <path fill="currentColor" d="M14 38v24h16l20 17V21L30 38H14z"/>
+          <path fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" d="M64 38 88 62M88 38 64 62"/>
+        </svg>
+      </span>
     </div>
   </div>
 
   <div id="mid">
-    <!-- HUD: Score chip | Progress bar | Moves chip -->
-    <div id="score-strip">
-      <div class="hud-chip" id="chip-score">
-        <span class="lbl" id="lbl-score">SCORE</span>
-        <span class="val" id="hud-score">0</span>
-      </div>
-      <div id="progress-wrap">
-        <div id="progress-labels">
-          <span id="lbl-goal">GOAL</span>
-          <span id="hud-goal">2000</span>
-        </div>
-        <div id="progress-bar-bg">
-          <div id="progress-bar-fill"></div>
-        </div>
-      </div>
-      <div class="hud-chip" id="chip-moves">
-        <span class="lbl" id="lbl-moves">MOVES</span>
-        <span class="val" id="hud-moves">20</span>
-      </div>
-    </div>
-
-    <!-- Board -->
+    <!-- Chỉ header + board, KHÔNG sub-strip (giống skydom) -->
     <div id="board-outer">
       <div id="board-wrap">
         <div id="grid-bg"></div>
@@ -1080,164 +734,40 @@ body.landscape #board-outer { padding: 4px; flex: 0 1 auto; }
 
 <canvas id="fx-canvas"></canvas>
 
-<!-- Main menu (hiện lúc boot; Play / Tutorial / info / sound) -->
-<div id="menu-screen">
-  <div id="menu-corner">
-    <div class="btn3d btn-icon" id="menu-back" role="button" aria-label="Back" tabindex="0">
+<!-- Game Over popup (game điểm-cao tự vẽ — popup-common §1.1) -->
+<div id="overlay" class="overlay hidden">
+  <div class="ov-card">
+    <div class="ov-title" id="ov-title">Game Over</div>
+    <div class="ov-scores">
+      <div><div class="ov-k" id="ov-score-k">SCORE</div><div class="ov-v" id="ov-score">0</div></div>
+      <div><div class="ov-k" id="ov-best-k">BEST</div><div class="ov-v best" id="ov-best">0</div></div>
+    </div>
+    <button class="btn3d ov-play" id="ov-btn" type="button">
       <span class="btn3d-shadow"></span>
-      <span class="btn3d-surface">
-        <svg class="back-ico" viewBox="0 0 447.243 447.243" aria-hidden="true">
-          <path fill="currentColor" d="M420.361 192.229a31.967 31.967 0 0 0-5.535-.41H99.305l6.88-3.2a63.998 63.998 0 0 0 18.08-12.8l88.48-88.48c11.653-11.124 13.611-29.019 4.64-42.4-10.441-14.259-30.464-17.355-44.724-6.914a32.018 32.018 0 0 0-3.276 2.754l-160 160c-12.504 12.49-12.515 32.751-.025 45.255l.025.025 160 160c12.514 12.479 32.775 12.451 45.255-.063a32.084 32.084 0 0 0 2.745-3.137c8.971-13.381 7.013-31.276-4.64-42.4l-88.32-88.64a64.002 64.002 0 0 0-16-11.68l-9.6-4.32h314.24c16.347.607 30.689-10.812 33.76-26.88 2.829-17.445-9.019-33.88-26.464-36.71z"/>
-        </svg>
-      </span>
-    </div>
-    <div id="menu-corner-right">
-      <div class="btn3d btn-icon" id="menu-sound" role="button" aria-label="Sound" tabindex="0">
-        <span class="btn3d-shadow"></span>
-        <span class="btn3d-surface">
-          <svg class="sound-ico ico-on" viewBox="0 0 100 100" aria-hidden="true">
-            <path fill="currentColor" d="M14 38v24h16l20 17V21L30 38H14z"/>
-            <path fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" d="M62 36c5 3.5 8 8.5 8 14s-3 10.5-8 14M72 26c9 6 14 14.6 14 24s-5 18-14 24"/>
-          </svg>
-          <svg class="sound-ico ico-off" viewBox="0 0 100 100" aria-hidden="true">
-            <path fill="currentColor" d="M14 38v24h16l20 17V21L30 38H14z"/>
-            <path fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" d="M64 38 88 62M88 38 64 62"/>
-          </svg>
-        </span>
-      </div>
-      <!-- hình thoi trong hình tròn → mở panel thông tin -->
-      <div class="btn3d btn-icon" id="info-btn" role="button" aria-label="Info" tabindex="0">
-        <span class="btn3d-shadow"></span>
-        <span class="btn3d-surface">
-          <svg class="ico-diamond" viewBox="0 0 100 100" aria-hidden="true">
-            <circle cx="50" cy="50" r="38" fill="none" stroke="currentColor" stroke-width="8"/>
-            <rect x="36" y="36" width="28" height="28" rx="4" fill="currentColor" transform="rotate(45 50 50)"/>
-          </svg>
-        </span>
-      </div>
-    </div>
-  </div>
-
-  <div class="menu-mascots">
-    <div class="menu-mascot tile-3" data-rune="3"></div>
-    <div class="menu-mascot tile-p" data-rune="p"></div>
-    <div class="menu-mascot tile-0" data-rune="0"></div>
-  </div>
-  <div id="menu-title">RUNIC BLAZE</div>
-  <div id="menu-tagline">Match runes · Forge blazes · Clear the goal</div>
-
-  <button class="btn3d cta" id="menu-play" type="button">
-    <span class="btn3d-shadow"></span>
-    <span class="btn3d-surface" id="menu-play-label">Play</span>
-  </button>
-  <button class="btn3d" id="menu-tutorial" type="button">
-    <span class="btn3d-shadow"></span>
-    <span class="btn3d-surface" id="menu-tut-label">Tutorial</span>
-  </button>
-</div>
-
-<!-- Info panel — cách chơi -->
-<div id="info-panel" class="hidden">
-  <div class="doc-card">
-    <div class="btn3d btn-icon" id="info-close" role="button" aria-label="Close" tabindex="0">
-      <span class="btn3d-shadow"></span>
-      <span class="btn3d-surface">✕</span>
-    </div>
-    <h2 id="info-title">How to play</h2>
-
-    <!-- Sơ đồ 1: swap 2 rune kề nhau → match 3 (JS bơm rune art vào g[data-rune]) -->
-    <div class="info-fig">
-      <svg viewBox="0 0 320 96" aria-hidden="true">
-        <rect x="10"  y="20" width="56" height="56" rx="12" fill="rgba(255,255,255,.05)" stroke="rgba(255,61,90,.5)" stroke-width="2"/>
-        <rect x="76"  y="20" width="56" height="56" rx="12" fill="rgba(255,255,255,.05)" stroke="rgba(255,61,90,.5)" stroke-width="2"/>
-        <rect x="142" y="20" width="56" height="56" rx="12" fill="rgba(255,255,255,.05)" stroke="rgba(47,123,255,.5)" stroke-width="2"/>
-        <rect x="208" y="20" width="56" height="56" rx="12" fill="rgba(255,255,255,.05)" stroke="rgba(255,61,90,.5)" stroke-width="2" stroke-dasharray="6 4"/>
-        <g data-rune="0" transform="translate(16,26) scale(.44)"></g>
-        <g data-rune="0" transform="translate(82,26) scale(.44)"></g>
-        <g data-rune="1" transform="translate(148,26) scale(.44)"></g>
-        <g data-rune="0" transform="translate(214,26) scale(.44)" opacity=".8"></g>
-        <!-- mũi tên swap cong giữa ô 3 và ô 4 -->
-        <path d="M196 12 Q 220 -2 244 12" fill="none" stroke="#ffb830" stroke-width="4" stroke-linecap="round"/>
-        <path d="M238 4 L246 13 L235 15 Z" fill="#ffb830"/>
-        <circle cx="290" cy="48" r="14" fill="#35c26e" stroke="#fff" stroke-width="2.5"/>
-        <polyline points="283,48 288,53 297,42" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </div>
-    <div class="info-cap" id="info-b1"></div>
-
-    <!-- 3 special cards: Blaze / Nova / Prism (JS bơm icon) -->
-    <div class="info-grid2">
-      <div class="spec-card">
-        <svg viewBox="0 0 100 100" aria-hidden="true"><g data-spec="stripe"></g></svg>
-        <span class="sc-name" id="info-sp1-name"></span>
-        <span class="sc-how" id="info-sp1-how"></span>
-      </div>
-      <div class="spec-card">
-        <svg viewBox="0 0 100 100" aria-hidden="true"><g data-spec="nova"></g></svg>
-        <span class="sc-name" id="info-sp2-name"></span>
-        <span class="sc-how" id="info-sp2-how"></span>
-      </div>
-      <div class="spec-card">
-        <svg viewBox="0 0 100 100" aria-hidden="true"><g data-spec="prism"></g></svg>
-        <span class="sc-name" id="info-sp3-name"></span>
-        <span class="sc-how" id="info-sp3-how"></span>
-      </div>
-    </div>
-    <div class="info-cap" id="info-b2"></div>
-
-    <!-- chips: goal + moves -->
-    <div class="info-chips">
-      <div class="info-chip">
-        <svg viewBox="0 0 40 26" aria-hidden="true">
-          <rect x="3" y="9" width="34" height="8" rx="4" fill="rgba(255,255,255,.14)"/>
-          <rect x="3" y="9" width="22" height="8" rx="4" fill="#ffb830"/>
-          <circle cx="33" cy="13" r="6" fill="none" stroke="#ffe9b0" stroke-width="2"/>
-        </svg>
-        <span id="info-c-goal"></span>
-      </div>
-      <div class="info-chip">
-        <svg viewBox="0 0 40 26" aria-hidden="true">
-          <path fill="none" stroke="#eddeff" stroke-width="2.6" stroke-linecap="round" d="M12 5a9 9 0 1 0 9 9"/>
-          <path fill="#eddeff" d="M21 2l6 6-8 2z"/>
-        </svg>
-        <span id="info-c-moves"></span>
-      </div>
-    </div>
+      <span class="btn3d-surface" id="ov-btn-label">Play Again</span>
+    </button>
   </div>
 </div>
 
-<!-- Hộp xác nhận về menu -->
-<div id="confirm-panel" class="hidden">
-  <div class="confirm-card">
-    <div id="confirm-text">Back to menu?</div>
-    <div class="confirm-btns">
-      <button class="btn3d" id="confirm-no" type="button">
-        <span class="btn3d-shadow"></span><span class="btn3d-surface">✕</span>
+<!-- Onboarding carousel (phủ lên board lần chơi đầu — 1 scene, không chuyển cảnh) -->
+<div id="onboard" class="hidden">
+  <div class="ob-card">
+    <div class="ob-illo" id="ob-illo"></div>
+    <div class="ob-title" id="ob-title"></div>
+    <div class="ob-desc" id="ob-desc"></div>
+    <div class="ob-dots" id="ob-dots"></div>
+    <div class="ob-nav">
+      <button class="btn3d ob-skip-btn" id="ob-skip" type="button">
+        <span class="btn3d-shadow"></span><span class="btn3d-surface" id="ob-skip-label">Skip</span>
       </button>
-      <button class="btn3d" id="confirm-yes" type="button">
-        <span class="btn3d-shadow"></span><span class="btn3d-surface">✓</span>
+      <button class="btn3d ov-play" id="ob-next" type="button">
+        <span class="btn3d-shadow"></span><span class="btn3d-surface" id="ob-next-label">Next</span>
       </button>
     </div>
   </div>
-</div>
-
-<!-- Tutorial banner + bàn tay -->
-<div id="tut-banner" class="hidden">
-  <span id="tut-text"></span>
-  <button class="btn3d mini" id="tut-skip" type="button">
-    <span class="btn3d-shadow"></span>
-    <span class="btn3d-surface" id="tut-skip-label">Skip</span>
-  </button>
-</div>
-<div id="tut-hand" aria-hidden="true">
-  <svg viewBox="0 0 100 100">
-    <path fill="#ffe3c2" stroke="#3a2400" stroke-width="4" stroke-linejoin="round"
-      d="M42 14c0-5 8-5 8 0v30l7-8c4-4 10 1 7 6l1-1c4-4 10 1 7 6 4-3 9 2 6 6l-9 14c-4 7-9 11-19 11-12 0-19-7-19-18V44c0-5 8-5 8 0v6h3V14z"/>
-  </svg>
 </div>
 
 <!-- Overlays -->
-<div id="level-intro"><div id="li-level">Level 1</div><div id="li-goal"></div></div>
 <div id="result-banner"></div>
 <div id="combo-badge" aria-live="polite"><span id="combo-praise"></span><span id="combo-mult"></span></div>
 <div id="toast" role="status"></div>
@@ -1721,6 +1251,51 @@ const I18N = {
   },
 };
 
+/* Khoá bổ sung cho score-attack + corruption (đủ 23 locale — giữ chuẩn i18n) */
+const EXTRA_I18N = {
+  en:{ best:'BEST', corruption:'Corruption', gameOver:'Game Over', newBest:'New Record!', playAgain:'Play Again', consumed:'The Blight consumes all…' },
+  vi:{ best:'KỶ LỤC', corruption:'Ăn mòn', gameOver:'Kết thúc', newBest:'Kỷ lục mới!', playAgain:'Chơi lại', consumed:'Hắc khí nuốt trọn…' },
+  'zh-Hans':{ best:'最高', corruption:'腐蚀', gameOver:'游戏结束', newBest:'新纪录！', playAgain:'再玩一次', consumed:'腐蚀吞噬一切…' },
+  'zh-Hant':{ best:'最高', corruption:'腐蝕', gameOver:'遊戲結束', newBest:'新紀錄！', playAgain:'再玩一次', consumed:'腐蝕吞噬一切…' },
+  ja:{ best:'ベスト', corruption:'侵食', gameOver:'ゲームオーバー', newBest:'新記録！', playAgain:'もう一度', consumed:'侵食に飲まれた…' },
+  ko:{ best:'최고', corruption:'부패', gameOver:'게임 오버', newBest:'신기록!', playAgain:'다시하기', consumed:'부패가 모든 것을 삼켰다…' },
+  es:{ best:'MEJOR', corruption:'Corrupción', gameOver:'Fin', newBest:'¡Récord!', playAgain:'Jugar otra vez', consumed:'La plaga lo consume todo…' },
+  'es-MX':{ best:'MEJOR', corruption:'Corrupción', gameOver:'Fin', newBest:'¡Récord!', playAgain:'Jugar otra vez', consumed:'La plaga lo consume todo…' },
+  'es-AR':{ best:'MEJOR', corruption:'Corrupción', gameOver:'Fin', newBest:'¡Récord!', playAgain:'Jugar otra vez', consumed:'La plaga lo consume todo…' },
+  'pt-BR':{ best:'RECORDE', corruption:'Corrupção', gameOver:'Fim de Jogo', newBest:'Novo recorde!', playAgain:'Jogar de novo', consumed:'A praga consome tudo…' },
+  pt:{ best:'RECORDE', corruption:'Corrupção', gameOver:'Fim de Jogo', newBest:'Novo recorde!', playAgain:'Jogar de novo', consumed:'A praga consome tudo…' },
+  fr:{ best:'MEILLEUR', corruption:'Corruption', gameOver:'Fin', newBest:'Nouveau record !', playAgain:'Rejouer', consumed:'La corruption dévore tout…' },
+  de:{ best:'BESTE', corruption:'Verderben', gameOver:'Game Over', newBest:'Neuer Rekord!', playAgain:'Nochmal', consumed:'Das Verderben verschlingt alles…' },
+  it:{ best:'RECORD', corruption:'Corruzione', gameOver:'Fine', newBest:'Nuovo record!', playAgain:'Rigioca', consumed:'La corruzione divora tutto…' },
+  nl:{ best:'BESTE', corruption:'Verval', gameOver:'Game Over', newBest:'Nieuw record!', playAgain:'Opnieuw', consumed:'Het verval verzwelgt alles…' },
+  pl:{ best:'REKORD', corruption:'Zepsucie', gameOver:'Koniec gry', newBest:'Nowy rekord!', playAgain:'Zagraj ponownie', consumed:'Zepsucie pochłania wszystko…' },
+  ru:{ best:'РЕКОРД', corruption:'Порча', gameOver:'Игра окончена', newBest:'Новый рекорд!', playAgain:'Ещё раз', consumed:'Порча поглощает всё…' },
+  tr:{ best:'EN İYİ', corruption:'Çürüme', gameOver:'Oyun Bitti', newBest:'Yeni rekor!', playAgain:'Tekrar oyna', consumed:'Çürüme her şeyi yutuyor…' },
+  ar:{ best:'الأفضل', corruption:'الفساد', gameOver:'انتهت اللعبة', newBest:'رقم قياسي جديد!', playAgain:'إعادة اللعب', consumed:'الفساد يبتلع كل شيء…' },
+  hi:{ best:'सर्वश्रेष्ठ', corruption:'क्षय', gameOver:'खेल समाप्त', newBest:'नया रिकॉर्ड!', playAgain:'फिर खेलें', consumed:'क्षय सब कुछ निगल गया…' },
+  th:{ best:'สูงสุด', corruption:'ความเสื่อม', gameOver:'จบเกม', newBest:'สถิติใหม่!', playAgain:'เล่นอีกครั้ง', consumed:'ความเสื่อมกลืนกินทุกสิ่ง…' },
+  id:{ best:'TERBAIK', corruption:'Korupsi', gameOver:'Permainan Selesai', newBest:'Rekor baru!', playAgain:'Main Lagi', consumed:'Wabah melahap semuanya…' },
+  fil:{ best:'PINAKA', corruption:'Pagkabulok', gameOver:'Tapos na', newBest:'Bagong rekord!', playAgain:'Ulitin', consumed:'Nilalamon ng salot ang lahat…' },
+};
+Object.keys(EXTRA_I18N).forEach(k => { if (I18N[k]) Object.assign(I18N[k], EXTRA_I18N[k]); });
+
+/* Onboarding + events. `next` đủ 23 locale; mô tả onboarding en+vi (còn lại fallback en). */
+const OB_I18N = {
+  en:{ next:'Next', cursedSpawn:'A cursed rune appears!', surge:'Arcane Surge!', blazeStorm:'Blaze Storm!',
+       ob1T:'Match Runes', ob1D:'Swap two adjacent runes to line up 3 or more of the same kind. They burst — and cascading matches multiply your score!',
+       ob2T:'Forge Specials', ob2D:'Match 4 for a Blaze (clears a line), an L/T for a Nova (3×3 double blast), 5 for a Prism (burns a whole color). Swap two specials for a huge combo!',
+       ob3T:'Cursed Runes', ob3D:'A cursed rune counts down every turn. Clear a match right next to it to break it before it hits 0 — or the run ends. They come faster and harsher the longer you last!' },
+  vi:{ next:'Tiếp', cursedSpawn:'Hắc ấn xuất hiện!', surge:'Bùng Phép!', blazeStorm:'Bão Lửa!',
+       ob1T:'Ghép Rune', ob1D:'Đổi chỗ 2 rune kề nhau để xếp 3+ rune cùng loại. Chúng nổ — ăn liên hoàn (cascade) nhân điểm!',
+       ob2T:'Rèn Rune Đặc Biệt', ob2D:'Ghép 4 ra Blaze (nổ nguyên hàng), chữ L/T ra Nova (nổ 3×3 hai lần), 5 ra Prism (thiêu 1 màu). Đổi 2 special → combo cực lớn!',
+       ob3T:'Hắc Ấn', ob3D:'Hắc ấn đếm ngược mỗi lượt. Ghép ngay CẠNH nó để phá trước khi về 0 — nếu không sẽ thua! Càng chơi lâu chúng càng tới nhanh và khó hơn.' },
+  'zh-Hans':{next:'下一步'},'zh-Hant':{next:'下一步'},ja:{next:'次へ'},ko:{next:'다음'},
+  es:{next:'Siguiente'},'es-MX':{next:'Siguiente'},'es-AR':{next:'Siguiente'},'pt-BR':{next:'Próximo'},pt:{next:'Seguinte'},
+  fr:{next:'Suivant'},de:{next:'Weiter'},it:{next:'Avanti'},nl:{next:'Volgende'},pl:{next:'Dalej'},ru:{next:'Далее'},
+  tr:{next:'İleri'},ar:{next:'التالي'},hi:{next:'आगे'},th:{next:'ถัดไป'},id:{next:'Lanjut'},fil:{next:'Susunod'},
+};
+Object.keys(OB_I18N).forEach(k => { if (I18N[k]) Object.assign(I18N[k], OB_I18N[k]); });
+
 let LANG = DEFAULT_LANG;
 function t(key) {
   const v = (I18N[LANG] && I18N[LANG][key]);
@@ -1759,7 +1334,7 @@ function sendMessage(type, opts) {
   opts = opts || {};
   post({
     type,
-    level: currentLevelIdx + 1,        // 1-indexed per spec
+    level: null,                       // game điểm-cao KHÔNG level → luôn null
     result: opts.result   ?? null,
     data:   opts.data     ?? null,
     showModal: opts.showModal === true,
@@ -1783,6 +1358,11 @@ function saveLocal(payload) {
 
 function readLocal() {
   try { return localStorage.getItem(LS_KEY) || ''; } catch (e) { return ''; }
+}
+
+/* ?reset=1 → xoá toàn bộ dữ liệu lưu, chơi lại từ đầu (best=0, onboarding hiện lại) */
+function isReset() {
+  try { return new URLSearchParams(window.location.search).get('reset') === '1'; } catch (e) { return false; }
 }
 
 /* ── statusBarHeight (game-common §2 — URL ưu tiên) ──────────── */
@@ -1813,6 +1393,10 @@ function getInitialData() {
 
 /** Gộp data nhẹ (native ưu tiên) + trạng thái ván nặng (localStorage). */
 function parseInitialData() {
+  if (isReset()) {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    return null;   // ván sạch: best=0, tutorialSeen=false → onboarding hiện lại
+  }
   let nativeObj = null;
   const raw = getInitialData();
   if (raw) { try { nativeObj = JSON.parse(raw); } catch (e) {} }
@@ -1831,59 +1415,38 @@ function parseInitialData() {
 let devTimer = null;
 function devSimulateNative(msg) {
   if (window.ReactNativeWebView) return;
-  if (msg.type === 'game_result' && msg.showModal) {
+  // Endless: game tự vẽ popup Game Over → dev tự bấm Play Again sau ít giây
+  if (msg.type === 'game_result') {
     clearTimeout(devTimer);
-    devTimer = setTimeout(() => {
-      if (msg.result === 'win' && typeof window.onNextLevel === 'function') window.onNextLevel();
-      else if (msg.result === 'lose' && typeof window.onRetryLevel === 'function') window.onRetryLevel();
-    }, 1600);
-  } else if (msg.type === 'victory') {
-    clearTimeout(devTimer);
-    devTimer = setTimeout(() => { showToast('🏆 VICTORY (dev)'); }, 600);
+    devTimer = setTimeout(() => { if (typeof window.onRetryLevel === 'function') window.onRetryLevel(); }, 2500);
   }
 }
 
 /* ================================================================
- * §2. Level & tuning config — LEVEL VÔ HẠN sinh theo công thức
- * ================================================================
- * Không có level cuối → không bao giờ bắn `victory` (deviation có chủ đích
- * so với game-common §1.5, ghi trong README — giống animal-connect).
- * levelConfig(idx) deterministic theo idx: retry sau khi thua dựng lại
- * đúng envelope độ khó, chỉ cách xếp rune là ngẫu nhiên mới.
- */
+ * §2. Tuning — endless score-attack (KHÔNG level)
+ * ================================================================ */
 const COLS = 7, ROWS = 7;
-const MAX_LEVEL_IDX = 9998;
+const MAX_LEVEL_IDX = 9998;   // giữ cho getInitialLevelIdx tiện dụng — không dùng cho gameplay
 
-/** splitmix-lite: hash idx → [0,1) ổn định giữa các lần chạy. */
-function levelHash(idx) {
-  let x = (idx + 0x9E3779B9) | 0;
-  x = Math.imul(x ^ (x >>> 16), 0x21F0AAAD);
-  x = Math.imul(x ^ (x >>> 15), 0x735A2D97);
-  x = (x ^ (x >>> 15)) >>> 0;
-  return x / 4294967296;
-}
-
-/** Config 1 level: moves 20 → sàn 16, điểm-cần-mỗi-lượt tăng dần rồi
- *  plateau (~400) để chơi dài vẫn công bằng; màu thứ 6 từ level 9,
- *  thỉnh thoảng hash cho level 5 màu để đổi nhịp. */
-function levelConfig(idx) {
-  const h = levelHash(idx);
-  const colors = idx < 8 ? 5 : (h < 0.22 ? 5 : 6);
-  const moves = Math.max(16, 20 - (idx >> 1)) + (h > 0.65 ? 1 : 0);
-  const perMove = Math.min(400, 100 + idx * 22) * (0.95 + h * 0.1);
-  const goal = Math.max(1500, Math.round(moves * perMove / 50) * 50);
-  return { moves, goal, colors };
-}
+/** Số màu rune theo điểm (thêm màu thứ 6 khi điểm cao → khó dần). */
+function colorsFor(s) { return s >= 5000 ? 6 : 5; }
 
 const PTS_PER_TILE   = 40;   // điểm 1 tile × chain multiplier
 const CHAIN_CAP      = 5;    // multiplier tối đa
 const SPECIAL_BONUS  = 80;   // thưởng mỗi special được kích hoạt
 const IDLE_HINT_MS   = 5000; // ngồi im 5s → gợi ý
-const RUSH_MAX       = 6;    // blaze rush: tối đa 6 moves thừa đổi thành stripe
-const ADS_EVERY      = 3;    // xin quảng cáo mỗi 3 lần kết thúc ván
+const ADS_EVERY      = 3;    // xin quảng cáo mỗi 3 lần thua
+
+// Cursed Runes ("Hắc Ấn") — hazard đếm ngược, càng về sau càng khó
+const CURSE_GRACE        = 4;         // số lượt đầu chưa sinh hắc ấn
+const CURSE_DEFUSE_BONUS = 250;       // điểm thưởng khi phá 1 hắc ấn
+const CURSE_HEX          = '#ff3d5a'; // màu FX nguyền (đỏ máu)
+// Events (mốc điểm)
+const SURGE_EVERY = 5000;             // Arcane Surge — tặng 1 rune special
+const STORM_EVERY = 12000;            // Blaze Storm — bão nổ dây chuyền
 
 // Kind của tile
-const K_NORMAL = 0, K_SH = 1, K_SV = 2, K_NOVA = 3, K_PRISM = 4;
+const K_NORMAL = 0, K_SH = 1, K_SV = 2, K_NOVA = 3, K_PRISM = 4, K_CURSED = 5;
 
 /* ================================================================
  * §3. Audio — WebAudio synth toàn bộ, không file ngoài
@@ -1926,8 +1489,7 @@ function setMuted(v) {
   muted = v;
   if (audioMaster) audioMaster.gain.value = muted ? 0 : 0.9;
   document.getElementById('sound-btn').classList.toggle('muted', muted);
-  document.getElementById('menu-sound').classList.toggle('muted', muted);
-  persistLight();
+  persistBest();
 }
 
 /** 1 nốt đơn: osc + envelope. dest mặc định = master. */
@@ -2004,6 +1566,12 @@ function sNova()    {
 function sPrismCast(){ [620, 830, 1040, 1240, 1480].forEach((f, i) => tone({ freq: f, at: i * .05, d: .18, peak: .065 })); }
 function sZap()     { tone({ freq: 1780, type: 'square', d: .1, peak: .05, slide: 500 }); }
 function sShuffle() { for (let i = 0; i < 6; i++) noiseBurst({ f0: 1100 + i * 280, at: i * .05, d: .05, peak: .05 }); }
+function sCurse()  {
+  // corruption lan — buzz trầm bệnh tụt dốc + rít ăn mòn (khẽ, dark, không chói)
+  tone({ freq: 130, slide: 92, type: 'sawtooth', a: .01, d: .26, peak: .05 });
+  tone({ freq: 196, slide: 138, type: 'triangle', at: .03, d: .2, peak: .028 });
+  noiseBurst({ f0: 620, f1: 180, d: .3, peak: .045, q: 1.4 });
+}
 function sWin()     {
   // cao trào anh hùng TỐI MÀU — power-chord Rê + quãng năm dựng lên (không phải arp Đô-trưởng kẹo)
   duckBgm(2.8);
@@ -2151,11 +1719,12 @@ function duckBgm(dur) {
 /* ================================================================
  * §4. Game state
  * ================================================================ */
-let currentLevelIdx = 0;
 let board      = [];      // board[r][c] = tile | null
-let movesLeft  = 0;
 let score      = 0;
-let goal       = 0;
+let best       = 0;       // kỷ lục điểm cao nhất — persist + hiển thị live
+let runRecord  = 0;       // best lúc bắt đầu ván — mốc để mừng khi phá kỷ lục
+let recordHit  = false;   // đã phá kỷ lục trong ván này chưa
+let turnCount  = 0;       // số lượt đã đi trong ván (ân hạn blight)
 let nColors    = 5;
 let busy       = false;   // pipeline đang chạy → khoá input
 let ended      = false;
@@ -2164,12 +1733,11 @@ let selected   = null;    // {r,c}
 let cellPx     = 44;
 let tileIdCtr  = 0;
 let levelEpoch = 0;       // tăng mỗi lần loadLevel — huỷ mọi continuation cũ
-let menuOpen   = true;
-let confirmOpen = false;
-let howtoOpen  = false;
+let menuOpen   = false;  // vestigial (không còn menu) — giữ =false cho các gate cũ
+let confirmOpen = false; // vestigial
+let howtoOpen  = false;  // vestigial
 let tutorialMode = false;
 let tutorialSeen = false;
-let tutorialFromMenu = false;
 let endCounter = 0;
 let resultTimer = null;
 let pendingRelayout = false;
@@ -2249,7 +1817,7 @@ function stepScoreHud(dt) {
   const diff = score - dispScore;
   const step = Math.max(1, Math.abs(diff) * Math.min(1, dt / 110));
   dispScore = diff > 0 ? Math.min(score, dispScore + step) : score;
-  $('hud-score').textContent = Math.round(dispScore);
+  $('score-val').textContent = Math.round(dispScore);
 }
 
 let lastTs = 0, timeMs = 0;
@@ -2367,7 +1935,17 @@ function prismArt() {
     <circle cx="50" cy="47" r="10.5" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.5"/>`;
 }
 
+/* Cursed rune — ấn nguyền đỏ máu: đĩa tối viền đỏ, gai + xích, SỐ đếm ngược lớn */
+function cursedArt(n) {
+  return `<circle cx="50" cy="50" r="41" fill="rgba(14,6,16,.94)" stroke="#c01a3e" stroke-width="4"/>`
+       + `<circle cx="50" cy="50" r="41" fill="none" stroke="#ff6a86" stroke-width="1.4" opacity=".5"/>`
+       + `<path d="M50 11 L56 23 L50 19 L44 23 Z" fill="#ff3d5a"/>`
+       + `<path d="M21 41 Q13 50 21 59 M79 41 Q87 50 79 59" fill="none" stroke="#ff6a86" stroke-width="3" stroke-linecap="round" opacity=".7"/>`
+       + `<text x="50" y="67" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="900" font-size="46" fill="#ffd23f" stroke="#5a0616" stroke-width="1.6" paint-order="stroke">${n}</text>`;
+}
+
 function tileSVG(color, kind) {
+  if (kind === K_CURSED) return cursedArt(0);   // số thật do renderCursed() đặt sau khi morph
   if (kind === K_PRISM) return prismArt();
   return runeGlyph(color) + specialOverlay(kind);
 }
@@ -2376,6 +1954,7 @@ function tileSVG(color, kind) {
  * §7. Tile DOM helpers
  * ================================================================ */
 function tileClass(color, kind) {
+  if (kind === K_CURSED) return 'tile tile-cursed';
   let c = 'tile ' + (kind === K_PRISM ? 'tile-p' : 'tile-' + color);
   if (kind === K_SH)    c += ' kind-stripeH';
   if (kind === K_SV)    c += ' kind-stripeV';
@@ -2491,7 +2070,6 @@ function resize() {
 
   const topPad = Math.max(getStatusBarHeight(), envSafeTop) + 8;
   $('topbar').style.paddingTop = topPad + 'px';
-  $('menu-corner').style.paddingTop = topPad + 'px';
 
   document.body.classList.toggle('landscape', window.innerWidth > window.innerHeight * 1.25);
 
@@ -2625,9 +2203,9 @@ function collectRuns() {
     let c = 0;
     while (c < COLS) {
       const t = board[r][c];
-      if (!t || t.kind === K_PRISM) { c++; continue; }
+      if (!t || t.kind === K_PRISM || t.kind === K_CURSED) { c++; continue; }
       let j = c + 1;
-      while (j < COLS && board[r][j] && board[r][j].kind !== K_PRISM && board[r][j].color === t.color) j++;
+      while (j < COLS && board[r][j] && board[r][j].kind !== K_PRISM && board[r][j].kind !== K_CURSED && board[r][j].color === t.color) j++;
       if (j - c >= 3) {
         const cells = [];
         for (let k = c; k < j; k++) cells.push({ r, c: k });
@@ -2641,9 +2219,9 @@ function collectRuns() {
     let r = 0;
     while (r < ROWS) {
       const t = board[r][c];
-      if (!t || t.kind === K_PRISM) { r++; continue; }
+      if (!t || t.kind === K_PRISM || t.kind === K_CURSED) { r++; continue; }
       let j = r + 1;
-      while (j < ROWS && board[j][c] && board[j][c].kind !== K_PRISM && board[j][c].color === t.color) j++;
+      while (j < ROWS && board[j][c] && board[j][c].kind !== K_PRISM && board[j][c].kind !== K_CURSED && board[j][c].color === t.color) j++;
       if (j - r >= 3) {
         const cells = [];
         for (let k = r; k < j; k++) cells.push({ r: k, c });
@@ -2730,7 +2308,7 @@ function mostCommonColor() {
   const cnt = new Array(6).fill(0);
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
     const tl = board[r][c];
-    if (tl && tl.kind !== K_PRISM) cnt[tl.color]++;
+    if (tl && tl.kind !== K_PRISM && tl.kind !== K_CURSED) cnt[tl.color]++;
   }
   let best = 0;
   for (let i = 1; i < 6; i++) if (cnt[i] > cnt[best]) best = i;
@@ -2779,7 +2357,7 @@ function expandClears(initialCells) {
       activated.push({ r, c, kind: K_PRISM, color: target });
       for (let rr = 0; rr < ROWS; rr++) for (let cc = 0; cc < COLS; cc++) {
         const u = board[rr][cc];
-        if (u && u.kind !== K_PRISM && u.color === target) queue.push({ r: rr, c: cc });
+        if (u && u.kind !== K_PRISM && u.kind !== K_CURSED && u.color === target) queue.push({ r: rr, c: cc });
       }
     }
   }
@@ -2800,11 +2378,11 @@ function swapIsMatch(r1, c1, r2, c2) {
 
 function liveRunAt(r, c) {
   const t = board[r][c];
-  if (!t || t.kind === K_PRISM) return false;
+  if (!t || t.kind === K_PRISM || t.kind === K_CURSED) return false;
   const col = t.color;
   const same = (rr, cc) => {
     const u = inb(rr, cc) ? board[rr][cc] : null;
-    return u && u.kind !== K_PRISM && u.color === col;
+    return u && u.kind !== K_PRISM && u.kind !== K_CURSED && u.color === col;
   };
   let n = 1;
   for (let i = c - 1; same(r, i); i--) n++;
@@ -2819,22 +2397,23 @@ function liveRunAt(r, c) {
 /** Tìm 1 nước đi (kèm loại): prism-swap và special+special cũng là nước đi. */
 function findHintMove() {
   const dirs = [[0, 1], [1, 0]];
+  const movable = t => t && t.kind !== K_CURSED;   // blight không đổi chỗ được
   // ưu tiên nước match thường để hint dễ hiểu
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
     for (const [dr, dc] of dirs) {
       const r2 = r + dr, c2 = c + dc;
-      if (!inb(r2, c2) || !board[r][c] || !board[r2][c2]) continue;
+      if (!inb(r2, c2) || !movable(board[r][c]) || !movable(board[r2][c2])) continue;
       if (swapIsMatch(r, c, r2, c2)) return { r1: r, c1: c, r2, c2 };
     }
   }
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
     const a = board[r][c];
-    if (!a) continue;
+    if (!movable(a)) continue;
     for (const [dr, dc] of dirs) {
       const r2 = r + dr, c2 = c + dc;
       if (!inb(r2, c2)) continue;
       const b = board[r2][c2];
-      if (!b) continue;
+      if (!movable(b)) continue;
       if (a.kind === K_PRISM || b.kind === K_PRISM) return { r1: r, c1: c, r2, c2 };
       if (a.kind !== K_NORMAL && b.kind !== K_NORMAL) return { r1: r, c1: c, r2, c2 };
     }
@@ -3174,12 +2753,26 @@ async function executeWave(ep, chain, initialCells, clusters) {
       if (toClear.has(idx)) { toClear.delete(idx); spawns.push(cl); }
     }
   }
+  // PURGE: blight kề (4 hướng) bất kỳ ô bị xoá đều được thanh tẩy
+  let purged = 0;
+  {
+    const adj = [];
+    toClear.forEach(idx => {
+      const r = Math.floor(idx / COLS), c = idx % COLS;
+      for (const [rr, cc] of [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]]) {
+        if (!inb(rr, cc)) continue;
+        const tl = board[rr][cc];
+        if (tl && tl.kind === K_CURSED) adj.push(rr * COLS + cc);
+      }
+    });
+    for (const idx of adj) if (!toClear.has(idx)) { toClear.add(idx); purged++; }
+  }
   if (!toClear.size && !activated.length) return 0;
 
   const mult = Math.min(chain, CHAIN_CAP);
-  const pts = toClear.size * PTS_PER_TILE * mult + activated.length * SPECIAL_BONUS;
+  const pts = toClear.size * PTS_PER_TILE * mult + activated.length * SPECIAL_BONUS + purged * CURSE_DEFUSE_BONUS;
   score += pts;
-  updateProgress();
+  bumpBest();
 
   sPop(chain);
   if (chain >= 2) showComboBadge(chain);
@@ -3216,7 +2809,7 @@ async function executeWave(ep, chain, initialCells, clusters) {
     anims.push((async () => {
       if (delay) await sleep(delay);
       const ctr = boardCellCenter(r, c);
-      spawnBurst(ctr.x, ctr.y, RUNE_HEX[tile.kind === K_PRISM ? 6 : tile.color], 7, 240);
+      spawnBurst(ctr.x, ctr.y, tile.kind === K_CURSED ? CURSE_HEX : RUNE_HEX[tile.kind === K_PRISM ? 6 : tile.color], 7, 240);
       if (absorb) {
         const x0 = tile.x, y0 = tile.y;
         await tween({ dur: 200, ease: easeInCubic, update(k) {
@@ -3357,7 +2950,7 @@ async function runCombo(ep, type, a, b) {
     const targets = [];
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
       const u = board[r][c];
-      if (u && u !== prism && u.kind !== K_PRISM && u.color === targetColor) targets.push({ r, c, u });
+      if (u && u !== prism && u.kind !== K_PRISM && u.kind !== K_CURSED && u.color === targetColor) targets.push({ r, c, u });
     }
     const per = Math.min(60, 700 / Math.max(1, targets.length));
     for (const tg of targets) {
@@ -3419,13 +3012,14 @@ async function runCombo(ep, type, a, b) {
 }
 
 async function doSwap(r1, c1, r2, c2) {
-  if (busy || ended || paused || menuOpen || confirmOpen || howtoOpen) return;
+  if (busy || ended || paused || onboarding) return;
   if (!inb(r1, c1) || !inb(r2, c2)) return;
   const a = board[r1][c1], b = board[r2][c2];
   if (!a || !b) return;
-  if (tutorialMode && !tutAllowsSwap(r1, c1, r2, c2)) {
-    a.el.classList.add('shake');
-    setTimeout(() => a.el.classList.remove('shake'), 280);
+  if (a.kind === K_CURSED || b.kind === K_CURSED) {   // hắc ấn bất động — không đổi chỗ được
+    const t0 = a.kind === K_CURSED ? a : b;
+    t0.el.classList.add('shake');
+    setTimeout(() => t0.el.classList.remove('shake'), 280);
     return;
   }
 
@@ -3454,11 +3048,7 @@ async function doSwap(r1, c1, r2, c2) {
       return;
     }
 
-    if (!tutorialMode) {
-      movesLeft--;
-      updateHUD();
-      if (movesLeft === 5) sMovesLow();   // cảnh báo sắp hết lượt (1 lần khi chạm mốc)
-    }
+    turnCount++;
     lastSwapCells = [{ r: r1, c: c1 }, { r: r2, c: c2 }];
 
     if (combo) await runCombo(ep, combo, a, b);
@@ -3468,11 +3058,24 @@ async function doSwap(r1, c1, r2, c2) {
     lastSwapCells = null;
     if (pendingRelayout) { pendingRelayout = false; layoutAllStatic(); }
 
-    if (tutorialMode) { onTutorialSwapDone(); return; }
-
+    nColors = colorsFor(score);        // thêm màu thứ 6 khi điểm cao
+    const boom = tickCursed();         // đếm ngược hắc ấn còn lại
+    if (boom) {                        // 1 hắc ấn về 0 → detonate → thua
+      ended = true;
+      const ctr = boardCellCenter(boom.r, boom.c);
+      spawnFlash(ctr.x, ctr.y, cellPx * 3.2);
+      spawnBurst(ctr.x, ctr.y, '#ff3d5a', 30, 380);
+      screenShake(18);
+      await sleep(220);
+      if (ep !== levelEpoch) return;
+      gameOver(ep);
+      return;
+    }
+    maybeSpawnCursed();                // sinh hắc ấn mới nếu tới nhịp
+    await maybeEvents(ep);             // Arcane Surge / Blaze Storm ở mốc điểm
+    if (ep !== levelEpoch || ended) return;
     await ensureMovable(ep);
     if (ep !== levelEpoch) return;
-    saveCurrentState(true);   // board vừa settle — bỏ qua guard busy
     checkEnd(ep);
   } finally {
     if (ep === levelEpoch) busy = false;
@@ -3495,7 +3098,7 @@ boardEl.addEventListener('pointerdown', e => {
   if (paused) return;
   idleMs = 0;
   clearHint();
-  if (busy || ended || menuOpen || confirmOpen || howtoOpen) return;
+  if (busy || ended || onboarding || menuOpen || confirmOpen || howtoOpen) return;
   const cell = hitCell(e.clientX, e.clientY);
   if (!cell) return;
   ptr = { x: e.clientX, y: e.clientY, r: cell.r, c: cell.c, live: true };
@@ -3519,7 +3122,7 @@ boardEl.addEventListener('pointerup', e => {
   const { r, c } = ptr;
   ptr = null;
   if (!wasLive) return;
-  if (busy || ended || menuOpen || confirmOpen || howtoOpen || paused) return;
+  if (busy || ended || onboarding || menuOpen || confirmOpen || howtoOpen || paused) return;
   handleTap(r, c);
 }, { passive: true });
 
@@ -3555,7 +3158,7 @@ function deselect() {
  * §17. Idle hint
  * ================================================================ */
 function stepIdleHint(dt) {
-  if (busy || ended || menuOpen || confirmOpen || howtoOpen || tutorialMode) { idleMs = 0; return; }
+  if (busy || ended || onboarding || menuOpen || confirmOpen || howtoOpen || tutorialMode) { idleMs = 0; return; }
   idleMs += dt;
   if (idleMs >= IDLE_HINT_MS) {
     idleMs = -6500;      // hint lại sau ~11.5s nếu vẫn im
@@ -3611,55 +3214,141 @@ function clearHint() {
 /* ================================================================
  * §18. HUD + hiệu ứng chữ
  * ================================================================ */
-function updateHUD() {
-  $('hud-moves').textContent = movesLeft;
-  $('hud-goal').textContent = goal;
-  const movesVal = $('hud-moves');
-  if (movesLeft <= 5 && movesLeft > 0) movesVal.classList.add('moves-danger');
-  else movesVal.classList.remove('moves-danger');
-  updateProgress();
+/* ── Điểm + Best (endless score-attack) ────────────────────────── */
+function renderScore() { $('score-val').textContent = Math.round(dispScore); }
+function renderBest()  { $('best-val').textContent = best; }
+function bumpBest() {
+  if (score > best) { best = score; renderBest(); persistBest(); }
+  if (!recordHit && score > runRecord) recordHit = true;
 }
 
-function updateProgress() {
-  const pct = Math.min(100, (score / goal) * 100);
-  const fill = $('progress-bar-fill');
-  fill.style.width = pct + '%';
-  fill.classList.toggle('near-goal', pct >= 80 && pct < 100);
+/* ── Cursed Runes ("Hắc Ấn") — hazard đếm ngược, càng về sau càng khó ──
+ *   Ô nguyền bất động / không ghép / không đổi. Mỗi lượt đếm ngược −1; ghép hoặc
+ *   nổ CẠNH nó (4 hướng) → phá (+điểm to). Về 0 mà chưa phá → detonate → thua.
+ *   Mỗi lần xuất hiện: ngòi ngắn dần + dày hơn + tối đa 2 cùng lúc. */
+let cursedIdx = 0;        // số hắc ấn đã sinh trong ván (tăng độ khó)
+let sinceCursed = 99;     // số lượt kể từ lần sinh gần nhất
+
+function cursedTiles() {
+  const out = [];
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++)
+    if (board[r][c] && board[r][c].kind === K_CURSED) out.push({ r, c, t: board[r][c] });
+  return out;
+}
+function maxActiveCursed() { return score >= 14000 ? 2 : 1; }
+function cursedCadence()   { return Math.max(4, 8 - Math.floor(score / 4000)); }   // lượt giữa 2 lần sinh
+function cursedFuse()      { return Math.max(3, 7 - Math.floor(cursedIdx / 2)); }   // đếm ngược khởi tạo
+
+/** Vẽ lại số đếm ngược trên 1 ô nguyền + cảnh báo đỏ khi ≤2. */
+function renderCursed(tl) {
+  const svg = tl.el.querySelector('svg');
+  if (svg) svg.innerHTML = cursedArt(tl.curse);
+  tl.el.classList.toggle('cursed-urgent', tl.curse <= 2);
+}
+
+/** Sinh hắc ấn nếu tới nhịp (gọi cuối mỗi lượt hợp lệ). */
+function maybeSpawnCursed() {
+  sinceCursed++;
+  if (turnCount <= CURSE_GRACE) return;
+  if (cursedTiles().length >= maxActiveCursed()) return;
+  if (sinceCursed < cursedCadence()) return;
+  const normals = [];
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++)
+    if (board[r][c] && board[r][c].kind === K_NORMAL) normals.push({ r, c });
+  if (normals.length < 8) return;
+  const tg = normals[Math.floor(Math.random() * normals.length)];
+  const tl = board[tg.r][tg.c];
+  tl.curse = cursedFuse();
+  morphTile(tl, tl.color, K_CURSED);
+  renderCursed(tl);
+  cursedIdx++; sinceCursed = 0;
+  sCurse();
+  const ctr = boardCellCenter(tg.r, tg.c);
+  spawnRing(ctr.x, ctr.y, CURSE_HEX, cellPx * 1.15);
+  showToast(t('cursedSpawn'));
+}
+
+/** Đầu mỗi lượt: giảm đếm ngược mọi hắc ấn. Trả {r,c} nếu có ô detonate. */
+function tickCursed() {
+  for (const { r, c, t } of cursedTiles()) {
+    t.curse--;
+    if (t.curse <= 0) return { r, c };
+    renderCursed(t);
+  }
+  return null;
+}
+
+/* ── Events (thưởng ở mốc điểm) ─────────────────────────────────── */
+function randomNormals(n) {
+  const arr = [];
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++)
+    if (board[r][c] && board[r][c].kind === K_NORMAL) arr.push({ r, c });
+  for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+  return arr.slice(0, n);
+}
+
+/** Arcane Surge — tặng 1 Prism (không tự tạo match → an toàn). */
+function arcaneSurge() {
+  const pick = randomNormals(1)[0];
+  if (!pick) return;
+  const tl = board[pick.r][pick.c];
+  morphTile(tl, 0, K_PRISM);
+  const ctr = boardCellCenter(pick.r, pick.c);
+  spawnRing(ctr.x, ctr.y, '#ffd23f', cellPx * 1.4);
+  spawnFlash(ctr.x, ctr.y, cellPx * 2);
+  sForge();
+  showToast('✦ ' + t('surge'));
+}
+
+/** Blaze Storm — biến vài ô thành Blaze rồi kích nổ dây chuyền (bữa tiệc nổ). */
+async function blazeStorm(ep) {
+  const picks = randomNormals(4);
+  if (picks.length < 3) return;
+  showResultBanner(t('blazeStorm'), false);
+  sStripe();
+  const initial = [];
+  for (const p of picks) {
+    const tl = board[p.r][p.c];
+    morphTile(tl, tl.color, Math.random() < 0.5 ? K_SH : K_SV);
+    const ctr = boardCellCenter(p.r, p.c);
+    spawnRing(ctr.x, ctr.y, RUNE_HEX[tl.color], cellPx);
+    initial.push(p);
+  }
+  screenShake(10);
+  await sleep(260);
+  if (ep !== levelEpoch) return;
+  await executeWave(ep, 2, initial, []);
+  if (ep !== levelEpoch) return;
+  await gravityAndRefill(ep);
+  if (ep !== levelEpoch) return;
+  await resolveBoard(ep, 2);
+}
+
+/** Kiểm mốc điểm → kích event (gọi cuối lượt, board đã settle). */
+let nextSurge = SURGE_EVERY, nextStorm = STORM_EVERY;
+async function maybeEvents(ep) {
+  if (score >= nextStorm) {           // storm (mốc thưa) ưu tiên
+    nextStorm += STORM_EVERY;
+    if (score >= nextSurge) nextSurge = (Math.floor(score / SURGE_EVERY) + 1) * SURGE_EVERY;
+    await blazeStorm(ep);
+    return;
+  }
+  if (score >= nextSurge) {
+    nextSurge += SURGE_EVERY;
+    arcaneSurge();
+  }
 }
 
 function updateLabels() {
-  $('game-title').textContent = t('title');
-  $('level-num').textContent = `${t('level')} ${currentLevelIdx + 1}`;
-  $('lbl-score').textContent = t('score');
-  $('lbl-goal').textContent = t('goal');
-  $('lbl-moves').textContent = t('moves');
-  $('menu-title').textContent = t('title');
-  $('menu-tagline').textContent = t('tagline');
-  $('menu-play-label').textContent = t('play');
-  $('menu-tut-label').textContent = t('tutorial');
-  $('info-title').textContent = t('howto');
-  $('info-b1').textContent = t('infoSwap');
-  $('info-b2').textContent = t('infoCombo');
-  $('info-sp1-name').textContent = t('spBlaze');
-  $('info-sp1-how').textContent = t('spBlazeHow');
-  $('info-sp2-name').textContent = t('spNova');
-  $('info-sp2-how').textContent = t('spNovaHow');
-  $('info-sp3-name').textContent = t('spPrism');
-  $('info-sp3-how').textContent = t('spPrismHow');
-  $('info-c-goal').textContent = t('infoGoal');
-  $('info-c-moves').textContent = t('infoMoves');
-  $('confirm-text').textContent = t('confirmMenu');
-  $('tut-skip-label').textContent = t('skip');
+  $('score-k').textContent = t('score');
+  $('best-k').textContent = t('best');
+  $('ov-score-k').textContent = t('score');
+  $('ov-best-k').textContent = t('best');
+  $('ov-btn-label').textContent = t('playAgain');
+  $('ob-skip-label').textContent = t('skip');
   $('pause-txt').textContent = t('tapToResume');
   $('back-btn').setAttribute('aria-label', t('back'));
-  $('restart-btn').setAttribute('aria-label', t('restart'));
-  $('menu-btn').setAttribute('aria-label', t('home'));
   $('sound-btn').setAttribute('aria-label', t('sound'));
-  $('help-btn').setAttribute('aria-label', t('howto'));
-  $('menu-sound').setAttribute('aria-label', t('sound'));
-  $('info-btn').setAttribute('aria-label', t('howto'));
-  $('info-close').setAttribute('aria-label', t('close'));
-  $('menu-back').setAttribute('aria-label', t('back'));
 }
 
 function spawnScoreFly(boardR, boardC, pts, mult) {
@@ -3698,9 +3387,8 @@ function showToast(msg) {
 }
 
 /* ================================================================
- * §19. Win / Lose + Blaze Rush finale (game-common §1.1 + §1.5)
+ * §19. Game Over (endless score-attack — corruption nuốt board)
  * ================================================================ */
-let progressIdx = 0;   // level sẽ vào ở boot / sau menu
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 function showResultBanner(text, lose) {
@@ -3723,403 +3411,185 @@ function maybeAds() {
   if (endCounter % ADS_EVERY === 0) sendMessage('ads');
 }
 
+/* Fallback: hết nước đi (hiếm — auto-shuffle lo trước) → kết thúc ván. */
 function checkEnd(ep) {
   if (ended || tutorialMode || ep !== levelEpoch) return;
-  if (score >= goal) {
+  if (!findHintMove()) {
     ended = true;
-    winSequence(ep);
-  } else if (movesLeft <= 0) {
-    ended = true;
-    loseSequence(ep);
+    gameOver(ep);
   }
 }
 
-async function winSequence(ep) {
+/* Game Over — game điểm-cao tự vẽ popup (popup-common §1.1) */
+async function gameOver(ep) {
   deselect(); clearHint();
-  progressIdx = Math.min(currentLevelIdx + 1, MAX_LEVEL_IDX);
-  clearSavedGame();
-  persistLight();
-
-  // Blaze Rush: moves thừa đổi thành Blaze Rune rồi kích nổ toàn bộ
-  const rush = Math.min(movesLeft, RUSH_MAX);
-  if (rush > 0) {
-    showResultBanner(t('blazeRush'), false);
-    await sleep(650);
-    if (ep !== levelEpoch) return;
-    const normals = [];
-    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
-      const tl = board[r][c];
-      if (tl && tl.kind === K_NORMAL) normals.push({ r, c });
-    }
-    for (let i = normals.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [normals[i], normals[j]] = [normals[j], normals[i]];
-    }
-    const picks = normals.slice(0, rush);
-    for (let i = 0; i < picks.length; i++) {
-      if (ep !== levelEpoch) return;
-      const tl = board[picks[i].r][picks[i].c];
-      if (!tl) continue;
-      morphTile(tl, tl.color, Math.random() < 0.5 ? K_SH : K_SV);
-      sRush(i);
-      const ctr = boardCellCenter(picks[i].r, picks[i].c);
-      spawnRing(ctr.x, ctr.y, RUNE_HEX[tl.color], cellPx);
-      movesLeft = Math.max(0, movesLeft - 1);
-      updateHUD();
-      await sleep(120);
-    }
-    if (ep !== levelEpoch) return;   // guard sau sleep cuối của vòng convert
-    movesLeft = 0;
-    updateHUD();
-    await sleep(180);
-    if (ep !== levelEpoch) return;
-    await executeWave(ep, 1, picks.slice(), []);
-    if (ep !== levelEpoch) return;
-    await gravityAndRefill(ep);
-    if (ep !== levelEpoch) return;
-    await resolveBoard(ep, 1);
-    if (ep !== levelEpoch) return;
-  }
-
-  sWin();
-  showResultBanner(t('levelClear'), false);
-  // pháo hoa quanh banner
-  const W = window.innerWidth, H = window.innerHeight;
-  for (let i = 0; i < 5; i++) {
-    setTimeout(() => {
-      if (ep !== levelEpoch) return;
-      spawnBurst(W * (0.2 + Math.random() * 0.6), H * (0.25 + Math.random() * 0.3),
-        RUNE_HEX[Math.floor(Math.random() * 6)], 22, 320);
-      spawnFlash(W * 0.5, H * 0.4, 120);
-    }, i * 200);
-  }
-  screenShake(5);
-  await sleep(1250);
-  if (ep !== levelEpoch) return;
-  maybeAds();
-  // Level vô hạn → không tồn tại "level cuối" nên `victory` (game-common §1.5)
-  // không bao giờ bắn — deviation có chủ đích, ghi trong README.
-  sendMessage('game_result', { result: 'win', showModal: true });
-}
-
-async function loseSequence(ep) {
-  deselect(); clearHint();
-  clearSavedGame();
+  persistBest();
   sLose();
-  showResultBanner(t('outOfMoves'), true);
-  await sleep(1000);
+  showResultBanner(t('gameOver'), true);
+  screenShake(10);
+  const W = window.innerWidth, H = window.innerHeight;
+  spawnFlash(W * 0.5, H * 0.42, 160);
+  await sleep(950);
   if (ep !== levelEpoch) return;
   maybeAds();
-  sendMessage('game_result', { result: 'lose', showModal: true });
+  showGameOverPopup();
+  // endless (§1.1): result=null, showModal=false — game tự lo Play Again
+  sendMessage('game_result');
+}
+
+function showGameOverPopup() {
+  const isNew = recordHit || score > runRecord;
+  const title = $('ov-title');
+  title.textContent = isNew ? t('newBest') : t('gameOver');
+  title.classList.toggle('newbest', isNew);
+  $('ov-score').textContent = score;
+  $('ov-best').textContent = best;
+  renderBest();
+  fitOverlayScores();
+  $('overlay').classList.remove('hidden');
+}
+
+/* Co cỡ điểm cho vừa card khi nhiều chữ số (popup-common §5b) */
+function fitOverlayScores() {
+  const row = document.querySelector('.ov-scores');
+  if (!row) return;
+  const card = row.closest('.ov-card');
+  const vals = row.querySelectorAll('.ov-v');
+  vals.forEach(v => { v.style.fontSize = ''; });
+  const pad = parseFloat(getComputedStyle(card).paddingLeft) || 24;
+  const max = card.clientWidth - 2 * pad;
+  let fz = 32;
+  while (row.scrollWidth > max && fz > 15) { fz -= 1; vals.forEach(v => { v.style.fontSize = fz + 'px'; }); }
 }
 
 /* ================================================================
- * §20. Persistence 2 tầng (game-common §1.2)
+ * §20. Persistence (game-common §1.2) — chỉ best/muted/tutorialSeen
+ *      Score-attack: KHÔNG lưu ván dở, mở lại = ván mới (giống skydom).
  * ================================================================ */
-function persistLight() {
-  saveData({ levelIdx: progressIdx, muted, tutorialSeen });
-  let obj = null;
-  try { obj = JSON.parse(readLocal() || 'null'); } catch (e) {}
-  const light = { levelIdx: progressIdx, muted, tutorialSeen };
-  if (obj && obj.game) light.game = obj.game;
-  saveLocal(light);
+function persistBest() {
+  const p = { best, muted, tutorialSeen };
+  saveData(p);   // native save_data
+  saveLocal(p);  // localStorage
 }
-
-/** Snapshot ván đang chơi (chỉ khi board ổn định & đầy đủ).
- *  force=true: gọi từ cuối pipeline doSwap — busy còn true nhưng board đã settle. */
-function saveCurrentState(force) {
-  if (ended || tutorialMode || menuOpen || (busy && !force)) return;
-  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
-    if (!board[r] || !board[r][c]) return;   // board chưa ổn định → bỏ qua
-  }
-  const snap = board.map(row => row.map(tl => ({ c: tl.color, k: tl.kind, b: tl.boomed ? 1 : 0 })));
-  saveLocal({
-    levelIdx: progressIdx, muted, tutorialSeen,
-    game: { levelIdx: currentLevelIdx, movesLeft, score, board: snap },
-  });
-}
-
-function clearSavedGame() {
-  saveLocal({ levelIdx: progressIdx, muted, tutorialSeen });
-}
-
-/** Khôi phục ván dở từ localStorage — validate kỹ, hỏng thì bỏ. */
-function tryRestoreState() {
-  let obj = null;
-  try { obj = JSON.parse(readLocal() || 'null'); } catch (e) { return false; }
-  const g = obj && obj.game;
-  if (!g || g.levelIdx !== currentLevelIdx || !Array.isArray(g.board)) return false;
-  if (typeof g.movesLeft !== 'number' || g.movesLeft <= 0) return false;
-  if (typeof g.score !== 'number' || g.score < 0 || g.score >= levelConfig(currentLevelIdx).goal) return false;
-  if (g.board.length !== ROWS) return false;
-  for (let r = 0; r < ROWS; r++) {
-    if (!Array.isArray(g.board[r]) || g.board[r].length !== COLS) return false;
-    for (let c = 0; c < COLS; c++) {
-      const cell = g.board[r][c];
-      if (!cell || typeof cell.c !== 'number' || cell.c < 0 || cell.c >= 6) return false;
-      if (typeof cell.k !== 'number' || cell.k < 0 || cell.k > K_PRISM) return false;
-      if (cell.k === K_NORMAL && cell.c >= nColors) return false;
-    }
-  }
-  boardEl.innerHTML = '';
-  board = Array.from({ length: ROWS }, () => new Array(COLS).fill(null));
-  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
-    const cell = g.board[r][c];
-    const tile = makeTile(cell.c, cell.k);
-    tile.boomed = !!cell.b;
-    board[r][c] = tile;
-    placeTile(tile, r, c);
-  }
-  movesLeft = Math.floor(g.movesLeft);
-  score = Math.floor(g.score);
-  dispScore = score;
-  $('hud-score').textContent = score;
-  updateHUD();   // moves + progress bar hiển thị đúng giá trị đã khôi phục
-  return true;
-}
+function persistLight()     { persistBest(); }
+function saveCurrentState() { persistBest(); }   // endless: không snapshot ván
+function clearSavedGame()   { persistBest(); }
 
 /* ================================================================
- * §21. Load level + intro
+ * §21. New run (score-attack — không level, không intro)
  * ================================================================ */
-function loadLevel(idx, opts) {
-  opts = opts || {};
+function newRun() {
   levelEpoch++;
   const ep = levelEpoch;
   flushTweens();
   clearTimeout(resultTimer);
   tutorialMode = false;
-  $('tut-banner').classList.add('hidden');
-  hideTutHand();
+  $('overlay').classList.add('hidden');
 
-  currentLevelIdx = clamp(idx, 0, MAX_LEVEL_IDX);
-  const lv = levelConfig(currentLevelIdx);
-  nColors = lv.colors;
-  movesLeft = lv.moves;
+  nColors = 5;
   score = 0; dispScore = 0;
-  goal = lv.goal;
+  runRecord = best;
+  recordHit = false;
+  turnCount = 0;
+  cursedIdx = 0; sinceCursed = 99;
+  nextSurge = SURGE_EVERY; nextStorm = STORM_EVERY;
   busy = true; ended = false;
   selected = null; lastSwapCells = null;
   clearHint();
   particles = [];
   shakeAmp = 0; wrapEl.style.transform = '';
   hideResultBanner();
-  $('hud-score').textContent = '0';
+  $('score-val').textContent = '0';
+  renderBest();
   tileIdCtr = 0;
   boardEl.innerHTML = '';
   board = Array.from({ length: ROWS }, () => new Array(COLS).fill(null));
   updateLabels();
-  updateHUD();
   resize();
 
   (async () => {
     await sleep(30);   // đợi resize RAF tính cellPx
     if (ep !== levelEpoch) return;
-    const restored = !!opts.tryRestore && tryRestoreState();
-    if (!restored) {
-      const p = fillBoard();
-      if (!opts.skipIntro) {
-        $('li-level').textContent = `${t('level')} ${currentLevelIdx + 1}`;
-        $('li-goal').textContent = `${t('goal')} ${goal} · ${t('moves')} ${movesLeft}`;
-        const li = $('level-intro');
-        li.classList.remove('show');
-        void li.offsetWidth;
-        li.classList.add('show');
-        sIntro();
-      }
-      await p;
-    } else {
-      layoutAllStatic();
-    }
+    await fillBoard();
     if (ep !== levelEpoch) return;
     await ensureMovable(ep);
     if (ep !== levelEpoch) return;
     busy = false;
-    saveCurrentState();
+    if (!tutorialSeen) showOnboard();   // lần đầu: onboarding phủ lên board (1 scene, không chuyển)
   })();
 }
 
 /* ================================================================
- * §22. Tutorial — 3 bước tương tác, board dựng tay
+ * §22. Onboarding — carousel demo phủ lên board (1 scene, KHÔNG chuyển cảnh)
  * ================================================================ */
-const TUT_STEPS = [
-  {
-    key: 'tut1',
-    layout: [
-      '1234123',
-      '3120241',
-      '2431002',
-      '4012314',
-      '1340120',
-      '0213401',
-      '3402132',
-    ],
-    allow: [[1, 3, 2, 3]],
-    hand: [[1, 3], [2, 3]],
-  },
-  {
-    key: 'tut2',
-    layout: [
-      '2014024',
-      '0231330',
-      '4103201',
-      '1420124',
-      '0142302',
-      '2301041',
-      '4024213',
-    ],
-    allow: [[1, 3, 2, 3]],
-    hand: [[2, 3], [1, 3]],
-  },
-  {
-    key: 'tut3',
-    layout: [
-      '0123401',
-      '2340123',
-      '4012340',
-      '123P012',
-      '3401234',
-      '0123401',
-      '2340123',
-    ],
-    allow: 'prism',
-    hand: [[3, 3], [3, 4]],
-  },
-];
-let tutStep = 0;
-let tutAdvancing = false;
-let tutHandTimer = 0;
+let onboarding = false;
+const OB_STEPS = ['match', 'special', 'cursed'];
+let obStep = 0;
 
-function tutAllowsSwap(r1, c1, r2, c2) {
-  const def = TUT_STEPS[tutStep];
-  if (!def) return false;
-  if (def.allow === 'prism') {
-    const a = board[r1][c1], b = board[r2][c2];
-    return (a && a.kind === K_PRISM) || (b && b.kind === K_PRISM);
+/* mini-tile: ô bo góc + glyph rune bên trong (glyph viewBox 100×100) */
+function obTile(x, y, inner, s) {
+  s = s || 54;
+  return `<g transform="translate(${x},${y})">`
+    + `<rect width="${s}" height="${s}" rx="10" fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.16)" stroke-width="1.5"/>`
+    + `<g transform="translate(${(s * 0.13).toFixed(1)},${(s * 0.13).toFixed(1)}) scale(${(s * 0.74 / 100).toFixed(3)})">${inner}</g>`
+    + `</g>`;
+}
+function obCheck(cx, cy) {
+  return `<circle cx="${cx}" cy="${cy}" r="12" fill="#35c26e" stroke="#fff" stroke-width="2.2"/>`
+    + `<polyline points="${cx - 6},${cy} ${cx - 2},${cy + 4} ${cx + 5},${cy - 5}" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
+}
+function obIllo(kind) {
+  if (kind === 'match') {
+    return `<svg viewBox="0 0 300 96" aria-hidden="true">`
+      + obTile(18, 20, runeGlyph(0)) + obTile(80, 20, runeGlyph(0)) + obTile(142, 20, runeGlyph(1))
+      + obTile(210, 20, runeGlyph(0))
+      + `<path d="M186 10 Q210 -4 234 10" fill="none" stroke="#ffb830" stroke-width="4" stroke-linecap="round"/>`
+      + `<path d="M228 2 L236 11 L225 13 Z" fill="#ffb830"/>` + obCheck(280, 47) + `</svg>`;
   }
-  return def.allow.some(([ar, ac, br, bc]) =>
-    (ar === r1 && ac === c1 && br === r2 && bc === c2) ||
-    (ar === r2 && ac === c2 && br === r1 && bc === c1));
-}
-
-function startTutorial(fromMenu) {
-  tutorialFromMenu = fromMenu;
-  tutorialMode = true;
-  tutAdvancing = false;
-  closeMenu();
-  hideResultBanner();
-  loadTutorialStep(0);
-}
-
-function loadTutorialStep(i) {
-  levelEpoch++;
-  flushTweens();
-  tutStep = i;
-  tutAdvancing = false;
-  const def = TUT_STEPS[i];
-  nColors = 5;
-  busy = false; ended = false; selected = null; lastSwapCells = null;
-  clearHint(); particles = [];
-  boardEl.innerHTML = '';
-  board = Array.from({ length: ROWS }, () => new Array(COLS).fill(null));
-  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
-    const ch = def.layout[r][c];
-    const tile = ch === 'P' ? makeTile(0, K_PRISM) : makeTile(Number(ch));
-    board[r][c] = tile;
-    placeTile(tile, r, c);
+  if (kind === 'special') {
+    return `<svg viewBox="0 0 300 96" aria-hidden="true">`
+      + obTile(30, 20, runeGlyph(3) + specialOverlay(K_SH))
+      + obTile(123, 20, runeGlyph(0) + specialOverlay(K_NOVA))
+      + obTile(216, 20, prismArt()) + `</svg>`;
   }
-  // HUD trong tutorial: moves = bước hiện tại
-  $('hud-moves').textContent = `${i + 1}/3`;
-  $('hud-moves').classList.remove('moves-danger');
-  $('tut-text').textContent = t(def.key);
-  $('tut-banner').classList.remove('hidden');
-  showTutHand(def.hand);
+  // cursed: hắc ấn + 2 rune cùng màu kề nó → phá
+  return `<svg viewBox="0 0 300 96" aria-hidden="true">`
+    + obTile(74, 20, cursedArt(3)) + obTile(140, 20, runeGlyph(2)) + obTile(202, 20, runeGlyph(2))
+    + obCheck(168, 10) + `</svg>`;
 }
 
-function showTutHand(cells) {
-  const hand = $('tut-hand');
-  hand.classList.add('show');
-  const myTimer = ++tutHandTimer;
-  (async () => {
-    while (tutHandTimer === myTimer && tutorialMode) {
-      const p0 = boardCellCenter(cells[0][0], cells[0][1]);
-      const p1 = boardCellCenter(cells[1][0], cells[1][1]);
-      await tween({ dur: 700, ease: easeInOutQ, update(k) {
-        hand.style.left = (p0.x + (p1.x - p0.x) * k - 8) + 'px';
-        hand.style.top = (p0.y + (p1.y - p0.y) * k - 4) + 'px';
-      } });
-      await sleep(350);
-      if (tutHandTimer !== myTimer || !tutorialMode) break;
-      hand.style.left = (p0.x - 8) + 'px';
-      hand.style.top = (p0.y - 4) + 'px';
-      await sleep(250);
-    }
-  })();
+function renderOb() {
+  const kind = OB_STEPS[obStep];
+  $('ob-illo').innerHTML = obIllo(kind);
+  $('ob-title').textContent = t('ob' + (obStep + 1) + 'T');
+  $('ob-desc').textContent = t('ob' + (obStep + 1) + 'D');
+  $('ob-dots').innerHTML = OB_STEPS.map((_, i) => `<span class="ob-dot${i === obStep ? ' on' : ''}"></span>`).join('');
+  const last = obStep === OB_STEPS.length - 1;
+  $('ob-next-label').textContent = last ? t('play') : t('next');
+  $('ob-skip').style.visibility = last ? 'hidden' : 'visible';
 }
-
-function hideTutHand() {
-  tutHandTimer++;
-  $('tut-hand').classList.remove('show');
+function showOnboard() {
+  onboarding = true;
+  obStep = 0;
+  renderOb();
+  $('onboard').classList.remove('hidden');
 }
-
-function onTutorialSwapDone() {
-  if (tutAdvancing) return;
-  tutAdvancing = true;
-  hideTutHand();
-  (async () => {
-    if (tutStep < 2) {
-      await sleep(750);
-      if (!tutorialMode) return;
-      loadTutorialStep(tutStep + 1);
-    } else {
-      $('tut-text').textContent = t('tutDone');
-      sWin();
-      const W = window.innerWidth, H = window.innerHeight;
-      spawnBurst(W * 0.5, H * 0.35, '#ffd23f', 26, 340);
-      await sleep(1400);
-      if (!tutorialMode) return;
-      finishTutorial();
-    }
-  })();
+function obNext() {
+  if (obStep < OB_STEPS.length - 1) { obStep++; renderOb(); }
+  else finishOnboard();
 }
-
-function finishTutorial() {
-  levelEpoch++;        // huỷ pipeline tutorial còn dở (Skip giữa lúc swap)
-  flushTweens();
-  tutorialMode = false;
+function finishOnboard() {
+  onboarding = false;
   tutorialSeen = true;
-  busy = false;
-  persistLight();
-  $('tut-banner').classList.add('hidden');
-  hideTutHand();
-  if (tutorialFromMenu) openMenu();
-  else loadLevel(progressIdx, { tryRestore: true });
+  persistBest();
+  $('onboard').classList.add('hidden');
 }
 
 /* ================================================================
- * §23. Menu / How-to-play / Confirm / Pause
+ * §23. Pause (không còn Menu/How-to-play/Confirm)
  * ================================================================ */
-function openMenu() {
-  menuOpen = true;
-  deselect(); clearHint();
-  $('menu-screen').classList.remove('hidden');
-}
-function closeMenu() {
-  menuOpen = false;
-  $('menu-screen').classList.add('hidden');
-}
-
-function openHowto() { howtoOpen = true; $('info-panel').classList.remove('hidden'); }
-function closeHowto() { howtoOpen = false; $('info-panel').classList.add('hidden'); }
-
-function openConfirm() {
-  if (busy || ended || tutorialMode || menuOpen || paused) return;
-  confirmOpen = true;
-  $('confirm-panel').classList.remove('hidden');
-}
-function closeConfirm() { confirmOpen = false; $('confirm-panel').classList.add('hidden'); }
-
 function pauseGame() {
-  if (paused || menuOpen) return;
+  if (paused) return;
   paused = true;
   $('pause-veil').classList.remove('hidden');
   if (audioCtx && audioCtx.state === 'running') audioCtx.suspend().catch(() => {});
@@ -4131,16 +3601,6 @@ function resumeGame() {
   audioUnlock();
 }
 
-function closeOverlays() {
-  closeConfirm(); closeHowto(); resumeGame();
-  if (tutorialMode) {
-    tutorialMode = false;
-    $('tut-banner').classList.add('hidden');
-    hideTutHand();
-  }
-  closeMenu();
-}
-
 /* nút bấm — kèm hỗ trợ Enter/Space cho div role=button */
 function onTap(id, fn) {
   const el = $(id);
@@ -4150,112 +3610,29 @@ function onTap(id, fn) {
   });
 }
 
-onTap('back-btn', () => { sButton(); saveCurrentState(); sendMessage('quit'); });
-onTap('menu-back', () => { sButton(); sendMessage('quit'); });
-onTap('restart-btn', () => {
-  if (busy || ended || tutorialMode || menuOpen || paused) return;
-  sButton();
-  clearSavedGame();
-  loadLevel(currentLevelIdx);          // §1.6 — không bắn event
-});
-onTap('menu-btn', () => { sButton(); openConfirm(); });
-onTap('confirm-yes', () => {
-  sButton();
-  saveCurrentState();
-  closeConfirm();
-  openMenu();
-});
-onTap('confirm-no', () => { sButton(); closeConfirm(); });
-$('confirm-panel').addEventListener('pointerdown', function (e) {
-  if (e.target === this) closeConfirm();
-}, { passive: true });
-
-onTap('help-btn', () => {
-  if (paused) return;
-  sButton();
-  openHowto();
-});
-onTap('info-btn', () => { sButton(); openHowto(); });
-onTap('info-close', () => { sButton(); closeHowto(); });
-$('info-panel').addEventListener('pointerdown', function (e) {
-  if (e.target === this) closeHowto();
-}, { passive: true });
-
+onTap('back-btn', () => { sButton(); persistBest(); sendMessage('quit'); });
 onTap('sound-btn', () => { audioUnlock(); setMuted(!muted); sButton(); });
-onTap('menu-sound', () => { audioUnlock(); setMuted(!muted); sButton(); });
-
-onTap('menu-play', () => {
-  sButton();
-  if (!tutorialSeen) { startTutorial(false); return; }
-  closeMenu();
-  // resume ván dở nếu có, không thì vào level tiến độ
-  let target = progressIdx;
-  try {
-    const obj = JSON.parse(readLocal() || 'null');
-    if (obj && obj.game && typeof obj.game.levelIdx === 'number') {
-      target = clamp(obj.game.levelIdx, 0, MAX_LEVEL_IDX);
-    }
-  } catch (e) {}
-  loadLevel(target, { tryRestore: true });
-});
-onTap('menu-tutorial', () => { sButton(); startTutorial(true); });
-onTap('tut-skip', () => { sButton(); finishTutorial(); });
+onTap('ov-btn', () => { sButton(); sendMessage('retry_level'); newRun(); });   // Play Again (§1.1)
+onTap('ob-next', () => { sButton(); obNext(); });
+onTap('ob-skip', () => { sButton(); finishOnboard(); });
 
 $('pause-veil').addEventListener('pointerdown', () => { resumeGame(); }, { passive: true });
 
 document.addEventListener('pointerdown', audioUnlock, { passive: true });
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) {
-    saveCurrentState();
-    if (!menuOpen) pauseGame();
-    else if (audioCtx && audioCtx.state === 'running') audioCtx.suspend().catch(() => {});
-  }
+  if (document.hidden) { persistBest(); pauseGame(); }
 });
 
 /* ================================================================
  * §24. Native callbacks (game-common §1.3)
  * ================================================================ */
-window.onAppPause = function () {
-  saveCurrentState();
-  if (!menuOpen) pauseGame();
-  else if (audioCtx && audioCtx.state === 'running') audioCtx.suspend().catch(() => {});
-};
-
-window.onNextLevel = function () {
-  closeOverlays();
-  if (currentLevelIdx < MAX_LEVEL_IDX) loadLevel(currentLevelIdx + 1);
-};
-
-window.onRetryLevel = function () {
-  closeOverlays();
-  loadLevel(currentLevelIdx);
-};
+window.onAppPause  = function () { persistBest(); pauseGame(); };
+window.onAppResume = function () { audioUnlock(); };
+window.onNextLevel = function () { /* endless: không có level kế */ };
+window.onRetryLevel = function () { newRun(); };   // native gọi Play Again → ván mới
 
 /* ================================================================
- * §25. Dựng art cho menu + info panel
- * ================================================================ */
-function buildMenuMascots() {
-  document.querySelectorAll('.menu-mascot').forEach(el => {
-    const k = el.getAttribute('data-rune');
-    const inner = k === 'p' ? prismArt() : runeGlyph(Number(k));
-    el.innerHTML = `<div class="tile-inner"><svg viewBox="0 0 100 100" aria-hidden="true">${inner}</svg></div>`;
-  });
-}
-
-function buildInfoArt() {
-  document.querySelectorAll('#info-panel g[data-rune]').forEach(g => {
-    g.innerHTML = runeGlyph(Number(g.getAttribute('data-rune')));
-  });
-  document.querySelectorAll('#info-panel g[data-spec]').forEach(g => {
-    const kind = g.getAttribute('data-spec');
-    if (kind === 'stripe') g.innerHTML = runeGlyph(3) + specialOverlay(K_SH);
-    else if (kind === 'nova') g.innerHTML = runeGlyph(0) + specialOverlay(K_NOVA);
-    else g.innerHTML = prismArt();
-  });
-}
-
-/* ================================================================
- * §26. Boot (game-common §3 waitForNativeInjection)
+ * §25. Boot (game-common §3 waitForNativeInjection)
  * ================================================================ */
 function bootGame() {
   LANG = getLanguage();
@@ -4265,23 +3642,20 @@ function bootGame() {
 
   const saved = parseInitialData();
   if (saved) {
-    if (typeof saved.levelIdx === 'number') progressIdx = clamp(saved.levelIdx, 0, MAX_LEVEL_IDX);
+    if (typeof saved.best === 'number' && saved.best > 0) best = Math.floor(saved.best);
     muted = !!saved.muted;
     tutorialSeen = !!saved.tutorialSeen;
   }
-  const urlIdx = getInitialLevelIdx();
-  if (urlIdx >= 0) progressIdx = urlIdx;
 
   $('sound-btn').classList.toggle('muted', muted);
-  $('menu-sound').classList.toggle('muted', muted);
-
-  buildMenuMascots();
-  buildInfoArt();
+  renderBest();
   updateLabels();
   resize();
   initBgItems();
   requestAnimationFrame(mainLoop);
-  openMenu();
+
+  // MENTOR MANDATE: không menu — vào thẳng ván; lần đầu newRun() bật onboarding phủ lên board
+  newRun();
 }
 
 // Poll native inject, fallback 200ms (game-common §3)

@@ -15,21 +15,23 @@
   đặt) chơi **tutorial hướng dẫn**: một miếng trôi tới gần rồi **FREEZE**, hiện
   "Chạm để nhảy" → chạm → hamster nhảy, miếng canh đúng nhịp để **luôn Perfect** →
   hiện lời khen. Lặp **3 lần** rồi "Chúc chơi vui vẻ!"; **chạm lần nữa** vào ván
-  thật (giữ nguyên tháp, bắt đầu tính điểm — KHÔNG reset). Tutorial không thể thua.
+  thật (giữ nguyên tháp, bắt đầu chơi — KHÔNG reset). Tutorial không thể thua.
 - **Header chuẩn**: Back (trái) · pill **SCORE** (★) + **BEST** (👑) ở giữa ·
-  nút **Volume** bật/tắt âm thanh (phải). Ngay dưới: **độ cao tháp** (icon 2 phô
-  mai chồng) + số **xu**.
+  nút **Volume** bật/tắt âm thanh (phải).
+- **Điểm = SỐ PHÔ MAI trong tháp**, tính cả **miếng gốc** dưới đáy (vào ván đã là
+  1). Không còn cơ chế xu, không còn đồng hồ đếm độ cao riêng — chỉ **một con số**
+  đếm số phô mai xếp được cho tới lúc **Game Over** (ground cheese cũng được tính).
 - Miếng phô mai **trượt vào trên ván gỗ** ở đúng tầm mặt tháp (hướng, tốc độ và
   nhịp chờ ngẫu nhiên; nhanh dần theo độ cao, trần 10.5px/frame). **Khởi đầu dịu**:
   3 tầng đầu chạy ×0.75, tăng dần lên tốc chuẩn (×1.0) ở tầng 20.
 - **Tap / Space** → hamster nhảy thẳng lên (~0.61s); miếng trượt qua bên dưới và
-  **dừng ngay chỗ hamster đáp lên** → thành tầng mới (miếng **nhún & nghiêng** về
-  phía đáp cho đã tay). Đáp lệch thì tháp xiêu vẹo (không cắt miếng, không đổ);
-  đáp sát mép (<30px) → loạng choạng 1s.
-- Kỷ lục **tháp cao nhất** (`bh`) vẫn được lưu trong save_data (dùng cho thống kê).
-- Lệch ≤ ~7px → **Perfect** (vòng sáng, chuỗi hiện "Perfect ×n" dưới điểm).
+  **dừng ngay chỗ hamster đáp lên** → thành tầng mới (**+1 điểm**; miếng **nhún &
+  nghiêng** về phía đáp cho đã tay). Đáp lệch thì tháp xiêu vẹo (không cắt miếng,
+  không đổ); đáp sát mép (<30px) → loạng choạng 1s.
+- Lệch ≤ ~7px → **Perfect** (vòng sáng + chuỗi "Perfect ×n" dưới điểm) — chỉ là
+  hiệu ứng/độ khéo, **không cộng thêm điểm** (điểm chỉ đếm số phô mai).
 - **Nhảy vọt qua** (không ai đáp) → KHÔNG thua: miếng văng đi kéo **sập 5 tầng**
-  (−5 điểm, đứt chuỗi), hamster rơi xuống đáp tầng thứ 6.
+  (điểm tụt theo số tầng mất, đứt chuỗi), hamster rơi xuống đáp tầng thứ 6.
 - **Thua** khi bị phô mai **xô ngã** (nhảy quá trễ / rơi lại quá sớm — kể cả đang
   bay) hoặc **đâm đầu vào phô mai mốc** → bung dù rơi xuống, camera pan-out trọn
   tháp, popup kết quả.
@@ -38,25 +40,19 @@
 
 | Loại | Mở từ tầng | Hiệu ứng |
 |---|---|---|
-| ✨ Vàng | 5 | Nhanh ×1.25 — đáp được **+8 xu** |
+| ✨ Vàng | 5 | Chạy **nhanh ×1.25** — thử phản xạ (không thưởng riêng) |
 | 🪀 Lò xo | 6 | Cú nhảy **kế tiếp** cao & lâu hơn 35% (báo bằng ▲) |
-| 🐭 Mini | 8 | Rộng ~60% — **điểm ×2** |
+| 🐭 Mini | 8 | Miếng **hẹp ~60%** — khó canh đáp hơn |
 | 🧊 Băng | 12 | Đáp xong **trượt mạnh theo đà** (ma sát nhỏ) — dễ tuột tới mép, loạng choạng |
-| 🦠 Mốc | 15 | Bay ở **làn cao** — đứng yên cho nó qua **+2 điểm**, nhảy trúng = thua |
-| 🎁 Hộp quà | ~12 | Mỗi 12–20 tầng một hộp — **+3 xu** |
+| 🦠 Mốc | 15 | Bay ở **làn cao** — đứng yên cho nó qua (an toàn), nhảy trúng = thua |
 | 👯 Double | 25 | ~9% round: 2 miếng từ 2 phía so le — đáp 1, miếng kia tự rơi |
 
-## Điểm & Xu
+## Điểm
 
-| Sự kiện | Thưởng |
-|---|---|
-| Đáp thường / mini | +1 / +2 |
-| Perfect thứ n liên tiếp | **+5×n** (5→10→15…; mini ×2) |
-| Perfect chuỗi ≥ 2 | +1 xu |
-| Né phô mai mốc | +2 |
-| Xu rơi từ trời (nhảy chạm) | +1 xu (18% ra +3) |
-
-Xu tích lũy vĩnh viễn (backlog: shop skin). `?reset=1` xoá kỷ lục + xu khi chơi thử.
+Điểm **= số phô mai đang có trong tháp** (kể cả miếng gốc). Mỗi lần đáp thêm một
+miếng → **+1**; nhảy hụt làm sập tầng → điểm **giảm đúng số tầng mất**. `best`
+(kỷ lục) là điểm cao nhất từng đạt, persist ngay khi vượt. `?reset=1` xoá kỷ lục
+khi chơi thử.
 
 ## Âm thanh
 
@@ -67,8 +63,8 @@ compressor** trước khi ra loa (không bao giờ có sóng saw/square thô hay
 - **Nhạc nền**: polka "toy-chip" **vui nhộn** (C trưởng, ~128 BPM) — bass oom-pah +
   giai điệu music-box hỏi/đáp, 3 biến tấu xoay vòng (~45s) để đỡ nhàm; peak nhỏ,
   luôn nằm dưới SFX; scheduler lookahead resume-safe.
-- **SFX**: nhảy & đáp **dùng chung một tiếng "pop" tự nhiên mềm**; xu (ding dịu),
-  lò xo, Perfect (ngũ cung dâng theo chuỗi, trần ≤988Hz), né mốc, loạng choạng,
+- **SFX**: nhảy & đáp **dùng chung một tiếng "pop" tự nhiên mềm**; lò xo,
+  Perfect (ngũ cung dâng theo chuỗi, trần ≤988Hz), né mốc, loạng choạng,
   **mất 5 tầng** (chuỗi 5 nốt rơi dần + "whump"), xô ngã, bung dù, kết quả
   (best/thua), nút bấm, nhắc tutorial.
 
@@ -80,7 +76,7 @@ chồng nhau) và **năng lượng > 4kHz ≈ 0** (không gắt tai).
 
 - **game-common.md** — `sendMessage` 5 trường, `level: null`; `game_result`
   (`showModal:false`) · `retry_level` · `quit` · `ads` (mỗi 3 ván) · `save_data`
-  (`{best, coins}`, persist ngay khi đổi + mirror localStorage, boot lấy max);
+  (`{best, tut, mute}`, persist ngay khi đổi + mirror localStorage, boot lấy max);
   đọc `statusBarHeight`/`data`/`language` đúng thứ tự ưu tiên; callback native
   định nghĩa sớm; nút Back SVG chuẩn; font Google Sans Flex (+fallback ngoài
   Latinh, cả canvas); reset CSS + tắt tap-highlight.
@@ -92,6 +88,5 @@ chồng nhau) và **năng lượng > 4kHz ≈ 0** (không gắt tai).
 
 ## Backlog
 
-- [ ] Shop skin hamster/phô mai dùng xu
 - [ ] Quest daily + login streak (localStorage)
 - [ ] Revive/gift bằng quảng cáo — chờ app hỗ trợ callback ad (bridge `ads` hiện một chiều)

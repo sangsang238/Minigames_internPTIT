@@ -1,6 +1,6 @@
 # Runic Blaze — QuanKA
 
-> **Match-3 puzzle game** | HTML5 single-file | Dark fantasy theme | v2.0 — hồi sinh & viết lại toàn bộ
+> **Match-3 endless high-score** | HTML5 single-file | Dark fantasy | v3.1 — hazard **Cursed Runes** + events + onboarding
 
 ---
 
@@ -11,118 +11,92 @@
 | **Tên game** | Runic Blaze |
 | **Package** | `com.falcon.runicblaze` |
 | **Engine** | HTML5 (single-file `index.html`) |
-| **Version** | 2.0.0 |
-| **Category** | PUZZLE |
+| **Version** | 3.1.0 |
+| **Category** | PUZZLE (điểm-cao, endless) |
 | **Entry** | `runic-blaze/index.html` |
 
-> v1.0 từng bị abandon vì bug đóng băng board (busy-lock trong chuỗi async CSS-transition).
-> v2.0 viết lại từ đầu trên **tween engine dt-based chạy trong một vòng rAF duy nhất** — mọi
-> nhịp gameplay (swap/nổ/rơi/sleep) đều là tween pause-aware, không còn `setTimeout` đua với
-> CSS transition → hết hẳn class bug treo `busy`.
+> v2 là match-3 theo **level**. v3 chuyển sang **score-attack vô tận** — chơi một mạch, tích điểm.
+> Khung header + vòng điểm-cao (self-popup, best live, Play Again) **mô phỏng skydom (HaND)**;
+> **thẩm mỹ dark-fantasy** + hazard **Hắc Ấn** + **events** là của riêng runic-blaze.
+> Base match-3 giữ cảm giác **thoả mãn kiểu skydom** (nổ liên hoàn, board sạch), độ khó đến từ **Hắc Ấn**.
 
 ---
 
 ## Gameplay & Cơ chế
 
-### Core Loop
-1. **Board 7×7**, 5 màu rune (level 9+ thêm màu thứ 6), sinh ngẫu nhiên không match sẵn, luôn đảm bảo có nước đi
-2. **Tap** chọn rồi tap ô kề để swap, hoặc **swipe** — swap kích hoạt ngay khi kéo đủ 35% ô (không cần thả tay)
-3. Swap hợp lệ (tạo ≥3 liên tiếp hoặc là combo special) → xoá → gravity → refill → cascade
-4. Swap không hợp lệ → trả về + rung, **không** trừ moves
-5. Đạt `scoreGoal` trước khi hết `movesLeft` → thắng; hết moves → thua
+### Core Loop (endless — KHÔNG level, KHÔNG giới hạn lượt)
+1. **Board 7×7**, 5 màu rune (thêm màu thứ 6 khi điểm ≥ 5 000), sinh không match sẵn, luôn có nước đi
+2. **Tap** chọn rồi tap ô kề để swap, hoặc **swipe** — swap kích hoạt ngay khi kéo đủ 35% ô
+3. Swap hợp lệ (≥3 cùng loại hoặc combo special) → xoá → gravity → refill → **cascade** nhân điểm (juicy!)
+4. Swap không tạo match → trả về + rung (không mất gì)
+5. Chơi tới khi một **Hắc Ấn** phát nổ (hoặc hết nước đi) → Game Over
+
+### Hắc Ấn — Cursed Rune (hazard chính, càng lâu càng khó)
+- Định kỳ sinh **1 ô nguyền** (ấn đỏ máu có **SỐ đếm ngược**): **bất động, không ghép, không đổi chỗ**
+- **Mỗi lượt đếm ngược −1** (số hiện ngay trên ô; ≤2 thì nhấp nháy đỏ)
+- **Phá:** ghép hoặc cho special nổ **CẠNH nó** (4 hướng) → tan (**+250 điểm**)
+- **Về 0 mà chưa phá → detonate → THUA**
+- **Leo thang theo số lần xuất hiện + điểm:** ngòi **7 → 3** (ngắn dần), sinh **dày hơn** (cadence 8→4 lượt), **tối đa 2 cùng lúc** khi điểm ≥ 14 000; **ân hạn 4 lượt đầu** chưa sinh
+
+### Events (thưởng ở mốc điểm — "mechanics hay")
+- **Arcane Surge** (mỗi 5 000 điểm) → tặng **1 Prism** ngẫu nhiên trên board + fanfare
+- **Blaze Storm** (mỗi 12 000 điểm) → biến vài ô thành **Blaze** rồi kích **nổ dây chuyền** (bữa tiệc nổ)
 
 ### Rune đặc biệt (forge từ match to)
 
 | Special | Cách tạo | Hiệu ứng |
 |---|---|---|
-| **Blaze Rune** (mũi tên ↔/↕) | Match 4 thẳng hàng | Nổ nguyên hàng (match ngang) / cột (match dọc) |
-| **Nova Rune** (vòng tròn) | Match hình L / T | Nổ 3×3 — **nổ 2 lần**: sống sót lần đầu, rơi xuống rồi nổ tiếp wave sau |
-| **Prism Rune** (bánh xe 6 màu) | Match 5 thẳng hàng | Swap với rune bất kỳ → thiêu toàn bộ rune màu đó (tia sét arc) |
+| **Blaze Rune** (mũi tên ↔/↕) | Match 4 thẳng hàng | Nổ nguyên hàng/cột |
+| **Nova Rune** (vòng tròn) | Match hình L / T | Nổ 3×3 — **nổ 2 lần** |
+| **Prism Rune** (bánh xe 6 màu) | Match 5 thẳng hàng | Swap với rune bất kỳ → thiêu toàn bộ rune màu đó |
 
-### Combo 2 special (swap 2 special kề nhau)
+Combo 2 special (Prism+Prism xoá board, Prism+Blaze/Nova biến-cả-màu, Blaze+Blaze chữ thập, Nova+Nova 5×5…) giữ nguyên.
 
-| Combo | Hiệu ứng |
-|---|---|
-| Prism + Prism | **Xoá toàn bộ board** |
-| Prism + Blaze | Biến cả một màu thành Blaze Rune rồi kích nổ toàn bộ |
-| Prism + Nova | Biến cả một màu thành Nova đã nạp → nổ chuỗi 3×3 |
-| Blaze + Blaze | Chữ thập: nguyên hàng + nguyên cột |
-| Blaze + Nova | Chữ thập dày: 3 hàng + 3 cột |
-| Nova + Nova | Vụ nổ 5×5 |
+### Điểm & Best
+- Mỗi wave: `số tile × 40 × chain` (chain ×1→×5), mỗi special +80, mỗi Hắc Ấn phá +250
+- **Best (kỷ lục) chạy LIVE** ở header, persist ngay khi vượt; ván sau vẫn nhớ
+- **Game Over popup game tự vẽ** (popup-common §1.1): "Game Over" / "New Record!", SCORE · BEST (vàng), **Play Again**
 
-### Điểm & Cascade
-- Mỗi wave: `số tile × 40 × chain` (chain ×1→×5 cap), mỗi special kích hoạt +80
-- Chain ≥2 hiện badge khen theo tier: Nice! → Great! → Awesome! → Blazing! → Legendary!
-- **Blaze Rush** khi thắng: moves thừa (tối đa 6) tự biến thành Blaze Rune và nổ dây chuyền cộng điểm trước khi bắn `game_result`
+### Onboarding (Tutorial chuẩn — 1 scene, KHÔNG chuyển cảnh)
+- **KHÔNG có menu chính.** Lần chơi đầu: **carousel 3 thẻ demo** (Ghép Rune → Rèn Đặc Biệt → Hắc Ấn) **phủ lên chính board thật** (board đã dựng sẵn phía sau, không đổi cảnh); Skip / Next / dots
+- Các lần sau → vào thẳng ván. Idle 5s → gợi ý; hết nước đi → tự xáo rune thường (special/Hắc Ấn giữ chỗ)
 
-### Level Design — VÔ HẠN (chơi bao lâu tuỳ sức)
-
-Level sinh theo công thức **deterministic** `levelConfig(idx)` (hash splitmix theo idx —
-retry sau khi thua dựng lại đúng envelope độ khó, chỉ cách xếp rune là random mới):
-
-- **Moves**: 20 giảm dần theo level, sàn **16** (+1 ngẫu nhiên theo hash)
-- **Điểm cần mỗi lượt**: `min(400, 100 + idx×22)` ±5% — tăng dần rồi **plateau ~400/lượt**
-  để chơi dài vẫn công bằng; `goal = moves × perMove` (làm tròn 50)
-- **Màu**: 5 màu tới level 8; từ level 9 là 6 màu, ~22% level hash cho 5 màu để đổi nhịp
-
-Ví dụ: L1 ≈ 20 moves / 2 000 · L5 ≈ 18 / 3 500 · L10 ≈ 16-17 / 5 200 · L15+ ≈ 16 / 6 400 (plateau)
-
-> ⚠️ **Deviation có chủ đích so với game-common §1.5**: level vô hạn → không tồn tại
-> "level cuối" nên event `victory` **không bao giờ bắn** (giống animal-connect). Mọi màn
-> thắng đều gửi `game_result/'win'` + `showModal: true`.
-
-### Trợ giúp người chơi
-- **Tutorial tương tác 3 bước** (board dựng tay + bàn tay chỉ dẫn): swap match-3 → forge Blaze → dùng Prism. Bắt buộc lần chơi đầu, skip được, mở lại từ menu
-- **How-to-play panel** (sơ đồ SVG vẽ bằng chính art engine của game) — mở được từ menu **và ngay trong trận** (nút `?`)
-- **Idle hint** sau 5s: cặp swap hợp lệ nháy sáng + tile tự nhích về hướng cần kéo
-- **Deadlock-proof**: hết nước đi → toast + tự xáo (special giữ nguyên chỗ), board sinh mới luôn kiểm tra có nước đi
-- **Level intro** (Level N · Goal · Moves) trước mỗi màn
-
-### UI trong trận
-- Topbar trái: **Back** (quit về app) + **?** (how-to-play)
-- Topbar phải: **Sound** (mute persist) + **Home** (confirm → về menu, ván được lưu) + **Restart**
-- HUD: chip Score (count-up) · progress bar goal (shimmer, nhấp nháy khi ≥80%) · chip Moves (đỏ khi ≤5)
+### UI trong trận (khung header chuẩn — mô phỏng skydom)
+- **Header:** `Back` (trái) · `SCORE` · `BEST` (vàng) · `Volume` (phải). Chỉ header + board, **không sub-strip** (số đếm ngược nằm ngay trên ô Hắc Ấn)
+- Back = lưu best + `quit`; Volume = mute (persist)
 
 ### Âm thanh (WebAudio synthesize 100%, không file ngoài)
-- **BGM dark cinematic** (Rê thứ): tiến trình **Dm → Gm → E♭ → A** — i · iv · **♭II Neapolitan**
-  (màu Phrygian tối) · V; mỗi hợp âm giữ 16 bước (~7.3s), vòng ~29s @ **66 BPM**
-- **String bed**: pad là **2 saw lệch nhẹ qua lowpass động** (attack ~kéo vĩ) → thân đàn dây
-  trầm & sử thi thay cho sine ngọt; lõi sine mỏng cho mượt
-- **Pedal Rê liên tục** dưới mọi hợp âm → nghịch nhẹ ở E♭/A tạo trọng lực & sức nặng phim
-- **Trống trầm sử thi** ("nhịp tim") mỗi lần đổi hợp âm + **1 swell cao thưa** giữa mỗi hợp âm
-  (thay arp giai điệu — bỏ hẳn để không bị "vui") + **chuông vọng trầm** cuối mỗi vòng; **gió rít nền**
-- **Cân bằng âm lượng**: mọi SFX qua **bus `sfxOut` riêng** (một núm SFX↔BGM, chặn cascade
-  cộng dồn vỡ tiếng); thang peak thống nhất UI ~.05 · phản hồi ~.07 · nổ ~.10–.11 · cao trào
-  (nova/win) ~.17 — xoá chênh lệch cũ (nova .4 vs button .06 ≈ 16 dB)
-- **Lookahead scheduler** chống dồn nốt khi resume; **ducking** — BGM tự nhún khi fanfare thắng/thua rồi bò lại
-- **18 SFX**: select/swap/invalid/pop (pitch tăng theo chain)/forge/beam/nova/prism/zap/shuffle/hint/win (power-chord Rê anh hùng)/lose/rush/button/**intro màn**/**cảnh báo còn 5 lượt**
-- Mute persist qua `save_data`; audio suspend khi pause/app nền, unlock ở chạm đầu tiên (autoplay policy)
+- **BGM dark cinematic** (Rê thứ, string bed saw + pedal Rê + ♭II Neapolitan + trống trầm) — giữ từ v2
+- **SFX** qua bus `sfxOut`: select/swap/pop(theo chain)/forge/beam/nova/prism/zap/shuffle/hint/**hắc ấn sinh**/lose/button
+- Mute persist qua `save_data`; audio suspend khi pause/nền, unlock ở chạm đầu
 
 ---
 
 ## Kỹ thuật
 
-- **1 vòng rAF + tween engine dt-based**: mọi animation & sleep gameplay đi qua tween → tự đóng băng khi pause, tốc độ đồng nhất ở 60/90/120/144 Hz
-- **levelEpoch**: mọi `await` trong pipeline re-check epoch — `onNextLevel`/`onRetryLevel`/restart giữa chừng không thể làm hỏng board mới
-- **Đa màn hình**: board đo theo `#board-outer` (flex) → tự khớp mọi ratio; landscape (w > 1.25h) tự chuyển HUD sang cột dọc cạnh board; canvas nền + FX scale theo `devicePixelRatio` (cap 3); media query cho màn hẹp/lùn; relayout khi `fonts.ready`
-- **FX**: particle canvas riêng (composite `lighter`) — burst theo màu rune, beam quét hàng/cột, ring nova, tia sét prism re-jag mỗi frame, flash, screen-shake giảm dần theo hàm mũ
-- **RTL**: tiếng Ả Rập tự bỏ letter-spacing (chữ nối liền không vỡ)
+- **1 vòng rAF + tween engine dt-based**: animation & sleep gameplay đều là tween pause-aware → mượt mọi Hz
+- **levelEpoch**: mọi `await` re-check epoch — Play Again / event / storm giữa chừng không hỏng board mới
+- **Hắc Ấn** = kind `K_CURSED`, `tile.curse` = số đếm ngược; loại khỏi mọi logic màu (`collectRuns`/`liveRunAt`/`findHintMove`/prism-target/mostCommonColor), rơi theo gravity; `tickCursed()` giảm số & phát hiện detonate, `maybeSpawnCursed()` sinh theo nhịp, phá = thêm vào tập xoá khi kề ô bị clear (trong `executeWave`)
+- **Persistence (§1.2):** chỉ `{ best, muted, tutorialSeen }` — score-attack **không lưu ván dở**, mở lại = ván mới (giống skydom)
+- **Đa màn hình**: board đo theo `#board-outer`; canvas nền + FX theo `devicePixelRatio`; landscape chỉ căn board
 
 ---
 
 ## Tuân thủ quy ước chung
 
-- ✅ **game-common.md** — `sendMessage` 5 trường; `quit`/Back + Restart đúng SVG chuẩn; `ads` mỗi 3 lần kết thúc ván; `statusBarHeight` (URL ưu tiên + env safe-area, +8px); `currentLevel`/`data`/`language` window ưu tiên; `waitForNativeInjection` 200ms; `onAppPause` (lưu ván + pause thật: veil + đóng băng tween + suspend audio) / `onNextLevel` / `onRetryLevel`. **Riêng `victory` (§1.5) không dùng** vì level vô hạn — xem ghi chú ở Level Design
-- ✅ **Lưu 2 tầng (§1.2)** — `save_data` chỉ data nhẹ `{levelIdx, muted, tutorialSeen}`; ván dở (board/moves/score) vào `localStorage`, validate kỹ khi restore (đúng level, đủ 7×7, giá trị hợp lệ, chưa thắng/thua) + đảm bảo còn nước đi
-- ✅ **popup-common.md** — game theo level, `showModal: true`, không tự vẽ popup kết quả
+- ✅ **game-common.md** — **game điểm-cao (§1.1):** `game_result` `result:null, showModal:false`, game **tự vẽ popup**; **Play Again → `retry_level`**; `ads` mỗi 3 lần thua; `level` luôn `null`; Back = `quit`; `statusBarHeight`; `onAppPause` (lưu best + pause) / `onRetryLevel` (ván mới) / `onNextLevel` (no-op). **Không dùng `victory`/`next_level`**
+- ✅ **popup-common.md** — game không-level tự vẽ popup kết quả (SCORE/BEST/Play Again), auto-fit cỡ số nhiều chữ số
 - ✅ **zip-common.md** — single-file, `game.json` đủ field, 3 ảnh cover đúng tên/kích thước
-- ✅ **i18n** — inline `I18N` **đủ 23 ngôn ngữ** (en, vi, zh-Hans, zh-Hant, ja, ko, es, es-MX, es-AR, pt-BR, pt, fr, de, it, nl, pl, ru, tr, ar, hi, th, id, fil) cho toàn bộ UI + tutorial + how-to-play + aria-label; Google Sans Flex + fallback `system-ui` cho ngôn ngữ ngoài Latin
+- ✅ **i18n** — inline `I18N` **đủ 23 ngôn ngữ** cho UI/popup/aria + khoá `next`; mô tả onboarding + tên events hiện en+vi (còn lại fallback en — xem Backlog)
 
 ---
 
 ## 📋 Backlog
 
-- [ ] Objective đa dạng theo level (thu thập N rune màu X, phá ô băng…) ngoài score-goal
-- [ ] Daily challenge / star rating (1–3 sao theo điểm dư)
-- [ ] Haptic feedback qua bridge khi nổ lớn (cần native hỗ trợ)
-- [ ] Leaderboard điểm tổng qua `save_data` mở rộng
+- [ ] Dịch nốt mô tả onboarding + tên events (surge/storm/cursedSpawn) cho 21 locale còn lại
+- [ ] Hắc Ấn nhiều lớp (cần phá 2–3 lần) ở mốc điểm rất cao
+- [ ] Milestone điểm (5k/10k/20k) → toast + FX ăn mừng riêng
+- [ ] Haptic khi Hắc Ấn còn 1 lượt (cần native)
+
+> ⚠️ **Cover PNG** (`cover-*.png`) đang là art match-3 dark-fantasy của v2 — đúng tông nhưng chưa thể hiện
+> Hắc Ấn. Là art người dùng duyệt → **chờ xác nhận trước khi tạo lại**.

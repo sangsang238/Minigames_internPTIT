@@ -71,128 +71,82 @@ body {
   align-items: center;
 }
 
-/* ── Header chuẩn: Back | SCORE · BEST | Volume ────────────────── */
+/* ── Header chuẩn (cursed-knives): fixed overlay — Back | SCORE ★ | BEST ♛ | Volume ── */
 #topbar {
+  position: fixed;
+  top: 0;
+  left: 0;                       /* left:0;right:0;margin:auto — KHÔNG translateX
+                                    (translateX từng gây scroll ngang ở cursed-knives) */
+  right: 0;
+  margin: 0 auto;
   width: 100%;
   max-width: 520px;
+  z-index: 5;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 0 12px;
-  /* padding-top injected by JS = max(statusBarHeight, env-safe) + 8 */
+  flex-direction: column;
+  gap: 3px;
+  padding: 0 max(10px, env(safe-area-inset-right)) 0 max(10px, env(safe-area-inset-left));
+  pointer-events: none;          /* không nuốt tap gameplay */
+  /* padding-top do JS đặt = max(statusBarHeight, env-safe) + 6 */
 }
+#topbar .btn3d, .hud-scores { pointer-events: auto; }
 
-#hud-scores {
+#hud-bar { display: flex; align-items: center; gap: 8px; }
+
+.hud-scores {
   flex: 1;
   min-width: 0;
   display: flex;
-  gap: 8px;
-  justify-content: center;
+  gap: 6px;
 }
 .hud-pill {
-  flex: 0 1 auto;
+  flex: 1 1 0;
   min-width: 0;
+  overflow: hidden;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 12px 5px 9px;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 8px 6px 4px;       /* icon ghim sát mép trái (chuẩn chung) */
   background: var(--glass);
   border: 1px solid var(--glass-border);
-  border-radius: 13px;
+  border-radius: 14px;
   backdrop-filter: blur(6px);
+  box-shadow: inset 0 2px 6px rgba(255,255,255,.35), 0 3px 8px rgba(23,74,52,.18);
   -webkit-user-select: none; user-select: none;
 }
+.pill-text { display: flex; flex-direction: column; align-items: center; min-width: 0; flex: 1 0 auto; }
 .pill-ico {
   flex: 0 0 auto;
-  width: clamp(16px, 4.6vw, 20px);
-  height: clamp(16px, 4.6vw, 20px);
-  display: block;
-  filter: drop-shadow(0 1px 1px rgba(23,74,52,.25));
+  width: clamp(16px, 4.8vw, 21px); height: clamp(16px, 4.8vw, 21px); display: block;
+  filter: drop-shadow(0 1px 1px rgba(23,74,52,.28));
 }
-.pill-text { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
-.hud-pill .lbl {
-  font-size: 9px;
-  letter-spacing: 1.6px;
-  text-transform: uppercase;
-  color: var(--text-soft);
-  white-space: nowrap;
-  line-height: 1.1;
-}
-.hud-pill .val {
-  font-size: clamp(15px, 4.6vw, 19px);
+.hud-pill .label {
+  font-size: clamp(9px, 3vw, 12px);
   font-weight: 700;
+  letter-spacing: .5px;
+  color: var(--text-soft);
+  line-height: 1.05;
+  white-space: nowrap;
+}
+.hud-pill .value {
+  font-size: clamp(15px, 4.6vw, 22px);
+  line-height: 1.1;
   color: var(--text);
   white-space: nowrap;
-  line-height: 1.1;
+  font-weight: 800;
 }
-#hud-best { color: #e39a12; }   /* BEST accent vàng hợp theme pastel */
+#hud-best { color: #e39a12; }     /* BEST accent vàng (chuẩn chung) */
 
-/* ── HUD strip: score chip | time bar | pairs chip ────────────── */
-#hud-strip {
-  width: 100%;
-  max-width: 520px;
-  padding: 6px 14px 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.hud-chip {
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  border-radius: 12px;
-  padding: 4px 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 56px;
-  backdrop-filter: blur(6px);
-}
-
-.hud-chip .lbl {
-  font-size: 9px;
-  letter-spacing: 1.8px;
+#hud-sub {
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--text-soft);
+  white-space: nowrap;
 }
-
-.hud-chip .val { font-size: 17px; color: var(--text); line-height: 1.2; }
-
-#time-wrap { flex: 1; display: flex; flex-direction: column; gap: 3px; }
-
-#time-labels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-  color: var(--text-soft);
-  padding: 0 1px;
-}
-#hud-clock { color: var(--text); }
-
-#time-bar-bg {
-  height: 10px;
-  background: rgba(255,255,255,.35);
-  border-radius: 5px;
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,.55);
-}
-
-#time-bar-fill {
-  height: 100%;
-  border-radius: 5px;
-  width: 100%;
-  background: linear-gradient(90deg, #35c26e, #7fd34f);
-  transition: width .3s linear, background .4s;
-}
-#time-bar-fill.warn   { background: linear-gradient(90deg, #ffb02e, #ffd23f); }
-#time-bar-fill.danger { background: linear-gradient(90deg, #ff4d4d, #ff8a3d); }
-
-@keyframes clockDanger {
-  0%, 100% { color: #d92b2b; }
-  50%      { color: #ff7a7a; }
-}
-.clock-danger { animation: clockDanger .6s ease-in-out infinite; }
+#hud-sub #hud-level { color: var(--text); font-weight: 800; }
 
 /* ── Board ────────────────────────────────────────────────────── */
 #board-outer {
@@ -334,25 +288,6 @@ body {
   100% { transform: translate(var(--bx), var(--by)) scale(.2); opacity: 0; }
 }
 
-/* ── Score fly-up text ────────────────────────────────────────── */
-.score-fly {
-  position: fixed;
-  pointer-events: none;
-  font-family: var(--ui-font);
-  font-weight: 800;
-  font-size: 15px;
-  color: #fff;
-  text-shadow: 0 0 10px rgba(255,150,50,1), 0 2px 4px rgba(23,74,52,.55);
-  z-index: 200;
-  white-space: nowrap;
-  animation: scoreFlyUp .9s ease-out forwards;
-}
-@keyframes scoreFlyUp {
-  0%   { opacity: 1; transform: translate(-50%,-50%) scale(1); }
-  20%  { opacity: 1; transform: translate(-50%,-80%) scale(1.2); }
-  100% { opacity: 0; transform: translate(-50%,-140%) scale(.9); }
-}
-
 /* ── Combo badge ──────────────────────────────────────────────── */
 #combo-badge {
   position: fixed;
@@ -376,6 +311,29 @@ body {
 }
 .combo-anim { animation: comboPop .65s ease-out forwards; }
 
+/* ── Lời khen "nối nhanh" (cơ chế giờ ẩn) ─────────────────────── */
+#praise {
+  position: fixed;
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%,-50%);
+  font-size: 22px;
+  font-weight: 800;
+  pointer-events: none;
+  z-index: 101;
+  opacity: 0;
+  white-space: nowrap;
+  color: #fff;
+  text-shadow: 0 0 18px rgba(255,120,60,.95), 0 2px 5px rgba(23,74,52,.5);
+}
+@keyframes praisePop {
+  0%   { opacity: 0; transform: translate(-50%,-40%) scale(.6); }
+  25%  { opacity: 1; transform: translate(-50%,-50%) scale(1.1); }
+  70%  { opacity: 1; transform: translate(-50%,-58%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%,-90%) scale(.9); }
+}
+.praise-anim { animation: praisePop 1s ease-out forwards; }
+
 /* ── Toast (auto-shuffle notice…) ─────────────────────────────── */
 #toast {
   position: fixed;
@@ -394,32 +352,6 @@ body {
   transition: opacity .25s;
 }
 #toast.show { opacity: 1; }
-
-/* ── Bottom bar: Hint | Shuffle ───────────────────────────────── */
-#bottombar {
-  width: 100%;
-  max-width: 520px;
-  display: flex;
-  justify-content: center;
-  gap: 14px;
-  padding: 2px 12px 14px;
-}
-
-.count-badge {
-  min-width: 20px;
-  height: 20px;
-  padding: 0 5px;
-  border-radius: 10px;
-  background: var(--accent);
-  color: #fff;
-  font-size: 12px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.btn3d.used .btn3d-surface { opacity: .45; }
-
-.tool-ico { width: 20px; height: 20px; fill: currentColor; display: block; }
 
 /* ── btn3d (game-common §1.4 / popup-common §6) ───────────────── */
 .btn3d {
@@ -478,24 +410,29 @@ body {
 
 #topbar-right { display: flex; gap: 8px; }
 
-/* ── Responsive HUD — co giãn theo bề ngang, gọn lại khi màn thấp ─ */
-.hud-pill      { padding: 4px clamp(8px, 3vw, 12px) 5px clamp(6px, 2.4vw, 9px); }
-.hud-chip      { min-width: clamp(44px, 13vw, 56px); padding: 4px clamp(6px, 2.4vw, 12px); }
-.hud-chip .val { font-size: clamp(13px, 4vw, 17px); }
-#time-wrap  { min-width: 56px; }
-#bottombar .btn3d, #bottombar .btn3d-surface { min-width: 0; }
-#hint-label, #shuffle-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
+/* ── Responsive — thu nút icon khi màn thấp ────────────────────── */
 @media (max-height: 640px) {
   #topbar .btn3d.btn-icon { --surface-height: 36px; --surface-width: 36px; }
-  #hud-strip { padding-top: 4px; }
-  #bottombar { padding: 0 12px 8px; }
-  #bottombar .btn3d { --surface-height: 36px; --surface-font-size: 14px; }
   #tut-banner { bottom: 12px; padding: 9px 12px; }
 }
-@media (max-height: 480px) {
-  #time-bar-bg { height: 8px; }
+@media (max-width: 360px) {
+  .btn3d.btn-icon { --surface-height: 38px; --surface-width: 38px; }
 }
+
+/* ── Ngôi sao bay từ đường nối lên SCORE (đặc trưng game) ───────── */
+.fly-star {
+  position: fixed;
+  z-index: 40;
+  width: 20px; height: 20px;
+  margin: -10px 0 0 -10px;        /* neo tâm sao vào toạ độ */
+  pointer-events: none;
+  will-change: transform, opacity;
+  transition: transform .7s cubic-bezier(.45,0,.3,1), opacity .7s ease-in;
+  filter: drop-shadow(0 0 5px rgba(255,206,77,.9));
+}
+.fly-star svg { width: 100%; height: 100%; display: block; }
+@keyframes scorePulse { 0%,100% { transform: scale(1); } 40% { transform: scale(1.28); } }
+.hud-pill.score-hit { animation: scorePulse .3s ease-out; }
 
 /* ── Nút loa (bật/tắt SFX) trong header ────────────────────────── */
 .snd-ico { width: 58%; height: 58%; display: block; }
@@ -557,11 +494,10 @@ body {
 
 <canvas id="bg-canvas"></canvas>
 
-<div id="app">
-
-  <!-- Header chuẩn: Back | SCORE · BEST | Volume -->
-  <div id="topbar">
-    <div class="btn3d btn-icon hud-flat" id="back-btn" role="button" aria-label="Back" tabindex="0">
+<!-- Header chuẩn (theo cursed-knives): fixed overlay — Back | SCORE ★ | BEST ♛ | Volume, dưới là Level -->
+<div id="topbar">
+  <div id="hud-bar">
+    <div class="btn3d btn-icon" id="back-btn" role="button" aria-label="Back" tabindex="0">
       <span class="btn3d-shadow"></span>
       <span class="btn3d-surface">
         <svg class="back-ico" viewBox="0 0 447.243 447.243" aria-hidden="true">
@@ -569,16 +505,15 @@ body {
         </svg>
       </span>
     </div>
-
-    <div id="hud-scores">
+    <div class="hud-scores">
       <div class="hud-pill">
         <svg class="pill-ico" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 2 L14.9 8.6 L22 9.3 L16.7 14 L18.3 21 L12 17.3 L5.7 21 L7.3 14 L2 9.3 L9.1 8.6 Z"
                 fill="#ffce4d" stroke="#e39a12" stroke-width="1" stroke-linejoin="round"/>
         </svg>
         <div class="pill-text">
-          <div class="lbl" id="lbl-score">SCORE</div>
-          <div class="val" id="hud-score">0</div>
+          <div class="label" id="lbl-score">SCORE</div>
+          <div class="value" id="hud-score">0</div>
         </div>
       </div>
       <div class="hud-pill">
@@ -590,13 +525,12 @@ body {
           <circle cx="19.8" cy="8" r="1.5" fill="#fff3c4"/>
         </svg>
         <div class="pill-text">
-          <div class="lbl" id="lbl-best">BEST</div>
-          <div class="val" id="hud-best">0</div>
+          <div class="label" id="lbl-best">BEST</div>
+          <div class="value" id="hud-best">0</div>
         </div>
       </div>
     </div>
-
-    <div class="btn3d btn-icon hud-flat" id="sound-btn" role="button" aria-label="Sound" tabindex="0">
+    <div class="btn3d btn-icon" id="sound-btn" role="button" aria-label="Sound" tabindex="0">
       <span class="btn3d-shadow"></span>
       <span class="btn3d-surface">
         <svg class="snd-ico" viewBox="0 0 100 100" aria-hidden="true">
@@ -607,58 +541,16 @@ body {
       </span>
     </div>
   </div>
+  <div id="hud-sub"><span id="lbl-level">LEVEL</span> <span id="hud-level">1</span></div>
+</div>
 
-  <!-- HUD: Level | Time bar | Pairs left -->
-  <div id="hud-strip">
-    <div class="hud-chip" id="chip-level">
-      <span class="lbl" id="lbl-level">LEVEL</span>
-      <span class="val" id="hud-level">1</span>
-    </div>
-    <div id="time-wrap">
-      <div id="time-labels">
-        <span id="lbl-time">TIME</span>
-        <span id="hud-clock">0:00</span>
-      </div>
-      <div id="time-bar-bg"><div id="time-bar-fill"></div></div>
-    </div>
-    <div class="hud-chip" id="chip-pairs">
-      <span class="lbl" id="lbl-pairs">PAIRS</span>
-      <span class="val" id="hud-pairs">0</span>
-    </div>
-  </div>
-
-  <!-- Board -->
+<div id="app">
   <div id="board-outer">
     <div id="board-wrap">
       <div id="board"></div>
       <svg id="link-svg" aria-hidden="true"></svg>
     </div>
   </div>
-
-  <!-- Bottom tools: Hint | Shuffle -->
-  <div id="bottombar">
-    <button class="btn3d" id="hint-btn" type="button">
-      <span class="btn3d-shadow"></span>
-      <span class="btn3d-surface">
-        <svg class="tool-ico" viewBox="0 0 24 24" aria-hidden="true">
-          <path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7zm-3 19a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-1H9v1z"/>
-        </svg>
-        <span id="hint-label">Hint</span>
-        <span class="count-badge" id="hint-count">3</span>
-      </span>
-    </button>
-    <button class="btn3d" id="shuffle-btn" type="button">
-      <span class="btn3d-shadow"></span>
-      <span class="btn3d-surface">
-        <svg class="tool-ico" viewBox="0 0 24 24" aria-hidden="true">
-          <path fill="currentColor" d="M17 4h4a1 1 0 0 1 1 1v4h-2V7.41l-4.79 4.8-1.42-1.42L18.59 6H17V4zM3 6h5.5l2.25 2.25-1.42 1.41L7.67 8H3V6zm13.79 7.79L22 19v-4h-2v1.59l-3.79-3.8-1.42 1.42.99 1zM3 18h4.67l1.66-1.66 1.42 1.41L8.5 20H3v-2z"/>
-        </svg>
-        <span id="shuffle-label">Shuffle</span>
-        <span class="count-badge" id="shuffle-count">2</span>
-      </span>
-    </button>
-  </div>
-
 </div>
 
 <!-- Tutorial banner -->
@@ -672,6 +564,7 @@ body {
 
 <!-- Overlays -->
 <div id="combo-badge" aria-live="polite"></div>
+<div id="praise" aria-live="polite"></div>
 <div id="toast" role="status"></div>
 <div id="pause-veil" class="hidden"><div class="pv-txt" id="pause-txt">Tap to resume</div></div>
 
@@ -978,6 +871,58 @@ const BEST_LABEL = {
 };
 Object.keys(I18N).forEach(k => { I18N[k].best = BEST_LABEL[k] || 'BEST'; });
 
+/* Tutorial 1 bàn: bước "nối sai" + "dọn sạch" (bổ sung cho mọi ngôn ngữ) */
+const TUT_FAIL = {
+  en:'Different animals won’t connect — try it!', vi:'2 con khác loại không nối được — thử xem!',
+  'zh-Hans':'不同动物不能连 — 试试看！', 'zh-Hant':'不同動物不能連 — 試試看！',
+  ja:'違う動物はつながらない — やってみて！', ko:'다른 동물은 연결 안 돼요 — 해보세요!',
+  es:'Animales distintos no se conectan — ¡pruébalo!', 'es-MX':'Animales distintos no se conectan — ¡pruébalo!',
+  'es-AR':'Animales distintos no se conectan — ¡probalo!', 'pt-BR':'Animais diferentes não conectam — tente!',
+  pt:'Animais diferentes não ligam — tenta!', fr:'Deux animaux différents ne se relient pas — essaie !',
+  de:'Verschiedene Tiere verbinden sich nicht — probier’s!', it:'Animali diversi non si collegano — prova!',
+  nl:'Verschillende dieren verbinden niet — probeer!', pl:'Różne zwierzęta się nie łączą — spróbuj!',
+  ru:'Разные животные не соединяются — попробуй!', tr:'Farklı hayvanlar bağlanmaz — dene!',
+  ar:'الحيوانات المختلفة لا تتصل — جرّب!', hi:'अलग जानवर नहीं जुड़ते — आज़माएँ!',
+  th:'สัตว์ต่างชนิดต่อไม่ได้ — ลองดู!', id:'Hewan berbeda tak bisa disambung — coba!',
+  fil:'Magkaibang hayop ay ’di kumokonekta — subukan!',
+};
+const TUT_CLEAR = {
+  en:'Great! Now clear the whole board', vi:'Tuyệt! Giờ dọn sạch cả bàn nào',
+  'zh-Hans':'很好！现在清空整个棋盘', 'zh-Hant':'很好！現在清空整個棋盤',
+  ja:'いいね！盤面を全部消そう', ko:'좋아요! 이제 보드를 다 비우세요',
+  es:'¡Genial! Ahora limpia todo el tablero', 'es-MX':'¡Genial! Ahora limpia todo el tablero',
+  'es-AR':'¡Genial! Ahora limpiá todo el tablero', 'pt-BR':'Ótimo! Agora limpe o tabuleiro todo',
+  pt:'Ótimo! Agora limpa o tabuleiro todo', fr:'Super ! Vide maintenant tout le plateau',
+  de:'Super! Räum jetzt das ganze Brett ab', it:'Ottimo! Ora svuota tutto il tabellone',
+  nl:'Top! Maak nu het hele bord leeg', pl:'Świetnie! Teraz wyczyść całą planszę',
+  ru:'Отлично! Теперь очисти всё поле', tr:'Harika! Şimdi tüm tahtayı temizle',
+  ar:'رائع! الآن نظّف كامل اللوحة', hi:'बढ़िया! अब पूरा बोर्ड साफ़ करें',
+  th:'เยี่ยม! ทีนี้เก็บให้หมดกระดาน', id:'Bagus! Sekarang bersihkan seluruh papan',
+  fil:'Galing! Ngayon linisin ang buong board',
+};
+Object.keys(I18N).forEach(k => {
+  I18N[k].tutFail  = TUT_FAIL[k]  || TUT_FAIL.en;
+  I18N[k].tutClear = TUT_CLEAR[k] || TUT_CLEAR.en;
+});
+
+/* Lời khen khi nối nhanh (cơ chế giờ ẩn) — 2 mức */
+const PRAISE_FAST = {  // nhanh
+  en:'Nice!', vi:'Nhanh!', 'zh-Hans':'不错！', 'zh-Hant':'不錯！', ja:'いいね！', ko:'좋아요!',
+  es:'¡Bien!', 'es-MX':'¡Bien!', 'es-AR':'¡Bien!', 'pt-BR':'Boa!', pt:'Boa!', fr:'Bien !',
+  de:'Gut!', it:'Bene!', nl:'Goed!', pl:'Nieźle!', ru:'Класс!', tr:'Güzel!',
+  ar:'جيد!', hi:'बढ़िया!', th:'เยี่ยม!', id:'Bagus!', fil:'Ayos!',
+};
+const PRAISE_WOW = {   // rất nhanh
+  en:'Lightning!', vi:'Cực nhanh!', 'zh-Hans':'神速！', 'zh-Hant':'神速！', ja:'神速！', ko:'번개같이!',
+  es:'¡Relámpago!', 'es-MX':'¡Relámpago!', 'es-AR':'¡Relámpago!', 'pt-BR':'Relâmpago!', pt:'Relâmpago!',
+  fr:'Éclair !', de:'Blitzschnell!', it:'Fulmine!', nl:'Bliksem!', pl:'Błyskawica!', ru:'Молния!',
+  tr:'Şimşek!', ar:'كالبرق!', hi:'बिजली!', th:'เร็วมาก!', id:'Secepat kilat!', fil:'Kidlat!',
+};
+Object.keys(I18N).forEach(k => {
+  I18N[k].praiseFast = PRAISE_FAST[k] || PRAISE_FAST.en;
+  I18N[k].praiseWow  = PRAISE_WOW[k]  || PRAISE_WOW.en;
+});
+
 let LANG = DEFAULT_LANG;
 function t(key) {
   return (I18N[LANG] && I18N[LANG][key]) || I18N.en[key] || key;
@@ -1270,14 +1215,11 @@ let busy        = false;   // đang animate match/shuffle
 let ended       = false;
 let paused      = false;
 let selected    = null;    // {r, c}
-let hintsLeft   = 3;
-let shufflesLeft= 2;
 let hintPair    = null;    // [{r,c},{r,c}] đang highlight
 let cellPx      = 44;
 let comboStreak = 0;
 let lastMatchAt = 0;
-let timeTotal   = 150;     // giây của level
-let timeLeft    = 150;     // giây còn lại (float)
+let lastFindAt  = 0;       // mốc thời gian để đo "tìm cặp nhanh" (giờ ẩn → bonus)
 let endCounter  = 0;       // đếm số ván kết thúc → bắn ads mỗi 3 ván
 let levelEpoch  = 0;       // tăng mỗi loadLevel — vô hiệu continuation async cũ
 let resultTimer = 0;       // setTimeout gửi game_result/victory (huỷ khi loadLevel)
@@ -1336,17 +1278,16 @@ function resize() {
   const sbh    = getStatusBarHeight();
   const envTop = parseInt(getComputedStyle(document.documentElement)
                    .getPropertyValue('--sat') || '0') || 0;
-  const topPad = Math.max(sbh, envTop) + 8;
-  document.getElementById('topbar').style.paddingTop = topPad + 'px';
+  const topPad = Math.max(sbh, envTop) + 6;
+  const topbar = document.getElementById('topbar');
+  topbar.style.paddingTop = topPad + 'px';
 
   requestAnimationFrame(() => {
-    const topbar = document.getElementById('topbar');
-    const strip  = document.getElementById('hud-strip');
-    const bottom = document.getElementById('bottombar');
-    const usedH  = topbar.getBoundingClientRect().bottom
-                 + strip.getBoundingClientRect().height
-                 + bottom.getBoundingClientRect().height + 20;
-    const availH = window.innerHeight - usedH - 12;
+    // Header là overlay fixed → đẩy board xuống dưới header đúng chiều cao của nó
+    const headH = topbar.getBoundingClientRect().height;
+    document.getElementById('board-outer').style.paddingTop = headH + 'px';
+
+    const availH = window.innerHeight - headH - 16;
     const availW = Math.min(window.innerWidth, 520) - 24 - 12;
     // Chừa ~1 ô chiều cao (ROWS+1) làm chỗ cho đường nối vòng ra ngoài biên,
     // để #board-outer overflow:hidden không cắt nét khi màn bị giới hạn chiều cao.
@@ -1642,6 +1583,7 @@ boardEl.addEventListener('pointerdown', e => {
 }, { passive: true });
 
 function handleTap(r, c) {
+  idleAcc = 0;                 // có thao tác → reset đồng hồ auto-hint
   if (!selected) { select(r, c); return; }
   const { r: sr, c: sc } = selected;
   if (sr === r && sc === c) { deselect(); return; }
@@ -1650,10 +1592,12 @@ function handleTap(r, c) {
     const path = findPath(sr, sc, r, c);
     if (path) { doMatch([sr, sc], [r, c], path); return; }
   }
-  // Không nối được / khác loại → rung nhẹ cả hai, chuyển chọn sang tile mới
+  // Không nối được / khác loại → rung nhẹ cả hai
   SND.bad();
   shakeTile(sr, sc); shakeTile(r, c);
   deselect();
+  // Tutorial: bài học "nối sai" — đã thử 2 con không nối được → sang bước dọn bàn
+  if (tutorialMode && tutStep === 1) { setTutPhase(2); return; }
   select(r, c);
 }
 
@@ -1683,17 +1627,19 @@ function shakeTile(r, c) {
  * ================================================================ */
 async function doMatch(a, b, path) {
   busy = true;
+  idleAcc = 0;
   const ep = levelEpoch;   // continuation cũ không được đụng level mới
   try {
     deselect();
     clearHint();
 
-    // Combo: match liên tiếp trong 4s giữ chuỗi
+    // Combo: match liên tiếp trong 4s (giữ để đổi cao độ SFX + badge)
     const now = performance.now();
     comboStreak = (now - lastMatchAt < 4000) ? comboStreak + 1 : 1;
     lastMatchAt = now;
-    const pts = 10 + (comboStreak - 1) * 5;
-    score += pts;
+    // Đồng hồ ẩn: thời gian TÌM ra cặp này (từ lần nối trước / lúc bàn sẵn sàng)
+    const findMs = now - lastFindAt;
+    lastFindAt = now;
     SND.match(comboStreak);
     if (comboStreak >= 2) showComboBadge(comboStreak);
 
@@ -1704,26 +1650,41 @@ async function doMatch(a, b, path) {
     grid[ar][ac] = -1; grid[br][bc] = -1;
     tiles[ar][ac] = null; tiles[br][bc] = null;
     pairsLeft--;
-    updateHUD();
 
-    spawnScoreFly((ar + br) / 2, (ac + bc) / 2, pts);
+    // ★ Đặc trưng game: rải sao dọc ĐƯỜNG NỐI (mỗi ~1 cạnh tile 1 sao) rồi
+    // bay lên SCORE. Đường càng dài → càng nhiều sao → càng nhiều điểm.
+    // Cơ chế giờ ẩn: tìm cặp NHANH → thưởng điểm + lời khen nhỏ (cân bằng nhẹ).
+    // (Tutorial là tập chơi → KHÔNG tính điểm, không rải sao.)
+    if (!tutorialMode) {
+      const nStars = spawnStars(path);
+      let gained = nStars * STAR_POINTS;
+      let praise = '';
+      if (findMs < 1100)      { gained += 20; praise = t('praiseWow');  }   // rất nhanh
+      else if (findMs < 2200) { gained += 10; praise = t('praiseFast'); }   // nhanh
+      score += gained;
+      updateHUD();
+      if (praise) showPraise(praise, gained - nStars * STAR_POINTS);
+    }
+
     spawnBurst(ar, ac); spawnBurst(br, bc);
     tA.el.classList.add('pop'); tB.el.classList.add('pop');
 
-    // Quyết định THẮNG ngay tại đây (đồng bộ) — để timer không thể chen
-    // `lose` vào giữa 300ms animation của cặp cuối cùng
     if (tutorialMode) {
-      ended = true;                        // khoá input + chặn continuation (shift/xáo)
-      setTimeout(nextTutorialStep, 900);   // qua bước hướng dẫn kế tiếp
-    } else if (pairsLeft <= 0) winLevel();
+      tutOnMatch();                        // tutorial 1 bàn: chuyển bước / hoàn thành
+    } else if (pairsLeft <= 0) {
+      winLevel();
+    }
 
     await sleep(300);
     if (ep !== levelEpoch) return;   // loadLevel đã chạy trong lúc animate
     tA.el.remove(); tB.el.remove();
-    if (ended) return;               // vừa thắng, hoặc thua hết giờ giữa chừng
+    if (ended) return;
 
     await waitWhilePaused();         // onAppPause giữa match → đứng yên chờ
     if (ep !== levelEpoch || ended) return;
+
+    // Bàn tutorial: KHÔNG dồn tile / không auto-xáo (giữ bàn tĩnh để dạy)
+    if (tutorialMode) return;
 
     // Dồn tile theo mode của level
     if (applyShift(levelConfig(currentLevelIdx).shift)) await sleep(230);
@@ -1754,35 +1715,17 @@ function clearHint() {
   hintPair = null;
 }
 
-document.getElementById('hint-btn').addEventListener('click', () => {
-  if (busy || ended || paused || tutorialMode || hintsLeft <= 0) return;
+/* Auto-hint: 5s không thao tác mà chưa nối được → tự nháy 1 cặp nối được
+   (thay cho nút Hint đã bỏ). Đồng hồ idleAcc chạy trong mainLoop. */
+function showAutoHint() {
+  if (busy || ended || paused || tutorialMode || !tiles.length) return;
   const pair = findAnyPair(true);
   if (!pair) return;
-  hintsLeft--;
   clearHint();
-  hintPair = pair;
-  for (const [r, c] of pair) tiles[r][c].el.classList.add('hint');
+  hintPair = pair.map(p => p.slice());
+  for (const [r, c] of pair) if (tiles[r][c]) tiles[r][c].el.classList.add('hint');
   SND.hint();
-  updateToolButtons();
-  saveCurrentState();
-});
-
-document.getElementById('shuffle-btn').addEventListener('click', async () => {
-  // pairsLeft < 2: chỉ còn 1 cặp — xáo không đổi được gì, đừng trừ lượt
-  if (busy || ended || paused || tutorialMode || shufflesLeft <= 0 || pairsLeft < 2) return;
-  busy = true;
-  const ep = levelEpoch;
-  try {
-    shufflesLeft--;
-    updateToolButtons();
-    SND.shuffle();
-    await reshuffleBoard();
-    if (ep !== levelEpoch) return;
-    saveCurrentState();
-  } finally {
-    if (ep === levelEpoch) busy = false;
-  }
-});
+}
 
 /* Xáo lại các tile còn trên bàn; đảm bảo sau xáo còn nước đi */
 async function reshuffleBoard() {
@@ -1850,41 +1793,85 @@ function updateHUD() {
   document.getElementById('hud-score').textContent = score;
   document.getElementById('hud-best').textContent  = best;
   document.getElementById('hud-level').textContent = currentLevelIdx + 1;
-  document.getElementById('hud-pairs').textContent = pairsLeft;
-}
-
-function updateToolButtons() {
-  const hBtn = document.getElementById('hint-btn');
-  const sBtn = document.getElementById('shuffle-btn');
-  document.getElementById('hint-count').textContent    = hintsLeft;
-  document.getElementById('shuffle-count').textContent = shufflesLeft;
-  hBtn.classList.toggle('used', hintsLeft <= 0);
-  sBtn.classList.toggle('used', shufflesLeft <= 0);
 }
 
 function updateLabels() {
-  document.getElementById('lbl-score').textContent  = t('score');
-  document.getElementById('lbl-best').textContent   = t('best');
-  document.getElementById('lbl-level').textContent  = t('level');
-  document.getElementById('lbl-time').textContent   = t('time');
-  document.getElementById('lbl-pairs').textContent  = t('pairs');
-  document.getElementById('hint-label').textContent    = t('hint');
-  document.getElementById('shuffle-label').textContent = t('shuffle');
-  document.getElementById('pause-txt').textContent     = t('tapResume');
+  document.getElementById('lbl-score').textContent = t('score');
+  document.getElementById('lbl-best').textContent  = t('best');
+  document.getElementById('lbl-level').textContent = t('level');
+  document.getElementById('pause-txt').textContent = t('tapResume');
   document.getElementById('back-btn').setAttribute('aria-label', t('back'));
   document.getElementById('sound-btn').setAttribute('aria-label', t('sound'));
-  document.getElementById('tut-skip-label').textContent  = t('skip');
+  document.getElementById('tut-skip-label').textContent = t('skip');
 }
 
-function spawnScoreFly(boardR, boardC, pts) {
-  const rect = boardEl.getBoundingClientRect();
-  const el = document.createElement('div');
-  el.className = 'score-fly';
-  el.textContent = `+${pts}`;
-  el.style.left = (rect.left + boardC * cellPx + cellPx / 2) + 'px';
-  el.style.top  = (rect.top  + boardR * cellPx + cellPx / 2) + 'px';
-  document.body.appendChild(el);
-  el.addEventListener('animationend', () => el.remove(), { once: true });
+/* ★ Ngôi sao bay lên SCORE — rải dọc đường nối, mỗi ~1 cạnh tile 1 sao.
+   Trả về SỐ sao (đường càng dài càng nhiều sao → nhiều điểm). */
+const STAR_POINTS = 10;
+const STAR_SVG = '<svg viewBox="0 0 24 24"><path d="M12 2 L14.9 8.6 L22 9.3 L16.7 14 L18.3 21 L12 17.3 L5.7 21 L7.3 14 L2 9.3 L9.1 8.6 Z" fill="#ffce4d" stroke="#e39a12" stroke-width="1.3" stroke-linejoin="round"/></svg>';
+
+function spawnStars(pathPtsPadded) {
+  const br = boardEl.getBoundingClientRect();
+  // padded (pr,pc) → tâm ô board (pr-1,pc-1) theo toạ độ viewport
+  const pts = pathPtsPadded.map(([pr, pc]) => ({
+    x: br.left + (pc - 1) * cellPx + cellPx / 2,
+    y: br.top  + (pr - 1) * cellPx + cellPx / 2,
+  }));
+  // Rải 1 sao mỗi ~cellPx dọc polyline, từ điểm đầu tới điểm cuối
+  const STEP = cellPx;
+  const starPts = [{ x: pts[0].x, y: pts[0].y }];
+  let carry = 0;
+  for (let i = 1; i < pts.length; i++) {
+    let ax = pts[i - 1].x, ay = pts[i - 1].y;
+    const bx = pts[i].x, by = pts[i].y;
+    let seg = Math.hypot(bx - ax, by - ay);
+    if (seg < 0.001) continue;
+    const ux = (bx - ax) / seg, uy = (by - ay) / seg;
+    let need = STEP - carry;
+    while (need <= seg + 0.001) {
+      ax += ux * need; ay += uy * need;
+      starPts.push({ x: ax, y: ay });
+      seg -= need; carry = 0; need = STEP;
+    }
+    carry += seg;
+  }
+  const tRect = document.getElementById('hud-score').getBoundingClientRect();
+  const tx = tRect.left + tRect.width / 2, ty = tRect.top + tRect.height / 2;
+  starPts.forEach((p, i) => flyStar(p.x, p.y, tx, ty, i));
+  return Math.max(1, starPts.length);
+}
+
+/* Nhịp sao ĐỀU cho mọi độ dài (gần/xa cùng cảm giác), tổng thể chậm ~1.25×:
+   sao thứ i hiện tại chỗ đường nối lúc i×STAGGER, đứng DWELL rồi bay lên SCORE. */
+const STAR_STAGGER = 60;   // ms giữa 2 sao liên tiếp
+const STAR_DWELL   = 300;  // ms sao "đậu" trên đường nối trước khi bay
+function flyStar(x, y, tx, ty, idx) {
+  setTimeout(() => {
+    const el = document.createElement('div');
+    el.className = 'fly-star';
+    el.innerHTML = STAR_SVG;
+    el.style.left = x + 'px';
+    el.style.top  = y + 'px';
+    el.style.transform = 'scale(1)';
+    el.style.opacity = '1';
+    document.body.appendChild(el);
+    setTimeout(() => {
+      el.style.transform = `translate(${tx - x}px, ${ty - y}px) scale(.4)`;
+      el.style.opacity = '.15';
+    }, STAR_DWELL);
+    el.addEventListener('transitionend', e => {
+      if (e.propertyName === 'transform') { el.remove(); pulseScore(); }
+    }, { once: true });
+    setTimeout(() => { if (el.parentNode) el.remove(); }, STAR_DWELL + 1200);
+  }, idx * STAR_STAGGER);
+}
+
+function pulseScore() {
+  const pill = document.getElementById('hud-score').closest('.hud-pill');
+  if (!pill) return;
+  pill.classList.remove('score-hit');
+  void pill.offsetWidth;
+  pill.classList.add('score-hit');
 }
 
 const BURST_COLORS = ['#ff8a3d', '#ffd23f', '#6cc24a', '#3d9fff', '#ff6b9d'];
@@ -1912,6 +1899,15 @@ function showComboBadge(streak) {
   el.classList.add('combo-anim');
 }
 
+/* Lời khen nhỏ khi nối nhanh (cơ chế giờ ẩn) */
+function showPraise(text, bonus) {
+  const el = document.getElementById('praise');
+  el.textContent = bonus > 0 ? `${text} +${bonus}` : text;
+  el.classList.remove('praise-anim');
+  void el.offsetWidth;
+  el.classList.add('praise-anim');
+}
+
 let toastTimer = null;
 function showToast(msg) {
   const el = document.getElementById('toast');
@@ -1921,61 +1917,17 @@ function showToast(msg) {
   toastTimer = setTimeout(() => el.classList.remove('show'), 1600);
 }
 
-/* ================================================================
- * §15. Timer — rAF, pause được; hết giờ = thua
- * ================================================================ */
 let lastTs = null;
-let timerUiAcc = 1;   // ≥0.2 để frame active đầu tiên render ngay
-let lastTickSec = -1; // tiếng tick mỗi giây trong 10s cuối
-
-/* dt tính bằng GIÂY (đã clamp ở mainLoop) — độc lập refresh rate */
-function tickTimer(dt) {
-  if (!paused && !ended && !menuOpen && !tutorialMode && !confirmOpen) {
-    timeLeft -= dt;
-    if (timeLeft <= 0) {
-      timeLeft = 0;
-      // pairsLeft === 0 nghĩa là cặp cuối vừa match (winLevel đã quyết) —
-      // không bao giờ đổi thắng thành thua giữa animation
-      if (pairsLeft > 0) loseLevel();
-      renderTimer();          // trạng thái chốt hiện ngay
-      return;
-    }
-    // Tick cảnh báo mỗi giây trong 10s cuối
-    const s = Math.ceil(timeLeft);
-    if (s !== lastTickSec) { lastTickSec = s; if (s <= 10) SND.tick(); }
-    // DOM đồng hồ/thanh giờ chỉ ghi ~5 lần/s (transition width .3s làm mượt
-    // phần còn lại) — ở 120/144Hz không tốn style-recalc mỗi frame
-    timerUiAcc += dt;
-    if (timerUiAcc >= 0.2) { timerUiAcc = 0; renderTimer(); }
-  }
-}
-
-function renderTimer() {
-  const frac = timeTotal > 0 ? timeLeft / timeTotal : 0;
-  const fill = document.getElementById('time-bar-fill');
-  fill.style.width = (frac * 100) + '%';
-  fill.classList.toggle('warn',   frac <= .3 && frac > .15);
-  fill.classList.toggle('danger', frac <= .15);
-
-  const clock = document.getElementById('hud-clock');
-  const s = Math.ceil(timeLeft);
-  clock.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-  clock.classList.toggle('clock-danger', frac <= .15 && !ended);
-}
+let idleAcc = 0;   // giây rảnh (không thao tác) → auto-hint khi ≥5s
 
 /* ================================================================
- * §16. Win / Lose (game-common §1.1 + §1.5 — app vẽ popup)
+ * §16. Win (game-common §1.1 — app vẽ popup). Không còn Time → không thua.
  * ================================================================ */
 function winLevel() {
   if (ended) return;
   ended = true;
   deselect(); clearHint();
-
-  // Bonus thời gian còn lại
-  const bonus = Math.floor(timeLeft) * 2;
-  score += bonus;
   updateHUD();
-  if (bonus > 0) spawnScoreFly(ROWS / 2 - .5, COLS / 2 - .5, bonus);
 
   SND.win();
   const newIdx = Math.min(currentLevelIdx + 1, MAX_LEVEL_IDX);
@@ -1987,20 +1939,6 @@ function winLevel() {
   resultTimer = setTimeout(() => {
     // Level vô hạn → không có màn cuối → không bao giờ bắn `victory`
     sendMessage('game_result', { result: 'win', showModal: true });
-  }, 450);
-}
-
-function loseLevel() {
-  if (ended) return;
-  ended = true;
-  deselect(); clearHint();
-  renderTimer();
-  SND.lose();
-  saveLocal({ levelIdx: currentLevelIdx, tutorialSeen, muted, best });  // bỏ snapshot, retry ván mới
-  maybeRequestAds();
-  clearTimeout(resultTimer);
-  resultTimer = setTimeout(() => {
-    sendMessage('game_result', { result: 'lose', showModal: true });
   }, 450);
 }
 
@@ -2022,8 +1960,7 @@ function saveCurrentState() {
     best,
     game: {
       grid: grid.map(row => row.slice()),
-      timeLeft: Math.floor(timeLeft),
-      score, hintsLeft, shufflesLeft, endCounter,
+      score, endCounter,
     },
   });
 }
@@ -2044,12 +1981,9 @@ function tryRestoreState(idx) {
     if (count < 2 || count % 2 !== 0) return false;
 
     const num = (v, dflt) => Number.isFinite(Number(v)) ? Number(v) : dflt;
-    pairsLeft    = count / 2;
-    timeLeft     = Math.min(Math.max(num(g.timeLeft, 0), 5), timeTotal);
-    score        = num(g.score, 0);
-    hintsLeft    = Math.min(Math.max(num(g.hintsLeft, 3), 0), 9);
-    shufflesLeft = Math.min(Math.max(num(g.shufflesLeft, 2), 0), 9);
-    endCounter   = num(g.endCounter, 0);
+    pairsLeft  = count / 2;
+    score      = num(g.score, 0);
+    endCounter = num(g.endCounter, 0);
 
     if (!hasMoves()) forceOneMove();   // sửa grid TRƯỚC khi dựng DOM
     buildTileDom(false);
@@ -2068,107 +2002,106 @@ function loadLevel(idx) {
   COLS = lv.cols; ROWS = lv.rows;
   pairsLeft    = (COLS * ROWS) / 2;
   score        = 0;
-  timeTotal    = lv.time;
-  timeLeft     = lv.time;
-  hintsLeft    = lv.hints;
-  shufflesLeft = lv.shuffles;
   busy = false; ended = false; paused = false;
   selected = null; hintPair = null;
-  comboStreak = 0; lastMatchAt = 0;
+  comboStreak = 0; lastMatchAt = 0; idleAcc = 0; lastFindAt = performance.now();
   linkSvg.innerHTML = '';
   document.getElementById('pause-veil').classList.add('hidden');
   // rời tutorial nếu đang dở (an toàn khi native gọi next/retry giữa chừng)
   tutorialMode = false;
   document.getElementById('tut-banner').classList.add('hidden');
-  document.getElementById('bottombar').style.visibility = '';
 
   fillBoard();
   updateLabels();
   updateHUD();
-  updateToolButtons();
-  renderTimer();
   resize();
   saveCurrentState();
 }
 
 /* ================================================================
- * §18b. Menu + Tutorial
- * Tutorial tương tác 3 bước, BẮT BUỘC lần đầu mở game (cờ tutorialSeen
- * persist qua save_data + localStorage — game-common §1.2); có thể mở
- * lại từ nút Tutorial dưới nút Play trong menu.
+ * §18b. Tutorial — 1 BÀN duy nhất, KHÔNG chuyển cảnh.
+ * Bước 0: nối 2 con GIỐNG nhau → bước 1: thử nối 2 con KHÁC nhau (sẽ FAIL)
+ * → bước 2: dọn sạch bàn. Bắt buộc lần đầu mở game (cờ tutorialSeen persist).
  * ================================================================ */
-const TUT_STEPS = [
-  // Bước 1: 2 panda kề nhau — chạm 2 con giống nhau
-  { key: 'tut1', pair: [[1, 2], [1, 3]],
-    tiles: [[1, 2, 3], [1, 3, 3]] },
-  // Bước 2: 2 ếch lệch hàng — đường nối rẽ tối đa 2 lần
-  { key: 'tut2', pair: [[1, 1], [2, 4]],
-    tiles: [[1, 1, 6], [2, 4, 6]] },
-  // Bước 3: 2 chó ở 2 góc đáy, bị chặn kín — đường PHẢI vòng ra ngoài bàn
-  { key: 'tut3', pair: [[3, 0], [3, 5]],
-    tiles: [[3, 0, 0], [3, 5, 0],
-            [2, 0, 7], [2, 1, 8], [2, 2, 9], [2, 3, 10], [2, 4, 11], [2, 5, 13],
-            [3, 1, 1], [3, 2, 2], [3, 3, 4], [3, 4, 5]] },
+const TUT_COLS = 4, TUT_ROWS = 2;
+const TUT_TILES = [            // [r, c, type] — mọi cặp đều kề nhau nên luôn nối được
+  [0, 0, 3], [0, 1, 3], [0, 2, 6], [0, 3, 6],
+  [1, 0, 0], [1, 1, 0], [1, 2, 4], [1, 3, 4],
 ];
 
 function startTutorial() {
-  saveCurrentState();               // giữ ván thật trước khi mượn board cho tutorial
-  tutorialMode = true;
-  document.getElementById('bottombar').style.visibility = 'hidden';
-  loadTutorialStep(0);
-}
-
-function loadTutorialStep(i) {
-  const st = TUT_STEPS[i];
-  levelEpoch++;                     // vô hiệu continuation của bước trước
+  saveCurrentState();               // giữ ván thật trước khi mượn bàn cho tutorial
+  levelEpoch++;
   clearTimeout(resultTimer);
-  tutStep = i;
-  COLS = 6; ROWS = 4;
+  tutorialMode = true;
+  COLS = TUT_COLS; ROWS = TUT_ROWS;
   busy = false; ended = false; paused = false;
-  selected = null; hintPair = null;
-  comboStreak = 0;
+  selected = null; hintPair = null; comboStreak = 0; idleAcc = 0;
   linkSvg.innerHTML = '';
-  pairsLeft = TUT_STEPS.length - i; // HUD PAIRS = số bước còn lại
+  pairsLeft = TUT_TILES.length / 2;
 
   grid = Array.from({ length: ROWS }, () => new Array(COLS).fill(-1));
-  for (const [r, c, ty] of st.tiles) grid[r][c] = ty;
+  for (const [r, c, ty] of TUT_TILES) grid[r][c] = ty;
   buildTileDom(true);
   resize();
-
-  hintPair = st.pair.map(p => p.slice());
-  for (const [r, c] of st.pair) tiles[r][c].el.classList.add('hint');
-
-  document.getElementById('tut-banner').classList.remove('hidden');
-  document.getElementById('tut-text').textContent = t(st.key);
   updateHUD();
+  document.getElementById('tut-banner').classList.remove('hidden');
+  setTutPhase(0);
 }
 
-function nextTutorialStep() {
-  if (!tutorialMode) return;
-  if (tutStep + 1 >= TUT_STEPS.length) {
-    document.getElementById('tut-text').textContent = t('tutDone');
-    setTimeout(() => { if (tutorialMode) finishTutorial(); }, 1200);
+/* Đổi bước tutorial: cập nhật banner + gợi ý cặp phù hợp */
+function setTutPhase(n) {
+  tutStep = n;
+  const txt = document.getElementById('tut-text');
+  clearHint();
+  if (n === 0)      { txt.textContent = t('tut1');     highlightTutPair(true);  }  // nối 2 con giống nhau
+  else if (n === 1) { txt.textContent = t('tutFail');  highlightTutPair(false); }  // thử nối 2 con KHÁC nhau
+  else              { txt.textContent = t('tutClear'); }                            // dọn sạch bàn
+}
+
+/* Gợi ý: same=true → 1 cặp nối được; same=false → 2 tile khác loại (để dạy fail) */
+function highlightTutPair(same) {
+  let pair = null;
+  if (same) {
+    pair = findAnyPair(true);
   } else {
-    loadTutorialStep(tutStep + 1);
+    const spots = [];
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (grid[r][c] >= 0) spots.push([r, c]);
+    for (let i = 0; i < spots.length && !pair; i++)
+      for (let j = i + 1; j < spots.length; j++)
+        if (grid[spots[i][0]][spots[i][1]] !== grid[spots[j][0]][spots[j][1]]) { pair = [spots[i], spots[j]]; break; }
   }
+  if (!pair) return;
+  hintPair = pair.map(p => p.slice());
+  for (const [r, c] of pair) if (tiles[r][c]) tiles[r][c].el.classList.add('hint');
 }
 
-/* Xong / skip tutorial: đánh dấu đã xem, khôi phục ván thật */
+/* Gọi sau mỗi lần nối THÀNH CÔNG trong tutorial */
+function tutOnMatch() {
+  if (pairsLeft <= 0) {                    // dọn sạch → hoàn thành
+    document.getElementById('tut-text').textContent = t('tutDone');
+    clearHint();
+    setTimeout(() => { if (tutorialMode) finishTutorial(); }, 1100);
+  } else if (tutStep === 0) {
+    setTutPhase(1);                        // đã biết nối → sang bài học "nối sai"
+  }
+  // bước 1/2 mà chưa sạch → cứ chơi tiếp
+}
+
+/* Xong / skip tutorial: đánh dấu đã xem, vào ván thật */
 function finishTutorial() {
   tutorialSeen = true;
   tutorialMode = false;
+  clearHint();
   document.getElementById('tut-banner').classList.add('hidden');
-  document.getElementById('bottombar').style.visibility = '';
   levelEpoch++;
 
-  // Khôi phục ván thật (đã snapshot vào localStorage lúc vào tutorial)
   const lv = levelConfig(currentLevelIdx);
   COLS = lv.cols; ROWS = lv.rows;
-  timeTotal = lv.time;
   busy = false; ended = false; paused = false;
   selected = null; hintPair = null;
   if (tryRestoreState(currentLevelIdx)) {
-    updateLabels(); updateHUD(); updateToolButtons(); renderTimer(); resize();
+    updateLabels(); updateHUD(); resize();
   } else {
     loadLevel(currentLevelIdx);
   }
@@ -2287,11 +2220,18 @@ function mainLoop(ts) {
   if (lastTs == null) lastTs = ts;
   let dt = (ts - lastTs) / 1000;
   lastTs = ts;
-  // Frame khựng (GC/janky) hay clock lùi → không trừ oan đồng hồ cả cục
+  // Frame khựng (GC/janky) hay clock lùi → clamp dt (độc lập refresh rate)
   if (dt < 0 || dt > 0.25) dt = 0.25;
 
-  if (!menuOpen) animateBg(dt);   // menu che kín màn → khỏi vẽ nền cho đỡ tốn
-  tickTimer(dt);
+  animateBg(dt);
+
+  // Auto-hint: 5s không thao tác khi đang chơi thường → tự nháy 1 cặp nối được
+  if (!busy && !ended && !paused && !tutorialMode && tiles.length) {
+    idleAcc += dt;
+    if (idleAcc >= 5) { idleAcc = 0; showAutoHint(); }
+  } else {
+    idleAcc = 0;
+  }
   requestAnimationFrame(mainLoop);
 }
 
@@ -2380,16 +2320,23 @@ document.addEventListener('pointerdown', function () {
   SND.resume();
 }, { once: true, passive: true });
 
-/* Click nhẹ cho mọi nút btn3d (Hint/Shuffle có tiếng riêng) */
+/* Click nhẹ cho mọi nút btn3d (Back/Volume) */
 document.addEventListener('pointerdown', e => {
   const b = e.target && e.target.closest ? e.target.closest('.btn3d') : null;
-  if (b && b.id !== 'hint-btn' && b.id !== 'shuffle-btn') SND.ui();
+  if (b) SND.ui();
 }, { capture: true, passive: true });
 
 /* ================================================================
  * §21. Boot (game-common §3 waitForNativeInjection)
  * ================================================================ */
 function bootGame() {
+  // ?reset=1 → xoá hết state (reset to first-open)
+  if (new URLSearchParams(window.location.search).get('reset') === '1') {
+    try { localStorage.removeItem('animal_connect_v1'); } catch (e) {}
+    tutorialSeen = false;
+    best = 0;
+  }
+
   LANG = getLanguage();
   applyUiFont(LANG);
 
@@ -2425,22 +2372,17 @@ function bootGame() {
   currentLevelIdx = startIdx;
   const lv = levelConfig(startIdx);
   COLS = lv.cols; ROWS = lv.rows;
-  timeTotal = lv.time;
   score = 0; busy = false; ended = false; paused = false;
-  selected = null; hintPair = null; comboStreak = 0;
+  selected = null; hintPair = null; comboStreak = 0; idleAcc = 0;
+  lastFindAt = performance.now();
 
   if (!tryRestoreState(startIdx)) {
-    pairsLeft    = (COLS * ROWS) / 2;
-    timeLeft     = lv.time;
-    hintsLeft    = lv.hints;
-    shufflesLeft = lv.shuffles;
+    pairsLeft = (COLS * ROWS) / 2;
     fillBoard();
   }
 
   updateLabels();
   updateHUD();
-  updateToolButtons();
-  renderTimer();
   resize();
 
   // Không còn menu → vào thẳng gameplay. Lần đầu mở game thì chơi tutorial trước.
