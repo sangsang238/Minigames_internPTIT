@@ -193,6 +193,34 @@ body {
 @keyframes linkFade { 0%,70% { opacity: 1; } 100% { opacity: 0; } }
 .link-anim { animation: linkFade .34s ease-in forwards; }
 
+/* Đường "quá vòng" (>2 rẽ) trong tutorial — đỏ nét đứt chạy + chấm ở chỗ rẽ */
+.bend-path-under { fill: none; stroke: rgba(255,255,255,.92); stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
+.bend-path {
+  fill: none; stroke: #ff4d4d; stroke-width: 5;
+  stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 1 11;
+  filter: drop-shadow(0 0 6px rgba(255,77,77,.85));
+  animation: bendDash 1.1s linear infinite, bendPulse 1s ease-in-out infinite;
+}
+@keyframes bendDash  { to { stroke-dashoffset: -24; } }
+@keyframes bendPulse { 50% { opacity: .55; } }
+.bend-dot { fill: #ff4d4d; stroke: #fff; stroke-width: 2.5; }
+
+/* Tick ✓ nổ ra khi nối đúng (nhấn mạnh "connection" trong tutorial) */
+#tut-check {
+  position: fixed; z-index: 45; pointer-events: none;
+  width: 46px; height: 46px; margin: -23px 0 0 -23px; opacity: 0;
+}
+#tut-check svg { width: 100%; height: 100%; display: block;
+  filter: drop-shadow(0 2px 6px rgba(23,74,52,.5)); }
+.tut-check-anim { animation: tutCheckPop .7s ease-out forwards; }
+@keyframes tutCheckPop {
+  0%   { opacity: 0; transform: scale(.3); }
+  35%  { opacity: 1; transform: scale(1.15); }
+  70%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.05) translateY(-8px); }
+}
+
 /* ── Tiles ────────────────────────────────────────────────────── */
 .tile {
   position: absolute;
@@ -565,6 +593,10 @@ body {
 <!-- Overlays -->
 <div id="combo-badge" aria-live="polite"></div>
 <div id="praise" aria-live="polite"></div>
+<div id="tut-check" aria-hidden="true">
+  <svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="21" fill="#35c26e" stroke="#fff" stroke-width="3.5"/>
+  <path d="M14 24.5 L21 31.5 L34 17.5" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</div>
 <div id="toast" role="status"></div>
 <div id="pause-veil" class="hidden"><div class="pv-txt" id="pause-txt">Tap to resume</div></div>
 
@@ -900,9 +932,62 @@ const TUT_CLEAR = {
   th:'เยี่ยม! ทีนี้เก็บให้หมดกระดาน', id:'Bagus! Sekarang bersihkan seluruh papan',
   fil:'Galing! Ngayon linisin ang buong board',
 };
+/* Bài học "cùng loại nhưng đường phải rẽ >2 lần → không nối được" */
+const TUT_BENDTXT = {
+  en:'Same animal, but the path needs >2 bends — won’t link. Try!',
+  vi:'Cùng con, nhưng đường phải rẽ >2 lần — không nối được. Thử xem!',
+  'zh-Hans':'同一动物，但连线要转>2次 — 连不上，试试！', 'zh-Hant':'同一動物，但連線要轉>2次 — 連不上，試試！',
+  ja:'同じ動物でも曲がり>2回は繋がらない — やってみて！', ko:'같은 동물이라도 >2번 꺾이면 연결 안 돼요 — 해보세요!',
+  es:'Mismo animal, pero el camino dobla >2 veces — no une. ¡Prueba!',
+  'es-MX':'Mismo animal, pero el camino dobla >2 veces — no une. ¡Prueba!',
+  'es-AR':'Mismo animal, pero el camino dobla >2 veces — no une. ¡Probá!',
+  'pt-BR':'Mesmo animal, mas o caminho dobra >2 vezes — não liga. Tente!',
+  pt:'Mesmo animal, mas o caminho dobra >2 vezes — não liga. Tenta!',
+  fr:'Même animal, mais le chemin tourne >2 fois — ne relie pas. Essaie !',
+  de:'Gleiches Tier, aber der Weg knickt >2× — verbindet nicht. Probier!',
+  it:'Stesso animale, ma il percorso piega >2 volte — non collega. Prova!',
+  nl:'Zelfde dier, maar het pad buigt >2× — verbindt niet. Probeer!',
+  pl:'To samo zwierzę, ale ścieżka skręca >2× — nie łączy. Spróbuj!',
+  ru:'Тот же зверь, но путь гнётся >2 раз — не соединить. Попробуй!',
+  tr:'Aynı hayvan ama yol >2 kez dönüyor — bağlanmaz. Dene!',
+  ar:'نفس الحيوان، لكن المسار ينثني أكثر من مرتين — لا يتصل. جرّب!',
+  hi:'वही जानवर, पर रास्ता >2 बार मुड़ता है — नहीं जुड़ता। आज़माएँ!',
+  th:'สัตว์เดียวกัน แต่เส้นหักเกิน 2 ครั้ง — ต่อไม่ได้ ลองดู!',
+  id:'Hewan sama, tapi jalur berbelok >2× — tak nyambung. Coba!',
+  fil:'Parehong hayop, pero >2 liko ang daan — ’di kumokonekta. Subukan!',
+};
+/* Sau khi VẼ đường quá vòng: xác nhận "quá nhiều lần rẽ" */
+const TUT_BENDSEE = {
+  en:'See? Too many bends — over 2!', vi:'Thấy chưa? Rẽ quá nhiều — hơn 2 lần!',
+  'zh-Hans':'看到没？转太多次 — 超过 2 次！', 'zh-Hant':'看到沒？轉太多次 — 超過 2 次！',
+  ja:'ほら、曲がりすぎ — 2回超え！', ko:'봤죠? 너무 많이 꺾여요 — 2번 초과!',
+  es:'¿Ves? Demasiadas vueltas — ¡más de 2!', 'es-MX':'¿Ves? Demasiadas vueltas — ¡más de 2!',
+  'es-AR':'¿Ves? Demasiadas vueltas — ¡más de 2!', 'pt-BR':'Viu? Curvas demais — mais de 2!',
+  pt:'Vês? Curvas demais — mais de 2!', fr:'Tu vois ? Trop de virages — plus de 2 !',
+  de:'Siehst du? Zu viele Knicke — über 2!', it:'Visto? Troppe curve — più di 2!',
+  nl:'Zie je? Te veel bochten — meer dan 2!', pl:'Widzisz? Za dużo zakrętów — ponad 2!',
+  ru:'Видишь? Слишком много поворотов — больше 2!', tr:'Gördün mü? Çok fazla dönüş — 2’den fazla!',
+  ar:'رأيت؟ انعطافات كثيرة — أكثر من 2!', hi:'देखा? बहुत ज़्यादा मोड़ — 2 से ज़्यादा!',
+  th:'เห็นไหม? หักเยอะไป — เกิน 2 ครั้ง!', id:'Lihat? Terlalu banyak belok — lebih dari 2!',
+  fil:'Kita mo? Sobrang daming liko — higit sa 2!',
+};
+/* Nhắc khi bấm nhầm cặp trong tutorial */
+const TUT_PICK = {
+  en:'Tap the glowing pair!', vi:'Chạm cặp đang sáng!',
+  'zh-Hans':'点发光的那一对！', 'zh-Hant':'點發光的那一對！', ja:'光っているペアをタップ！', ko:'빛나는 짝을 탭하세요!',
+  es:'¡Toca el par que brilla!', 'es-MX':'¡Toca el par que brilla!', 'es-AR':'¡Tocá el par que brilla!',
+  'pt-BR':'Toque no par que brilha!', pt:'Toca no par que brilha!', fr:'Touche la paire qui brille !',
+  de:'Tippe das leuchtende Paar an!', it:'Tocca la coppia che brilla!', nl:'Tik op het lichtende paar!',
+  pl:'Dotknij świecącej pary!', ru:'Нажми светящуюся пару!', tr:'Parlayan çifte dokun!',
+  ar:'المس الزوج المتوهج!', hi:'चमकती जोड़ी पर टैप करें!', th:'แตะคู่ที่เรืองแสง!',
+  id:'Ketuk pasangan yang menyala!', fil:'Tapikin ang nagniningning na pares!',
+};
 Object.keys(I18N).forEach(k => {
-  I18N[k].tutFail  = TUT_FAIL[k]  || TUT_FAIL.en;
-  I18N[k].tutClear = TUT_CLEAR[k] || TUT_CLEAR.en;
+  I18N[k].tutFail    = TUT_FAIL[k]    || TUT_FAIL.en;
+  I18N[k].tutClear   = TUT_CLEAR[k]   || TUT_CLEAR.en;
+  I18N[k].tutBend    = TUT_BENDTXT[k] || TUT_BENDTXT.en;
+  I18N[k].tutBendSee = TUT_BENDSEE[k] || TUT_BENDSEE.en;
+  I18N[k].tutPick    = TUT_PICK[k]    || TUT_PICK.en;
 });
 
 /* Lời khen khi nối nhanh (cơ chế giờ ẩn) — 2 mức */
@@ -1226,6 +1311,7 @@ let resultTimer = 0;       // setTimeout gửi game_result/victory (huỷ khi lo
 let menuOpen    = false;   // (vestigial) luôn false — không còn màn menu, giữ để các gate còn hợp lệ
 let tutorialMode = false;  // đang chạy tutorial tương tác
 let tutStep      = 0;
+let tutTarget    = null;   // cặp người chơi cần nối ở stage đang "dạy nối"
 let tutorialSeen = false;  // đã qua tutorial chưa (persist qua save_data + localStorage)
 let confirmOpen = false;   // (vestigial) luôn false — giữ để các gate còn hợp lệ
 
@@ -1458,6 +1544,57 @@ function findPath(r1, c1, r2, c2) {
   return null;
 }
 
+/* Tìm đường có SỐ RẼ ÍT NHẤT (cho phép >2 rẽ) — để MINH HOẠ vì sao 1 cặp không
+ * nối được (cần >2 lần rẽ). 0-1 BFS trên (ô, hướng). Trả {pts (padded), bends, turns}. */
+function findMinTurnPath(r1, c1, r2, c2) {
+  const H = ROWS + 2, W = COLS + 2;
+  const A = [r1 + 1, c1 + 1], B = [r2 + 1, c2 + 1];
+  const passable = (pr, pc) => {
+    if (pr < 0 || pr >= H || pc < 0 || pc >= W) return false;
+    if (pr === B[0] && pc === B[1]) return true;
+    const gr = pr - 1, gc = pc - 1;
+    if (gr < 0 || gr >= ROWS || gc < 0 || gc >= COLS) return true;
+    return grid[gr][gc] < 0;
+  };
+  const DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  const key = (pr, pc, d) => (pr * W + pc) * 4 + d;
+  const best = new Map(), parent = new Map();
+  const dq = [];
+  for (let d = 0; d < 4; d++) {
+    const nr = A[0] + DIRS[d][0], nc = A[1] + DIRS[d][1];
+    if (passable(nr, nc)) { best.set(key(A[0], A[1], d), 0); parent.set(key(A[0], A[1], d), -1); dq.push({ pr: A[0], pc: A[1], d, t: 0 }); }
+  }
+  let endK = -1, endT = Infinity;
+  while (dq.length) {
+    const cur = dq.shift();
+    const ck = key(cur.pr, cur.pc, cur.d);
+    if (best.get(ck) < cur.t) continue;
+    if (cur.pr === B[0] && cur.pc === B[1]) { if (cur.t < endT) { endT = cur.t; endK = ck; } continue; }
+    if (cur.t > 6) continue;
+    for (let nd = 0; nd < 4; nd++) {
+      const nr = cur.pr + DIRS[nd][0], nc = cur.pc + DIRS[nd][1];
+      if (!passable(nr, nc)) continue;
+      const nt = cur.t + (nd === cur.d ? 0 : 1);
+      const nk = key(nr, nc, nd);
+      if (nt < (best.has(nk) ? best.get(nk) : Infinity)) {
+        best.set(nk, nt); parent.set(nk, ck);
+        (nd === cur.d) ? dq.unshift({ pr: nr, pc: nc, d: nd, t: nt }) : dq.push({ pr: nr, pc: nc, d: nd, t: nt });
+      }
+    }
+  }
+  if (endK < 0) return null;
+  const chain = [];
+  for (let k = endK; k !== -1; k = parent.get(k)) {
+    const d = k % 4, cell = (k - d) / 4;
+    chain.push([Math.floor(cell / W), cell % W, d]);
+  }
+  chain.reverse();
+  const pts = chain.map(c => [c[0], c[1]]);
+  const bends = [];
+  for (let i = 1; i < chain.length - 1; i++) if (chain[i][2] !== chain[i + 1][2]) bends.push([chain[i][0], chain[i][1]]);
+  return { pts, bends, turns: endT };
+}
+
 /* Có còn nước đi nào không? (quét theo loại, thoát sớm) */
 function hasMoves() { return findAnyPair(false) !== null; }
 
@@ -1503,6 +1640,20 @@ function drawLink(pathPts) {
     `<polyline class="link-path under link-anim" points="${ptsAttr}"/>` +
     `<polyline class="link-path link-anim" points="${ptsAttr}"/>`;
   linkTimer = setTimeout(() => { linkSvg.innerHTML = ''; }, 380);
+}
+
+/* MINH HOẠ tutorial: vẽ đường "quá vòng" (>2 rẽ) màu đỏ nét đứt + chấm tại mỗi
+   chỗ rẽ → cho người chơi THẤY vì sao cặp này không nối được. */
+function drawBendPath(pts, bends, holdMs) {
+  const toXY = ([pr, pc]) => [pc * cellPx + cellPx / 2, pr * cellPx + cellPx / 2];
+  const ptsAttr = pts.map(toXY).map(([x, y]) => `${x},${y}`).join(' ');
+  let dots = '';
+  bends.forEach(b => { const [x, y] = toXY(b); dots += `<circle class="bend-dot" cx="${x}" cy="${y}" r="${cellPx * 0.16}"/>`; });
+  clearTimeout(linkTimer);
+  linkSvg.innerHTML =
+    `<polyline class="bend-path-under" points="${ptsAttr}"/>` +
+    `<polyline class="bend-path" points="${ptsAttr}"/>` + dots;
+  linkTimer = setTimeout(() => { linkSvg.innerHTML = ''; }, holdMs || 2000);
 }
 
 /* ================================================================
@@ -1588,16 +1739,27 @@ function handleTap(r, c) {
   const { r: sr, c: sc } = selected;
   if (sr === r && sc === c) { deselect(); return; }
 
-  if (grid[sr][sc] === grid[r][c]) {
-    const path = findPath(sr, sc, r, c);
-    if (path) { doMatch([sr, sc], [r, c], path); return; }
+  const same = grid[sr][sc] === grid[r][c];
+  const path = same ? findPath(sr, sc, r, c) : null;
+
+  if (tutorialMode && tutStep < 2) {
+    if (tutStep === 0) {                         // STAGE 0 — chỉ cho nối cặp được chỉ
+      if (path && isTutTarget(sr, sc, r, c)) { doMatch([sr, sc], [r, c], path); return; }
+      if (same && path) { tutWrongChoice(sr, sc, r, c); return; }   // cặp giống nhưng sai chỗ
+    } else {                                     // STAGE 1 — demo đường "quá vòng"
+      if (same && !path) { deselect(); tutShowBend(sr, sc, r, c); return; }  // cặp bị chặn → VẼ 3 rẽ
+      if (same && path)  { tutWrongChoice(sr, sc, r, c); return; }           // chọn sai
+    }
+    // khác loại → nhắc nhẹ, đổi ô chọn
+    SND.bad(); shakeTile(sr, sc); shakeTile(r, c); deselect(); select(r, c);
+    return;
   }
-  // Không nối được / khác loại → rung nhẹ cả hai
+
+  if (same && path) { doMatch([sr, sc], [r, c], path); return; }
+  // Không nối được / khác loại → rung nhẹ cả hai, đổi ô chọn
   SND.bad();
   shakeTile(sr, sc); shakeTile(r, c);
   deselect();
-  // Tutorial: bài học "nối sai" — đã thử 2 con không nối được → sang bước dọn bàn
-  if (tutorialMode && tutStep === 1) { setTutPhase(2); return; }
   select(r, c);
 }
 
@@ -1670,7 +1832,8 @@ async function doMatch(a, b, path) {
     tA.el.classList.add('pop'); tB.el.classList.add('pop');
 
     if (tutorialMode) {
-      tutOnMatch();                        // tutorial 1 bàn: chuyển bước / hoàn thành
+      spawnCheck((ar + br) / 2, (ac + bc) / 2);   // ✓ nhấn mạnh "đã nối"
+      tutOnMatch();                                // tutorial: chuyển bước / hoàn thành
     } else if (pairsLeft <= 0) {
       winLevel();
     }
@@ -1908,6 +2071,17 @@ function showPraise(text, bonus) {
   el.classList.add('praise-anim');
 }
 
+/* Tick ✓ nổ ra ở giữa cặp vừa nối (nhấn mạnh "connection" trong tutorial) */
+function spawnCheck(boardR, boardC) {
+  const br = boardEl.getBoundingClientRect();
+  const el = document.getElementById('tut-check');
+  el.style.left = (br.left + boardC * cellPx + cellPx / 2) + 'px';
+  el.style.top  = (br.top  + boardR * cellPx + cellPx / 2) + 'px';
+  el.classList.remove('tut-check-anim');
+  void el.offsetWidth;
+  el.classList.add('tut-check-anim');
+}
+
 let toastTimer = null;
 function showToast(msg) {
   const el = document.getElementById('toast');
@@ -2019,14 +2193,24 @@ function loadLevel(idx) {
 }
 
 /* ================================================================
- * §18b. Tutorial — 1 BÀN duy nhất, KHÔNG chuyển cảnh.
- * Bước 0: nối 2 con GIỐNG nhau → bước 1: thử nối 2 con KHÁC nhau (sẽ FAIL)
- * → bước 2: dọn sạch bàn. Bắt buộc lần đầu mở game (cờ tutorialSeen persist).
+ * §18b. Tutorial — 1 BÀN 5×5 duy nhất, KHÔNG chuyển cảnh.
+ * Stage 0: NỐI 2 con giống nhau (chỉ cho nối cặp được chỉ) → ✓.
+ * Stage 1: thử nối cặp CÙNG loại BỊ CHẶN → game VẼ đường "quá vòng" (3 lần rẽ,
+ *   >2) để thấy vì sao không nối được. Bấm nhầm cặp giống-nối-được → nhắc.
+ * Stage 2: DỌN NỐT cả bàn (cặp bị chặn mở ra sau khi dọn blocker) → xong.
+ * Bắt buộc lần đầu mở game (tutorialSeen persist).
  * ================================================================ */
-const TUT_COLS = 4, TUT_ROWS = 2;
-const TUT_TILES = [            // [r, c, type] — mọi cặp đều kề nhau nên luôn nối được
-  [0, 0, 3], [0, 1, 3], [0, 2, 6], [0, 3, 6],
-  [1, 0, 0], [1, 1, 0], [1, 2, 4], [1, 3, 4],
+const TUT_COLS = 5, TUT_ROWS = 5;
+const TUT_CONNECT = [[4, 0], [4, 1]];   // cặp dễ, tách biệt — dạy nối (stage 0)
+const TUT_BEND    = [[1, 1], [3, 2]];   // cặp CÙNG loại nhưng cần 3 lần rẽ (stage 1)
+const TUT_TILES = [                       // [r, c, type] — bàn 5×5 hơi rối
+  [0, 2, 6], [0, 3, 6],                  // H
+  [1, 1, 0], [3, 2, 0],                  // B = TUT_BEND (cùng loại, đường 3 rẽ)
+  [1, 2, 5], [2, 1, 5],                  // X — chặn quanh B
+  [2, 0, 7], [3, 0, 7],                  // Y — chặn cột trái
+  [1, 4, 9], [2, 4, 9],                  // I
+  [3, 3, 8], [3, 4, 8],                  // G
+  [4, 0, 3], [4, 1, 3],                  // E = TUT_CONNECT (cặp dạy nối)
 ];
 
 function startTutorial() {
@@ -2036,7 +2220,7 @@ function startTutorial() {
   tutorialMode = true;
   COLS = TUT_COLS; ROWS = TUT_ROWS;
   busy = false; ended = false; paused = false;
-  selected = null; hintPair = null; comboStreak = 0; idleAcc = 0;
+  selected = null; hintPair = null; comboStreak = 0; idleAcc = 0; tutTarget = null;
   linkSvg.innerHTML = '';
   pairsLeft = TUT_TILES.length / 2;
 
@@ -2049,43 +2233,67 @@ function startTutorial() {
   setTutPhase(0);
 }
 
-/* Đổi bước tutorial: cập nhật banner + gợi ý cặp phù hợp */
+/* Stage 0=nối cặp được chỉ · 1=demo đường 3 rẽ · 2=dọn nốt */
 function setTutPhase(n) {
   tutStep = n;
   const txt = document.getElementById('tut-text');
   clearHint();
-  if (n === 0)      { txt.textContent = t('tut1');     highlightTutPair(true);  }  // nối 2 con giống nhau
-  else if (n === 1) { txt.textContent = t('tutFail');  highlightTutPair(false); }  // thử nối 2 con KHÁC nhau
-  else              { txt.textContent = t('tutClear'); }                            // dọn sạch bàn
+  if (n === 0)      { txt.textContent = t('tut1');    tutTarget = TUT_CONNECT.map(p => p.slice()); highlightPair(TUT_CONNECT); }
+  else if (n === 1) { txt.textContent = t('tutBend'); tutTarget = null; highlightPair(TUT_BEND); }
+  else              { txt.textContent = t('tutClear'); tutTarget = null; highlightPair(findAnyPair(true)); }
 }
 
-/* Gợi ý: same=true → 1 cặp nối được; same=false → 2 tile khác loại (để dạy fail) */
-function highlightTutPair(same) {
-  let pair = null;
-  if (same) {
-    pair = findAnyPair(true);
-  } else {
-    const spots = [];
-    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (grid[r][c] >= 0) spots.push([r, c]);
-    for (let i = 0; i < spots.length && !pair; i++)
-      for (let j = i + 1; j < spots.length; j++)
-        if (grid[spots[i][0]][spots[i][1]] !== grid[spots[j][0]][spots[j][1]]) { pair = [spots[i], spots[j]]; break; }
-  }
+function highlightPair(pair) {
+  clearHint();
   if (!pair) return;
   hintPair = pair.map(p => p.slice());
   for (const [r, c] of pair) if (tiles[r][c]) tiles[r][c].el.classList.add('hint');
 }
 
-/* Gọi sau mỗi lần nối THÀNH CÔNG trong tutorial */
+function isTutTarget(r1, c1, r2, c2) {
+  if (!tutTarget) return false;
+  const [a, b] = tutTarget;
+  return (a[0] === r1 && a[1] === c1 && b[0] === r2 && b[1] === c2) ||
+         (a[0] === r2 && a[1] === c2 && b[0] === r1 && b[1] === c1);
+}
+
+/* Chọn SAI (cặp giống nhau nối được nhưng không phải cặp đang dạy) → nhắc + nháy lại */
+function tutWrongChoice(r1, c1, r2, c2) {
+  SND.bad();
+  shakeTile(r1, c1); shakeTile(r2, c2);
+  deselect();
+  if (hintPair) for (const [r, c] of hintPair) if (tiles[r][c]) {
+    tiles[r][c].el.classList.remove('hint'); void tiles[r][c].el.offsetWidth; tiles[r][c].el.classList.add('hint');
+  }
+  showToast(t('tutPick'));
+}
+
+/* Cặp cùng loại bị chặn → VẼ đường "quá vòng" (>2 rẽ) cho thấy, rồi sang stage 2 */
+function tutShowBend(r1, c1, r2, c2) {
+  SND.bad();
+  clearHint();
+  const res = findMinTurnPath(r1, c1, r2, c2);
+  if (res) drawBendPath(res.pts, res.bends, 2300);
+  shakeTile(r1, c1); shakeTile(r2, c2);
+  document.getElementById('tut-text').textContent = t('tutBendSee');
+  busy = true;                       // khoá input trong lúc minh hoạ
+  setTimeout(() => {
+    busy = false;
+    linkSvg.innerHTML = '';
+    if (tutorialMode) setTutPhase(2);
+  }, 2400);
+}
+
+/* Gọi khi nối THÀNH CÔNG trong tutorial */
 function tutOnMatch() {
-  if (pairsLeft <= 0) {                    // dọn sạch → hoàn thành
+  if (tutStep === 0) { setTutPhase(1); return; }   // đã biết nối → dạy cặp bị chặn
+  if (pairsLeft <= 0) {                             // stage 2 dọn sạch → xong
     document.getElementById('tut-text').textContent = t('tutDone');
     clearHint();
     setTimeout(() => { if (tutorialMode) finishTutorial(); }, 1100);
-  } else if (tutStep === 0) {
-    setTutPhase(1);                        // đã biết nối → sang bài học "nối sai"
+    return;
   }
-  // bước 1/2 mà chưa sạch → cứ chơi tiếp
+  highlightPair(findAnyPair(true));                 // stage 2: gợi ý cặp kế
 }
 
 /* Xong / skip tutorial: đánh dấu đã xem, vào ván thật */

@@ -392,12 +392,13 @@ const I18N = {
     sound:'Sound', close:'Close', skip:'Skip', stageClear:'Shattered!', closeCall:'Close!', tapCue:'TAP!',
     razor:'Razor!', needle:'Needle!', overkill:'OVERKILL!', uncharted:'New depth!', deepest:'Deepest', echoBroken:'Echo broken!', missedBy:'Missed by {n}°',
     tagline:'Throw daggers · Dodge steel · Shatter the totem',
-    tut1:'Tap to throw a dagger into the totem!',
+    tut1:'Tap to throw a knife!',
     tut2:'Never hit a dagger already stuck!',
     tutRetry:'Careful! Try again',
     tut3:'Spend every dagger to shatter the totem!',
     tutGem:'Tap to strike the soul gem!',
     tutFree:'Now throw one on your own!',
+    tutTry:'Try to throw a knife!',
     tutDone:'You’re ready!',
     infoThrow:'Tap to throw a dagger into the spinning totem',
     infoAvoid:'Hit a stuck dagger and the run is over',
@@ -416,6 +417,7 @@ const I18N = {
     tut3:'Cắm hết dao để đập vỡ totem!',
     tutGem:'Chạm để phóng trúng ngọc hồn!',
     tutFree:'Giờ tự phóng một dao nào!',
+    tutTry:'Thử phóng một dao xem!',
     tutDone:'Sẵn sàng rồi!',
     infoThrow:'Chạm để phóng dao vào totem đang xoay',
     infoAvoid:'Trúng dao đã cắm là thua ngay',
@@ -434,6 +436,7 @@ const I18N = {
     tut3:'掷出全部飞刀，击碎图腾！',
     tutGem:'点击击中魂玉！',
     tutFree:'现在自己掷一刀试试！',
+    tutTry:'试着掷出一刀！',
     tutDone:'准备就绪！',
     infoThrow:'点击屏幕，将飞刀掷向旋转的图腾',
     infoAvoid:'击中已插上的飞刀即告失败',
@@ -452,6 +455,7 @@ const I18N = {
     tut3:'擲出全部飛刀，擊碎圖騰！',
     tutGem:'點擊擊中魂玉！',
     tutFree:'現在自己擲一刀試試！',
+    tutTry:'試著擲出一刀！',
     tutDone:'準備就緒！',
     infoThrow:'點擊螢幕，將飛刀擲向旋轉的圖騰',
     infoAvoid:'擊中已插上的飛刀即告失敗',
@@ -470,6 +474,7 @@ const I18N = {
     tut3:'ダガーを全部刺してトーテムを砕こう！',
     tutGem:'タップして魂の宝玉を狙おう！',
     tutFree:'今度は自分で投げてみよう！',
+    tutTry:'試しに投げてみて！',
     tutDone:'準備完了！',
     infoThrow:'タップして回転するトーテムにダガーを投げる',
     infoAvoid:'刺さったダガーに当たるとゲームオーバー',
@@ -488,6 +493,7 @@ const I18N = {
     tut3:'단검을 모두 꽂아 토템을 부수세요!',
     tutGem:'탭해서 소울 젬을 맞히세요!',
     tutFree:'이제 직접 던져 보세요!',
+    tutTry:'단검을 던져 보세요!',
     tutDone:'준비 완료!',
     infoThrow:'탭하여 회전하는 토템에 단검 던지기',
     infoAvoid:'꽂힌 단검에 맞으면 게임 오버',
@@ -506,6 +512,7 @@ const I18N = {
     tut3:'¡Clava todas las dagas para romper el tótem!',
     tutGem:'¡Toca para golpear la gema del alma!',
     tutFree:'¡Ahora lanza una tú mismo!',
+    tutTry:'¡Intenta lanzar una daga!',
     tutDone:'¡Listo!',
     infoThrow:'Toca para lanzar una daga al tótem giratorio',
     infoAvoid:'Si golpeas una daga clavada, pierdes',
@@ -524,6 +531,7 @@ const I18N = {
     tut3:'¡Clava todas las dagas para romper el tótem!',
     tutGem:'¡Toca para pegarle a la gema del alma!',
     tutFree:'¡Ahora avienta una tú mismo!',
+    tutTry:'¡Intenta aventar una daga!',
     tutDone:'¡Listo!',
     infoThrow:'Toca para lanzar una daga al tótem giratorio',
     infoAvoid:'Si le pegas a una daga clavada, pierdes',
@@ -542,6 +550,7 @@ const I18N = {
     tut3:'¡Clavá todas las dagas para romper el tótem!',
     tutGem:'¡Tocá para pegarle a la gema del alma!',
     tutFree:'¡Ahora lanzá una vos mismo!',
+    tutTry:'¡Probá lanzar una daga!',
     tutDone:'¡Listo!',
     infoThrow:'Tocá para lanzar una daga al tótem giratorio',
     infoAvoid:'Si golpeás una daga clavada, perdés',
@@ -560,6 +569,7 @@ const I18N = {
     tut3:'Crave todas as adagas para quebrar o totem!',
     tutGem:'Toque para acertar a gema da alma!',
     tutFree:'Agora arremesse uma você mesmo!',
+    tutTry:'Tente arremessar uma adaga!',
     tutDone:'Pronto!',
     infoThrow:'Toque para arremessar uma adaga no totem giratório',
     infoAvoid:'Acertar uma adaga cravada encerra a partida',
@@ -578,6 +588,7 @@ const I18N = {
     tut3:'Crave todas as adagas para quebrar o totem!',
     tutGem:'Toque para acertar a gema da alma!',
     tutFree:'Agora lance uma você mesmo!',
+    tutTry:'Tente lançar uma adaga!',
     tutDone:'Pronto!',
     infoThrow:'Toque para lançar uma adaga contra o totem giratório',
     infoAvoid:'Acertar numa adaga cravada termina a partida',
@@ -596,6 +607,7 @@ const I18N = {
     tut3:'Plantez toutes les dagues pour briser le totem !',
     tutGem:'Frappez la gemme des âmes !',
     tutFree:'À vous de lancer une dague !',
+    tutTry:'Essayez de lancer une dague !',
     tutDone:'Vous êtes prêt !',
     infoThrow:'Touchez pour lancer une dague sur le totem qui tourne',
     infoAvoid:'Toucher une dague plantée met fin à la partie',
@@ -614,6 +626,7 @@ const I18N = {
     tut3:'Setze alle Dolche, um das Totem zu zerschmettern!',
     tutGem:'Tippe, um den Seelenstein zu treffen!',
     tutFree:'Jetzt wirf selbst einen!',
+    tutTry:'Versuch, einen Dolch zu werfen!',
     tutDone:'Bereit!',
     infoThrow:'Tippe, um einen Dolch auf das drehende Totem zu werfen',
     infoAvoid:'Triffst du einen steckenden Dolch, ist der Lauf vorbei',
@@ -632,6 +645,7 @@ const I18N = {
     tut3:'Conficca tutti i pugnali per frantumare il totem!',
     tutGem:'Colpisci la gemma delle anime!',
     tutFree:'Ora lancia tu un pugnale!',
+    tutTry:'Prova a lanciare un pugnale!',
     tutDone:'Sei pronto!',
     infoThrow:'Tocca per lanciare un pugnale sul totem rotante',
     infoAvoid:'Colpire un pugnale conficcato termina la partita',
@@ -650,6 +664,7 @@ const I18N = {
     tut3:'Gebruik alle dolken om de totem te versplinteren!',
     tutGem:'Tik om de zielsgem te raken!',
     tutFree:'Werp er nu zelf een!',
+    tutTry:'Probeer een dolk te werpen!',
     tutDone:'Klaar!',
     infoThrow:'Tik om een dolk naar de draaiende totem te werpen',
     infoAvoid:'Een vastzittende dolk raken beëindigt de run',
@@ -668,6 +683,7 @@ const I18N = {
     tut3:'Wbij wszystkie sztylety, aby roztrzaskać totem!',
     tutGem:'Dotknij, aby trafić w klejnot duszy!',
     tutFree:'Teraz rzuć sam!',
+    tutTry:'Spróbuj rzucić sztylet!',
     tutDone:'Gotowe!',
     infoThrow:'Dotknij, aby rzucić sztylet w wirujący totem',
     infoAvoid:'Trafienie we wbity sztylet kończy grę',
@@ -686,6 +702,7 @@ const I18N = {
     tut3:'Воткните все кинжалы, чтобы разбить тотем!',
     tutGem:'Коснитесь, чтобы попасть в камень души!',
     tutFree:'Теперь метните сами!',
+    tutTry:'Попробуйте метнуть кинжал!',
     tutDone:'Вы готовы!',
     infoThrow:'Коснитесь, чтобы метнуть кинжал во вращающийся тотем',
     infoAvoid:'Попадание в воткнутый кинжал — конец игры',
@@ -704,6 +721,7 @@ const I18N = {
     tut3:'Totemi parçalamak için tüm hançerleri sapla!',
     tutGem:'Ruh mücevherine vurmak için dokun!',
     tutFree:'Şimdi kendin bir tane fırlat!',
+    tutTry:'Bir hançer fırlatmayı dene!',
     tutDone:'Hazırsın!',
     infoThrow:'Dönen toteme hançer fırlatmak için dokun',
     infoAvoid:'Saplı bir hançere çarparsan oyun biter',
@@ -722,6 +740,7 @@ const I18N = {
     tut3:'اغرس كل الخناجر لتحطيم الطوطم!‏',
     tutGem:'انقر لإصابة جوهرة الروح!‏',
     tutFree:'الآن ارمِ خنجرًا بنفسك!‏',
+    tutTry:'حاول رمي خنجر!‏',
     tutDone:'أنت جاهز!‏',
     infoThrow:'انقر لرمي خنجر نحو الطوطم الدوّار',
     infoAvoid:'إصابة خنجر مغروس تُنهي الجولة',
@@ -740,6 +759,7 @@ const I18N = {
     tut3:'सारी कटारें गाड़कर टोटेम तोड़ो!',
     tutGem:'सोल जेम पर मारने के लिए टैप करें!',
     tutFree:'अब खुद एक कटार फेंको!',
+    tutTry:'एक कटार फेंककर देखो!',
     tutDone:'आप तैयार हैं!',
     infoThrow:'घूमते टोटेम पर कटार फेंकने के लिए टैप करें',
     infoAvoid:'गड़ी कटार से टकराने पर खेल समाप्त',
@@ -758,6 +778,7 @@ const I18N = {
     tut3:'ปักมีดให้ครบเพื่อทุบโทเท็ม!',
     tutGem:'แตะเพื่อโดนอัญมณีวิญญาณ!',
     tutFree:'ตอนนี้ลองขว้างเองดู!',
+    tutTry:'ลองขว้างมีดดูสิ!',
     tutDone:'พร้อมแล้ว!',
     infoThrow:'แตะเพื่อขว้างมีดใส่โทเท็มที่หมุนอยู่',
     infoAvoid:'ขว้างโดนมีดที่ปักอยู่ = จบเกม',
@@ -776,6 +797,7 @@ const I18N = {
     tut3:'Tancapkan semua belati untuk menghancurkan totem!',
     tutGem:'Ketuk untuk mengenai permata jiwa!',
     tutFree:'Sekarang lempar sendiri satu!',
+    tutTry:'Coba lempar belati!',
     tutDone:'Siap!',
     infoThrow:'Ketuk untuk melempar belati ke totem yang berputar',
     infoAvoid:'Mengenai belati yang menancap = kalah',
@@ -794,6 +816,7 @@ const I18N = {
     tut3:'Ibaon lahat ng punyal para madurog ang totem!',
     tutGem:'I-tap para tamaan ang soul gem!',
     tutFree:'Ngayon, maghagis ka mismo!',
+    tutTry:'Subukang maghagis ng punyal!',
     tutDone:'Handa ka na!',
     infoThrow:'I-tap para maghagis ng punyal sa umiikot na totem',
     infoAvoid:'Pagtama sa nakabaon na punyal = talo',
@@ -932,15 +955,18 @@ const ADS_EVERY = 3;        // mỗi 3 ván thua → xin app hiện quảng cáo
 const SPAWN_MS = 1000;      // totem mới PHÌNH TỪ TÂM ra trong ~1s (chặn touch tới khi xong)
 const BREAK_MS = 100;       // vỡ xong → mảnh bung ra là lòi ngay totem trong (nested reveal)
 const GEM_SCORE = 5;
-/* Tutorial choreograph (1 totem, KHÔNG chuyển cảnh) — totem xoay tới các góc
-   rồi FREEZE để người chơi tap. dir +1. 3 mốc đầu cách nhau 120° → 3 dao ĐỐI
-   XỨNG (90°/330°/210°); mốc thứ 4 quay lại đúng DAO #1 (90°) → người chơi phi
-   trúng dao cũ = CHẾT (demo), rồi tự phi cú an toàn. */
-const TUT_CRUISE = 2.6;                 // tốc độ xoay tutorial (rad/s)
+/* Tutorial choreograph (1 totem, KHÔNG chuyển cảnh) — totem xoay STEADY (tốc độ
+   đều), chỉ 20° CUỐI mới giảm tốc từ từ đến FREEZE thì mới hiện banner; xong lại
+   speed-up lặp lại. dir +1. 3 mốc đầu cách 120° → 3 dao ĐỐI XỨNG (90°/330°/210°),
+   dao #3 trúng GEM; mốc 4 quay lại đúng DAO #1 (90°) → phi trúng = CHẾT (demo). */
+const TUT_CRUISE = 2.6;                 // tốc độ xoay steady (rad/s)
+const TUT_DECEL_ARC = 20 * Math.PI / 180;   // 20° cuối: giảm tốc dần tới freeze
+const TUT_MIN_W = 0.4;                  // sàn tốc độ trong pha giảm (khỏi bò quá lâu)
+const TUT_GEM_A = 7 * Math.PI / 6;      // 210° — ngọc rơi đúng impact tại mốc 3
 const TUT_FREEZES = [
-  4 * Math.PI,                          // F1 — sau đúng 2 vòng (dao #1 @ 90°)
+  4 * Math.PI,                          // F1 — sau ~2 vòng (dao #1 @ 90°)
   4 * Math.PI + 2 * Math.PI / 3,        // F2 — +120° (dao #2 @ 330°)
-  4 * Math.PI + 4 * Math.PI / 3,        // F3 — +120° (dao #3 @ 210°)
+  4 * Math.PI + 4 * Math.PI / 3,        // F3 — +120° (dao #3 @ 210° = TRÚNG GEM)
   6 * Math.PI,                          // F4 — +120° (quay lại đúng dao #1 → demo chết)
 ];
 const STAGE_BONUS = 2;      // thưởng phá totem thường
@@ -1341,9 +1367,6 @@ function resize() {
   const gap = (knifeIdleY - KNIFE_TIP) - (disc.y + disc.R);
   if (gap < 90) disc.R = Math.max(64, disc.R - (90 - gap));
   if (cfg) buildDiscSprite();                       // R đổi → dựng lại sprite
-  /* dao "ma" của demo tutorial lưu y tuyệt đối — resize dời rim/knifeIdleY thì
-     nó thành lệch (hit oan, mất animation); reset cho nó bay lại từ vị trí mới */
-  if (tutorial && tutorial.demo && !tutorial.demo.hit) tutorial.demo.y = knifeIdleY;
 }
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', () => setTimeout(resize, 120));
@@ -1953,7 +1976,7 @@ function newRun() {
 function tutCfg() {
   return {
     boss: false, knives: 99, speed: TUT_CRUISE, dir: 1, pattern: 'steady',
-    period: 2, flipT: 2, phase0: 0, pre: [], gems: [],
+    period: 2, flipT: 2, phase0: 0, pre: [], gems: [TUT_GEM_A],
     accent: '#35e0ff', sigil: 2,
   };
 }

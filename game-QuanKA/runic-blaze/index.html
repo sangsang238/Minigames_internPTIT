@@ -85,54 +85,62 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   align-items: center;
 }
 
-/* ── Header (khung skydom): Back | SCORE · BEST | Volume ───────── */
+/* ── Header chuẩn chung: Back | SCORE ★ | BEST ♛ | Volume ──────── */
 #topbar {
   width: 100%;
   max-width: 520px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   padding: 0 max(10px, env(safe-area-inset-right)) 0 max(10px, env(safe-area-inset-left));
   /* padding-top do JS bơm = max(statusBarHeight, env-safe) + 8 */
 }
 
-/* Thanh điểm giữa (khung skydom, skin dark-fantasy: obsidian glass) */
-.scorebar {
+.hud-scores {
   flex: 1;
   min-width: 0;
   display: flex;
-  justify-content: center;
-  gap: 10px;
-  padding: 0 6px;
+  gap: 6px;
 }
-.sc-box {
+.hud-pill {
   flex: 1 1 0;
   min-width: 0;
-  max-width: 150px;
+  overflow: hidden;
+  background: rgba(20, 12, 40, 0.55);
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  padding: 5px 8px 6px 4px;       /* icon ghim sát mép trái (chuẩn chung) */
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  line-height: 1.04;
-  padding: 5px 12px 7px;
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  border-radius: 14px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 4px 14px rgba(0,0,0,.4);
-  overflow: hidden;
+  gap: 5px;
+  box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.08),
+              0 3px 8px rgba(0, 0, 0, 0.35);
 }
-.sc-k {
-  font-size: 10px; letter-spacing: 1.5px; font-weight: 800;
-  color: var(--text-soft); text-transform: uppercase;
-  max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.pill-text { display: flex; flex-direction: column; align-items: center; min-width: 0; flex: 1 0 auto; }
+.pill-ico {
+  flex: 0 0 auto;
+  width: clamp(16px, 4.8vw, 21px); height: clamp(16px, 4.8vw, 21px); display: block;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));
 }
-.sc-v {
-  font-size: 25px; color: var(--text);
-  max-width: 100%; white-space: nowrap;
-  text-shadow: 0 2px 6px rgba(0,0,0,.5);
+.hud-pill .label {
+  font-size: clamp(9px, 3vw, 12px);
+  font-family: system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--text-soft);
+  line-height: 1.05;
+  white-space: nowrap;
 }
-.sc-v.best { color: #ffd23f; }   /* BEST vàng (chuẩn header) */
+.hud-pill .value {
+  font-size: clamp(15px, 4.6vw, 22px);
+  line-height: 1.1;
+  color: var(--text);
+  white-space: nowrap;
+  font-weight: 800;
+  text-shadow: 0 2px 2px rgba(0, 0, 0, 0.4);
+}
+#best-val { color: #ffd86b; }     /* BEST accent vàng (chuẩn chung) */
 
 /* ── Mid section: HUD strip + board (đổi trục khi landscape) ──── */
 #mid {
@@ -656,8 +664,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 /* ── Responsive ────────────────────────────────────────────────── */
 @media (max-width: 380px) {
   .btn3d.btn-icon { --surface-height: 36px; --surface-width: 36px; }
-  .sc-v { font-size: 21px; }
-  .sc-k { font-size: 9px; }
+  .hud-pill { padding: 4px 6px 5px 3px; }
 }
 
 /* Landscape: chỉ căn board (không còn sub-strip) */
@@ -694,14 +701,29 @@ body.landscape #board-outer { padding: 4px; }
       </span>
     </div>
 
-    <div class="scorebar" id="scorebar">
-      <div class="sc-box">
-        <div class="sc-k" id="score-k">SCORE</div>
-        <div class="sc-v" id="score-val">0</div>
+    <div class="hud-scores">
+      <div class="hud-pill">
+        <svg class="pill-ico" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2 L14.9 8.6 L22 9.3 L16.7 14 L18.3 21 L12 17.3 L5.7 21 L7.3 14 L2 9.3 L9.1 8.6 Z"
+                fill="#ffd23f" stroke="#c8901a" stroke-width="1" stroke-linejoin="round"/>
+        </svg>
+        <div class="pill-text">
+          <div class="label" id="score-k">SCORE</div>
+          <div class="value" id="score-val">0</div>
+        </div>
       </div>
-      <div class="sc-box">
-        <div class="sc-k" id="best-k">BEST</div>
-        <div class="sc-v best" id="best-val">0</div>
+      <div class="hud-pill">
+        <svg class="pill-ico" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 18 L4.2 8 L9 12.5 L12 5.5 L15 12.5 L19.8 8 L21 18 Z" fill="#ffd23f" stroke="#a9740a" stroke-width="1.2" stroke-linejoin="round"/>
+          <rect x="3.4" y="16.6" width="17.2" height="3" rx="1.2" fill="#f0b400"/>
+          <circle cx="4.2" cy="8" r="1.5" fill="#fff1a8"/>
+          <circle cx="12" cy="5.5" r="1.6" fill="#fff1a8"/>
+          <circle cx="19.8" cy="8" r="1.5" fill="#fff1a8"/>
+        </svg>
+        <div class="pill-text">
+          <div class="label" id="best-k">BEST</div>
+          <div class="value best" id="best-val">0</div>
+        </div>
       </div>
     </div>
 

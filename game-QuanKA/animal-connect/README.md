@@ -20,6 +20,11 @@
 - **Điểm = số NGÔI SAO** ★ (đặc trưng game): mỗi lần nối, sao xuất hiện **dọc
   đường connect** (mỗi ~1 cạnh tile 1 sao, từ điểm đầu → điểm cuối) rồi **bay
   lên ô SCORE**. Đường càng dài → càng nhiều sao → càng nhiều điểm (10đ/sao).
+  Nhịp sao **đều** cho mọi độ dài (gần/xa cùng cảm giác), rải so le
+  (STAR_STAGGER) + đậu 1 nhịp (STAR_DWELL) rồi bay (transition .7s).
+- **Đồng hồ ẩn — thưởng nối nhanh**: đo thời gian *tìm ra* mỗi cặp (từ lần nối
+  trước / lúc bàn sẵn sàng); <1.1s → **+20** kèm "Cực nhanh!", <2.2s → **+10** kèm
+  "Nhanh!" (lời khen nổi giữa màn). Không có thanh giờ hiện.
 - **Không có Time / Hint / Shuffle** trong match. Thay vào đó **~5s không thao
   tác** mà chưa nối được thì game **tự nháy 1 cặp** nối được (auto-hint); hết
   nước đi vẫn tự xáo miễn phí.
@@ -38,10 +43,16 @@
   dần theo combo, bù loudness khi lên cao)/sai cặp/auto-hint/xáo/thắng + click
   nút. Nút loa ở header (cờ `muted` persist); mở khoá sau cử chỉ đầu (autoplay
   policy), app ra nền / pause là suspend toàn bộ.
-- **Tutorial 1 BÀN, không chuyển cảnh** — bước 0 nối 2 con **giống nhau** → bước
-  1 **thử nối 2 con khác nhau** (học rằng khác loại **không nối được**) → bước 2
-  dọn sạch bàn. **Bắt buộc lần đầu mở game** (cờ `tutorialSeen` persist), có nút
-  Skip. Tutorial **không tính điểm**. `?reset=1` xoá state để xem lại từ đầu.
+- **Tutorial 1 BÀN 5×5, không chuyển cảnh** — dạy 3 bước bằng **hình**:
+  1. **Nối** 1 cặp được chỉ (chỉ cho nối đúng cặp đó) → hiện đường nối + **tick ✓**.
+  2. Thử nối 1 cặp **CÙNG loại BỊ CHẶN** → game **VẼ đường "quá vòng" 3 lần rẽ**
+     (đỏ nét đứt + chấm ở mỗi chỗ rẽ) cho thấy vì sao không nối được (>2 rẽ).
+     Bấm **nhầm** cặp giống-nối-được → nháy lại cặp đúng + nhắc "chạm cặp đang sáng".
+  3. **Dọn nốt** cả bàn (cặp bị chặn tự mở ra sau khi dọn blocker — bàn đã verify
+     giải được hết).
+  Bàn + cặp 3-rẽ đã **verify bằng máy** (`findPath`=null, `findMinTurnPath`=3 rẽ,
+  bỏ cặp bước 1 vẫn chặn, greedy solve = 0 ô thừa). **Bắt buộc lần đầu**
+  (`tutorialSeen`), có Skip, **không tính điểm**. `?reset=1` xem lại.
 
 ### Level sinh theo công thức — `levelConfig(idx)`
 
