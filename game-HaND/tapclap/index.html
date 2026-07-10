@@ -1,5 +1,8 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
 <!--
-  Tap Away (clone Tap Away / Tile Away Story — TAPCLAP) — HaND
+  Tap Away (clone Tap Away / Tile Away Story) — HaND
   Flat theme. Single-file HTML (CSS + JS inline).
   LỐI CHƠI
   · Khay (tray) vừa màn hình — KHÔNG pan/zoom. Mỗi ô có 1 mũi tên (lên/phải/xuống/trái).
@@ -70,7 +73,12 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    /* Ẩn tới khi boot dựng xong level ĐÚNG ⇒ không lộ số "1" tĩnh + khay trống
+       (tránh "giật về level 1 rồi mới hiện level tiến trình"). Nền gradient ở body
+       vẫn hiển thị trong lúc chờ. */
+    opacity: 0;
   }
+  .app.ready { opacity: 1; transition: opacity .15s ease; }
 
   /* ── HUD trên cùng ────────────────────────────────────────────────── */
   .topbar {
@@ -100,7 +108,7 @@
     min-width: 0;
     flex: 1 1 0;
     max-width: 150px;
-    padding: 5px 12px 7px;
+    padding: 7px 12px 6px;
     background: rgba(255, 255, 255, .94);
     border-radius: 16px;
     box-shadow: 0 4px 14px rgba(24, 20, 60, .18);
@@ -111,7 +119,7 @@
     color: var(--accent); text-transform: uppercase;
     max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .sc-v { font-size: 26px; font-weight: 800; color: var(--ink); max-width: 100%; white-space: nowrap; }
+  .sc-v { font-size: 26px; font-weight: 800; line-height: .9; color: var(--ink); max-width: 100%; white-space: nowrap; }
 
   /* ── Tim (lượt chơi) — 3 tim mỗi lần chơi ─────────────────────────── */
   .lives {
@@ -159,7 +167,7 @@
     border-radius: var(--radius);
     background-color: var(--surface-color);
     color: var(--surface-text);
-    box-shadow: 0 3px 0 rgba(59, 91, 219, .18), 0 6px 14px rgba(36, 48, 77, .12);
+    box-shadow: 0 4px 12px rgba(36, 48, 77, .14);   /* phẳng: chỉ bóng đổ mềm, KHÔNG gờ 3D */
     transition: transform .09s ease-out;
   }
   .btn3d:active .btn3d-surface { transform: scale(.95); }
@@ -320,85 +328,103 @@
     80% { transform: translate(2px, 0); }
   }
 
-  /* ── Coach tooltip (chỉ hiện lần đầu) ───────────────────────────────── */
-  /* Overlay ở đỉnh sân khấu (khoảng trống trên board) ⇒ KHÔNG chiếm layout,
-     board đứng yên không bị dịch. Tutorial chỉ hiện ở màn 1 (board nhỏ) nên luôn dư chỗ. */
-  .coach {
-    position: absolute;
-    left: 50%;
-    top: 4px;
-    z-index: 7;
-    pointer-events: none;
-    animation: coachIn .3s ease both;
-  }
-  @keyframes coachIn {
-    from { opacity: 0; transform: translate(-50%, -8px) scale(.94); }
-    to   { opacity: 1; transform: translate(-50%, 0) scale(1); }
-  }
-  /* Thẻ hướng dẫn: khớp theme flat của game (nền trắng, chữ mực, viền/điểm nhấn accent). */
-  .coach-card {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 18px;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, .96);
-    color: var(--ink);
-    box-shadow: inset 0 0 0 1px rgba(59, 91, 219, .12),
-      0 12px 30px rgba(36, 48, 77, .28);
-    font-size: 14px;
-    font-weight: 700;
-    max-width: min(88vw, 340px);
-    text-align: left;
-  }
-  /* Demo: bàn tay ấn xuống khối → khối nhún rồi trượt ra theo hướng mũi tên (lên). */
-  .coach-demo {
-    position: relative;
-    flex: 0 0 auto;
-    width: 48px;
-    height: 60px;        /* chừa chỗ phía trên để khối nhún/trượt lên */
-  }
-  .demo-tile {
-    position: absolute;
-    left: 1px;
-    bottom: 0;
-    width: 46px;
-    height: 46px;
-    border-radius: 12px;
-    background: #ff922b;
+  /* ── Onboarding: chuỗi popup mẫu (hiện LẦN ĐẦU, trước khi chơi) ───────
+     Mỗi bước có DEMO minh hoạ bằng chính viên/mũi tên của game. Flat theme:
+     thẻ trắng, chữ mực, điểm nhấn accent — khớp phần còn lại của game. */
+  .ob {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .18), 0 2px 5px rgba(36, 48, 77, .28);
-    animation: demoTile 2.2s ease-in-out infinite;
+    padding: 16px;
+    background: rgba(24, 30, 55, .52);
+    transition: opacity .25s ease;
   }
-  .demo-tile svg { width: 66%; height: 66%; display: block; }
-  .demo-hand {
+  .ob.hidden { opacity: 0; pointer-events: none; }
+  .ob-card {
+    width: min(92%, 360px);
+    padding: 20px 22px 18px;
+    border-radius: 24px;
+    text-align: center;
+    background: #ffffff;
+    box-shadow: 0 20px 50px rgba(24, 30, 55, .4);
+    transform: scale(1);
+    transition: transform .25s ease;
+  }
+  .ob.hidden .ob-card { transform: scale(.9); }
+  /* overflow:hidden ⇒ ô trượt ra ngoài khung demo thì BIẾN MẤT (không bay lồ ra thẻ). */
+  .ob-demo { position: relative; height: 208px; margin-bottom: 8px; overflow: hidden; border-radius: 12px; }
+  .ob-stage { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+  /* Khay demo — bản thu nhỏ của .tray (nền trắng + gờ 3D nhẹ) */
+  .ob-tray {
     position: absolute;
-    left: 22px;
-    top: 6px;
-    font-size: 26px;
-    animation: demoHand 2.2s ease-in-out infinite;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow:
+      inset 0 0 0 3px #e8eefb,
+      inset 0 0 0 4px rgba(59, 91, 219, .2),
+      0 8px 0 #aebedf,
+      0 14px 20px -6px rgba(36, 48, 77, .35);
   }
-  /* bàn tay: hạ xuống chạm khối rồi nâng lên, lặp lại */
-  @keyframes demoHand {
-    0%, 100% { transform: translateY(-4px); }
-    16%      { transform: translateY(7px); }   /* ấn xuống */
-    30%      { transform: translateY(7px); }
-    46%      { transform: translateY(-4px); }
+  .ob-tile { position: absolute; width: 44px; height: 44px; }
+  .ob-tile .face {
+    position: absolute;
+    inset: 2px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .16), 0 3px 6px rgba(36, 48, 77, .22);
   }
-  /* khối: nhún khi bị ấn → nảy lên → trượt hẳn ra ngoài (lên) rồi hiện lại */
-  @keyframes demoTile {
-    0%, 12%   { transform: translateY(0) scale(1);      opacity: 1; }
-    20%       { transform: translateY(0) scale(.9);     opacity: 1; }  /* nhún */
-    30%       { transform: translateY(-3px) scale(1);   opacity: 1; }  /* nảy lên */
-    55%       { transform: translateY(-52px) scale(.92); opacity: 0; }  /* trượt ra hướng mũi tên */
-    56%       { transform: translateY(0) scale(1);      opacity: 0; }
-    72%, 100% { transform: translateY(0) scale(1);      opacity: 1; }
+  .ob-tile .face svg { width: 72%; height: 72%; display: block; }
+  .ob-hand {
+    position: absolute;
+    z-index: 6;
+    font-size: 30px;
+    pointer-events: none;
+    filter: drop-shadow(0 4px 4px rgba(0, 0, 0, .3));
+  }
+  /* Hàng tim mini (bước "ô bị chặn") */
+  .ob-hearts { position: absolute; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; }
+  .ob-hearts .h { width: 22px; height: 22px; color: #ff5a72; }
+  .ob-hearts .h svg { width: 100%; height: 100%; display: block; }
+  .ob-hearts .h.empty { color: #c7cede; }
+  /* Dấu tick "thắng" (bước cuối) */
+  .ob-check {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 74px; height: 74px; border-radius: 50%;
+    background: #37b24d; color: #fff; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 20px rgba(55, 178, 77, .45);
+  }
+  .ob-check svg { width: 52%; height: 52%; display: block; fill: currentColor; }
+
+  .ob-title { font-size: 22px; font-weight: 800; color: var(--ink); margin-bottom: 6px; }
+  .ob-desc { font-size: 14px; font-weight: 600; color: var(--ink-soft); line-height: 1.5; min-height: 42px; }
+  .ob-dots { display: flex; gap: 7px; justify-content: center; margin: 12px 0 14px; }
+  .ob-dots i { width: 8px; height: 8px; border-radius: 50%; background: rgba(59, 91, 219, .2); transition: background .2s; }
+  .ob-dots i.on { background: var(--accent); }
+  .ob-btns { display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .ob-nav {
+    width: 48px; height: 48px; border-radius: 14px; border: 0; padding: 0;
+    font: inherit; font-size: 24px; font-weight: 800; line-height: 1; cursor: pointer;
+    background: #eef2fe; color: var(--accent); flex: 0 0 auto;
+    transition: transform .09s ease-out;
+  }
+  .ob-nav:active { transform: scale(.94); }
+  .ob-nav.go { background: var(--accent); color: #fff; box-shadow: 0 4px 12px rgba(59, 91, 219, .3); }
+  .ob-nav.play { width: auto; padding: 0 26px; font-size: 16px; font-weight: 800; }
+  .ob-nav.disabled { opacity: .3; pointer-events: none; }
+  .ob-skip {
+    height: 48px; padding: 0 12px; border: 0; background: transparent;
+    font: inherit; font-size: 14px; font-weight: 700; color: var(--ink-soft); cursor: pointer; flex: 0 0 auto;
   }
 
   .hidden { display: none !important; }
 </style>
+</head>
+<body>
 
 <div class="app" id="app">
   <div class="topbar" id="topbar">
@@ -431,21 +457,6 @@
   <div class="lives" id="lives"></div>
 
   <div class="stage">
-    <div class="coach hidden" id="coach">
-      <div class="coach-card">
-        <div class="coach-demo">
-          <div class="demo-tile">
-            <svg viewBox="0 0 100 100" fill="#ffffff" aria-hidden="true">
-              <path d="M50 20 L78 52 L60 52 L60 80 L40 80 L40 52 L22 52 Z"
-                stroke="#ffffff" stroke-width="11" stroke-linejoin="round" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <span class="demo-hand">👆</span>
-        </div>
-        <span class="coach-text" id="coach-text"></span>
-      </div>
-    </div>
-
     <div class="deck" id="deck">
       <div class="plate p2"></div>
       <div class="plate p1"></div>
@@ -468,8 +479,20 @@ const LATIN_LANGS = new Set([
 ]);
 
 const I18N = {
-  en: { level: 'Level', tut: 'Tap a tile — it slides where its arrow points' },
-  vi: { level: 'Màn', tut: 'Chạm ô → trượt theo hướng mũi tên' },
+  en: {
+    level: 'Level', tut: 'Tap a tile — it slides where its arrow points',
+    obTapT: 'Tap to slide out', obTapD: 'Tap a tile and it slides off the tray in the direction its arrow points.',
+    obBlockT: 'Mind the path', obBlockD: 'If another tile blocks the way, it can\'t move — and you lose a heart. You get 3 per level.',
+    obWinT: 'Clear the tray', obWinD: 'Empty every tile to win the level. Plan your order so nothing gets stuck!',
+    obSkip: 'Skip', obPlay: 'Play',
+  },
+  vi: {
+    level: 'Màn', tut: 'Chạm ô → trượt theo hướng mũi tên',
+    obTapT: 'Chạm để trượt ra', obTapD: 'Chạm một ô, nó sẽ trượt ra khỏi khay theo hướng mũi tên.',
+    obBlockT: 'Coi chừng đường đi', obBlockD: 'Nếu ô khác chặn đường, ô không đi được — bạn mất 1 tim. Mỗi màn có 3 tim.',
+    obWinT: 'Dọn sạch khay', obWinD: 'Dọn hết mọi ô để thắng màn. Tính thứ tự để không ô nào bị kẹt!',
+    obSkip: 'Bỏ qua', obPlay: 'Chơi',
+  },
   es: { level: 'Nivel', tut: 'Toca una ficha — se desliza hacia su flecha' },
   fr: { level: 'Niveau', tut: 'Touche une tuile — elle glisse vers sa flèche' },
   de: { level: 'Level', tut: 'Tippe ein Feld — es gleitet in Pfeilrichtung' },
@@ -525,6 +548,17 @@ function saveData(payload) {
   const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
   sendMessage('save_data', { data });
 }
+/* Trạng thái ván NẶNG (khay đang chơi dở) → localStorage của WebView, KHÔNG qua
+   native (game-common §1.2). Bọc try/catch: chế độ riêng tư / hết quota không throw.
+   Đây cũng là lý do F5 trên trình duyệt vẫn khôi phục được ván. */
+const LS_KEY = 'tapaway_save';
+function saveLocal(payload) {
+  try { localStorage.setItem(LS_KEY, typeof payload === 'string' ? payload : JSON.stringify(payload)); }
+  catch (e) { /* private mode / quota — bỏ qua */ }
+}
+function readLocal() {
+  try { return localStorage.getItem(LS_KEY) || ''; } catch (e) { return ''; }
+}
 function getStatusBarHeight() {
   const params = new URLSearchParams(location.search);
   const fromUrl = params.get('statusBarHeight');
@@ -533,20 +567,34 @@ function getStatusBarHeight() {
   if (Number.isNaN(h) || h < 0) h = 0;
   return h;
 }
+/* Gộp data nhẹ (native: seen/levelIdx) + trạng thái ván (localStorage: board).
+   - seen: true nếu bất kỳ nguồn nào đánh dấu đã xem.
+   - board: CHỈ từ localStorage (native không giữ ván nặng).
+   - levelIdx: ưu tiên native, rồi tới localStorage (dùng làm fallback level khi
+     native KHÔNG truyền currentLevel — vd chạy trên trình duyệt / F5). */
 function getInitialSaved() {
+  const parse = (raw) => {
+    if (!raw) return null;
+    try { const o = JSON.parse(raw); return (o && typeof o === 'object') ? o : null; }
+    catch (e) { return null; }
+  };
   const fromWin = typeof window.data === 'string' ? window.data : null;
   const fromUrl = new URLSearchParams(location.search).get('data');
-  const raw = fromWin != null ? fromWin : (fromUrl || '');
-  if (!raw) return { seen: false };
-  try {
-    const o = JSON.parse(raw) || {};
-    return { seen: o.seen === true };
-  } catch (e) { return { seen: false }; }
+  const nativeObj = parse(fromWin != null ? fromWin : (fromUrl || ''));
+  const localObj = parse(readLocal());
+  const seen = !!((nativeObj && nativeObj.seen === true) || (localObj && localObj.seen === true));
+  const board = (localObj && localObj.board && typeof localObj.board === 'object') ? localObj.board : null;
+  let levelIdx = null;
+  if (nativeObj && Number.isFinite(nativeObj.levelIdx)) levelIdx = nativeObj.levelIdx;
+  else if (localObj && Number.isFinite(localObj.levelIdx)) levelIdx = localObj.levelIdx;
+  return { seen, board, levelIdx };
 }
-/* Level khởi tạo (1-indexed từ native) → 0-indexed, clamp [0, LEVELS.length-1]. */
+/* Level từ native (1-indexed) → 0-indexed, clamp. Trả null khi native KHÔNG truyền
+   currentLevel ⇒ boot sẽ fallback về level trong save (localStorage). */
 function getInitialLevelIdx() {
   const fromWin = typeof window.currentLevel === 'number' ? window.currentLevel : null;
   const fromUrl = new URLSearchParams(location.search).get('currentLevel');
+  if (fromWin == null && fromUrl == null) return null;
   const raw = Number(fromWin != null ? fromWin : fromUrl);
   if (!Number.isFinite(raw) || raw < 1) return 0;
   return Math.min(Math.floor(raw), LEVELS.length) - 1;
@@ -585,8 +633,9 @@ const LEVELS = Array.from({ length: LEVEL_COUNT }, (_, i) => {
 });
 let currentLevelIdx = 0;      // màn hiện tại (0-indexed)
 
-let tutorialSeen = false;     // đã xem coach tooltip lần đầu chưa (persist)
+let tutorialSeen = false;     // đã xem onboarding lần đầu chưa (persist)
 let advancing = false;        // đang chuyển khung / chờ thắng màn (khoá thao tác)
+let pendingRestore = null;    // ván dở nạp từ save — dùng 1 lần lúc boot (khôi phục đúng khay + tim)
 
 const MAX_HEARTS = 3;         // số tim mỗi màn
 let hearts = MAX_HEARTS;      // tim còn lại của màn hiện tại
@@ -600,7 +649,6 @@ let viewW = 320, viewH = 400; // vùng sân khấu khả dụng (px)
 
 const trayEl = document.getElementById('tray');
 const deckEl = document.getElementById('deck');
-const coachEl = document.getElementById('coach');
 const livesEl = document.getElementById('lives');
 
 const KEY = (r, c) => r + ',' + c;
@@ -777,6 +825,15 @@ function buildTray() {
   styleBlocks();
 }
 
+/* Dựng lại khay từ ván dở đã lưu (khôi phục đúng ô còn lại: vị trí, hướng, màu). */
+function buildTrayFromState(board) {
+  trayEl.innerHTML = '';
+  live = new Map();
+  for (const tl of board.tiles) placeTile(tl.r, tl.c, tl.d, tl.col, false);
+  markMoves();
+  styleBlocks();
+}
+
 /* =====================================================================
  * 5. Chơi — chạm ô để trượt ra mép; dọn sạch khay ⇒ khay mới
  * ===================================================================== */
@@ -785,8 +842,6 @@ function tapCell(r, c) {
   const tile = getCell(r, c);
   if (!tile || !tile.el) return;
   if (tile.el.classList.contains('slide')) return;
-
-  if (!tutorialSeen) dismissCoach();   // chạm lần đầu → tắt hướng dẫn
 
   if (!pathClear(r, c, tile.dir)) {
     tile.el.classList.remove('blocked');
@@ -820,6 +875,7 @@ function tapCell(r, c) {
   markMoves();
   styleBlocks();   // dọn bớt ⇒ bo lại mép khối vừa lộ ra
   if (live.size === 0) winLevel();   // dọn sạch khay ⇒ THẮNG màn
+  persist();       // lưu ván dở sau mỗi nước (khay trống/đang chuyển màn ⇒ serializeBoard null)
 }
 
 /* Thắng màn: bắn event lên native (app hiện popup Next/Retry). Level cuối ⇒ victory.
@@ -840,7 +896,22 @@ function winLevel() {
 /* =====================================================================
  * 6. HUD màn/khung + lưu tiến độ (game-common §1.2)
  * ===================================================================== */
-function persist() { saveData({ levelIdx: currentLevelIdx, seen: tutorialSeen }); }
+/* Chụp trạng thái khay đang chơi để lưu ván dở. Trả null khi KHÔNG nên lưu ván
+   (đang chuyển màn hoặc khay đã trống) ⇒ lần sau mở lại sẽ dựng khay mới cho màn. */
+function serializeBoard() {
+  if (advancing || live.size === 0) return null;
+  const tiles = [];
+  for (const [k, tl] of live) {
+    const i = k.indexOf(',');
+    tiles.push({ r: +k.slice(0, i), c: +k.slice(i + 1), d: tl.dir, col: tl.color });
+  }
+  return { levelIdx: currentLevelIdx, cols: COLS, rows: ROWS, hearts, tiles };
+}
+function persist() {
+  const light = { levelIdx: currentLevelIdx, seen: tutorialSeen };
+  saveData(light);                                 // nhẹ → native (best/tiến độ/cờ)
+  saveLocal({ ...light, board: serializeBoard() });// nhẹ + ván nặng → localStorage (khôi phục F5)
+}
 function updateHud() {
   document.getElementById('level-num').textContent = String(currentLevelIdx + 1);
 }
@@ -865,6 +936,7 @@ function loseHeart() {
   const el = livesEl.children[hearts];   // trái tim vừa mất
   if (el) el.classList.add('lose');
   if (hearts <= 0) loseGame();
+  persist();   // lưu số tim còn lại vào ván dở
 }
 /* Thua hết tim: báo native (app hiện popup) rồi CHƠI LẠI ĐÚNG MÀN ĐÓ (đầy tim).
    game-common §1.1 — game KHÔNG tự vẽ modal; app gọi window.onRetryLevel. */
@@ -874,15 +946,219 @@ function loseGame() {
   if (!isNative()) setTimeout(() => loadLevel(currentLevelIdx), 900);   // browser: tự chơi lại màn đó
 }
 
-/* ── Coach tooltip (lần đầu chơi) ─────────────────────────────────── */
-function showCoach() {
-  document.getElementById('coach-text').textContent = t('tut');
-  coachEl.classList.remove('hidden');
+/* ── Onboarding (lần đầu chơi): chuỗi popup mẫu 3 bước, có DEMO động ────
+ *   Bước 1: chạm ô → trượt ra theo mũi tên.
+ *   Bước 2: ô bị chặn → rung + mất 1 tim (3 tim/màn).
+ *   Bước 3: dọn sạch khay → thắng màn.
+ *   Demo vẽ bằng chính viên/mũi tên của game. Lặp lại tới khi qua bước khác.
+ * ===================================================================== */
+const OB_CELL = 46;                 // bước ô demo (px)
+const OB_STEPS = [
+  { demo: 'tap',   titleKey: 'obTapT',   descKey: 'obTapD' },
+  { demo: 'block', titleKey: 'obBlockT', descKey: 'obBlockD' },
+  { demo: 'win',   titleKey: 'obWinT',   descKey: 'obWinD' },
+];
+const CHECK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4' +
+  'L9 19 21 7l-1.4-1.4z"/></svg>';
+let obEl = null, obStep = 0, obTimers = [];
+
+function obClearTimers() { obTimers.forEach(clearTimeout); obTimers = []; }
+function obT(ms, fn) { const id = setTimeout(fn, ms); obTimers.push(id); return id; }
+
+function buildOnboardDOM() {
+  const ov = document.createElement('div');
+  ov.className = 'ob hidden'; ov.id = 'ob';
+  ov.innerHTML =
+    '<div class="ob-card">' +
+      '<div class="ob-demo" id="ob-demo"></div>' +
+      '<div class="ob-title" id="ob-title"></div>' +
+      '<div class="ob-desc" id="ob-desc"></div>' +
+      '<div class="ob-dots" id="ob-dots"></div>' +
+      '<div class="ob-btns">' +
+        '<button class="ob-nav" id="ob-prev" aria-label="Prev">&lsaquo;</button>' +
+        '<button class="ob-skip" id="ob-skip"></button>' +
+        '<button class="ob-nav go" id="ob-next" aria-label="Next">&rsaquo;</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(ov);
+  ov.querySelector('#ob-skip').addEventListener('click', finishOnboarding);
+  ov.querySelector('#ob-prev').addEventListener('click', () => { if (obStep > 0) showObStep(obStep - 1); });
+  ov.querySelector('#ob-next').addEventListener('click', () => {
+    if (obStep >= OB_STEPS.length - 1) finishOnboarding();
+    else showObStep(obStep + 1);
+  });
+  return ov;
 }
-function dismissCoach() {
-  coachEl.classList.add('hidden');
+function startOnboarding() {
+  if (!obEl) obEl = buildOnboardDOM();
+  obboarding = true;
+  showObStep(0);
+  obEl.classList.remove('hidden');
+}
+function showObStep(i) {
+  obStep = i;
+  obClearTimers();
+  const step = OB_STEPS[i];
+  document.getElementById('ob-title').textContent = t(step.titleKey);
+  document.getElementById('ob-desc').textContent = t(step.descKey);
+  const dots = document.getElementById('ob-dots'); dots.innerHTML = '';
+  for (let k = 0; k < OB_STEPS.length; k++) {
+    const d = document.createElement('i'); if (k === i) d.className = 'on'; dots.appendChild(d);
+  }
+  const last = i >= OB_STEPS.length - 1;
+  const nextBtn = document.getElementById('ob-next');
+  nextBtn.textContent = last ? t('obPlay') : '›';
+  nextBtn.classList.toggle('play', last);
+  document.getElementById('ob-skip').textContent = t('obSkip');
+  document.getElementById('ob-prev').classList.toggle('disabled', i === 0);
+  playObDemo(step.demo);
+}
+function finishOnboarding() {
+  obClearTimers();
+  obboarding = false;
   if (!tutorialSeen) { tutorialSeen = true; persist(); }
+  if (obEl) {
+    const el = obEl; el.classList.add('hidden');
+    setTimeout(() => { if (el && el.parentNode) el.remove(); }, 320);
+    obEl = null;
+  }
 }
+
+/* ── Trình chạy demo (lặp lại tới khi sang bước khác) ────────────────── */
+function playObDemo(kind) {
+  const demo = document.getElementById('ob-demo');
+  const run = () => {
+    demo.innerHTML = '';
+    const stage = document.createElement('div'); stage.className = 'ob-stage'; demo.appendChild(stage);
+    const total = OB_DEMOS[kind](stage);
+    obT(total + 700, run);   // nghỉ rồi lặp
+  };
+  run();
+}
+/* Khay demo: đặt nền .ob-tray phủ đúng lưới cols×rows rồi trả về stage đã set kích thước. */
+function obSetTray(stage, cols, rows) {
+  stage.style.width = (cols * OB_CELL) + 'px';
+  stage.style.height = (rows * OB_CELL) + 'px';
+  const tray = document.createElement('div'); tray.className = 'ob-tray';
+  tray.style.left = '-6px'; tray.style.top = '-6px';
+  tray.style.width = (cols * OB_CELL + 12) + 'px';
+  tray.style.height = (rows * OB_CELL + 12) + 'px';
+  stage.appendChild(tray);
+}
+function obTile(stage, r, c, dir, colorIdx) {
+  const el = document.createElement('div'); el.className = 'ob-tile';
+  el.style.left = (c * OB_CELL) + 'px'; el.style.top = (r * OB_CELL) + 'px';
+  el.innerHTML = '<div class="face" style="background:' + PALETTE[colorIdx] + '">' + arrowSvg(dir) + '</div>';
+  stage.appendChild(el);
+  return el;
+}
+/* "Bàn tay" ảo chạm xuống 1 ô: hiện, nhấn xuống, nhả lên */
+function obHand(stage, r, c, delay) {
+  const hand = document.createElement('div'); hand.className = 'ob-hand';
+  hand.textContent = '👆';
+  hand.style.left = (c * OB_CELL + OB_CELL * 0.5) + 'px';
+  hand.style.top = (r * OB_CELL + OB_CELL * 0.62) + 'px';
+  stage.appendChild(hand);
+  hand.animate([
+    { transform: 'translateY(-4px)', opacity: 0 },
+    { transform: 'translateY(-4px)', opacity: 1, offset: .25 },
+    { transform: 'translateY(6px)',  opacity: 1, offset: .5 },
+    { transform: 'translateY(-4px)', opacity: 1, offset: .78 },
+    { transform: 'translateY(-4px)', opacity: 0 },
+  ], { duration: 900, delay: delay || 0, fill: 'forwards' });
+  return hand;
+}
+/* Nhún viên (bị ấn) */
+function obPress(el, delay) {
+  const f = el.firstElementChild;
+  f.animate([{ transform: 'scale(1)' }, { transform: 'scale(.9)', offset: .5 }, { transform: 'scale(1)' }],
+    { duration: 300, delay: delay || 0, easing: 'ease-out' });
+}
+/* Viên được dọn: đổi xanh lá + trượt hẳn ra ngoài theo hướng dir */
+function obSlideOut(el, dir, delay) {
+  obT(delay || 0, () => { el.firstElementChild.style.background = '#37b24d'; });
+  const dist = 210;
+  el.animate([
+    { transform: 'translate(0,0)', opacity: 1, offset: 0 },
+    { transform: 'translate(0,0)', opacity: 1, offset: .15 },
+    { transform: 'translate(' + (DC[dir] * dist) + 'px,' + (DR[dir] * dist) + 'px)', opacity: 1 },
+  ], { duration: 460, delay: delay || 0, easing: 'cubic-bezier(.45,0,.85,.6)', fill: 'forwards' });
+}
+/* Rung viên (bị chặn) */
+function obShake(el, delay) {
+  el.animate([
+    { transform: 'translateX(0)' }, { transform: 'translateX(-3px)', offset: .2 },
+    { transform: 'translateX(3px)', offset: .4 }, { transform: 'translateX(-2px)', offset: .6 },
+    { transform: 'translateX(2px)', offset: .8 }, { transform: 'translateX(0)' },
+  ], { duration: 340, delay: delay || 0, easing: 'ease' });
+}
+/* Hàng tim mini (bước "bị chặn"): trả về hàm làm rỗng tim cuối */
+function obHearts(stage, r, cols) {
+  const wrap = document.createElement('div'); wrap.className = 'ob-hearts';
+  wrap.style.left = (cols * OB_CELL / 2) + 'px';
+  wrap.style.top = (r * OB_CELL) + 'px';
+  const hs = [];
+  for (let i = 0; i < 3; i++) {
+    const h = document.createElement('span'); h.className = 'h'; h.innerHTML = HEART_SVG;
+    wrap.appendChild(h); hs.push(h);
+  }
+  stage.appendChild(wrap);
+  return (idx) => {
+    const h = hs[idx]; if (!h) return;
+    h.classList.add('empty');
+    h.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.4)', offset: .3 }, { transform: 'scale(1)' }],
+      { duration: 420, easing: 'ease' });
+  };
+}
+
+/* Ba kịch bản demo → mỗi hàm dựng stage, trả về tổng thời lượng (ms). */
+const OB_DEMOS = {
+  // Chạm ô góc phải-trên (mũi tên LÊN, đường trống) → trượt ra ngoài.
+  tap(stage) {
+    obSetTray(stage, 3, 2);
+    obTile(stage, 0, 0, 1, 0); obTile(stage, 0, 1, 3, 3);
+    const target = obTile(stage, 0, 2, 0, 1);     // mũi tên lên, hàng 0 ⇒ đường trống
+    obTile(stage, 1, 0, 0, 4); obTile(stage, 1, 1, 1, 6); obTile(stage, 1, 2, 0, 5);
+    obHand(stage, 0, 2, 200);
+    obPress(target, 560);
+    obSlideOut(target, 0, 760);
+    return 1300;
+  },
+  // Chạm ô trên (mũi tên XUỐNG) nhưng bị ô dưới chặn → rung + mất 1 tim.
+  block(stage) {
+    obSetTray(stage, 3, 3);
+    const setHeart = obHearts(stage, 0, 3);        // hàng tim ở đỉnh (bù chỗ: dùng 3 hàng ô)
+    obTile(stage, 1, 0, 1, 0);
+    const target = obTile(stage, 1, 1, 2, 3);      // mũi tên xuống…
+    obTile(stage, 2, 1, 0, 6);                     // …nhưng ô ngay dưới chặn đường
+    obTile(stage, 1, 2, 3, 4); obTile(stage, 2, 0, 1, 5); obTile(stage, 2, 2, 0, 1);
+    obHand(stage, 1, 1, 200);
+    obPress(target, 560);
+    obT(760, () => { obShake(target, 0); setHeart(2); });
+    return 1400;
+  },
+  // Dọn 3 viên lần lượt → khay trống → hiện dấu tick "thắng".
+  win(stage) {
+    obSetTray(stage, 3, 2);
+    const t0 = obTile(stage, 0, 0, 3, 0);          // trái
+    const t1 = obTile(stage, 0, 2, 1, 3);          // phải
+    const t2 = obTile(stage, 1, 1, 2, 5);          // xuống
+    obSlideOut(t0, 3, 200);
+    obSlideOut(t1, 1, 560);
+    obSlideOut(t2, 2, 920);
+    obT(1500, () => {
+      const chk = document.createElement('div'); chk.className = 'ob-check';
+      chk.style.left = (3 * OB_CELL / 2) + 'px'; chk.style.top = (2 * OB_CELL / 2) + 'px';
+      chk.innerHTML = CHECK_SVG; stage.appendChild(chk);
+      chk.animate([
+        { transform: 'translate(-50%,-50%) scale(0)', opacity: 0 },
+        { transform: 'translate(-50%,-50%) scale(1.15)', opacity: 1, offset: .6 },
+        { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
+      ], { duration: 420, easing: 'ease-out', fill: 'forwards' });
+    });
+    return 2200;
+  },
+};
 
 /* =====================================================================
  * 7. Tap input (KHÔNG pan/zoom — khay đứng yên)
@@ -946,17 +1222,26 @@ function loadLevel(idx) {
   currentLevelIdx = Math.max(0, Math.min(idx, LEVELS.length - 1));
   const lv = LEVELS[currentLevelIdx];
   COLS = lv.cols; ROWS = lv.rows;
-  hearts = MAX_HEARTS;        // mỗi màn có đủ 3 tim (thua ⇒ loadLevel lại ⇒ đầy tim)
   advancing = false;
   trayEl.classList.remove('out', 'in');
   computeSizing();
-  buildTray();
+  // Nếu có ván dở khớp ĐÚNG màn/cỡ khay ⇒ khôi phục nguyên trạng (ô còn lại + tim);
+  // ngược lại dựng khay mới, đủ 3 tim. pendingRestore chỉ dùng 1 lần (lúc boot).
+  const rb = pendingRestore; pendingRestore = null;
+  if (rb && rb.levelIdx === currentLevelIdx && rb.cols === COLS && rb.rows === ROWS &&
+      Array.isArray(rb.tiles) && rb.tiles.length) {
+    hearts = (typeof rb.hearts === 'number' && rb.hearts > 0 && rb.hearts <= MAX_HEARTS)
+      ? rb.hearts : MAX_HEARTS;
+    buildTrayFromState(rb);
+  } else {
+    hearts = MAX_HEARTS;      // mỗi màn có đủ 3 tim (thua ⇒ loadLevel lại ⇒ đầy tim)
+    buildTray();
+  }
   renderLives();
   updateHud();
   persist();                 // lưu tiến độ (levelIdx) — resume đúng màn
-  // Tutorial CHỈ hiện ở màn 1 lần đầu chơi (chưa từng xem) — các màn/lần sau ẩn.
-  if (!tutorialSeen && currentLevelIdx === 0) showCoach();
-  else coachEl.classList.add('hidden');
+  // Onboarding CHỈ hiện ở màn 1 lần đầu chơi (chưa từng xem) — các màn/lần sau bỏ qua.
+  if (!tutorialSeen && currentLevelIdx === 0) startOnboarding();
 }
 
 /* =====================================================================
@@ -969,13 +1254,15 @@ document.getElementById('back-btn').addEventListener('click', (e) => {
 document.getElementById('restart-btn').addEventListener('click', (e) => {
   e.stopPropagation(); loadLevel(currentLevelIdx);
 });
-window.onAppPause = function () { /* no-op — game tĩnh, không loop/timer */ };
+window.onAppPause = function () { persist(); };   // app vào nền ⇒ lưu ngay ván dở
 // App gọi khi bấm Next Level trên popup → qua màn kế.
 window.onNextLevel = function () {
   if (currentLevelIdx < LEVELS.length - 1) loadLevel(currentLevelIdx + 1);
 };
 // App gọi khi bấm Retry/Play Again → chơi lại màn hiện tại (đầy 3 tim).
 window.onRetryLevel = function () { loadLevel(currentLevelIdx); };
+// Game không dùng force_ads — vẫn định nghĩa no-op để native gọi an toàn (game-common §1.3).
+window.onAdResult = function () { /* no-op */ };
 
 /* =====================================================================
  * 11. Boot
@@ -995,7 +1282,14 @@ function boot() {
   applyStaticI18n();
   const saved = getInitialSaved();
   tutorialSeen = saved.seen;
-  loadLevel(getInitialLevelIdx());   // vào đúng màn native truyền (mặc định màn 1); loadLevel tự nạp 3 tim
+  pendingRestore = saved.board;      // ván dở (nếu có) — loadLevel khôi phục nếu khớp màn/cỡ khay
+  // Level: native currentLevel là nguồn chính; nếu native KHÔNG truyền (trình duyệt /
+  // F5 / standalone) thì dùng level đã lưu (native data hoặc localStorage), mặc định 0.
+  const nativeLvl = getInitialLevelIdx();
+  const idx = nativeLvl != null ? nativeLvl
+    : (saved.levelIdx != null ? Math.max(0, Math.min(Math.floor(saved.levelIdx), LEVELS.length - 1)) : 0);
+  loadLevel(idx);                    // loadLevel tự nạp 3 tim (hoặc khôi phục tim từ ván dở)
+  document.getElementById('app').classList.add('ready');   // hiện app sau khi level đúng đã dựng xong
 }
 
 // Gộp mọi tín hiệu đổi cỡ vào 1 lần relayout/khung hình ⇒ tránh layout thrashing.
@@ -1012,18 +1306,25 @@ if (window.visualViewport) {
   window.visualViewport.addEventListener('scroll', scheduleRelayout);
 }
 
-// Đợi native inject (chống race) — game-common §3
+// Đợi native inject (chống race) — game-common §3.
+// Game CÓ level ⇒ currentLevel là NGUỒN LEVEL CHÍNH. Trong WebView native ta ĐỢI
+// đúng currentLevel trước khi boot; nếu boot sớm lúc mới có language/data, level sẽ
+// rơi về mặc định rồi "giật" sang level đúng khi currentLevel tới. Ngoài trình duyệt
+// (không native) không bao giờ có currentLevel ⇒ boot theo timeout ngắn, dùng localStorage.
 (function waitForNativeInjection() {
   const start = Date.now();
+  const native = isNative();
   (function check() {
-    if (typeof window.currentLevel === 'number' ||
-        typeof window.language === 'string' ||
-        typeof window.data === 'string' ||
-        Date.now() - start > 200) {
-      boot();
-    } else {
-      setTimeout(check, 10);
-    }
+    const haveLevel = typeof window.currentLevel === 'number';
+    const haveAny = haveLevel ||
+      typeof window.language === 'string' || typeof window.data === 'string';
+    const ready = native ? haveLevel : haveAny;
+    const timedOut = Date.now() - start > (native ? 1500 : 150);
+    if (ready || timedOut) boot();
+    else setTimeout(check, 10);
   })();
 })();
 </script>
+
+</body>
+</html>
