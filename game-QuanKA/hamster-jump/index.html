@@ -617,12 +617,11 @@ const I18N = {
         infoPerfect:'Land in the middle = Perfect',
         infoMiss:'Miss = top 5 layers fall (−5)',
         infoLose:'Get hit = game over',
-        infoGold:'Fast! +8 coins',
-        infoMini:'×2 points',
+        infoGold:'Fast!',
+        infoMini:'Narrow — harder',
         infoIce:'Slippery!',
         infoSpring:'Next jump higher',
-        infoMold:"Don't jump! Let it pass (+2)",
-        infoGift:'+3 coins',
+        infoMold:"Don't jump!",
         infoDouble:'Pick one!',
         infoStreak:'Streak: +5 → +10 → +15…', menu:'Menu', sound:'Sound', highest:'Highest' },
   vi: { title:'HAMSTER JUMP', score:'ĐIỂM', best:'CAO NHẤT', tapToStart:'Chạm để bắt đầu',
@@ -637,12 +636,11 @@ const I18N = {
         infoPerfect:'Đáp giữa miếng = Perfect',
         infoMiss:'Nhảy hụt = sập 5 tầng (−5)',
         infoLose:'Bị tông = thua',
-        infoGold:'Nhanh! +8 xu',
-        infoMini:'Điểm ×2',
+        infoGold:'Nhanh!',
+        infoMini:'Hẹp — canh khó',
         infoIce:'Trơn trượt!',
         infoSpring:'Cú nhảy sau cao hơn',
-        infoMold:'Đừng nhảy! Cho nó qua (+2)',
-        infoGift:'+3 xu',
+        infoMold:'Đừng nhảy!',
         infoDouble:'Chọn 1 miếng!',
         infoStreak:'Chuỗi: +5 → +10 → +15…', menu:'Menu', sound:'Âm thanh', highest:'Cao nhất' },
   'zh-Hans': { title:'仓鼠跳跳', score:'分数', best:'最高', tapToStart:'点击开始',
@@ -1299,7 +1297,6 @@ const C = {
   cheese: '#f3e17f', cheeseTop: '#f9efad', cheeseDark: '#e0c968',
   hole: '#d9bf5c', outline: 'rgba(160,125,55,.4)',
   board: '#c8935a', boardEdge: '#a4713a',
-  gift: '#f25c7f', giftLid: '#ff8fa8', giftOutline: 'rgba(150,55,80,.5)', ribbon: '#fff3d6',
   spring: '#9298a5', springHi: '#c8cdd8',
   ham: '#fbf3e4', hamShade: '#efdec4', hamPatch: '#e8964e',
   earIn: '#ffbfcf', blush: 'rgba(255,140,165,.55)',
@@ -1329,7 +1326,7 @@ let cssW = 0, cssH = 0, scale = 1, LH = 0;
 let state = 'ready';        // 'ready' | 'playing' | 'over'
 let paused = false;
 
-/* tháp: mỗi tầng {cx, gift} — bề rộng không đổi; tầng i chiếm
+/* tháp: mỗi tầng {cx, kind, w, seed} — bề rộng không đổi; tầng i chiếm
    worldY [-(i+1)*BLOCK_H, -i*BLOCK_H]; mặt trên tháp = -count*BLOCK_H */
 let tower = [];             // mỗi tầng: {cx, kind, w, seed}
 let sliders = [];           // các miếng đang vào: {cx, dir, speed, kind, w, seed,
@@ -1338,7 +1335,7 @@ let springArmed = false;    // đáp lên lò xo → cú nhảy kế tiếp cao 
 let tutorial = null;        // đang trong tutorial: {landed}
 let tutSeen = false;        // đã chơi qua tutorial (persist trong save_data)
 let boards = [];            // ván gỗ: {dir, yW, endX, extendT0, retractT0}
-let fallBlocks = [];        // miếng trượt hụt rơi khỏi tháp: {cx, yTop, vx, vy, rot, vr, gift, seed}
+let fallBlocks = [];        // miếng trượt hụt rơi khỏi tháp: {cx, yTop, vx, vy, rot, vr, kind, w, seed}
 let landBounceT0 = -1e9;    // thời điểm miếng trên cùng nhún (hamster vừa đáp)
 let landBounceOff = 0;      // hướng lệch lúc đáp (−1..1) → miếng nhún NGHIÊNG về phía đó
 let floatTexts = [];        // {x, y, born, text, color}
@@ -1804,10 +1801,6 @@ function drawTable() {
   ctx.beginPath();
   ctx.ellipse(mx, py + 1, BLOCK_W * 0.56, 10, 0, 0, Math.PI * 2);
   ctx.fill();
-
-  /* nĩa (trái) + dao (phải) nằm gọn trên rug */
-  drawForkAt(mx - 198, py + 42, -0.15, 0.9);
-  drawKnifeAt(mx + 198, py + 40, 0.15, 0.9);
 }
 
 /* Miếng phô mai (hoặc hộp quà) — vẽ theo world coords */
@@ -1887,10 +1880,9 @@ function drawBlock(cxW, topW, kind, seed, w, sq) {
   w = w || BLOCK_W;
   const x = sx(cxW - w / 2), y = sy(topW);
   if (y > LH / 2 + cullPad() || y < LH / 2 - cullPad() - BLOCK_H) return;
-  if (kind !== 'gift') {
-    const SK = BLOCK_SKINS[kind] || BLOCK_SKINS.normal;
-    const inset = Math.round(w * 0.1);
-    const kw = w / BLOCK_W;               // tỉ lệ co (mini)
+  const SK = BLOCK_SKINS[kind] || BLOCK_SKINS.normal;
+  const inset = Math.round(w * 0.1);
+  const kw = w / BLOCK_W;               // tỉ lệ co (mini)
     if (kind === 'spring') {
       drawSpringSandwich(x, y, w, seed, sq || 0, SK, inset);
       return;
@@ -1988,87 +1980,6 @@ function drawBlock(cxW, topW, kind, seed, w, sq) {
     ctx.arcTo(x, y + BLOCK_H, x, y + BLOCK_H - 8, 8);
     ctx.closePath();
     ctx.stroke();
-  } else {
-    /* hộp quà: thân + NẮP có mặt trên (cùng góc nhìn với phô mai) + nơ trên nắp */
-    const cxm = x + BLOCK_W / 2;
-    /* mặt trên của nắp — góc trước TRÙNG góc trên mặt trước nắp */
-    ctx.fillStyle = C.giftLid;
-    ctx.beginPath();
-    ctx.moveTo(x - 3, y + 8);
-    ctx.lineTo(x + BLOCK_W + 3, y + 8);
-    ctx.lineTo(x + BLOCK_W - 12, y - 13);
-    ctx.lineTo(x + 12, y - 13);
-    ctx.closePath();
-    ctx.fill();
-    /* ruy băng dọc chạy trên mặt nắp */
-    ctx.fillStyle = C.ribbon;
-    ctx.beginPath();
-    ctx.moveTo(cxm - 9, y + 8);
-    ctx.lineTo(cxm + 9, y + 8);
-    ctx.lineTo(cxm + 7, y - 13);
-    ctx.lineTo(cxm - 7, y - 13);
-    ctx.closePath();
-    ctx.fill();
-    /* thân hộp */
-    ctx.fillStyle = C.gift;
-    rr(x + 4, y + 26, BLOCK_W - 8, BLOCK_H - 26, 8);
-    ctx.fill();
-    ctx.strokeStyle = C.giftOutline;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    /* ruy băng dọc trên thân */
-    ctx.fillStyle = C.ribbon;
-    ctx.fillRect(cxm - 9, y + 26, 18, BLOCK_H - 26);
-    /* mặt trước nắp — góc trên sắc, rộng hơn thân */
-    ctx.fillStyle = C.giftLid;
-    frontFacePath(x - 3, y + 8, BLOCK_W + 6, 22, 6);
-    ctx.fill();
-    /* ruy băng ngang qua mặt trước nắp */
-    ctx.fillStyle = C.ribbon;
-    ctx.fillRect(cxm - 9, y + 8, 18, 22);
-    /* cạnh gấp nắp — nét mảnh nhạt */
-    ctx.strokeStyle = 'rgba(150,55,80,.25)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(x - 2, y + 8);
-    ctx.lineTo(x + BLOCK_W + 2, y + 8);
-    ctx.stroke();
-    /* viền ngoài nắp một nét liền (mặt trên + mặt trước) */
-    ctx.strokeStyle = C.giftOutline;
-    ctx.lineWidth = 2;
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(x - 3, y + 8);
-    ctx.lineTo(x + 12, y - 13);
-    ctx.lineTo(x + BLOCK_W - 12, y - 13);
-    ctx.lineTo(x + BLOCK_W + 3, y + 8);
-    ctx.lineTo(x + BLOCK_W + 3, y + 24);
-    ctx.arcTo(x + BLOCK_W + 3, y + 30, x + BLOCK_W - 3, y + 30, 6);
-    ctx.lineTo(x + 3, y + 30);
-    ctx.arcTo(x - 3, y + 30, x - 3, y + 24, 6);
-    ctx.closePath();
-    ctx.stroke();
-    /* đuôi nơ rủ từ mặt trên xuống mặt trước nắp */
-    ctx.beginPath();
-    ctx.moveTo(cxm - 4, y + 9);
-    ctx.lineTo(cxm - 16, y + 25);
-    ctx.lineTo(cxm - 7, y + 25);
-    ctx.closePath();
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(cxm + 4, y + 9);
-    ctx.lineTo(cxm + 16, y + 25);
-    ctx.lineTo(cxm + 7, y + 25);
-    ctx.closePath();
-    ctx.fill();
-    /* nơ: 2 vòng + nút giữa, đặt TRÊN mặt nắp */
-    ctx.strokeStyle = 'rgba(190,150,60,.55)';
-    ctx.lineWidth = 2;
-    ctx.fillStyle = C.ribbon;
-    ctx.beginPath(); ctx.ellipse(cxm - 13, y - 8, 12, 7.5, -0.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(cxm + 13, y - 8, 12, 7.5, 0.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.arc(cxm, y - 6, 5.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  }
 }
 
 /* Ván gỗ đưa phô mai vào — thò ra / rút về mượt (world-anchored) */
@@ -3239,7 +3150,6 @@ function buildInfoPanel() {
     ['ice', BLOCK_W, t('infoIce')],
     ['spring', BLOCK_W, t('infoSpring')],
     ['mold', BLOCK_W, t('infoMold')],
-    ['gift', BLOCK_W, t('infoGift')],
   ];
   for (const p of pieces) {
     const item = document.createElement('div');

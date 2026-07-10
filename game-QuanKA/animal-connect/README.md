@@ -15,8 +15,15 @@
 
 - Nối 2 tile **cùng con thú** bằng đường ≤ 3 đoạn thẳng (**≤ 2 lần rẽ**) qua ô
   trống; đường được vòng ra ngoài biên. Nối đúng → line phát sáng + tile nổ.
-- Sau mỗi match, tile còn lại **dồn theo hướng của level** (none/down/up/left/
-  right/in/out). **Sạch bàn = thắng màn** (không có đồng hồ → không thua).
+- Tile **LUÔN đứng yên** sau khi nối (không có cơ chế dồn). **Sạch bàn trước khi
+  hết giờ = thắng màn** → sang màn kế; **hết giờ = THUA = endgame** (run kết thúc,
+  chơi lại từ màn 1). Hết nước đi tự xáo miễn phí.
+- **Đồng hồ đếm ngược** ở dòng dưới header: **LEVEL x** (trái) · **thanh time**
+  (giữa) · **số giây** (phải) — cả dòng dài đúng bằng & khớp dọc header. Giây/level
+  giảm dần theo độ khó (`time = pairs × max(2.4, 5.5−idx×0.22)`, làm tròn 5s).
+- **Điểm CỘNG DỒN cả run** (lvl 1 → endgame): mỗi màn thắng giữ nguyên điểm, sang
+  màn kế cộng tiếp; thua thì `BEST = max(BEST, điểm run)`, run mới về 0. SCORE pill
+  = điểm run hiện tại, BEST = điểm run cao nhất. Persist `{levelIdx, score, best}`.
 - **Điểm = số NGÔI SAO** ★ (đặc trưng game): mỗi lần nối, sao xuất hiện **dọc
   đường connect** (mỗi ~1 cạnh tile 1 sao, từ điểm đầu → điểm cuối) rồi **bay
   lên ô SCORE**. Đường càng dài → càng nhiều sao → càng nhiều điểm (10đ/sao).
@@ -49,19 +56,29 @@
      (đỏ nét đứt + chấm ở mỗi chỗ rẽ) cho thấy vì sao không nối được (>2 rẽ).
      Bấm **nhầm** cặp giống-nối-được → nháy lại cặp đúng + nhắc "chạm cặp đang sáng".
   3. **Dọn nốt** cả bàn (cặp bị chặn tự mở ra sau khi dọn blocker — bàn đã verify
-     giải được hết).
+     giải được hết). Bước này **hiện timer demo 15s** ở header + **mũi tên** chỉ lên
+     nó, banner đổi thành "…clear the whole board **before the timer runs out**".
   Bàn + cặp 3-rẽ đã **verify bằng máy** (`findPath`=null, `findMinTurnPath`=3 rẽ,
   bỏ cặp bước 1 vẫn chặn, greedy solve = 0 ô thừa). **Bắt buộc lần đầu**
   (`tutorialSeen`), có Skip, **không tính điểm**. `?reset=1` xem lại.
 
-### Level sinh theo công thức — `levelConfig(idx)`
+### Level sinh theo công thức — `levelConfig(idx)` + `genBoardGrid()`
 
-Deterministic theo số màn (hash, retry ra đúng màn đó); xếp tile random mỗi lần chơi.
+`levelConfig` trả `{cols, rows, types, time}`; xếp tile random mỗi lần chơi.
 
-- **Bàn**: ramp 6×6 → 8×9 trong 8 màn đầu, sau đó xoay vòng bàn lớn (tối đa 8×10, tổng ô luôn chẵn).
-- **Dồn tile**: 7 màn đầu đi đủ tour các mode, sau đó bốc theo hash (bỏ `none`).
+- **Độ khó tăng dần CẢM NHẬN ĐƯỢC — 2 pha:**
+  - **Pha 1 (L1–5)**: bàn lớn dần `6×6 → 8×10` (36→80 ô) — thấy rõ bàn to ra.
+  - **Pha 2 (L6+)**: bàn giữ **MAX 8×10**, `perPair = max(2.0, 4.5−idx×0.18)` siết
+    dần → **timer GIẢM ĐỀU mỗi màn** (150→80s tới ~L15 rồi plateau). Cùng bàn to
+    nhưng ít giờ dần = tín hiệu khó rõ. `time = round(pairs × perPair / 5) × 5`.
 - **Loại thú**: 12 → 13 → 14 từ màn 3 (nhiều loại để ít cặp trùng).
-- (Trường `time`/`hints`/`shuffles` trong `levelConfig` còn nhưng **không dùng** — đã bỏ Time/Hint/Shuffle.)
+- **Sinh bàn = SINH NGƯỢC (reverse-gen)**: đặt từng cặp vào 2 ô **nối được** trên
+  bàn đang lấp → bàn **luôn giải được**. Với xác suất `f = max(0.2, 0.28−idx×0.01)`
+  đặt cặp **KỀ nhau** (an toàn), còn lại rải rác. Trần `f` hạ thấp để **bớt cặp kề
+  nhìn thấy** (tỉ lệ ô có hàng-xóm-cùng-loại: level 1 ~45%, nền coincidental ~29%).
+  Verify mô phỏng chơi ngẫu-nhiên-đối-nghịch: **~2.3% adversarial** (chơi thường
+  ~0.6%) → hiếm phải auto-xáo (độ khó chính do TIMER, không do cặp kề). Vẫn giữ
+  auto-xáo làm lưới an toàn.
 - Vô hạn → **không có màn cuối, không bắn `victory`**; thắng luôn gửi
   `game_result win` + `save_data {levelIdx: n+1, best}`.
 

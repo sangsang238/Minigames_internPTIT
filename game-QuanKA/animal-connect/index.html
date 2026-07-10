@@ -138,15 +138,69 @@ body {
 }
 #hud-best { color: #e39a12; }     /* BEST accent vàng (chuẩn chung) */
 
+/* Dòng dưới header: LEVEL x (trái) + thanh time đếm ngược (phải) — dài đúng
+   bằng & khớp dọc với hud-bar phía trên. */
 #hud-sub {
-  text-align: center;
-  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 1px 2px 0;
+}
+.sub-level {
+  flex: 0 0 auto;
+  font-size: 12px;
   letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--text-soft);
   white-space: nowrap;
 }
-#hud-sub #hud-level { color: var(--text); font-weight: 800; }
+.sub-level #hud-level { color: var(--text); font-weight: 800; }
+
+#time-bar-bg {
+  flex: 1;
+  min-width: 0;
+  height: 9px;
+  background: rgba(255,255,255,.4);
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.6);
+}
+#time-bar-fill {
+  height: 100%;
+  width: 100%;
+  border-radius: 5px;
+  background: linear-gradient(90deg, #35c26e, #7fd34f);
+  transition: width .25s linear, background .4s;
+}
+#time-bar-fill.warn   { background: linear-gradient(90deg, #ffb02e, #ffd23f); }
+#time-bar-fill.danger { background: linear-gradient(90deg, #ff4d4d, #ff8a3d); }
+@keyframes timeDanger { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+#time-bar-fill.danger { animation: timeDanger .6s ease-in-out infinite; }
+
+/* Số giây bên phải thanh timer (khớp dọc header) */
+#hud-secs {
+  flex: 0 0 auto;
+  min-width: 26px;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+#hud-secs.danger { color: #d92b2b; }
+
+/* Mũi tên chỉ lên timer (bước dạy đồng hồ trong tutorial) */
+#tut-arrow {
+  position: fixed;
+  z-index: 245;
+  width: 26px;
+  height: 54px;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 3px rgba(23,74,52,.4));
+  animation: arrowBob .9s ease-in-out infinite;
+}
+#tut-arrow.hidden { display: none; }
+@keyframes arrowBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 
 /* ── Board ────────────────────────────────────────────────────── */
 #board-outer {
@@ -229,7 +283,6 @@ body {
   -webkit-user-select: none;
   user-select: none;
 }
-.tile.sliding { transition: transform .2s cubic-bezier(.22,1,.36,1); }
 
 .tile-inner {
   width: 100%;
@@ -569,7 +622,11 @@ body {
       </span>
     </div>
   </div>
-  <div id="hud-sub"><span id="lbl-level">LEVEL</span> <span id="hud-level">1</span></div>
+  <div id="hud-sub">
+    <span class="sub-level"><span id="lbl-level">LEVEL</span> <span id="hud-level">1</span></span>
+    <div id="time-bar-bg"><div id="time-bar-fill"></div></div>
+    <span id="hud-secs">0</span>
+  </div>
 </div>
 
 <div id="app">
@@ -589,6 +646,12 @@ body {
     <span class="btn3d-surface" id="tut-skip-label">Skip</span>
   </button>
 </div>
+
+<!-- Mũi tên (ngoài dialog) chỉ lên timer trong bước dạy đồng hồ -->
+<svg id="tut-arrow" class="hidden" viewBox="0 0 26 54" aria-hidden="true">
+  <path d="M13 52 L13 14 M5 24 L13 7 L21 24" fill="none" stroke="#ff8a3d"
+        stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
 
 <!-- Overlays -->
 <div id="combo-badge" aria-live="polite"></div>
@@ -919,18 +982,27 @@ const TUT_FAIL = {
   fil:'Magkaibang hayop ay ’di kumokonekta — subukan!',
 };
 const TUT_CLEAR = {
-  en:'Great! Now clear the whole board', vi:'Tuyệt! Giờ dọn sạch cả bàn nào',
-  'zh-Hans':'很好！现在清空整个棋盘', 'zh-Hant':'很好！現在清空整個棋盤',
-  ja:'いいね！盤面を全部消そう', ko:'좋아요! 이제 보드를 다 비우세요',
-  es:'¡Genial! Ahora limpia todo el tablero', 'es-MX':'¡Genial! Ahora limpia todo el tablero',
-  'es-AR':'¡Genial! Ahora limpiá todo el tablero', 'pt-BR':'Ótimo! Agora limpe o tabuleiro todo',
-  pt:'Ótimo! Agora limpa o tabuleiro todo', fr:'Super ! Vide maintenant tout le plateau',
-  de:'Super! Räum jetzt das ganze Brett ab', it:'Ottimo! Ora svuota tutto il tabellone',
-  nl:'Top! Maak nu het hele bord leeg', pl:'Świetnie! Teraz wyczyść całą planszę',
-  ru:'Отлично! Теперь очисти всё поле', tr:'Harika! Şimdi tüm tahtayı temizle',
-  ar:'رائع! الآن نظّف كامل اللوحة', hi:'बढ़िया! अब पूरा बोर्ड साफ़ करें',
-  th:'เยี่ยม! ทีนี้เก็บให้หมดกระดาน', id:'Bagus! Sekarang bersihkan seluruh papan',
-  fil:'Galing! Ngayon linisin ang buong board',
+  en:'Great! Now clear the whole board before the timer runs out',
+  vi:'Tuyệt! Giờ dọn sạch cả bàn trước khi hết giờ',
+  'zh-Hans':'很好！在时间耗尽前清空整个棋盘', 'zh-Hant':'很好！在時間耗盡前清空整個棋盤',
+  ja:'いいね！時間切れ前に盤面を全部消そう', ko:'좋아요! 시간이 끝나기 전에 보드를 다 비우세요',
+  es:'¡Genial! Limpia todo el tablero antes de que acabe el tiempo',
+  'es-MX':'¡Genial! Limpia todo el tablero antes de que acabe el tiempo',
+  'es-AR':'¡Genial! Limpiá todo el tablero antes de que acabe el tiempo',
+  'pt-BR':'Ótimo! Limpe o tabuleiro todo antes do tempo acabar',
+  pt:'Ótimo! Limpa o tabuleiro todo antes do tempo acabar',
+  fr:'Super ! Vide tout le plateau avant la fin du temps',
+  de:'Super! Räum das ganze Brett ab, bevor die Zeit abläuft',
+  it:'Ottimo! Svuota tutto il tabellone prima che scada il tempo',
+  nl:'Top! Maak het hele bord leeg voor de tijd om is',
+  pl:'Świetnie! Wyczyść całą planszę, zanim skończy się czas',
+  ru:'Отлично! Очисти всё поле, пока не вышло время',
+  tr:'Harika! Süre bitmeden tüm tahtayı temizle',
+  ar:'رائع! نظّف كامل اللوحة قبل نفاد الوقت',
+  hi:'बढ़िया! समय खत्म होने से पहले पूरा बोर्ड साफ़ करें',
+  th:'เยี่ยม! เก็บให้หมดกระดานก่อนหมดเวลา',
+  id:'Bagus! Bersihkan seluruh papan sebelum waktu habis',
+  fil:'Galing! Linisin ang buong board bago maubos ang oras',
 };
 /* Bài học "cùng loại nhưng đường phải rẽ >2 lần → không nối được" */
 const TUT_BENDTXT = {
@@ -1110,45 +1182,27 @@ function getInitialData() {
 }
 
 /* ================================================================
- * §2. Level definitions — 10 levels
- *  cols×rows (số ô, luôn chẵn) | types: số loại thú | shift: hướng dồn
- *  tile sau mỗi match | time: giây | hints/shuffles: lượt trợ giúp
+ * §2. Level definitions — VÔ HẠN, sinh theo công thức
+ *  cols×rows (số ô, luôn chẵn) | types: số loại thú
  * ================================================================ */
-/* Level VÔ HẠN, sinh theo công thức — không có danh sách cố định.
- * Cùng một idx luôn sinh cùng cấu hình (retry = đúng level đó, nhờ hash
- * deterministic thay vì Math.random); còn cách XẾP tile thì random mỗi
- * lần chơi (fillBoard). Vì không có "màn cuối" nên event `victory`
- * (game-common §1.5) không dùng — chỉ có game_result win/lose. */
-const SHIFT_MODES = ['none', 'down', 'up', 'left', 'right', 'in', 'out'];
-
-// 8 màn đầu ramp cố định cho quen tay; từ màn 9 xoay vòng các bàn lớn.
-// Mọi kích thước đều cho tổng ô CHẴN (bàn chia hết thành cặp).
-const SIZE_RAMP = [[6,6],[6,7],[6,8],[7,8],[7,8],[8,8],[8,9],[8,9]];
-const SIZE_LOOP = [[8,10],[8,9],[7,10],[8,8],[8,10],[7,8]];
-
-/* Hash nguyên deterministic theo idx (splitmix-lite) */
-function levelHash(idx) {
-  let h = ((idx + 1) * 2654435761) >>> 0;
-  h = (((h >>> 16) ^ h) * 0x45d9f3b) >>> 0;
-  return ((h >>> 16) ^ h) >>> 0;
-}
+/* ĐỘ KHÓ TĂNG DẦN CẢM NHẬN ĐƯỢC — 2 pha:
+ *  • Pha 1 (level 1–5): BÀN lớn dần 6×6 → 8×10 (thấy rõ bàn to ra mỗi màn).
+ *  • Pha 2 (level 6+):  bàn giữ MAX 8×10, `perPair` (giây/cặp) SIẾT dần tới sàn
+ *    → cùng bàn to nhưng THỜI GIAN GIẢM ĐỀU mỗi màn = tín hiệu khó rõ ràng.
+ * Thêm: loại thú 12→14, tỉ lệ cặp-kề `f` giảm (bàn khó tìm hơn), điểm cộng dồn.
+ * Tile LUÔN đứng yên; không "màn cuối" → chỉ game_result win/lose. */
+const SIZE_RAMP = [[6,6],[6,8],[8,8],[8,9],[8,10]];   // tiles 36→48→64→72→80
+const SIZE_MAX  = [8,10];                             // level 6+ giữ ở max
 
 function levelConfig(idx) {
-  const [cols, rows] = idx < SIZE_RAMP.length
-    ? SIZE_RAMP[idx]
-    : SIZE_LOOP[levelHash(idx) % SIZE_LOOP.length];
-  const pairs = (cols * rows) / 2;
-  // giây/cặp: 8.5 giảm 0.35 mỗi màn, chạm sàn 5.0 → khó dần rồi giữ
-  // "căng nhưng công bằng", không thành Dark Souls
-  const perPair = Math.max(5.0, 8.5 - idx * 0.35);
-  const time = Math.round((pairs * perPair) / 5) * 5;
-  // 7 màn đầu đi đủ tour các mode dồn; sau đó bốc theo hash (bỏ 'none')
-  const shift = idx < SHIFT_MODES.length
-    ? SHIFT_MODES[idx]
-    : SHIFT_MODES[1 + levelHash(idx * 7 + 3) % (SHIFT_MODES.length - 1)];
+  const [cols, rows] = idx < SIZE_RAMP.length ? SIZE_RAMP[idx] : SIZE_MAX;
   // types cao để ít cặp trùng: màn 1 = 12 loại, từ màn 3 đủ 14
   const types = Math.min(ANIMALS.length, 12 + Math.min(idx, 2));
-  return { cols, rows, types, shift, time, hints: 3, shuffles: 2 };
+  // giây/cặp siết từ 4.5 → sàn 2.0 (đạt sàn ~màn 15) → nhịp bắt buộc nhanh dần
+  const pairs = (cols * rows) / 2;
+  const perPair = Math.max(2.0, 4.5 - idx * 0.18);
+  const time = Math.round(pairs * perPair / 5) * 5;   // làm tròn 5s
+  return { cols, rows, types, time };
 }
 
 const MAX_LEVEL_IDX = 9998;   // chặn giá trị vô lý từ native/data
@@ -1294,8 +1348,10 @@ let COLS = 6, ROWS = 6;
 let grid  = [];         // grid[r][c] = type index | -1 (trống)
 let tiles = [];         // tiles[r][c] = {type, el} | null (song song với grid)
 let pairsLeft   = 0;
-let score       = 0;
+let score       = 0;       // ĐIỂM CỘNG DỒN cả run (lvl1 → endgame), reset khi run mới
 let best        = 0;       // điểm cao nhất từng đạt (persist qua save_data + localStorage)
+let timeTotal   = 90;      // giây của level hiện tại
+let timeLeft    = 90;      // giây còn lại (float)
 let busy        = false;   // đang animate match/shuffle
 let ended       = false;
 let paused      = false;
@@ -1312,6 +1368,7 @@ let menuOpen    = false;   // (vestigial) luôn false — không còn màn menu,
 let tutorialMode = false;  // đang chạy tutorial tương tác
 let tutStep      = 0;
 let tutTarget    = null;   // cặp người chơi cần nối ở stage đang "dạy nối"
+let tutTimerRunning = false;   // demo timer stage-2 đã chạy chưa (bắt đầu khi thao tác)
 let tutorialSeen = false;  // đã qua tutorial chưa (persist qua save_data + localStorage)
 let confirmOpen = false;   // (vestigial) luôn false — giữ để các gate còn hợp lệ
 
@@ -1409,6 +1466,14 @@ function resize() {
       const bh = banner.getBoundingClientRect().height;
       const top = Math.max(headH + 6, headH + (bwTop - headH - bh) / 2);
       banner.style.top = top + 'px';
+
+      // Mũi tên (stage 2): nằm ngay TRÊN bảng, canh giữa theo thanh timer, chỉ lên
+      const arrow = document.getElementById('tut-arrow');
+      if (tutStep === 2 && !arrow.classList.contains('hidden')) {
+        const tbar = document.getElementById('time-bar-bg').getBoundingClientRect();
+        arrow.style.left = (tbar.left + tbar.width / 2 - 13) + 'px';
+        arrow.style.top  = Math.max(headH + 2, top - 58) + 'px';
+      }
     }
   });
 }
@@ -1430,28 +1495,49 @@ function shuffleArr(a) {
   return a;
 }
 
-function buildTypeBag(total, nTypes) {
-  const nPairs = total / 2;
-  const bag = [];
-  for (let i = 0; i < nPairs; i++) { bag.push(i % nTypes, i % nTypes); }
-  return shuffleArr(bag);
+/* Tỉ lệ đặt cặp KỀ nhau theo level: level đầu nhiều hơn (dễ, an toàn), càng về
+ * sau càng ít cặp kề → bàn rải rác/khó hơn. Trần hạ xuống ~0.6 để level đầu
+ * không bị "quá nhiều cặp kề". */
+function levelAdjFraction(idx) {
+  return Math.max(0.2, 0.28 - idx * 0.01);
+}
+
+/* Sinh grid bằng SINH NGƯỢC (reverse-gen) → bàn LUÔN giải được (đặt từng cặp vào
+ * 2 ô nối-được trên bàn đang lấp; thứ tự ngược luôn dọn được). Với xác suất f
+ * (theo level) đặt cặp KỀ nhau (domino — an toàn, không gây deadlock), còn lại
+ * rải rác cho khó. → gần như không bao giờ phải auto-xáo giữa chừng.
+ * Không dựng DOM — dùng chung cho fillBoard & test. */
+function genBoardGrid() {
+  const lv = levelConfig(currentLevelIdx);
+  const f = levelAdjFraction(currentLevelIdx);
+  grid = Array.from({ length: ROWS }, () => new Array(COLS).fill(-1));
+  let rem = [];
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) rem.push([r, c]);
+  let tc = 0;
+  while (rem.length >= 2) {
+    const ai = (Math.random() * rem.length) | 0, a = rem[ai];
+    const others = [];
+    for (let i = 0; i < rem.length; i++) if (i !== ai) others.push(rem[i]);
+    let b = null;
+    // Xác suất f: đặt cặp KỀ nhau (2 ô sát cạnh — luôn nối được, không deadlock)
+    if (Math.random() < f) {
+      const adj = others.filter(x => Math.abs(x[0] - a[0]) + Math.abs(x[1] - a[1]) === 1);
+      if (adj.length) b = adj[(Math.random() * adj.length) | 0];
+    }
+    // Còn lại: RẢI RÁC — đặt vào ô NỐI ĐƯỢC trên bàn đang lấp (đảm bảo giải được)
+    if (!b) {
+      const cand = shuffleArr(others.slice());
+      for (const x of cand) if (findPath(a[0], a[1], x[0], x[1])) { b = x; break; }
+      if (!b) b = others[0];   // cực hiếm (bàn gần đầy không còn đường) — chấp nhận
+    }
+    const ty = tc % lv.types; tc++;
+    grid[a[0]][a[1]] = ty; grid[b[0]][b[1]] = ty;
+    rem = rem.filter(x => x !== a && x !== b);
+  }
 }
 
 function fillBoard() {
-  const lv = levelConfig(currentLevelIdx);
-  let bag, tries = 0;
-  do {
-    bag = buildTypeBag(COLS * ROWS, lv.types);
-    grid = [];
-    let k = 0;
-    for (let r = 0; r < ROWS; r++) {
-      grid.push([]);
-      for (let c = 0; c < COLS; c++) grid[r].push(bag[k++]);
-    }
-    tries++;
-  } while (tries < 60 && !hasMoves());
-  if (!hasMoves()) forceOneMove();
-
+  genBoardGrid();
   buildTileDom(true);
 }
 
@@ -1673,71 +1759,6 @@ function drawBendPath(pts, bends, holdMs) {
 }
 
 /* ================================================================
- * §10. Shift modes — dồn tile sau mỗi match (đặc sản Onet)
- * ================================================================ */
-function compactSeq(cells) {
-  // cells: mảng [r,c] theo THỨ TỰ ĐÍCH (dồn về đầu mảng). Trả true nếu có di chuyển.
-  const vals = cells.map(([r, c]) => grid[r][c]).filter(v => v >= 0);
-  const tls  = cells.map(([r, c]) => tiles[r][c]).filter(Boolean);
-  let moved = false;
-  cells.forEach(([r, c], i) => {
-    const v = i < vals.length ? vals[i] : -1;
-    const tl = i < tls.length ? tls[i] : null;
-    if (grid[r][c] !== v || tiles[r][c] !== tl) moved = true;
-    grid[r][c]  = v;
-    tiles[r][c] = tl;
-  });
-  return moved;
-}
-
-function applyShift(mode) {
-  let moved = false;
-  const colCells = (c, topDown) => {
-    const a = [];
-    for (let r = 0; r < ROWS; r++) a.push([topDown ? r : ROWS - 1 - r, c]);
-    return a;
-  };
-  const rowCells = (r, leftRight) => {
-    const a = [];
-    for (let c = 0; c < COLS; c++) a.push([r, leftRight ? c : COLS - 1 - c]);
-    return a;
-  };
-  const half = COLS >> 1;
-
-  if (mode === 'down') for (let c = 0; c < COLS; c++) moved = compactSeq(colCells(c, false)) || moved;
-  else if (mode === 'up')    for (let c = 0; c < COLS; c++) moved = compactSeq(colCells(c, true))  || moved;
-  else if (mode === 'left')  for (let r = 0; r < ROWS; r++) moved = compactSeq(rowCells(r, true))  || moved;
-  else if (mode === 'right') for (let r = 0; r < ROWS; r++) moved = compactSeq(rowCells(r, false)) || moved;
-  else if (mode === 'in' || mode === 'out') {
-    for (let r = 0; r < ROWS; r++) {
-      const L = [], R = [];
-      for (let c = 0; c < half; c++) L.push([r, c]);
-      for (let c = half; c < COLS; c++) R.push([r, c]);
-      // 'in': hai nửa dồn VỀ giữa (trái dồn về cột half-1, phải về cột half)
-      // 'out': hai nửa dồn RA mép (trái về cột 0, phải về cột COLS-1)
-      if (mode === 'in') L.reverse(); else R.reverse();
-      moved = compactSeq(L) || moved;
-      moved = compactSeq(R) || moved;
-    }
-  }
-
-  if (moved) {
-    for (let r = 0; r < ROWS; r++)
-      for (let c = 0; c < COLS; c++)
-        if (tiles[r][c]) {
-          tiles[r][c].el.classList.add('sliding');
-          layoutTile(tiles[r][c], r, c);
-        }
-    setTimeout(() => {
-      for (let r = 0; r < ROWS; r++)
-        for (let c = 0; c < COLS; c++)
-          if (tiles[r][c]) tiles[r][c].el.classList.remove('sliding');
-    }, 230);
-  }
-  return moved;
-}
-
-/* ================================================================
  * §11. Input — tap chọn 2 tile cùng loại
  * ================================================================ */
 boardEl.addEventListener('pointerdown', e => {
@@ -1751,6 +1772,7 @@ boardEl.addEventListener('pointerdown', e => {
 
 function handleTap(r, c) {
   idleAcc = 0;                 // có thao tác → reset đồng hồ auto-hint
+  if (tutorialMode && tutStep === 2) tutTimerRunning = true;   // thao tác → demo timer chạy
   if (!selected) { select(r, c); return; }
   const { r: sr, c: sc } = selected;
   if (sr === r && sc === c) { deselect(); return; }
@@ -1837,8 +1859,8 @@ async function doMatch(a, b, path) {
       const nStars = spawnStars(path);
       let gained = nStars * STAR_POINTS;
       let praise = '';
-      if (findMs < 1100)      { gained += 20; praise = t('praiseWow');  }   // rất nhanh
-      else if (findMs < 2200) { gained += 10; praise = t('praiseFast'); }   // nhanh
+      if (findMs < 1100)      { gained += 2; praise = t('praiseWow');  }   // rất nhanh
+      else if (findMs < 2200) { gained += 1; praise = t('praiseFast'); }   // nhanh
       score += gained;
       updateHUD();
       if (praise) showPraise(praise, gained - nStars * STAR_POINTS);
@@ -1862,12 +1884,10 @@ async function doMatch(a, b, path) {
     await waitWhilePaused();         // onAppPause giữa match → đứng yên chờ
     if (ep !== levelEpoch || ended) return;
 
-    // Bàn tutorial: KHÔNG dồn tile / không auto-xáo (giữ bàn tĩnh để dạy)
+    // Bàn tutorial: không auto-xáo (giữ bàn tĩnh để dạy)
     if (tutorialMode) return;
 
-    // Dồn tile theo mode của level
-    if (applyShift(levelConfig(currentLevelIdx).shift)) await sleep(230);
-    if (ep !== levelEpoch || ended) return;
+    // Tile LUÔN đứng yên (không còn cơ chế dồn) — giữ nguyên vị trí sau mỗi match.
 
     // Deadlock → tự xáo (miễn phí)
     if (!hasMoves()) {
@@ -1986,7 +2006,7 @@ function updateLabels() {
 
 /* ★ Ngôi sao bay lên SCORE — rải dọc đường nối, mỗi ~1 cạnh tile 1 sao.
    Trả về SỐ sao (đường càng dài càng nhiều sao → nhiều điểm). */
-const STAR_POINTS = 10;
+const STAR_POINTS = 1;   // 1 điểm / sao (điểm = số sao, không còn bội số 10)
 const STAR_SVG = '<svg viewBox="0 0 24 24"><path d="M12 2 L14.9 8.6 L22 9.3 L16.7 14 L18.3 21 L12 17.3 L5.7 21 L7.3 14 L2 9.3 L9.1 8.6 Z" fill="#ffce4d" stroke="#e39a12" stroke-width="1.3" stroke-linejoin="round"/></svg>';
 
 function spawnStars(pathPtsPadded) {
@@ -2108,10 +2128,49 @@ function showToast(msg) {
 }
 
 let lastTs = null;
-let idleAcc = 0;   // giây rảnh (không thao tác) → auto-hint khi ≥5s
+let idleAcc = 0;      // giây rảnh (không thao tác) → auto-hint khi ≥5s
+let timerUiAcc = 1;   // dồn dt để render thanh giờ ~5 lần/s
+let lastTickSec = -1; // tiếng tick mỗi giây ở 10s cuối
+
+/* Đồng hồ đếm ngược (mainLoop, dt độc lập refresh rate). Hết giờ = THUA/endgame. */
+function tickTimer(dt) {
+  // Tutorial stage 2: demo timer chạy sau khi người chơi thao tác — chỉ đếm
+  // xuống + vẽ, KHÔNG gây thua (kẹt ở 0 nếu chưa dọn xong).
+  if (tutorialMode) {
+    if (tutStep === 2 && tutTimerRunning && !ended && !paused && timeLeft > 0) {
+      timeLeft = Math.max(0, timeLeft - dt);
+      timerUiAcc += dt;
+      if (timerUiAcc >= 0.15) { timerUiAcc = 0; renderTimer(); }
+    }
+    return;
+  }
+  if (paused || ended || menuOpen || confirmOpen) return;
+  timeLeft -= dt;
+  if (timeLeft <= 0) {
+    timeLeft = 0;
+    renderTimer();
+    if (pairsLeft > 0) loseLevel();       // chưa sạch bàn mà hết giờ → thua
+    return;
+  }
+  const s = Math.ceil(timeLeft);
+  if (s !== lastTickSec) { lastTickSec = s; if (s <= 10) SND.tick(); }
+  timerUiAcc += dt;
+  if (timerUiAcc >= 0.2) { timerUiAcc = 0; renderTimer(); }
+}
+
+function renderTimer() {
+  const frac = timeTotal > 0 ? Math.max(0, timeLeft / timeTotal) : 0;
+  const fill = document.getElementById('time-bar-fill');
+  fill.style.width = (frac * 100) + '%';
+  fill.classList.toggle('warn',   frac <= .35 && frac > .15);
+  fill.classList.toggle('danger', frac <= .15 && !ended);
+  const secs = document.getElementById('hud-secs');
+  secs.textContent = Math.ceil(Math.max(0, timeLeft));
+  secs.classList.toggle('danger', frac <= .15 && !ended);
+}
 
 /* ================================================================
- * §16. Win (game-common §1.1 — app vẽ popup). Không còn Time → không thua.
+ * §16. Win / Lose (game-common §1.1). Điểm CỘNG DỒN cả run; hết giờ = endgame.
  * ================================================================ */
 function winLevel() {
   if (ended) return;
@@ -2121,14 +2180,33 @@ function winLevel() {
 
   SND.win();
   const newIdx = Math.min(currentLevelIdx + 1, MAX_LEVEL_IDX);
-  saveData({ levelIdx: newIdx, tutorialSeen, muted, best });   // nhẹ → native (§1.2)
-  saveLocal({ levelIdx: newIdx, tutorialSeen, muted, best });  // xoá snapshot ván dở
+  // Thắng màn → sang màn kế, GIỮ điểm cộng dồn
+  saveData({ levelIdx: newIdx, score, tutorialSeen, muted, best });
+  saveLocal({ levelIdx: newIdx, score, tutorialSeen, muted, best });   // xoá snapshot ván dở
   maybeRequestAds();
 
   clearTimeout(resultTimer);
   resultTimer = setTimeout(() => {
-    // Level vô hạn → không có màn cuối → không bao giờ bắn `victory`
     sendMessage('game_result', { result: 'win', showModal: true });
+  }, 450);
+}
+
+/* Hết giờ = THUA = ENDGAME: điểm cộng dồn là điểm cuối; run kế bắt đầu lại từ
+ * màn 1, điểm 0. */
+function loseLevel() {
+  if (ended) return;
+  ended = true;
+  deselect(); clearHint();
+  renderTimer();
+  SND.lose();
+  if (score > best) best = score;
+  saveData({ levelIdx: 0, score: 0, tutorialSeen, muted, best });
+  saveLocal({ levelIdx: 0, score: 0, tutorialSeen, muted, best });
+  maybeRequestAds();
+
+  clearTimeout(resultTimer);
+  resultTimer = setTimeout(() => {
+    sendMessage('game_result', { result: 'lose', showModal: true });
   }, 450);
 }
 
@@ -2145,12 +2223,13 @@ function saveCurrentState() {
   if (ended || tutorialMode || !grid.length) return;   // đừng persist board tutorial
   saveLocal({
     levelIdx: currentLevelIdx,
+    score,                                    // điểm cộng dồn của run (top-level)
     tutorialSeen,
     muted,
     best,
     game: {
       grid: grid.map(row => row.slice()),
-      score, endCounter,
+      score, endCounter, timeLeft: Math.ceil(timeLeft),
     },
   });
 }
@@ -2174,6 +2253,7 @@ function tryRestoreState(idx) {
     pairsLeft  = count / 2;
     score      = num(g.score, 0);
     endCounter = num(g.endCounter, 0);
+    timeLeft   = Math.min(Math.max(num(g.timeLeft, timeTotal), 3), timeTotal);   // giữ giờ còn lại
 
     if (!hasMoves()) forceOneMove();   // sửa grid TRƯỚC khi dựng DOM
     buildTileDom(false);
@@ -2191,7 +2271,8 @@ function loadLevel(idx) {
   const lv = levelConfig(idx);
   COLS = lv.cols; ROWS = lv.rows;
   pairsLeft    = (COLS * ROWS) / 2;
-  score        = 0;
+  // KHÔNG reset score ở đây → điểm cộng dồn qua các màn (run mới reset ở boot/retry)
+  timeTotal = lv.time; timeLeft = lv.time; lastTickSec = -1; timerUiAcc = 1;
   busy = false; ended = false; paused = false;
   selected = null; hintPair = null;
   comboStreak = 0; lastMatchAt = 0; idleAcc = 0; lastFindAt = performance.now();
@@ -2205,6 +2286,7 @@ function loadLevel(idx) {
   fillBoard();
   updateLabels();
   updateHUD();
+  renderTimer();
   resize();
   saveCurrentState();
 }
@@ -2237,7 +2319,7 @@ function startTutorial() {
   tutorialMode = true;
   COLS = TUT_COLS; ROWS = TUT_ROWS;
   busy = false; ended = false; paused = false;
-  selected = null; hintPair = null; comboStreak = 0; idleAcc = 0; tutTarget = null;
+  selected = null; hintPair = null; comboStreak = 0; idleAcc = 0; tutTarget = null; tutTimerRunning = false;
   linkSvg.innerHTML = '';
   pairsLeft = TUT_TILES.length / 2;
 
@@ -2254,11 +2336,25 @@ function startTutorial() {
 function setTutPhase(n) {
   tutStep = n;
   const txt = document.getElementById('tut-text');
+  const sub = document.getElementById('hud-sub');
+  const arrow = document.getElementById('tut-arrow');
   clearHint();
   if (n === 0)      { txt.textContent = t('tut1');    tutTarget = TUT_CONNECT.map(p => p.slice()); highlightPair(TUT_CONNECT); }
   else if (n === 1) { txt.textContent = t('tutBend'); tutTarget = null; highlightPair(TUT_BEND); }
   else              { txt.textContent = t('tutClear'); tutTarget = null; highlightPair(findAnyPair(true)); }
-  resize();   // chữ đổi → đặt lại vị trí bảng + đẩy bàn cho khớp
+
+  // Stage 2 (dọn bàn): HIỆN timer demo 15s ở header + mũi tên chỉ lên nó
+  if (n === 2) {
+    sub.style.display = '';                 // hiện dòng LEVEL + timer
+    timeTotal = 15; timeLeft = 15;          // demo 15 giây — chạy khi người chơi thao tác
+    tutTimerRunning = false; timerUiAcc = 0;
+    renderTimer();
+    arrow.classList.remove('hidden');
+  } else {
+    sub.style.display = 'none';             // stage 0/1: ẩn (bảng nằm sát header)
+    arrow.classList.add('hidden');
+  }
+  resize();   // chữ/header đổi → đặt lại vị trí bảng + mũi tên cho khớp
 }
 
 function highlightPair(pair) {
@@ -2306,8 +2402,9 @@ function tutShowBend(r1, c1, r2, c2) {
 function tutOnMatch() {
   if (tutStep === 0) { setTutPhase(1); return; }   // đã biết nối → dạy cặp bị chặn
   if (pairsLeft <= 0) {                             // stage 2 dọn sạch → xong
-    document.getElementById('tut-text').textContent = t('tutDone');
     clearHint();
+    document.getElementById('tut-arrow').classList.add('hidden');
+    document.getElementById('tut-text').textContent = t('tutDone');
     setTimeout(() => { if (tutorialMode) finishTutorial(); }, 1100);
     return;
   }
@@ -2320,20 +2417,22 @@ function finishTutorial() {
   tutorialMode = false;
   clearHint();
   document.getElementById('tut-banner').classList.add('hidden');
+  document.getElementById('tut-arrow').classList.add('hidden');
   document.getElementById('hud-sub').style.display = '';   // hiện lại LEVEL
   levelEpoch++;
 
   const lv = levelConfig(currentLevelIdx);
   COLS = lv.cols; ROWS = lv.rows;
+  timeTotal = lv.time; timeLeft = lv.time; lastTickSec = -1; timerUiAcc = 1;
   busy = false; ended = false; paused = false;
   selected = null; hintPair = null;
   if (tryRestoreState(currentLevelIdx)) {
-    updateLabels(); updateHUD(); resize();
+    updateLabels(); updateHUD(); renderTimer(); resize();
   } else {
     loadLevel(currentLevelIdx);
   }
 
-  saveData({ levelIdx: currentLevelIdx, tutorialSeen: true, muted, best });  // nhẹ → native
+  saveData({ levelIdx: currentLevelIdx, score, tutorialSeen: true, muted, best });  // nhẹ → native
   saveCurrentState();                                                        // local kèm cờ mới
 }
 
@@ -2349,11 +2448,12 @@ window.onAppPause = function () {
 };
 
 window.onNextLevel = function () {
-  loadLevel(Math.min(currentLevelIdx + 1, MAX_LEVEL_IDX));   // level vô hạn
+  loadLevel(Math.min(currentLevelIdx + 1, MAX_LEVEL_IDX));   // thắng → màn kế, GIỮ điểm
 };
 
 window.onRetryLevel = function () {
-  loadLevel(currentLevelIdx);
+  score = 0;                 // thua/endgame → RUN MỚI: điểm 0, về màn 1
+  loadLevel(0);
 };
 
 function pauseGame() {
@@ -2451,6 +2551,7 @@ function mainLoop(ts) {
   if (dt < 0 || dt > 0.25) dt = 0.25;
 
   animateBg(dt);
+  tickTimer(dt);
 
   // Auto-hint: 5s không thao tác khi đang chơi thường → tự nháy 1 cặp nối được
   if (!busy && !ended && !paused && !tutorialMode && tiles.length) {
@@ -2568,7 +2669,7 @@ function bootGame() {
   applyUiFont(LANG);
 
   let startIdx = getInitialLevelIdx();
-  let nativeHasMuted = false;
+  let nativeHasMuted = false, nativeHasScore = false, bootScore = 0;
 
   // data nhẹ từ native ưu tiên (game-common §4 + §1.2)
   const raw = getInitialData();
@@ -2581,15 +2682,17 @@ function bootGame() {
       if (obj.tutorialSeen === true) tutorialSeen = true;
       if (typeof obj.muted === 'boolean') { muted = obj.muted; nativeHasMuted = true; }
       if (Number.isFinite(Number(obj.best))) best = Math.max(0, Math.floor(Number(obj.best)));
+      if (Number.isFinite(Number(obj.score))) { bootScore = Math.max(0, Math.floor(Number(obj.score))); nativeHasScore = true; }
     } catch (e) { /* data hỏng → mặc định */ }
   }
 
-  // tutorialSeen/muted/best cũng có thể nằm ở localStorage (chưa sync lên native)
+  // tutorialSeen/muted/best/score cũng có thể nằm ở localStorage (chưa sync lên native)
   try {
     const lobj = JSON.parse(readLocal() || 'null');
     if (lobj && lobj.tutorialSeen === true) tutorialSeen = true;
     if (!nativeHasMuted && lobj && typeof lobj.muted === 'boolean') muted = lobj.muted;
     if (lobj && Number.isFinite(Number(lobj.best))) best = Math.max(best, Math.floor(Number(lobj.best)));
+    if (!nativeHasScore && lobj && Number.isFinite(Number(lobj.score))) bootScore = Math.max(0, Math.floor(Number(lobj.score)));
   } catch (e) { /* ignore */ }
   document.getElementById('sound-btn').classList.toggle('muted', muted);
 
@@ -2599,7 +2702,8 @@ function bootGame() {
   currentLevelIdx = startIdx;
   const lv = levelConfig(startIdx);
   COLS = lv.cols; ROWS = lv.rows;
-  score = 0; busy = false; ended = false; paused = false;
+  score = bootScore; busy = false; ended = false; paused = false;   // điểm cộng dồn của run
+  timeTotal = lv.time; timeLeft = lv.time; lastTickSec = -1; timerUiAcc = 1;
   selected = null; hintPair = null; comboStreak = 0; idleAcc = 0;
   lastFindAt = performance.now();
 
@@ -2610,6 +2714,7 @@ function bootGame() {
 
   updateLabels();
   updateHUD();
+  renderTimer();
   resize();
 
   // Không còn menu → vào thẳng gameplay. Lần đầu mở game thì chơi tutorial trước.
