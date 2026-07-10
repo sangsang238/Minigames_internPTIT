@@ -242,7 +242,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 /* ── Banner tutorial ─────────────────────────────────────────── */
 #tut-banner {
   position: fixed;
-  bottom: 13%;
+  bottom: 25%;                    /* cao hơn hẳn dao chờ ở đáy (khỏi che) */
   left: 50%;
   transform: translateX(-50%);
   z-index: 6;
@@ -1994,14 +1994,13 @@ function startTutorial() {
   paused = false;
   tutorial = {
     mode: 'spin', fi: 0, F: TUT_FREEZES.slice(), hintKey: 'tut1',
-    seg0: 0, segFrom: 0, segTo: 0, segDur: 1,
-    retryUntil: 0, doneUntil: 0, deathUntil: 0,
+    segTo: 0, retryUntil: 0, doneUntil: 0, deathUntil: 0,
   };
   cfg = tutCfg();
   disc.rot = 0;
   disc.w = 0;
   stuck = [];
-  gems = [];                              // tutorial mới: không có ngọc
+  gems = [{ a: TUT_GEM_A, skull: false }];   // dao #3 sẽ trúng ngọc này
   knivesLeft = 99;                        // tutorial không đếm đạn (pips ẩn)
   stageT = 0;
   riskyCount = 0;
@@ -2015,22 +2014,20 @@ function startTutorial() {
   pendingBreakAt = 0;
   flying = null;
   setTutText(t('tut1'));
-  $('tut-banner').classList.remove('hidden');
+  hideTutBanner();                         // banner chỉ hiện KHI freeze (tutArrive)
   updateStageHud();
 }
 
-/** Bắt đầu 1 đoạn xoay eased tới góc toRot rồi freeze (arrive). */
+/** Bắt đầu 1 đoạn xoay steady tới góc toRot (giảm tốc 20° cuối rồi freeze). */
 function tutStartSpin(toRot) {
   const T = tutorial;
   T.mode = 'spin';
-  T.seg0 = timeMs;
-  T.segFrom = disc.rot;
   T.segTo = toRot;
-  const arc = Math.abs(toRot - disc.rot);
-  T.segDur = Math.max(700, arc / TUT_CRUISE * 1000);
+  hideTutBanner();                         // đang xoay → ẩn hướng dẫn (hiện lại khi freeze)
 }
 
-/** Xoay tới mốc: F0..F2 = freeze chờ tap phóng 3 dao; F3 = "Try to throw" → chết. */
+/** Tới mốc = FREEZE → mới hiện banner. F0..F2 = phóng 3 dao (dao 3 trúng gem);
+ *  F3 = "Try to throw" → phi trúng dao #1 = chết. */
 function tutArrive() {
   const T = tutorial;
   if (T.fi < 3) {
@@ -2042,20 +2039,25 @@ function tutArrive() {
     T.hintKey = 'tutTry';
     setTutText(t('tutTry'));
   }
+  $('tut-banner').classList.remove('hidden');       // freeze xong mới hiện hướng dẫn
 }
 
-/** Xoay choreograph cho tutorial (thay cho pattern/wrath). */
+/** Xoay choreograph tutorial: STEADY tốc độ đều, chỉ 20° CUỐI giảm tốc → freeze,
+ *  vào mốc mới thì speed-up lại (accel từ 0). */
 function tutSpin(dt) {
   const T = tutorial;
   prevRot = disc.rot;
   if (phase === 'spawn') { disc.w = 0; return; }    // đang phình — chưa xoay
   if (T.mode === 'spin') {
-    const p = T.segDur > 0 ? Math.min(1, (timeMs - T.seg0) / T.segDur) : 1;
-    const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;   // easeInOutCubic
-    disc.rot = T.segFrom + (T.segTo - T.segFrom) * e;
-    disc.w = dt > 0 ? (disc.rot - prevRot) / (dt / 1000) : 0;
-    if (p >= 1) { disc.rot = T.segTo; disc.w = 0; tutArrive(); }
-  } else if (T.mode === 'free') {                   // cú phi tự do — xoay đều
+    const remaining = T.segTo - disc.rot;
+    const targetW = remaining > TUT_DECEL_ARC       // >20° còn lại → chạy đều; ≤20° → giảm dần
+      ? TUT_CRUISE
+      : Math.max(TUT_MIN_W, TUT_CRUISE * remaining / TUT_DECEL_ARC);
+    const k = 1 - Math.pow(0.82, dt / 16.667);      // mượt hoá → speed-up từ 0 mượt, giảm cũng mượt
+    disc.w += (targetW - disc.w) * k;
+    disc.rot += disc.w * dt / 1000;
+    if (disc.rot >= T.segTo - 0.004) { disc.rot = T.segTo; disc.w = 0; tutArrive(); }
+  } else if (T.mode === 'free') {                   // cú phi tự do — vẫn xoay STEADY
     const k = 1 - Math.pow(0.82, dt / 16.667);
     disc.w += (TUT_CRUISE - disc.w) * k;
     disc.rot += disc.w * dt / 1000;
@@ -2097,6 +2099,7 @@ function tutorialDeath(killerA) {
   flying = null;
   rings.push({ x: LW / 2, y: disc.y + disc.R, born: timeMs, col: '#ff3d5a' });
   floatTexts.push({ x: LW / 2, y: disc.y + disc.R + 50, born: timeMs, life: 1400, size: 44, color: '#ff5d76', text: '✗' });
+  hideTutBanner();                        // giấu hướng dẫn trong lúc "chết" cho gọn
   tutorial.deathA = killerA;              // dao thủ phạm — render sáng đỏ trong lúc deathWait
   tutorial.mode = 'deathWait';
   tutorial.deathUntil = timeMs + 1500;
@@ -2245,13 +2248,14 @@ function update(dt) {
       // chỉ khôi phục hint khi còn ở pha chờ tap — không đè banner 'done'
       if (tutorial.mode === 'wait' || tutorial.mode === 'free') setTutText(t(tutorial.hintKey || 'tut1'));
     }
-    /* sau demo CHẾT (~1.5s) → cho người chơi TỰ phi cú an toàn */
+    /* sau demo CHẾT (~1.5s) → cho người chơi TỰ phi cú an toàn (vẫn xoay steady) */
     if (tutorial.mode === 'deathWait' && tutorial.deathUntil && timeMs >= tutorial.deathUntil) {
       tutorial.deathUntil = 0;
       tutorial.deathA = undefined;
       tutorial.mode = 'free';
       tutorial.hintKey = 'tutFree';
       setTutText(t('tutFree'));
+      $('tut-banner').classList.remove('hidden');   // hiện lại hướng dẫn cho cú tự do
     }
     if (tutorial.mode === 'done' && tutorial.doneUntil && timeMs >= tutorial.doneUntil) {
       finishTutorial();
