@@ -1014,7 +1014,7 @@ const Sound = (function () {
     sparkle() {
       ensure();
       [0, 0.045, 0.095].forEach((dl, i) =>
-        tone({ freq: mtof(88 + i * 5), dur: 0.19, type: 'sine', gain: 0.13, delay: dl, attack: 0.004, lp: 7000 }));
+        tone({ freq: mtof(88 + i * 5), dur: 0.19, type: 'sine', gain: 0.06, delay: dl, attack: 0.004, lp: 7000 }));
     },
   };
 })();
@@ -1400,34 +1400,62 @@ async function rainbowSpecialCombo(raPos, col, kind) {
   svg.setAttribute('width', size); svg.setAttribute('height', size);
   svg.style.cssText = 'position:absolute;left:0;top:0;z-index:8;pointer-events:none;overflow:visible';
   boardEl.appendChild(svg);
-  const SP = ['#ff4d6a', '#ffcf3a', '#2ed673', '#3aa0ff', '#b268ff', '#ff9838'];
-  const jag = (x1, y1, x2, y2) => {
-    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
-    const nx = -dy / len, ny = dx / len, segs = 5;
-    let d = 'M' + x1.toFixed(1) + ' ' + y1.toFixed(1);
-    for (let i = 1; i < segs; i++) {
-      const tt = i / segs, off = (Math.random() * 2 - 1) * Math.min(16, len * 0.2);
-      d += ' L' + (x1 + dx * tt + nx * off).toFixed(1) + ' ' + (y1 + dy * tt + ny * off).toFixed(1);
-    }
-    return d + ' L' + x2.toFixed(1) + ' ' + y2.toFixed(1);
+  // Đồng bộ với drawZaps: MỘT màu xanh điện · đầu tia nhọn · bao quanh viên · giật giật
+  const RAINBOW = ['#ffb3c1', '#ffd6a5', '#fdffb6', '#caffbf', '#9bf6ff', '#bdb2ff'];   // NHIỀU MÀU pastel nhạt — lung linh nhẹ
+  const wBody = cell * 0.1;                                 // thân tia (mảnh)
+  const haze = (g, x, y, R, ZAP_COL) => {                   // màn trắng-màu MỜ ở tâm viên
+    [[R, ZAP_COL, .18], [R * 0.72, ZAP_COL, .3], [R * 0.46, ZAP_COL, .5]].forEach(([r, f, o]) => {
+      const c = document.createElementNS(NS, 'circle');
+      c.setAttribute('cx', x.toFixed(1)); c.setAttribute('cy', y.toFixed(1)); c.setAttribute('r', r.toFixed(1));
+      c.setAttribute('fill', f); c.setAttribute('opacity', String(o)); g.appendChild(c);
+    });
+  };
+  const beam = (g, x1, y1, x2, y2, wMax, bowFrac, ZAP_COL) => {     // chùm laser NÉT LIỀN, CONG NHẸ + zíc-zắc: hình thoi tô đặc, đầu tù
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len, N = 20;
+    const bow = 0;                                          // ĐƯỜNG THẲNG — không uốn cong
+    const zamp = 0, phase = 0;                              // không zíc-zắc, không bẻ góc
+    const build = (scale) => {
+      let top = '', bot = '';
+      for (let k = 0; k <= N; k++) {
+        const f = k / N, s = Math.sin(f * Math.PI), w = wMax * scale * (0.7 + 0.3 * s) / 2;   // đầu TÙ (không nhọn)
+        const off = bow * s + Math.sin(f * Math.PI * 3 + phase) * zamp * s;   // uốn cong + zíc-zắc
+        const cx = x1 + dx * f + nx * off, cy = y1 + dy * f + ny * off;
+        top += (k ? ' L' : 'M') + (cx + nx * w).toFixed(1) + ' ' + (cy + ny * w).toFixed(1);
+        bot = ' L' + (cx - nx * w).toFixed(1) + ' ' + (cy - ny * w).toFixed(1) + bot;
+      }
+      return top + bot + ' Z';
+    };
+    const mk = (scale, fill, op) => { const p = document.createElementNS(NS, 'path'); p.setAttribute('d', build(scale)); p.setAttribute('fill', fill); p.setAttribute('opacity', String(op)); g.appendChild(p); };
+    mk(3.4, ZAP_COL, .3); mk(1.8, ZAP_COL, .6); mk(0.7, ZAP_COL, .7);   // lõi bớt gắt
+  };
+  const GROW = 160;                                        // thời gian tia VƯƠN ra (ms)
+  const drawBolt = (g, tx, ty, bowFrac, zapCol, gs) => {   // Tia LASER thẳng, vươn dần nguồn → viên đích
+    while (g.firstChild) g.removeChild(g.firstChild);
+    const wBeam = wBody * 0.95 * (0.85 + Math.random() * 0.35);
+    const reach = Math.max(0, Math.min(1, (performance.now() - gs) / GROW));   // tia VƯƠN dần ra
+    if (reach <= 0.01) return;                              // chưa vươn → chưa vẽ
+    const ex = rx + (tx - rx) * reach, ey = ry + (ty - ry) * reach;   // đầu tia đang bò tới đích
+    beam(g, rx, ry, ex, ey, wBeam, bowFrac, zapCol);
+    if (reach >= 0.99) haze(g, tx, ty, cell * 0.34, zapCol);   // chạm đích mới bừng sáng tâm viên
   };
 
   // PHA 1: nối xẹt lần lượt + biến thành sọc ngẫu nhiên (giữ tia lại)
+  const zapTimers = [];   // interval giật giật cho từng tia (dọn khi tia tắt)
   for (let i = 0; i < tiles.length; i++) {
     const { t, r, c } = tiles[i];
     const [tx, ty] = fxCenter(r, c);
     const g = document.createElementNS(NS, 'g');
-    const dp = jag(rx, ry, tx, ty);
-    const glow = document.createElementNS(NS, 'path');
-    glow.setAttribute('d', dp); glow.setAttribute('fill', 'none');
-    glow.setAttribute('stroke', SP[i % SP.length]); glow.setAttribute('stroke-width', '5');
-    glow.setAttribute('stroke-opacity', '.5'); glow.setAttribute('stroke-linecap', 'round'); glow.setAttribute('stroke-linejoin', 'round');
-    const core = document.createElementNS(NS, 'path');
-    core.setAttribute('d', dp); core.setAttribute('fill', 'none');
-    core.setAttribute('stroke', '#fff'); core.setAttribute('stroke-width', '1.8');
-    core.setAttribute('stroke-linecap', 'round'); core.setAttribute('stroke-linejoin', 'round');
-    g.appendChild(glow); g.appendChild(core); svg.appendChild(g);
+    svg.appendChild(g);
+    const bowFrac = (Math.random() < .5 ? 1 : -1) * (0.06 + Math.random() * 0.06);   // độ cong ổn định mỗi tia
+    let ci = i;                                            // con trỏ màu — nhích mỗi lần vẽ để tia ĐỔI MÀU LIÊN TỤC
+    const gs = performance.now();                          // mốc thời gian tia bắt đầu vươn
+    drawBolt(g, tx, ty, bowFrac, RAINBOW[ci++ % RAINBOW.length], gs);
     g.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 90, easing: 'ease-out', fill: 'forwards' });
+    // Giật giật: liên tục vẽ lại + nhấp sáng cho tới khi tia tắt
+    zapTimers.push(setInterval(() => {
+      drawBolt(g, tx, ty, bowFrac, RAINBOW[ci++ % RAINBOW.length], gs);
+      g.style.opacity = (Math.random() < .5 ? .5 : 1);   // CHỚP CHỚP (sàn cao → luôn rõ)
+    }, 24 + Math.random() * 24));
 
     if (board[r][c] === t) { t.special = kind === 'bomb' ? 'bomb' : (Math.random() < 0.5 ? 'row' : 'col'); paintTile(t); }
     const p = pos(r, c);
@@ -1441,6 +1469,7 @@ async function rainbowSpecialCombo(raPos, col, kind) {
   await sleep(200);
 
   // PHA 2: tia xẹt biến mất
+  zapTimers.forEach(clearInterval);   // ngừng giật giật trước khi tắt
   svg.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, easing: 'ease-out' }).onfinish = () => svg.remove();
   await sleep(140);
 
@@ -1756,7 +1785,14 @@ async function cascade(pending, swapCells) {
         // Tia xẹt nối cầu vồng → các viên bị xoá (theo đúng thứ tự nổ trong zapDelay)
         const zapTargets = [];
         for (const k of clr) { const [zr, zc] = k.split(',').map(Number); const zt = board[zr][zc]; if (zt && !zt.bomb) zapTargets.push([zr, zc]); }
-        for (const [rr, rc] of rbHits) rainbowBurst(rr, rc, zapTargets, connectAt, explodeAt);
+        // MỖI viên đích chỉ 1 tia: gán về cầu vồng GẦN NHẤT (tránh mỗi cầu vồng bắn tới mọi viên)
+        const perRb = rbHits.map(() => []);
+        for (const [zr, zc] of zapTargets) {
+          let bi = 0, bd = 1e9;
+          for (let ri = 0; ri < rbHits.length; ri++) { const dd = Math.hypot(zr - rbHits[ri][0], zc - rbHits[ri][1]); if (dd < bd) { bd = dd; bi = ri; } }
+          perRb[bi].push([zr, zc]);
+        }
+        for (let ri = 0; ri < rbHits.length; ri++) rainbowBurst(rbHits[ri][0], rbHits[ri][1], perRb[ri], connectAt, explodeAt);
       }
       // Mọi lần nổ — match 3/4 thường lẫn special (hàng/cột/bom/cầu vồng) — đều dùng "tiếng combo"
       Sound.blast(chain, cleared);
@@ -1904,53 +1940,76 @@ function drawZaps(sx, sy, sr, sc, targets, connectAt, explodeAt) {
   svg.setAttribute('width', size); svg.setAttribute('height', size);
   svg.style.cssText = 'position:absolute;left:0;top:0;z-index:8;pointer-events:none;overflow:visible';
   boardEl.appendChild(svg);
-  const SP = ['#ff4d6a', '#ffcf3a', '#2ed673', '#3aa0ff', '#b268ff', '#ff9838'];
-  const jag = (x1, y1, x2, y2) => {
-    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
-    const nx = -dy / len, ny = dx / len, segs = 5;
-    let d = 'M' + x1.toFixed(1) + ' ' + y1.toFixed(1);
-    for (let i = 1; i < segs; i++) {
-      const t = i / segs, off = (Math.random() * 2 - 1) * Math.min(16, len * 0.2);
-      d += ' L' + (x1 + dx * t + nx * off).toFixed(1) + ' ' + (y1 + dy * t + ny * off).toFixed(1);
-    }
-    return d + ' L' + x2.toFixed(1) + ' ' + y2.toFixed(1);
+  const RAINBOW = ['#ffb3c1', '#ffd6a5', '#fdffb6', '#caffbf', '#9bf6ff', '#bdb2ff'];   // NHIỀU MÀU pastel nhạt — lung linh nhẹ
+  const haze = (g, x, y, R, ZAP_COL) => {                 // màn trắng-màu MỜ ở tâm viên (nhiều vòng chồng, mềm)
+    [[R, ZAP_COL, .18], [R * 0.72, ZAP_COL, .3], [R * 0.46, ZAP_COL, .5]].forEach(([r, f, o]) => {
+      const c = document.createElementNS(NS, 'circle');
+      c.setAttribute('cx', x.toFixed(1)); c.setAttribute('cy', y.toFixed(1)); c.setAttribute('r', r.toFixed(1));
+      c.setAttribute('fill', f); c.setAttribute('opacity', String(o)); g.appendChild(c);
+    });
+  };
+  const beam = (g, x1, y1, x2, y2, wMax, bowFrac, ZAP_COL) => {   // chùm laser NÉT LIỀN, CONG NHẸ: hình thoi tô đặc, mảnh 2 đầu phồng giữa
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len, N = 20;
+    const bow = 0;                                          // ĐƯỜNG THẲNG — không uốn cong
+    const zamp = 0, phase = 0;                              // không zíc-zắc, không bẻ góc
+    const build = (scale) => {
+      let top = '', bot = '';
+      for (let k = 0; k <= N; k++) {
+        const f = k / N, s = Math.sin(f * Math.PI), w = wMax * scale * (0.7 + 0.3 * s) / 2;   // đầu TÙ (không nhọn)
+        const off = bow * s + Math.sin(f * Math.PI * 3 + phase) * zamp * s;   // uốn cong + zíc-zắc
+        const cx = x1 + dx * f + nx * off, cy = y1 + dy * f + ny * off;   // tâm uốn cong
+        top += (k ? ' L' : 'M') + (cx + nx * w).toFixed(1) + ' ' + (cy + ny * w).toFixed(1);
+        bot = ' L' + (cx - nx * w).toFixed(1) + ' ' + (cy - ny * w).toFixed(1) + bot;
+      }
+      return top + bot + ' Z';
+    };
+    const mk = (scale, fill, op) => { const p = document.createElementNS(NS, 'path'); p.setAttribute('d', build(scale)); p.setAttribute('fill', fill); p.setAttribute('opacity', String(op)); g.appendChild(p); };
+    mk(3.4, ZAP_COL, .3); mk(1.8, ZAP_COL, .6); mk(0.7, ZAP_COL, .7);   // lõi bớt gắt
   };
   const expMs = (explodeAt || 0) * 1000;
-  let i = 0;
+  const wBody = cell * 0.1;                               // thân tia (mảnh)
+  const t0 = performance.now(), GROW = 160;              // t0: mốc thời gian · GROW: thời gian tia VƯƠN ra (ms)
+  let ti = -1;
   for (const [tr, tc] of targets) {
     if (tr === sr && tc === sc) continue;
+    ti++;
+    let ci = ti;                                           // con trỏ màu — nhích mỗi lần vẽ để tia ĐỔI MÀU LIÊN TỤC
     const [tx, ty] = fxCenter(tr, tc);
     const appear = (connectAt && connectAt.has(key(tr, tc)) ? connectAt.get(key(tr, tc)) : 0) * 1000;
     const g = document.createElementNS(NS, 'g');
-    const glow = document.createElementNS(NS, 'path');
-    glow.setAttribute('d', jag(sx, sy, tx, ty)); glow.setAttribute('fill', 'none');
-    glow.setAttribute('stroke', SP[i++ % SP.length]);
-    glow.setAttribute('stroke-width', '5'); glow.setAttribute('stroke-opacity', '.5');
-    glow.setAttribute('stroke-linecap', 'round'); glow.setAttribute('stroke-linejoin', 'round');
-    const core = document.createElementNS(NS, 'path');
-    core.setAttribute('d', jag(sx, sy, tx, ty)); core.setAttribute('fill', 'none');
-    core.setAttribute('stroke', '#fff'); core.setAttribute('stroke-width', '1.8');
-    core.setAttribute('stroke-linecap', 'round'); core.setAttribute('stroke-linejoin', 'round');
-    g.appendChild(glow); g.appendChild(core);
     g.style.opacity = '0';
     svg.appendChild(g);
-    // Pha 1: hiện + GIỮ + giật giật (nhấp opacity) từ lúc nối tới lúc nổ
+    const bowFrac = (Math.random() < .5 ? 1 : -1) * (0.06 + Math.random() * 0.06);   // độ cong ổn định mỗi tia
+    // Tia LASER: chùm cong nhẹ nguồn → tâm viên, lõi trắng rực + quầng màu cầu vồng, có nhấp nháy độ dày nhẹ
+    const drawOne = () => {
+      while (g.firstChild) g.removeChild(g.firstChild);
+      const wBeam = wBody * 0.95 * (0.85 + Math.random() * 0.35);   // dày giữa (rung nhẹ), mảnh 2 đầu
+      const zapCol = RAINBOW[ci++ % RAINBOW.length];        // xoay màu mỗi lần vẽ lại
+      const reach = Math.max(0, Math.min(1, (performance.now() - t0 - appear) / GROW));   // tia VƯƠN dần ra
+      if (reach <= 0.01) return;                            // chưa vươn → chưa vẽ
+      const ex = sx + (tx - sx) * reach, ey = sy + (ty - sy) * reach;   // đầu tia đang bò tới đích
+      beam(g, sx, sy, ex, ey, wBeam, bowFrac, zapCol);
+      if (reach >= 0.99) haze(g, tx, ty, cell * 0.34, zapCol);   // chạm đích mới bừng sáng tâm viên
+    };
+    drawOne();
+    // Pha 1: hiện + GIẬT GIẬT — nhấp sáng nhanh & không đều suốt lúc giữ
     const life = Math.max(80, expMs - appear);
     const rise = Math.min(.25, 45 / life);
-    g.animate([
-      { opacity: 0, offset: 0 },
-      { opacity: 1, offset: rise },
-      { opacity: .5, offset: rise + (1 - rise) * .2 },
-      { opacity: 1, offset: rise + (1 - rise) * .38 },
-      { opacity: .65, offset: rise + (1 - rise) * .6 },
-      { opacity: 1, offset: rise + (1 - rise) * .8 },
-      { opacity: 1, offset: 1 },
-    ], { duration: life, delay: appear, easing: 'linear', fill: 'forwards' });
+    const kf = [];
+    const steps = Math.max(4, Math.round(life / 40));
+    for (let s = 0; s <= steps; s++) {
+      const off = s / steps;
+      const op = off < rise ? off / rise
+        : (Math.random() < .5 ? .5 + Math.random() * .3 : 1);   // CHỚP CHỚP: mờ nhẹ rồi vụt sáng (sàn cao → luôn rõ)
+      kf.push({ opacity: op, offset: off });
+    }
+    kf[kf.length - 1].opacity = 1;
+    g.animate(kf, { duration: life, delay: appear, easing: 'linear', fill: 'forwards' });
     // Pha 2: nổ → tia tắt nhanh
-    g.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 170, delay: expMs, easing: 'ease-out', fill: 'forwards' });
-    // Giật vị trí: đổi nhẹ đường zíc-zắc giữa chừng cho cảm giác "giật giật"
-    const flick = () => { const dd = jag(sx, sy, tx, ty); glow.setAttribute('d', dd); core.setAttribute('d', dd); };
-    for (let f = 1; f <= 3; f++) setTimeout(flick, appear + (life * f / 4));
+    g.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, delay: expMs, easing: 'ease-out', fill: 'forwards' });
+    // Giật giật HƠN NỮA: vẽ lại toàn khung liên tục, nhịp rất nhanh & không đều
+    const fEnd = appear + life;
+    for (let tms = appear + 20; tms < fEnd; tms += 22 + Math.random() * 26) setTimeout(drawOne, tms);
   }
   setTimeout(() => svg.remove(), expMs + 260);
 }
@@ -2449,17 +2508,16 @@ function spawnParticles(list) {
       p.style.color = color;        // cho box-shadow glow ăn theo màu mảnh
       p.style.left = x + 'px'; p.style.top = y + 'px';
       boardEl.appendChild(p);
-      // Mảnh vỡ NỔ BUNG TẠI CHỖ: phồng to nhanh, dạt ra 1 chút quanh tâm rồi CO LẠI & mờ tan
-      // (gần như không rơi) — cảm giác "tan biến" tức thì.
+      // Mảnh vỡ TUNG TỎA đều ra mọi hướng rồi mờ tan (không trọng lực, không rơi xuống)
       const ang = Math.random() * Math.PI * 2;
-      const rad = cell * (0.18 + Math.random() * 0.22);   // dạt ra quanh tâm rất ngắn
-      const ox = Math.cos(ang) * rad, oy = Math.sin(ang) * rad;
-      const rot = (Math.random() * 200 - 100) | 0;
+      const spd = cell * (1.1 + Math.random() * 1.1);                           // văng ra bao xa
+      const dx = Math.cos(ang) * spd, dy = Math.sin(ang) * spd;
+      const rot = (Math.random() * 640 - 320) | 0;
       p.animate([
-        { transform: 'translate(-50%,-50%) rotate(0deg) scale(.5)', opacity: 1, offset: 0 },
-        { transform: 'translate(calc(-50% + ' + (ox * 0.7) + 'px), calc(-50% + ' + (oy * 0.7) + 'px)) rotate(' + (rot * 0.5) + 'deg) scale(1.5)', opacity: 1, offset: .32 },
-        { transform: 'translate(calc(-50% + ' + ox + 'px), calc(-50% + ' + oy + 'px)) rotate(' + rot + 'deg) scale(.2)', opacity: 0, offset: 1 },
-      ], { duration: 600 + Math.random() * 200, delay: (delay || 0) * 1000, fill: 'backwards', easing: 'cubic-bezier(.25,.6,.4,1)' }).onfinish = () => p.remove();
+        { transform: 'translate(-50%,-50%) rotate(0deg) scale(1.35)', opacity: 1, offset: 0 },
+        { transform: 'translate(calc(-50% + ' + (dx * 0.55) + 'px), calc(-50% + ' + (dy * 0.55) + 'px)) rotate(' + (rot * 0.5) + 'deg) scale(1.05)', opacity: 1, offset: .45 },
+        { transform: 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px)) rotate(' + rot + 'deg) scale(.2)', opacity: 0, offset: 1 },
+      ], { duration: 1000 + Math.random() * 380, delay: (delay || 0) * 1000, fill: 'backwards', easing: 'cubic-bezier(.2,.6,.4,1)' }).onfinish = () => p.remove();
     }
   }
 }
@@ -2923,7 +2981,7 @@ function obRingAt(stage, r, c, delay) {
   stage.appendChild(ring);
   ring.animate([{ transform: 'scale(.2)', opacity: 1 }, { transform: 'scale(3.6)', opacity: 0 }], { duration: 540, delay: delay || 0, easing: 'ease-out' });
 }
-// Tia xẹt cầu vồng: sét zíc-zắc nhiều màu nối từ (sr,sc) tới các viên đích, giật giật rồi tắt khi nổ
+// Tia LASER cầu vồng (demo onboarding) — CÙNG loại với game: chùm mờ, chớp chớp, đầu tù, cong nhẹ
 function obZaps(stage, sr, sc, targets, holdMs) {
   const NS = 'http://www.w3.org/2000/svg';
   const w = parseFloat(stage.style.width) || 0, h = parseFloat(stage.style.height) || 0;
@@ -2931,38 +2989,37 @@ function obZaps(stage, sr, sc, targets, holdMs) {
   svg.setAttribute('width', w); svg.setAttribute('height', h);
   svg.style.cssText = 'position:absolute;left:0;top:0;z-index:9;pointer-events:none;overflow:visible';
   stage.appendChild(svg);
-  const SP = ['#ff4d6a', '#ffcf3a', '#2ed673', '#3aa0ff', '#b268ff', '#ff9838'];
+  const ZAP_COL = '#ffffff', U = OB_SZ;
   const ctr = (r, c) => [c * OB_STEP + OB_SZ / 2, r * OB_STEP + OB_SZ / 2];
   const [sx, sy] = ctr(sr, sc);
-  const jag = (x1, y1, x2, y2) => {
-    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
-    const nx = -dy / len, ny = dx / len, segs = 5;
-    let d = 'M' + x1.toFixed(1) + ' ' + y1.toFixed(1);
-    for (let i = 1; i < segs; i++) {
-      const t = i / segs, off = (Math.random() * 2 - 1) * Math.min(12, len * 0.18);
-      d += ' L' + (x1 + dx * t + nx * off).toFixed(1) + ' ' + (y1 + dy * t + ny * off).toFixed(1);
-    }
-    return d + ' L' + x2.toFixed(1) + ' ' + y2.toFixed(1);
+  const beam = (g, x1, y1, x2, y2, wMax, bowFrac) => {
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len, N = 20;
+    const bow = len * (bowFrac || 0), zamp = Math.min(U * 0.1, len * 0.045), phase = Math.random() * Math.PI * 2;
+    const build = (scale) => {
+      let top = '', bot = '';
+      for (let k = 0; k <= N; k++) {
+        const f = k / N, s = Math.sin(f * Math.PI), ww = wMax * scale * (0.7 + 0.3 * s) / 2;
+        const off = bow * s + Math.sin(f * Math.PI * 3 + phase) * zamp * s;
+        const cx = x1 + dx * f + nx * off, cy = y1 + dy * f + ny * off;
+        top += (k ? ' L' : 'M') + (cx + nx * ww).toFixed(1) + ' ' + (cy + ny * ww).toFixed(1);
+        bot = ' L' + (cx - nx * ww).toFixed(1) + ' ' + (cy - ny * ww).toFixed(1) + bot;
+      }
+      return top + bot + ' Z';
+    };
+    const mk = (scale, fill, op) => { const p = document.createElementNS(NS, 'path'); p.setAttribute('d', build(scale)); p.setAttribute('fill', fill); p.setAttribute('opacity', String(op)); g.appendChild(p); };
+    mk(3.4, ZAP_COL, .2); mk(1.8, ZAP_COL, .45); mk(0.7, '#fff', .85);
   };
-  let i = 0;
   for (const [tr, tc] of targets) {
     const [tx, ty] = ctr(tr, tc);
     const g = document.createElementNS(NS, 'g');
-    const glow = document.createElementNS(NS, 'path');
-    glow.setAttribute('d', jag(sx, sy, tx, ty)); glow.setAttribute('fill', 'none');
-    glow.setAttribute('stroke', SP[i++ % SP.length]); glow.setAttribute('stroke-width', '5'); glow.setAttribute('stroke-opacity', '.5');
-    glow.setAttribute('stroke-linecap', 'round'); glow.setAttribute('stroke-linejoin', 'round');
-    const core = document.createElementNS(NS, 'path');
-    core.setAttribute('d', jag(sx, sy, tx, ty)); core.setAttribute('fill', 'none');
-    core.setAttribute('stroke', '#fff'); core.setAttribute('stroke-width', '1.8');
-    core.setAttribute('stroke-linecap', 'round'); core.setAttribute('stroke-linejoin', 'round');
-    g.appendChild(glow); g.appendChild(core); svg.appendChild(g);
-    g.animate([                                                       // hiện + giữ + giật giật
-      { opacity: 0 }, { opacity: 1, offset: .2 }, { opacity: .55, offset: .45 },
-      { opacity: 1, offset: .65 }, { opacity: .7, offset: .82 }, { opacity: 1, offset: 1 },
-    ], { duration: holdMs, easing: 'linear', fill: 'forwards' });
+    svg.appendChild(g);
+    const bowFrac = (Math.random() < .5 ? 1 : -1) * (0.06 + Math.random() * 0.06);
+    const haze = () => { [[U * 0.34, ZAP_COL, .1], [U * 0.24, ZAP_COL, .16], [U * 0.16, '#fff', .28]].forEach(([r, f, o]) => { const c = document.createElementNS(NS, 'circle'); c.setAttribute('cx', tx.toFixed(1)); c.setAttribute('cy', ty.toFixed(1)); c.setAttribute('r', r.toFixed(1)); c.setAttribute('fill', f); c.setAttribute('opacity', String(o)); g.appendChild(c); }); };
+    const draw = () => { while (g.firstChild) g.removeChild(g.firstChild); beam(g, sx, sy, tx, ty, U * 0.14 * (0.85 + Math.random() * 0.35), bowFrac); haze(); };
+    draw();
+    g.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 90, easing: 'ease-out', fill: 'forwards' });
     g.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, delay: holdMs, easing: 'ease-out', fill: 'forwards' });
-    for (let fk = 1; fk <= 3; fk++) obTimers.push(setTimeout(() => { const d = jag(sx, sy, tx, ty); glow.setAttribute('d', d); core.setAttribute('d', d); }, holdMs * fk / 4));
+    for (let fk = 1; fk <= Math.max(1, Math.round(holdMs / 45)); fk++) obTimers.push(setTimeout(() => { draw(); g.style.opacity = (Math.random() < .5 ? .1 : 1); }, holdMs * fk / Math.max(2, Math.round(holdMs / 45) + 1)));
   }
   obTimers.push(setTimeout(() => svg.remove(), holdMs + 320));
 }

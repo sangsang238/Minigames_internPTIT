@@ -1,0 +1,255 @@
+<!doctype html>
+<!--
+  Skydom — Màn TEST các trường hợp nổ.
+  Nạp index.html?debug=1 trong iframe, điều khiển engine qua postMessage
+  (dùng đúng "Debug bridge" đã có sẵn trong index.html — mục 14).
+  Mở bằng cách double-click file này (chạy được cả file://).
+-->
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Skydom · Test nổ</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #0e1530; --panel: #182450; --panel2: #101a3c; --line: #2b3b74;
+    --ink: #eaf0ff; --soft: #9fb3e6; --gold: #ffb02e; --green: #2ed673; --red: #ff5a6a;
+  }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Google Sans Flex', system-ui, sans-serif;
+    background: var(--bg); color: var(--ink);
+    display: flex; height: 100vh; overflow: hidden;
+  }
+
+  /* ── Bảng điều khiển bên trái ─────────────────────────────── */
+  .panel {
+    width: 340px; flex: 0 0 340px; height: 100%; overflow-y: auto;
+    background: linear-gradient(180deg, var(--panel), var(--panel2));
+    border-right: 1px solid var(--line); padding: 16px 14px 40px;
+  }
+  .panel h1 { font-size: 19px; font-weight: 900; letter-spacing: .3px; }
+  .panel .sub { font-size: 12px; color: var(--soft); margin: 4px 0 14px; line-height: 1.5; }
+
+  .group { margin-bottom: 18px; }
+  .group > .gt {
+    font-size: 11px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase;
+    color: var(--gold); margin: 0 2px 9px; display: flex; align-items: center; gap: 8px;
+  }
+  .group > .gt::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+  .btn {
+    display: block; width: 100%; text-align: left; cursor: pointer;
+    background: rgba(255,255,255,.04); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 12px;
+    padding: 10px 13px; margin-bottom: 8px; font: inherit; font-weight: 700; font-size: 14px;
+    transition: transform .08s ease, background .15s ease, border-color .15s ease;
+  }
+  .btn:hover { background: rgba(255,255,255,.09); border-color: #3d54a0; }
+  .btn:active { transform: scale(.97); }
+  .btn small { display: block; font-weight: 500; font-size: 11.5px; color: var(--soft); margin-top: 3px; line-height: 1.4; }
+  .btn.danger { border-color: #6a2233; background: rgba(255,90,106,.08); }
+  .btn.danger:hover { background: rgba(255,90,106,.16); }
+  .btn.util { border-color: #2f6a45; background: rgba(46,214,115,.07); }
+  .btn.util:hover { background: rgba(46,214,115,.15); }
+
+  /* ── Sân khấu (iframe game) ───────────────────────────────── */
+  .stage {
+    flex: 1; min-width: 0; height: 100%; position: relative;
+    display: flex; align-items: center; justify-content: center;
+    background:
+      radial-gradient(60% 60% at 50% 0%, rgba(58,160,255,.10), transparent 70%),
+      var(--bg);
+  }
+  .frame-wrap {
+    position: relative; height: 100%; aspect-ratio: 9 / 16; max-width: 100%;
+    box-shadow: 0 0 0 1px var(--line), 0 24px 60px rgba(0,0,0,.55);
+    border-radius: 18px; overflow: hidden; background: #000;
+  }
+  iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+  .status {
+    position: absolute; left: 14px; bottom: 12px; z-index: 5;
+    font-size: 12px; color: var(--soft);
+    background: rgba(8,14,34,.72); border: 1px solid var(--line);
+    padding: 6px 11px; border-radius: 999px; backdrop-filter: blur(4px);
+  }
+  .status b { color: var(--gold); }
+  .status.err b { color: var(--red); }
+  .status.ok b { color: var(--green); }
+
+  @media (max-width: 720px) {
+    body { flex-direction: column; }
+    .panel { width: 100%; flex: 0 0 auto; height: auto; max-height: 46%; border-right: 0; border-bottom: 1px solid var(--line); }
+    .stage { flex: 1; }
+    .frame-wrap { height: 100%; }
+  }
+</style>
+
+<div class="panel">
+  <h1>Skydom · Test nổ 💥</h1>
+  <p class="sub">Bấm một trường hợp để engine tự dựng bàn & kích nổ. Nền là ô caro vàng/tím (không tự khớp) nên chỉ đúng viên bạn đặt mới nổ.</p>
+
+  <div class="group">
+    <div class="gt">Chung</div>
+    <button class="btn util" data-op="reset">↺ Reset ván mới<small>Bàn ngẫu nhiên như thật</small></button>
+    <button class="btn" data-case="match3">Khớp 3 viên (cơ bản)<small>Nổ 3 viên đỏ thẳng hàng</small></button>
+  </div>
+
+  <div class="group">
+    <div class="gt">Viên đặc biệt (nổ đơn)</div>
+    <button class="btn" data-case="row">Sọc ngang → nổ cả HÀNG<small>Đưa viên sọc vào hàng 3 để kích</small></button>
+    <button class="btn" data-case="col">Sọc dọc → nổ cả CỘT</button>
+    <button class="btn" data-case="bomb">Gói (bomb) → nổ 3×3</button>
+    <button class="btn" data-case="rainbow">Cầu vồng → xoá HẾT 1 màu<small>Đổi cầu vồng với viên đỏ</small></button>
+  </div>
+
+  <div class="group">
+    <div class="gt">Kết hợp 2 đặc biệt</div>
+    <button class="btn" data-case="row+row">Sọc + Sọc → chữ THẬP<small>1 hàng + 1 cột</small></button>
+    <button class="btn" data-case="row+col">Sọc ngang + Sọc dọc → chữ thập</button>
+    <button class="btn" data-case="bomb+bomb">Gói + Gói → nổ 5×5</button>
+    <button class="btn" data-case="bomb+line">Gói + Sọc → 3 hàng + 3 cột</button>
+    <button class="btn" data-case="rb+line">Cầu vồng + Sọc<small>Mọi viên cùng màu hoá sọc rồi nổ</small></button>
+    <button class="btn" data-case="rb+bomb">Cầu vồng + Gói<small>Mọi viên cùng màu hoá gói rồi nổ</small></button>
+    <button class="btn" data-case="rb+rb">Cầu vồng + Cầu vồng → nổ CẢ BÀN</button>
+  </div>
+
+  <div class="group">
+    <div class="gt">Bom đếm ngược</div>
+    <button class="btn" data-case="defuse">Gỡ bom (nổ trúng ô kề) +50<small>Bom số 5, khớp 3 viên sát bên</small></button>
+    <button class="btn danger" data-case="boom">Bom về 0 → NỔ & THUA<small>Bom số 1, tick 1 lượt → Game Over</small></button>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="frame-wrap">
+    <iframe id="game" src="index.html?debug=1"></iframe>
+  </div>
+  <div class="status" id="status">Đang nạp engine… <b>●</b></div>
+</div>
+
+<script>
+/* ── Màu: 0 đỏ · 1 xanh dương · 2 xanh lá · 3 vàng · 4 tím · 5 cam ──
+   Nền caro debug dùng 3(vàng)/4(tím) nên các case dùng 0/1/2 để không lẫn. */
+const RED = 0, BLUE = 1, GREEN = 2;
+
+// Mỗi case → thông điệp "setup" gửi cho bridge (mục 14 trong index.html).
+// tiles: [{r,c,color,special}] hoặc {r,c,bomb:<timer>}
+// swap:  [a,b] → engine tự đổi chỗ để kích nổ (như người chơi vuốt).
+// tick:  true  → chạy 1 lượt (đếm ngược bom) mà không cần swap.
+function rowLine(color, special) {
+  // 2 viên cùng màu ở (4,2)(4,3) + viên ĐẶC BIỆT ở (5,4); đẩy nó lên (4,4)
+  // để hoàn tất hàng 3 → viên đặc biệt nằm trong match → phát nổ.
+  return {
+    tiles: [
+      { r: 4, c: 2, color }, { r: 4, c: 3, color },
+      { r: 5, c: 4, color, special },
+    ],
+    swap: [{ r: 5, c: 4 }, { r: 4, c: 4 }],
+  };
+}
+// Rải vài viên cùng màu để thấy rõ cầu vồng quét sạch màu đó.
+function scatter(color, extra) {
+  const t = [{ r: 0, c: 1, color }, { r: 1, c: 6, color }, { r: 2, c: 2, color },
+             { r: 5, c: 5, color }, { r: 6, c: 1, color }, { r: 6, c: 6, color }];
+  return t.concat(extra || []);
+}
+
+const CASES = {
+  match3: {
+    tiles: [{ r: 4, c: 2, color: RED }, { r: 4, c: 3, color: RED }, { r: 5, c: 4, color: RED }],
+    swap: [{ r: 5, c: 4 }, { r: 4, c: 4 }],
+  },
+  row: rowLine(RED, 'row'),
+  col: rowLine(BLUE, 'col'),
+  bomb: rowLine(GREEN, 'bomb'),
+  rainbow: {
+    tiles: scatter(RED, [{ r: 4, c: 4, special: 'rainbow', color: RED }, { r: 4, c: 3, color: RED }]),
+    swap: [{ r: 4, c: 4 }, { r: 4, c: 3 }],
+  },
+  'row+row': {
+    tiles: [{ r: 4, c: 3, color: RED, special: 'row' }, { r: 4, c: 4, color: RED, special: 'row' }],
+    swap: [{ r: 4, c: 3 }, { r: 4, c: 4 }],
+  },
+  'row+col': {
+    tiles: [{ r: 4, c: 3, color: RED, special: 'row' }, { r: 4, c: 4, color: BLUE, special: 'col' }],
+    swap: [{ r: 4, c: 3 }, { r: 4, c: 4 }],
+  },
+  'bomb+bomb': {
+    tiles: [{ r: 4, c: 3, color: GREEN, special: 'bomb' }, { r: 4, c: 4, color: GREEN, special: 'bomb' }],
+    swap: [{ r: 4, c: 3 }, { r: 4, c: 4 }],
+  },
+  'bomb+line': {
+    tiles: [{ r: 4, c: 3, color: GREEN, special: 'bomb' }, { r: 4, c: 4, color: RED, special: 'row' }],
+    swap: [{ r: 4, c: 3 }, { r: 4, c: 4 }],
+  },
+  'rb+line': {
+    tiles: scatter(RED, [{ r: 4, c: 3, special: 'rainbow', color: RED }, { r: 4, c: 4, color: RED, special: 'row' }]),
+    swap: [{ r: 4, c: 3 }, { r: 4, c: 4 }],
+  },
+  'rb+bomb': {
+    tiles: scatter(RED, [{ r: 4, c: 3, special: 'rainbow', color: RED }, { r: 4, c: 4, color: RED, special: 'bomb' }]),
+    swap: [{ r: 4, c: 3 }, { r: 4, c: 4 }],
+  },
+  'rb+rb': {
+    tiles: [{ r: 4, c: 3, special: 'rainbow', color: RED }, { r: 4, c: 4, special: 'rainbow', color: BLUE }],
+    swap: [{ r: 4, c: 3 }, { r: 4, c: 4 }],
+  },
+  defuse: {
+    // Bom số 5 ở (4,4); khớp 3 đỏ ở (4,1)(4,2)(4,3) — ô (4,3) sát bom → gỡ bom +50.
+    tiles: [
+      { r: 4, c: 4, bomb: 5 },
+      { r: 4, c: 1, color: RED }, { r: 4, c: 2, color: RED }, { r: 5, c: 3, color: RED },
+    ],
+    swap: [{ r: 5, c: 3 }, { r: 4, c: 3 }],
+  },
+  boom: {
+    // Bom số 1 → chạy 1 lượt (tick) → đếm về 0 → nổ lớn → Game Over.
+    tiles: [{ r: 4, c: 4, bomb: 1 }],
+    tick: true,
+  },
+};
+
+/* ── Kênh liên lạc với iframe (postMessage) ───────────────── */
+const iframe = document.getElementById('game');
+const statusEl = document.getElementById('status');
+let ready = false, msgId = 0;
+
+function setStatus(text, cls) {
+  statusEl.className = 'status' + (cls ? ' ' + cls : '');
+  statusEl.innerHTML = text + ' <b>●</b>';
+}
+
+function send(payload) {
+  if (!iframe.contentWindow) return;
+  iframe.contentWindow.postMessage(Object.assign({ __skydom: 'cmd', id: ++msgId }, payload), '*');
+}
+
+// Bridge báo "ready" khi index.html?debug=1 nạp xong; cũng gửi lại ack sau mỗi lệnh.
+window.addEventListener('message', (e) => {
+  const m = e.data;
+  if (!m || (m.__skydom !== 'ready' && m.__skydom !== 'ack')) return;
+  if (m.__skydom === 'ready' && !ready) { ready = true; setStatus('Engine sẵn sàng — chọn một trường hợp', 'ok'); }
+});
+
+// Phòng khi 'ready' lỡ mất (iframe nạp trước khi listener gắn): coi như sẵn sàng sau khi load.
+iframe.addEventListener('load', () => {
+  setTimeout(() => { if (!ready) { ready = true; setStatus('Engine sẵn sàng — chọn một trường hợp', 'ok'); } }, 300);
+});
+
+/* ── Gắn nút ──────────────────────────────────────────────── */
+document.querySelector('.panel').addEventListener('click', (e) => {
+  const btn = e.target.closest('.btn');
+  if (!btn) return;
+
+  if (btn.dataset.op === 'reset') { send({ op: 'reset' }); setStatus('Đã reset ván mới', 'ok'); return; }
+
+  const name = btn.dataset.case;
+  const cfg = CASES[name];
+  if (!cfg) return;
+
+  // Luôn dựng lại từ nền caro sạch để trường hợp lặp lại được y hệt.
+  send(Object.assign({ op: 'setup', clear: true, fill: 'checker' }, cfg));
+  setStatus('Chạy: <b>' + btn.textContent.split('\n')[0].trim() + '</b>', 'ok');
+});
+</script>
