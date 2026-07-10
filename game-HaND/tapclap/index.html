@@ -1,13 +1,22 @@
 <!--
   Tap Away (clone Tap Away / Tile Away Story — TAPCLAP) — HaND
   Flat theme. Single-file HTML (CSS + JS inline).
-  KHUNG (khay/tray) vừa màn hình — KHÔNG pan/zoom. Mỗi ô có mũi tên 1 trong 4 hướng
-  (lên/phải/xuống/trái). Chạm ô → trượt theo hướng đó ra khỏi khung khi đường tới
-  mép trống. Dọn SẠCH 1 khung ⇒ khung kế (đang xếp chồng phía sau) trượt lên thay thế.
-  CHIA THEO MÀN (level): mỗi màn gồm 1..N KHUNG phải dọn hết; dọn hết mọi khung ⇒ THẮNG
-  màn → app hiện popup, qua màn kế. MAP TO DẦN theo màn (cols×rows tăng) & số khung tăng.
-  Khung dựng ngược (đặt ô chỉ khi có đường thoát) ⇒ luôn dọn hết được, KHÔNG bế tắc.
-  Tuân thủ game-common.md (bridge, game CÓ level).
+  LỐI CHƠI
+  · Khay (tray) vừa màn hình — KHÔNG pan/zoom. Mỗi ô có 1 mũi tên (lên/phải/xuống/trái).
+  · Chạm ô: nếu đường theo hướng mũi tên tới mép khay đang trống ⇒ ô trượt hẳn ra
+    ngoài. Nếu đường bị ô khác chặn ⇒ không đi được, MẤT 1 TIM (3 tim mỗi màn).
+  · Dọn SẠCH mọi ô của khay ⇒ THẮNG màn. Hết tim ⇒ THUA màn.
+  · Hai "khay chờ" (.plate p1/p2) xếp chồng phía sau CHỈ là trang trí — mỗi màn chỉ
+    có 1 khay thật phải dọn hết.
+
+  MÀN (level)
+  · LEVELS = mảng cấu hình từng màn (cols×rows). Map TO DẦN theo màn ⇒ khó tăng.
+  · Khay dựng NGƯỢC (reverse peel: chỉ gán hướng ô khi đã có đường thoát) ⇒ khay
+    LUÔN dọn hết được, KHÔNG bao giờ bế tắc.
+  · Thắng màn thường ⇒ game_result/'win' (app hiện popup Next/Retry). Thắng màn CUỐI
+    ⇒ victory. Thua ⇒ game_result/'lose'. Game KHÔNG tự vẽ modal (app lo popup).
+
+  Tuân thủ game-common.md (native bridge, game CÓ level).
 -->
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
@@ -73,7 +82,7 @@
     gap: 10px;
     padding: 0 14px 8px;
   }
-  /* ── Thanh Level / Frame — 2 khung thẻ (giống Score/Best các game khác) ── */
+  /* ── Thanh Level — 1 khung thẻ số màn (dạng thẻ giống Score/Best các game khác) ── */
   .scorebar {
     flex: 1;
     min-width: 0;
@@ -459,18 +468,18 @@ const LATIN_LANGS = new Set([
 ]);
 
 const I18N = {
-  en: { level: 'Level', frame: 'Frame', best: 'Best', tut: 'Tap a tile — it slides where its arrow points' },
-  vi: { level: 'Màn', frame: 'Khung', best: 'Cao nhất', tut: 'Chạm ô → trượt theo hướng mũi tên' },
-  es: { level: 'Nivel', frame: 'Marco', best: 'Mejor', tut: 'Toca una ficha — se desliza hacia su flecha' },
-  fr: { level: 'Niveau', frame: 'Cadre', best: 'Record', tut: 'Touche une tuile — elle glisse vers sa flèche' },
-  de: { level: 'Level', frame: 'Feld', best: 'Best', tut: 'Tippe ein Feld — es gleitet in Pfeilrichtung' },
-  'pt-BR': { level: 'Nível', frame: 'Quadro', best: 'Recorde', tut: 'Toque numa peça — ela desliza para a seta' },
-  ja: { level: 'レベル', frame: '枠', best: '最高', tut: 'タップすると矢印の方向へ滑ります' },
-  ko: { level: '레벨', frame: '틀', best: '최고', tut: '타일을 누르면 화살표 방향으로 미끄러져요' },
-  'zh-Hans': { level: '关卡', frame: '框', best: '最高', tut: '点击方块，它会沿箭头方向滑出' },
-  ru: { level: 'Уровень', frame: 'Рамка', best: 'Рекорд', tut: 'Нажми на плитку — она скользит по стрелке' },
-  tr: { level: 'Seviye', frame: 'Çerçeve', best: 'En iyi', tut: 'Bir kareye dokun — oku yönünde kayar' },
-  id: { level: 'Level', frame: 'Bingkai', best: 'Terbaik', tut: 'Ketuk ubin — meluncur ke arah panah' },
+  en: { level: 'Level', tut: 'Tap a tile — it slides where its arrow points' },
+  vi: { level: 'Màn', tut: 'Chạm ô → trượt theo hướng mũi tên' },
+  es: { level: 'Nivel', tut: 'Toca una ficha — se desliza hacia su flecha' },
+  fr: { level: 'Niveau', tut: 'Touche une tuile — elle glisse vers sa flèche' },
+  de: { level: 'Level', tut: 'Tippe ein Feld — es gleitet in Pfeilrichtung' },
+  'pt-BR': { level: 'Nível', tut: 'Toque numa peça — ela desliza para a seta' },
+  ja: { level: 'レベル', tut: 'タップすると矢印の方向へ滑ります' },
+  ko: { level: '레벨', tut: '타일을 누르면 화살표 방향으로 미끄러져요' },
+  'zh-Hans': { level: '关卡', tut: '点击方块，它会沿箭头方向滑出' },
+  ru: { level: 'Уровень', tut: 'Нажми на плитку — она скользит по стрелке' },
+  tr: { level: 'Seviye', tut: 'Bir kareye dokun — oku yönünde kayar' },
+  id: { level: 'Level', tut: 'Ketuk ubin — meluncur ke arah panah' },
 };
 
 function getLanguage() {
@@ -488,7 +497,7 @@ function applyUiFont(lang) {
 }
 
 /* =====================================================================
- * 1. Native bridge (game-common §1) — game KHÔNG level
+ * 1. Native bridge (game-common §1) — game CÓ level
  * ===================================================================== */
 function post(msg) {
   try {
@@ -561,21 +570,19 @@ function arrowSvg(dir) {
     'style="transform:rotate(' + (dir * 90) + 'deg)">' + ARROW + '</svg>';
 }
 /* =====================================================================
- * 3. State — MÀN (level): map to dần + số KHUNG tăng dần. Khung cỡ COLS×ROWS.
+ * 3. State — MÀN (level): map to dần theo màn. Khay (khung) cỡ COLS×ROWS.
  * ===================================================================== */
-// Mỗi màn: kích thước lưới (cols×rows). Map TO DẦN theo màn ⇒ khó tăng đều.
-const LEVELS = [
-  { cols: 4, rows: 5  },
-  { cols: 5, rows: 6  },
-  { cols: 5, rows: 7  },
-  { cols: 6, rows: 7  },
-  { cols: 6, rows: 8  },
-  { cols: 6, rows: 9  },
-  { cols: 7, rows: 9  },
-  { cols: 7, rows: 10 },
-  { cols: 8, rows: 10 },
-  { cols: 8, rows: 11 },
-];
+// 100 MÀN sinh tự động: cỡ lưới (cols×rows) TO DẦN theo màn ⇒ khó tăng đều tới màn 100.
+// Kết hợp thuật toán dựng khay "mắc chéo" (assignDirections) ⇒ vừa to hơn vừa rối hơn dần.
+// cols 4→8, rows 5→13 (nội suy tuyến tính) — đơn điệu không giảm, ô ≥28px luôn vừa màn dọc điện thoại.
+const LEVEL_COUNT = 100;
+const LEVELS = Array.from({ length: LEVEL_COUNT }, (_, i) => {
+  const t = i / (LEVEL_COUNT - 1);                 // 0 ở màn 1 → 1 ở màn cuối
+  return {
+    cols: Math.round(4 + t * 4),                   // 4 → 8
+    rows: Math.round(5 + t * 8),                   // 5 → 13
+  };
+});
 let currentLevelIdx = 0;      // màn hiện tại (0-indexed)
 
 let tutorialSeen = false;     // đã xem coach tooltip lần đầu chưa (persist)
@@ -657,14 +664,37 @@ function styleBlocks() {
 function distEdge(r, c, dir) {
   return dir === 0 ? r : dir === 1 ? COLS - 1 - c : dir === 2 ? ROWS - 1 - r : c;
 }
-/* Chọn hướng cho viên mới: LUÔN lấy hướng chĩa SÂU nhất vào trong (đường thoát DÀI nhất)
-   ⇒ gần như mọi viên đều chĩa vào trong, dây chuyền chặt nhất. Nhiều hướng dài bằng nhau
-   thì bốc ngẫu nhiên trong số đó (giữ chút biến thiên, tránh đơn điệu hoàn toàn). */
-function chooseSpreadDir(r, c, dirs) {
-  let best = -1;
-  for (const d of dirs) best = Math.max(best, distEdge(r, c, d));
-  const far = dirs.filter(d => distEdge(r, c, d) === best);   // các hướng dài nhất
-  return far[(Math.random() * far.length) | 0];
+/* Chọn hướng cho viên mới sao cho nó "MẮC" vào NHIỀU viên KHÁC CHIỀU nhất.
+   Lúc gán, mọi ô trên đường thoát của các hướng ứng viên đều đã có hướng (đã bóc trước),
+   nên ta biết được: đi theo hướng d sẽ bị chặn bởi bao nhiêu viên KHÁC chiều d.
+   Điểm 1 hướng:
+     • crossBlockers — số viên trên đường thoát mà CHĨA KHÁC hướng d (mỗi viên = 1 lần bị
+       chặn chéo: muốn dọn viên này phải dọn viên kia trước, mà nó lại đi hướng khác). ⇒ trọng số CAO nhất.
+     • hàng xóm 4 phía đã gán: thưởng nếu KHÁC chiều, phạt nếu CÙNG chiều ⇒ không còn "quét
+       nguyên hàng cùng hướng" một phát, bàn rối hơn.
+     • distEdge — chĩa sâu (phụ, phá thế hoà).
+   Vẫn chỉ chọn trong `dirs` hợp lệ của thuật toán bóc-ngược ⇒ ĐẢM BẢO không bế tắc. */
+function chooseSpreadDir(r, c, dirs, dirOf) {
+  let best = [], bestScore = -Infinity;
+  for (const d of dirs) {
+    let crossBlockers = 0;                    // viên khác chiều nằm trên đường thoát
+    let rr = r + DR[d], cc = c + DC[d];
+    while (inBounds(rr, cc)) {
+      const kk = KEY(rr, cc);
+      if (dirOf.has(kk) && dirOf.get(kk) !== d) crossBlockers++;
+      rr += DR[d]; cc += DC[d];
+    }
+    let diffNb = 0, sameNb = 0;               // hàng xóm 4 phía đã gán: khác / cùng chiều
+    for (const nd of DIRS) {
+      const nk = KEY(r + DR[nd], c + DC[nd]);
+      if (!dirOf.has(nk)) continue;
+      if (dirOf.get(nk) === d) sameNb++; else diffNb++;
+    }
+    const score = crossBlockers * 80 + diffNb * 24 - sameNb * 36 + distEdge(r, c, d) * 6;
+    if (score > bestScore) { bestScore = score; best = [d]; }
+    else if (score === bestScore) best.push(d);
+  }
+  return best[(Math.random() * best.length) | 0];   // hoà điểm ⇒ bốc ngẫu nhiên (giữ biến thiên)
 }
 
 /* Gán hướng cho MỌI ô bằng cách "BÓC NGƯỢC" (reverse peel):
@@ -686,40 +716,50 @@ function assignDirections() {
   };
   let left = ROWS * COLS;
   while (left > 0) {
+    // THỨ TỰ BÓC "SÂU NHẤT TRƯỚC": mỗi bước, trong các ô đủ điều kiện bóc, chọn ô nào có
+    // hướng thoát SÂU nhất (distEdge lớn nhất). Bóc ưu tiên viên "chĩa sâu" ⇒ trì hoãn các
+    // viên trong lõi, ép chúng có đường thoát dài & bị nhiều viên khác chặn ⇒ chuỗi phụ thuộc
+    // dài hơn nhiều, ÍT viên dọn-được-ngay ⇒ KHÓ hơn hẳn. Vẫn chỉ bóc ô hợp lệ ⇒ KHÔNG bế tắc.
     const cands = [];
+    let deepest = -1;
     for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
       if (removed.has(KEY(r, c))) continue;
       const dirs = DIRS.filter(d => pathRemoved(r, c, d));
-      if (dirs.length) cands.push([r, c, dirs]);
+      if (!dirs.length) continue;
+      let dd = -1;
+      for (const d of dirs) dd = Math.max(dd, distEdge(r, c, d));
+      if (dd > deepest) deepest = dd;
+      cands.push([r, c, dirs, dd]);
     }
-    const [r, c, dirs] = cands[(Math.random() * cands.length) | 0];
-    dirOf.set(KEY(r, c), chooseSpreadDir(r, c, dirs));   // ưu tiên hướng chĩa sâu ⇒ dây chuyền chặt
+    const deep = cands.filter(x => x[3] === deepest);     // các ô sâu nhất bước này
+    const [r, c, dirs] = deep[(Math.random() * deep.length) | 0];
+    dirOf.set(KEY(r, c), chooseSpreadDir(r, c, dirs, dirOf));   // ưu tiên MẮC nhiều viên khác chiều
     removed.add(KEY(r, c));
     left--;
   }
   return dirOf;
 }
 
-/* Gom các ô KỀ NHAU CÙNG HƯỚNG thành cụm ⇒ mỗi cụm 1 màu (nhìn gọn mắt như bản gốc). */
+/* Tô màu RẢI ĐỀU: mỗi ô một màu, PHẦN LỚN tránh trùng hàng xóm (4 phía) ⇒ không tụ
+   mảng lớn cùng màu một góc, nhìn lẫn lộn hơn. Nhưng CHỪA ~15% xác suất bốc màu bất kỳ
+   ⇒ thỉnh thoảng vẫn có 2 ô cạnh nhau cùng màu (ÍT), tự nhiên hơn là cấm tuyệt đối.
+   Không phụ thuộc hướng mũi tên. */
+const SAME_COLOR_CHANCE = 0.15;   // xác suất cho phép trùng màu hàng xóm
 function colorClusters(dirOf) {
   const color = new Map();
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
-    const k = KEY(r, c);
-    if (color.has(k)) continue;
-    const col = (Math.random() * PALETTE.length) | 0;
-    const dir = dirOf.get(k);
-    const stack = [[r, c]];
-    color.set(k, col);
-    while (stack.length) {
-      const [br, bc] = stack.pop();
-      for (const [nr, nc] of [[br - 1, bc], [br + 1, bc], [br, bc - 1], [br, bc + 1]]) {
-        if (!inBounds(nr, nc)) continue;
-        const nk = KEY(nr, nc);
-        if (color.has(nk) || dirOf.get(nk) !== dir) continue;
-        color.set(nk, col);
-        stack.push([nr, nc]);
-      }
+    if (Math.random() < SAME_COLOR_CHANCE) {          // đôi khi bốc bất kỳ ⇒ có thể trùng hàng xóm
+      color.set(KEY(r, c), (Math.random() * PALETTE.length) | 0);
+      continue;
     }
+    const used = new Set();
+    for (const nd of DIRS) {
+      const nk = KEY(r + DR[nd], c + DC[nd]);
+      if (color.has(nk)) used.add(color.get(nk));
+    }
+    const avail = [];
+    for (let i = 0; i < PALETTE.length; i++) if (!used.has(i)) avail.push(i);
+    color.set(KEY(r, c), avail[(Math.random() * avail.length) | 0]);
   }
   return color;
 }
