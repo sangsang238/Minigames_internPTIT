@@ -21,12 +21,12 @@
   body { font-family: var(--ui-font); font-weight: 700; color: var(--ink); background: #17102b; -webkit-user-select: none; user-select: none; touch-action: none; }
   .app { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; }
 
-  .topbar { position: absolute; top: 0; left: 0; right: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 0 12px 4px; }
+  .topbar { position: absolute; top: 0; left: 0; right: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 0 calc(12px + env(safe-area-inset-right)) 4px calc(12px + env(safe-area-inset-left)); }
   .scoreboard { flex: 1 1 0; min-width: 0; display: flex; align-items: stretch; gap: 6px; }
-  .stat { flex: 1 1 0; min-width: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 5px; background: rgba(28,12,40,.5); border: 2px solid rgba(255,255,255,.14); border-radius: 14px; padding: 7px 8px 9px 4px; box-shadow: inset 0 2px 6px rgba(255,255,255,.06), 0 3px 8px rgba(0,0,0,.35); backdrop-filter: blur(3px); }
+  .stat { flex: 1 1 0; min-width: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 5px; background: rgba(2,32,48,.55); border: 2px solid rgba(255,255,255,.16); border-radius: 14px; padding: 7px 8px 9px 4px; box-shadow: inset 0 2px 6px rgba(255,255,255,.06), 0 3px 8px rgba(0,0,0,.35); backdrop-filter: blur(3px); }
   .stat-ico { flex: 0 0 auto; display: block; width: clamp(16px,4.8vw,21px); height: clamp(16px,4.8vw,21px); fill: var(--gold); filter: drop-shadow(0 1px 1px rgba(0,0,0,.4)); }
   .stat-txt { display: flex; flex-direction: column; align-items: center; min-width: 0; flex: 1 0 auto; }
-  .stat .k { font-size: clamp(10px,3.2vw,13px); font-family: system-ui,-apple-system,'Segoe UI',sans-serif; font-weight: 600; letter-spacing: .5px; color: #ffcaa0; text-transform: uppercase; line-height: 1.05; white-space: nowrap; }
+  .stat .k { font-size: clamp(10px,3.2vw,13px); font-family: system-ui,-apple-system,'Segoe UI',sans-serif; font-weight: 600; letter-spacing: .5px; color: #8fd0ff; text-transform: uppercase; line-height: 1.05; white-space: nowrap; }
   .stat .v { font-size: clamp(16px,5vw,24px); line-height: 1.1; color: #fff; white-space: nowrap; font-family: system-ui,-apple-system,'Segoe UI',sans-serif; font-weight: 800; text-shadow: 0 2px 2px rgba(0,0,0,.4); }
   .stat .v.best { color: var(--gold); }
 
@@ -34,7 +34,7 @@
   .btn3d-shadow { display: none; }
   .btn3d-surface { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; border-radius: var(--radius); background-color: #b0532a; color: #fff; box-shadow: 0 3px 0 rgba(0,0,0,.4), 0 6px 14px rgba(0,0,0,.35); transition: transform .09s ease-out; }
   .btn3d:active .btn3d-surface { transform: scale(.95); }
-  .btn3d.btn-icon .btn3d-surface { width: var(--btn-size,46px); height: var(--btn-size,46px); border-radius: 16px; background-color: #7a3b1c; border: 2px solid #4d2410; box-shadow: none; }
+  .btn3d.btn-icon .btn3d-surface { width: var(--btn-size,46px); height: var(--btn-size,46px); border-radius: 16px; background-color: #1e4e7a; border: 2px solid #12344f; box-shadow: none; }
   #sound-btn .btn3d-surface { border-radius: 13px; }
   .btn3d.btn-icon { flex: 0 0 auto; -webkit-user-select: none; user-select: none; }
   .back-ico { width: 52%; height: 52%; fill: currentColor; display: block; }
@@ -47,16 +47,6 @@
   .stage { flex: 1; width: 100%; position: relative; }
   #game { display: block; width: 100%; height: 100%; touch-action: none; }
 
-  .hint { position: absolute; left: 50%; top: 58%; transform: translate(-50%,-50%); background: rgba(20,10,30,.55); color: #ffe6cf; padding: 10px 18px; border-radius: 14px; font-size: clamp(12px,3.6vw,16px); letter-spacing: .3px; white-space: nowrap; pointer-events: none; opacity: 1; transition: opacity .5s; box-shadow: 0 6px 18px rgba(0,0,0,.4); display: flex; align-items: center; gap: 9px; }
-  .hint.gone { opacity: 0; }
-  .hint svg { width: 20px; height: 20px; fill: #ffb46b; animation: tapPulse 1.1s ease-in-out infinite; }
-  @keyframes tapPulse { 0%,100% { transform: translateY(0); opacity: .7; } 50% { transform: translateY(4px); opacity: 1; } }
-
-  .combo-ind { position: absolute; left: 50%; top: 15%; transform: translate(-50%,0) scale(1); pointer-events: none; z-index: 6; text-align: center; font-weight: 900; letter-spacing: .5px; color: #ffd23f; font-size: calc(30px * var(--sc)); text-shadow: 0 2px 12px rgba(0,0,0,.7); opacity: 0; transition: opacity .2s; }
-  .combo-ind.on { opacity: 1; }
-  .combo-ind.bump { animation: comboBump .32s ease-out; }
-  @keyframes comboBump { 0% { transform: translate(-50%,0) scale(1); } 40% { transform: translate(-50%,0) scale(1.35); } 100% { transform: translate(-50%,0) scale(1); } }
-  .combo-ind .cl { display: block; font-size: calc(12px * var(--sc)); color: #ffcaa0; letter-spacing: 2px; }
 
   .boost-pop { position: absolute; left: 50%; top: 30%; transform: translate(-50%,-50%) scale(.5); text-align: center; pointer-events: none; opacity: 0; z-index: 6; font-weight: 900; letter-spacing: .5px; white-space: nowrap; font-size: calc(30px * var(--sc)); text-shadow: 0 2px 14px rgba(0,0,0,.7); }
   .boost-pop.show { animation: boostPop 1s ease-out forwards; }
@@ -64,7 +54,7 @@
 
   .overlay { position: absolute; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; background: rgba(10,4,20,.7); opacity: 1; transition: opacity .25s; }
   .overlay.hidden { opacity: 0; pointer-events: none; }
-  .card { width: min(82%, calc(360px * var(--sc))); padding: calc(26px * var(--sc)); text-align: center; border-radius: calc(22px * var(--sc)); background: linear-gradient(180deg,#3d2a52,#180f2a); border: 2px solid rgba(255,180,120,.22); box-shadow: 0 18px 50px rgba(0,0,0,.5); transform: scale(1); transition: transform .25s; }
+  .card { width: min(82%, calc(360px * var(--sc))); padding: calc(26px * var(--sc)); text-align: center; border-radius: calc(22px * var(--sc)); background: linear-gradient(180deg,#2a5f9e,#12294a); border: 2px solid rgba(150,210,255,.32); box-shadow: 0 18px 50px rgba(0,0,0,.5); transform: scale(1); transition: transform .25s; }
   .overlay.hidden .card { transform: scale(.9); }
   .card-title { color: #fff; font-size: calc(30px * var(--sc)); margin-bottom: calc(14px * var(--sc)); }
   .sb { display: flex; justify-content: center; gap: calc(30px * var(--sc)); margin-bottom: calc(18px * var(--sc)); }
@@ -72,15 +62,41 @@
   .sb .v { font-size: calc(32px * var(--sc)); color: #fff; }
   .sb .v.best { color: var(--gold); }
   .btn3d.play { --radius: calc(14px * var(--sc)); }
-  .btn3d.play .btn3d-surface { height: calc(52px * var(--sc)); padding: 0 calc(34px * var(--sc)); background-color: #ffb02e; color: #3a2400; font-family: var(--ui-font); font-size: calc(17px * var(--sc)); letter-spacing: .6px; box-shadow: 0 6px 16px rgba(255,176,46,.35); }
+  .btn3d.play .btn3d-surface { height: calc(52px * var(--sc)); padding: 0 calc(34px * var(--sc)); background-color: #35d67a; color: #063018; font-family: var(--ui-font); font-size: calc(17px * var(--sc)); letter-spacing: .6px; box-shadow: 0 6px 16px rgba(53,214,122,.42); }
+
+  /* ── TUTORIAL 3 bước (minh hoạ + NGÓN TAY lấy từ sandblock) ── */
+  .tut { position: absolute; inset: 0; z-index: 55; display: flex; align-items: center; justify-content: center; background: rgba(10,4,20,.72); transition: opacity .28s; }
+  .tut.hidden { opacity: 0; pointer-events: none; }
+  .tut-card { width: min(94%, calc(560px * var(--sc))); max-height: 94%; overflow-y: auto; padding: calc(18px * var(--sc)); text-align: center; border-radius: calc(22px * var(--sc)); background: linear-gradient(180deg,#2a5f9e,#12294a); border: 2px solid rgba(150,210,255,.32); box-shadow: 0 18px 50px rgba(0,0,0,.5); transform: scale(1); transition: transform .28s; }
+  .tut.hidden .tut-card { transform: scale(.92); }
+  .tut-title { color: #fff; font-size: calc(22px * var(--sc)); margin-bottom: calc(12px * var(--sc)); }
+  .tut-steps { display: flex; gap: calc(12px * var(--sc)); justify-content: center; align-items: flex-start; }
+  .tut-step { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: calc(8px * var(--sc)); text-align: center; }
+  .tut-illus { position: relative; flex: 0 0 auto; width: calc(100px * var(--sc)); height: calc(66px * var(--sc)); border-radius: calc(12px * var(--sc)); overflow: hidden; background: linear-gradient(180deg,#7fd0ec,#c6ecf6); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); }
+  .tut-illus svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .tut-fg { position: absolute; width: calc(38px * var(--sc)); height: calc(38px * var(--sc)); background: url('data:image/png;base64,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') center/contain no-repeat; filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); pointer-events: none; }
+  .tut-fg.press { animation: tutPress 1.3s ease-in-out infinite; }
+  .tut-fg.lift  { animation: tutLift 1.6s ease-in-out infinite; }
+  @keyframes tutPress { 0%,100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
+  @keyframes tutLift  { 0%,55% { transform: translateY(0); opacity: 1; } 80%,100% { transform: translateY(-10px); opacity: 0; } }
+  .tut-cap { color: #eaf4ff; font-size: calc(13px * var(--sc)); line-height: 1.36; }
+  .tut-cap b { color: #ffd23f; }
+  .tut-cap .n { display: inline-block; min-width: calc(15px * var(--sc)); color: #8fd0ff; font-weight: 800; }
+  .btn3d.tut-go { --radius: calc(14px * var(--sc)); margin-top: calc(16px * var(--sc)); }
+  .btn3d.tut-go .btn3d-surface { height: calc(50px * var(--sc)); padding: 0 calc(40px * var(--sc)); background-color: #35d67a; color: #063018; font-family: var(--ui-font); font-size: calc(17px * var(--sc)); letter-spacing: .6px; box-shadow: 0 6px 16px rgba(53,214,122,.42); }
+
+  /* ── KHOÁ NGANG: hiện màn "xoay máy" khi để DỌC (chỉ chơi màn hình ngang) ── */
+  .rotate { position: fixed; inset: 0; z-index: 200; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 22px; text-align: center; padding: 28px; background: linear-gradient(180deg,#183a63,#0b1a30); color: #eaf4ff; }
+  .rotate .ph { width: 86px; height: 86px; fill: none; stroke: #ffd23f; stroke-width: 4; stroke-linejoin: round; transform-origin: 50% 50%; animation: rotPhone 2.2s ease-in-out infinite; }
+  .rotate .rt { font-size: clamp(15px,4.6vw,20px); font-weight: 800; max-width: 340px; line-height: 1.45; }
+  @keyframes rotPhone { 0%,28% { transform: rotate(0); } 58%,100% { transform: rotate(-90deg); } }
+  @media (orientation: portrait) { .rotate { display: flex; } }
 </style>
 
 <div class="app" id="app">
   <div class="stage" id="stage">
     <canvas id="game"></canvas>
-    <div class="combo-ind" id="combo-ind"></div>
     <div class="boost-pop" id="boost-pop"></div>
-    <div class="hint" id="hint"></div>
   </div>
 
   <div class="topbar" id="topbar">
@@ -94,11 +110,11 @@
     </div>
     <div class="scoreboard">
       <div class="stat">
-        <svg class="stat-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C7 2 3 6 3 11c0 6 9 11 9 11s9-5 9-11c0-5-4-9-9-9zm0 4a5 5 0 1 1 0 10 5 5 0 0 1 0-10z"/></svg>
+        <svg class="stat-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 17.27l6.18 3.73-1.64-7.03L22 9.24l-7.19-.62L12 2 9.19 8.62 2 9.24l5.46 4.73L5.82 21z"/></svg>
         <div class="stat-txt"><div class="k" id="lbl-score">SCORE</div><div class="v" id="hud-score">0</div></div>
       </div>
       <div class="stat">
-        <svg class="stat-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4V2h10v2h4v3a4 4 0 0 1-4 4h-.4A5.5 5.5 0 0 1 13 15.9V18h3v2H8v-2h3v-2.1A5.5 5.5 0 0 1 7.4 11H7a4 4 0 0 1-4-4V4h4zm0 2H5v1a2 2 0 0 0 2 2V6zm12 0v3a2 2 0 0 0 2-2V6h-2z"/></svg>
+        <svg class="stat-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8.2l4.1 3.5L12 5l4.9 6.7 4.1-3.5-1.6 9.6H4.6zM4.4 20h15.2v2.2H4.4z"/></svg>
         <div class="stat-txt"><div class="k" id="lbl-best">BEST</div><div class="v best" id="hud-best">0</div></div>
       </div>
     </div>
@@ -126,6 +142,71 @@
       </button>
     </div>
   </div>
+
+  <div id="tutorial" class="tut hidden">
+    <div class="tut-card">
+      <div class="tut-title" id="tut-title">How to play</div>
+
+      <div class="tut-steps">
+      <div class="tut-step">
+        <div class="tut-illus">
+          <svg viewBox="0 0 100 66" aria-hidden="true">
+            <path d="M0,24 C24,20 34,26 54,42 C70,55 86,60 100,58 L100,66 L0,66 Z" fill="#f2ad46"/>
+            <path d="M0,24 C24,20 34,26 54,42 C70,55 86,60 100,58" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+            <path d="M40,27 L49,34 M49,34 l-5.5,.5 M49,34 l.5,-5.5" fill="none" stroke="#ffd23f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
+            <circle cx="28" cy="19" r="6.5" fill="#fff"/>
+          </svg>
+          <div class="tut-fg press" style="left:58%; top:40%;"></div>
+        </div>
+        <div class="tut-cap"><span class="n">1</span> <span id="tut-c1"></span></div>
+      </div>
+
+      <div class="tut-step">
+        <div class="tut-illus">
+          <svg viewBox="0 0 100 66" aria-hidden="true">
+            <line x1="0" y1="16" x2="100" y2="16" stroke="#fff" stroke-width="1.6" stroke-dasharray="5 4" opacity=".85"/>
+            <path d="M0,52 C10,50 18,40 26,40 C34,40 40,52 54,56 C74,62 88,60 100,58 L100,66 L0,66 Z" fill="#f2ad46"/>
+            <path d="M0,52 C10,50 18,40 26,40 C34,40 40,52 54,56 C74,62 88,60 100,58" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+            <path d="M26,40 Q50,0 84,22" fill="none" stroke="#ffd23f" stroke-width="1.8" stroke-dasharray="1.6 4" stroke-linecap="round"/>
+            <path d="M64,4 l1.2,2.6 l2.8,.3 l-2.1,1.9 l.6,2.8 l-2.5,-1.4 l-2.5,1.4 l.6,-2.8 l-2.1,-1.9 l2.8,-.3 z" fill="#ffd23f"/>
+            <circle cx="55" cy="13" r="6" fill="#fff"/>
+          </svg>
+          <div class="tut-fg lift" style="left:58%; top:40%;"></div>
+        </div>
+        <div class="tut-cap"><span class="n">2</span> <span id="tut-c2"></span></div>
+      </div>
+
+      <div class="tut-step">
+        <div class="tut-illus">
+          <svg viewBox="0 0 100 66" aria-hidden="true">
+            <path d="M0,22 C18,20 28,24 40,36 C56,52 76,60 100,60 L100,66 L0,66 Z" fill="#f2ad46"/>
+            <path d="M0,22 C18,20 28,24 40,36 C56,52 76,60 100,60" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+            <circle cx="44" cy="33" r="11" fill="#ffb454" opacity=".5"/>
+            <g stroke="#ffd23f" stroke-width="2" stroke-linecap="round">
+              <line x1="30" y1="33" x2="20" y2="31"/><line x1="30" y1="37" x2="21" y2="40"/><line x1="32" y1="29" x2="25" y2="24"/>
+            </g>
+            <circle cx="44" cy="33" r="6.5" fill="#fff"/>
+          </svg>
+        </div>
+        <div class="tut-cap"><span class="n">3</span> <span id="tut-c3"></span></div>
+      </div>
+      </div>
+
+      <button class="btn3d tut-go" id="tut-btn" type="button">
+        <span class="btn3d-shadow"></span><span class="btn3d-surface" id="tut-btn-txt">Start</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="rotate" id="rotate">
+  <svg class="ph" viewBox="0 0 48 48" aria-hidden="true">
+    <rect x="16" y="6" width="16" height="36" rx="3"/>
+    <line x1="21" y1="10" x2="27" y2="10"/>
+    <path d="M6 30a12 12 0 0 1 12-12" fill="none"/>
+    <path d="M6 30l-2-4 M6 30l4-1" fill="none"/>
+  </svg>
+  <div class="rt" id="rotate-txt">Please rotate your device to landscape to play</div>
 </div>
 
 <script>
@@ -136,8 +217,8 @@ const SUPPORTED_LANGS = ['en','vi','zh-Hans','zh-Hant','ja','ko','es','es-MX','e
 const DEFAULT_LANG = 'en';
 const LATIN_LANGS = new Set(['en','vi','es','es-MX','es-AR','pt-BR','pt','fr','de','it','nl','pl','tr','id','fil']);
 const I18N = {
-  en: { score: 'Score', best: 'Best', playAgain: 'Play Again', gameOver: 'Game Over', newBest: 'New Best!', hint: 'Hold to dive · fly over the line', combo: 'Combo', moon: 'TO THE MOON!', smooth: 'SMOOTH', perfect: 'PERFECT!' },
-  vi: { score: 'Điểm', best: 'Cao nhất', playAgain: 'Chơi lại', gameOver: 'Thua rồi', newBest: 'Kỷ lục mới!', hint: 'Giữ để lao xuống · bay vượt vạch', combo: 'Combo', moon: 'LÊN MẶT TRĂNG!', smooth: 'MƯỢT', perfect: 'HOÀN HẢO!' },
+  en: { score: 'Score', best: 'Best', playAgain: 'Play Again', gameOver: 'Game Over', newBest: 'New Best!', hint: 'Hold to dive · fly over the line', combo: 'Combo', moon: 'TO THE MOON!', smooth: 'SMOOTH', perfect: 'PERFECT!', tutTitle: 'How to play', tutStart: "Let's go", tut1: '<b>Hold</b> to dive down the slope and build speed.', tut2: '<b>Release</b> at the peak to fly over the line — higher means more points.', tut3: 'Land <b>smoothly</b> on the next downhill to chain a <b>boost</b>.', rotate: 'Please rotate your device to landscape to play' },
+  vi: { score: 'Điểm', best: 'Cao nhất', playAgain: 'Chơi lại', gameOver: 'Thua rồi', newBest: 'Kỷ lục mới!', hint: 'Giữ để lao xuống · bay vượt vạch', combo: 'Combo', moon: 'LÊN MẶT TRĂNG!', smooth: 'MƯỢT', perfect: 'HOÀN HẢO!', tutTitle: 'Cách chơi', tutStart: 'Bắt đầu', tut1: '<b>Giữ</b> để lao xuống dốc, dồn tốc độ.', tut2: '<b>Thả</b> ở đỉnh để bay vượt vạch — càng cao càng nhiều điểm.', tut3: 'Đáp <b>mượt</b> đầu dốc kế để nối chuỗi <b>tăng tốc</b>.', rotate: 'Xoay ngang thiết bị để chơi' },
   es: { score: 'Puntos', best: 'Récord', playAgain: 'Jugar de nuevo', gameOver: 'Fin del juego', newBest: '¡Nuevo récord!', hint: 'Mantén para caer · vuela sobre la línea', combo: 'Combo', moon: '¡A LA LUNA!', smooth: 'SUAVE', perfect: '¡PERFECTO!' },
   fr: { score: 'Score', best: 'Record', playAgain: 'Rejouer', gameOver: 'Partie terminée', newBest: 'Nouveau record !', hint: 'Maintiens pour plonger · dépasse la ligne', combo: 'Combo', moon: 'VERS LA LUNE !', smooth: 'FLUIDE', perfect: 'PARFAIT !' },
   de: { score: 'Punkte', best: 'Bestwert', playAgain: 'Nochmal', gameOver: 'Game Over', newBest: 'Neuer Rekord!', hint: 'Halten zum Sinken · über die Linie fliegen', combo: 'Combo', moon: 'ZUM MOND!', smooth: 'SANFT', perfect: 'PERFEKT!' },
@@ -184,6 +265,7 @@ const cv = document.getElementById('game');
 const ctx = cv.getContext('2d');
 let W = 360, H = 640, DPR = 1;
 
+
 /* ── SFX (Web Audio, tổng hợp — không file âm) ── */
 const SFX_KEY = 'dune_sfx';
 const AudioFX = (() => {
@@ -193,20 +275,65 @@ const AudioFX = (() => {
   function resume() { const c = actx(); if (c && c.state === 'suspended') c.resume(); }
   function tone(freq, dur, type, gain, delay, to) { if (!enabled) return; const c = actx(); if (!c) return; const t0 = c.currentTime + (delay || 0), o = c.createOscillator(), g = c.createGain(); o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t0); if (to) o.frequency.exponentialRampToValueAtTime(to, t0 + dur); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(gain || 0.3, t0 + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur); o.connect(g); g.connect(master); o.start(t0); o.stop(t0 + dur + 0.03); }
   function noise(dur, gain, cutoff) { if (!enabled) return; const c = actx(); if (!c) return; const t0 = c.currentTime, len = Math.floor(c.sampleRate * dur), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len); const src = c.createBufferSource(); src.buffer = buf; const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = cutoff || 2000; const g = c.createGain(); g.gain.value = gain || 0.3; src.connect(f); f.connect(g); g.connect(master); src.start(t0); }
+  // ── TIẾNG LƯỚT CÁT liên tục: noise loop, gain/cutoff theo tốc độ (nhẹ, êm) ──
+  let slNode = null, slGain = null, slFilt = null;
+  function slide(level) {   // level 0..1 = tốc lướt trên cát
+    const c = actx(); if (!c) return;
+    if (!slNode) {
+      const len = Math.floor(c.sampleRate), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      slNode = c.createBufferSource(); slNode.buffer = buf; slNode.loop = true;
+      slFilt = c.createBiquadFilter(); slFilt.type = 'lowpass'; slFilt.frequency.value = 600;
+      slGain = c.createGain(); slGain.gain.value = 0;
+      slNode.connect(slFilt); slFilt.connect(slGain); slGain.connect(master); slNode.start();
+    }
+    const g = enabled ? Math.min(0.09, level * 0.11) : 0;                       // ÊM: gain tối đa ~0.09
+    slGain.gain.setTargetAtTime(g, c.currentTime, 0.06);                        // mượt, không giật
+    slFilt.frequency.setTargetAtTime(400 + level * 700, c.currentTime, 0.06);   // nhanh hơn → hơi sáng hơn
+  }
+  // ── TIẾNG BAY BOOST liên tục: x2 = "vù vù" (bandpass thấp), x3 = "xèo xèo" (highpass cao) ──
+  let baNode = null, baGain = null, baFilt = null;
+  function boostAir(level) {   // 0 = tắt · 1 = ×2 vù vù · 2 = ×3 xèo xèo
+    const c = actx(); if (!c) return;
+    if (!baNode) {
+      const len = Math.floor(c.sampleRate), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      baNode = c.createBufferSource(); baNode.buffer = buf; baNode.loop = true;
+      baFilt = c.createBiquadFilter();
+      baGain = c.createGain(); baGain.gain.value = 0;
+      baNode.connect(baFilt); baFilt.connect(baGain); baGain.connect(master); baNode.start();
+    }
+    let g = 0;
+    if (enabled && level === 1) { baFilt.type = 'bandpass'; baFilt.Q.setTargetAtTime(0.9, c.currentTime, 0.08); baFilt.frequency.setTargetAtTime(650, c.currentTime, 0.08); g = 0.075; }   // VÙ VÙ (gió)
+    else if (enabled && level >= 2) { baFilt.type = 'highpass'; baFilt.Q.setTargetAtTime(0.7, c.currentTime, 0.08); baFilt.frequency.setTargetAtTime(3400, c.currentTime, 0.08); g = 0.05; }   // XÈO XÈO (lửa)
+    baGain.gain.setTargetAtTime(g, c.currentTime, 0.07);
+  }
   return {
+    slide, boostAir,
     resume, isEnabled() { return enabled; },
     setEnabled(v) { enabled = v; try { localStorage.setItem(SFX_KEY, v ? '1' : '0'); } catch (e) {} if (v) tone(660, 0.09, 'triangle', 0.25); },
-    jump() { tone(300, 0.16, 'sine', 0.16, 0, 700); noise(0.06, 0.05, 3000); },
     land(p) { p = Math.min(Math.max(p, 0), 1); noise(0.08 + p * 0.08, 0.08 + p * 0.16, 1300 + p * 800); tone(140 + p * 40, 0.09, 'sine', 0.12, 0, 80); },
-    score(combo) { const P = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21], c = Math.min((combo || 1) - 1, P.length - 1), f = 523 * Math.pow(2, P[c] / 12); tone(f, 0.18, 'triangle', 0.26, 0); tone(f * 1.5, 0.20, 'sine', 0.18, 0.09); tone(f / 2, 0.24, 'sine', 0.16, 0); },
-    crash() { noise(0.35, 0.5, 900); tone(200, 0.4, 'sawtooth', 0.3, 0, 60); tone(90, 0.5, 'sine', 0.22, 0.04, 50); },
+    score(combo) { const P = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21], c = Math.min((combo || 1) - 1, P.length - 1), f = 523 * Math.pow(2, P[c] / 12); tone(f, 0.16, 'triangle', 0.15, 0); tone(f * 1.5, 0.18, 'sine', 0.1, 0.08); tone(f / 2, 0.2, 'sine', 0.09, 0); },   // praise: ÂM LƯỢNG NHẸ hơn
+    moon() {   // TỚI MOON — chime thăng thiên, lấp lánh (khác hẳn praise)
+      const b = 784; tone(b, 0.5, 'triangle', 0.22, 0); tone(b * 1.25, 0.5, 'sine', 0.18, 0.09); tone(b * 1.5, 0.55, 'sine', 0.18, 0.18); tone(b * 2, 0.6, 'triangle', 0.16, 0.27); tone(b * 3, 0.45, 'sine', 0.09, 0.33);
+    },
+    ufo() {   // TỚI UFO — sci-fi theremin (sweep + rung dập, khác biệt hẳn)
+      tone(300, 0.7, 'sine', 0.22, 0, 1500); tone(306, 0.7, 'sine', 0.16, 0, 1530); tone(150, 0.6, 'sine', 0.13, 0.1, 420); tone(1600, 0.4, 'triangle', 0.13, 0.5, 2400);
+    },
+    crash() {   // "viên bi vỡ" — mềm, KHÔNG chói (bỏ sawtooth): rạn ngắn + mảnh vỡ rơi (triangle) + thud trầm êm
+      noise(0.1, 0.26, 1400);
+      tone(440, 0.16, 'triangle', 0.15, 0, 190);
+      tone(320, 0.2, 'triangle', 0.12, 0.05, 130);
+      tone(230, 0.26, 'triangle', 0.1, 0.11, 95);
+      tone(90, 0.42, 'sine', 0.2, 0.02, 45);
+    },
   };
 })();
 
 /* ── ĐỊA HÌNH — cồn bướu ĐƠN bất đối xứng (sin(n/20)·n), rộng-thoải, tất định vô tận ── */
 function BASE() { return H * 0.58; }
-const SEED = 41.7;                                                                          // đổi số này → sinh map KHÁC hẳn (layout cồn/nhọn khác)
-function thash(i) { const h = Math.sin((i + SEED + 97.13) * 127.1) * 43758.5453; return h - Math.floor(h); }
+let mapSeed = 41.7, runCount = 0;                                                           // mapSeed đổi mỗi 5 lần chơi → map khác
+function thash(i) { const h = Math.sin((i + mapSeed + 97.13) * 127.1) * 43758.5453; return h - Math.floor(h); }
 function diffAt(x) { return 1 + Math.min(Math.max(x, 0) / (6000 * (W / 800)), 0.6); }
 // ── ĐỊA HÌNH copy Y HỆT dune.html: XEN KẼ đỉnh/đáy, biên độ CỐ ĐỊNH + microNoise, bề rộng 150–450, quadratic qua trung điểm ──
 // tổng-tích-luỹ có nhớ ⇒ mỗi khoảng cách = 150..450px độc lập (như cameraX random của dune.html) nhưng TẤT ĐỊNH & vô tận
@@ -219,7 +346,10 @@ function cumX(name, i, wfn) {
   return c[i];
 }
 const W_RMIN = 200, W_RMAX = 300, W_SMIN = 150, W_SMAX = 160;                              // bề rộng: cồn TRÒN 200..300 · cồn NHỌN 150..160 (tune)
-function segW(k) { const peak = (k & 1) ? k : k + 1; return isSharp(peak) ? W_SMIN + thash(k) * (W_SMAX - W_SMIN) : W_RMIN + thash(k) * (W_RMAX - W_RMIN); }
+const SKEW_FRAC = 0.55, SKEW_AMT = 0.6;                                                    // 55% cồn LỆCH (mặt trước/sau khác dốc) · độ lệch tối đa ±0.6
+function pkBase(p) { return isSharp(p) ? W_SMIN + thash(p) * (W_SMAX - W_SMIN) : W_RMIN + thash(p) * (W_RMAX - W_RMIN); }   // bề rộng CƠ BẢN của đỉnh p
+function pkSkew(p) { return thash(p * 17 + 11) < SKEW_FRAC ? (thash(p * 23 + 3) - 0.5) * 2 * SKEW_AMT : 0; }                // 0=đối xứng · ±: mặt trước/sau lệch
+function segW(k) { const p = (k & 1) ? k : k + 1, front = !(k & 1); let f = (k & 1) ? 1 + pkSkew(p) * 0.5 : 1 - pkSkew(p) * 0.5; f *= front ? 0.85 : 1.15; return pkBase(p) * Math.max(0.4, f); }   // sườn LÊN (trước) HẸP hơn → DỐC hơn · sườn xuống (sau) rộng hơn
 function cpx(i) { return cumX('fg', i, segW); }
 const HR_MIN = 0.25, HR_MAX = 0.3;                                                         // cao ĐỈNH TRÒN biến thiên trong [min,max] (tune)
 function cpy(i) {                                                                          // ĐÁY=base · ĐỈNH TRÒN [HR_MIN,HR_MAX] · ĐỈNH NHỌN 0.16H · microNoise ±0.025H
@@ -278,52 +408,70 @@ function ridgeY(x, layer) {
   return bezMid(x, rx, ry, x / (minW + rng / 2));
 }
 
-const LINE1 = 0.25;                                                                        // MỘT vạch ăn điểm duy nhất (tune)
+const LINE1 = 0.2;                                                                         // MỘT vạch ăn điểm duy nhất (tune)
 function lineWorldY() { return BASE() - LINE1 * W; }
 function linesCrossed(minBy) { return (BASE() - minBy) / W >= LINE1 ? 1 : 0; }             // qua vạch = 1 · chưa = 0
-function moonWorldY() { return BASE() - W * 0.9; }                                          // mặt trăng — cần cú bay BOOST combo cao mới chạm (thưởng ×2)
+function moonWorldY() { return BASE() - W * 0.55; }                                         // MẶT TRĂNG (visual + thưởng ×2) — hạ thấp
+function ceilY() { return BASE() - W * 1.35; }                                              // TRẦN vật lý cao hơn hẳn → bóng KHÔNG đập vào trần
+function ufoWorldY() { return BASE() - W * 0.85; }                                          // ĐĨA BAY (trên mặt trăng) — hạ thấp · bay tới = thưởng ×3
 
 /* ── VẬT LÝ ── */
 function S() { return W / 800; }
 function BALL_R() { return 12 * S(); }
 const ANCHOR = 0.2;                                  // neo bóng SÁT TRÁI (thấy nhiều đường phía trước)
 const CRASH_UPSLOPE = -0.28, COMBO_MAX = 15, SPACE_START = 0.3, SPACE_FULL = 0.8;   // đáp dốc-lên gắt hơn mức này + đâm mạnh → crash (chặt hơn) · bay >0.3W bắt đầu tối, 0.8W = vũ trụ đen
-const CRASH_IMPACT = 0.32, CRASH_SLAM = 0.7;                                        // ngưỡng đâm để crash trên sườn-lên · đâm THẲNG quá mạnh (mọi sườn) → crash
-const BOOST_COMBO = 3, BOOST_STEP = 55, BOOST_LIFT_STEP = 0.13, BOOST_CAP_MAX = 900;    // combo ≥ 3 → BOOST tăng DẦN: mỗi combo thêm trần tốc & lực bật · trần bay TỐI ĐA 900
-function boostLvl() { return combo >= BOOST_COMBO ? combo - BOOST_COMBO + 1 : 0; }      // combo 3→lvl1, 4→2, …
-function boostCapV() { return Math.min(BOOST_CAP_MAX, 750 + boostLvl() * BOOST_STEP); } // trần tốc trên không theo combo
+const CRASH_IMPACT = 0.4;                                                            // ngưỡng đâm để crash (nới lỏng: cần đâm MẠNH hơn mới thua)
+const BOOST_CHAIN = 2, BOOST_LIFT_STEP = 0.15, BOOST_MULT_MAX = 1.30, BOOST_CAP_MAX = 900;   // chuỗi 2 → boost ĐẦU ×1.15 · chuỗi 3 → MAX ×1.30 · trần dọc 900
+const LAUNCH_LIFT = 100;                                                             // lực bật DỌC cố định lúc rời đất → bay CAO dù tốc ngang thấp (tách độ cao khỏi tốc chạy)
+function boostLvl() { return smoothChain >= BOOST_CHAIN ? smoothChain - BOOST_CHAIN + 1 : 0; }   // chuỗi 2→lvl1, 3→2, …
+function boostMult() { return Math.min(BOOST_MULT_MAX, 1 + boostLvl() * BOOST_LIFT_STEP); }       // ×1.22 (lvl1) → ×1.44 (lvl2 = smooth 3 lần, MAX)
+function crestFrac(x) {                                                                 // vị trí trên DỐC XUỐNG: 0=ngay đỉnh · 1=đáy · -1=đang lên dốc
+  let k = Math.floor(x / 250), g = 0;
+  while (cpx(k) > x && g++ < 400) k--;
+  g = 0; while (cpx(k + 1) <= x && g++ < 400) k++;
+  if (!(k & 1)) return -1;                                                              // k chẵn = valley→peak = dốc LÊN
+  const w = cpx(k + 1) - cpx(k); return w > 0 ? (x - cpx(k)) / w : -1;
+}
 
 let bx = 0, by = 0, vx = 0, vy = 0, angle = 0;
 let grounded = true, wasGround = true, flightMinBy = 1e9;
 let camWX = 0, camWY = 0, Z = 1;
+let pbx = 0, pby = 0, pcamWX = 0, pcamWY = 0, pZ = 1;   // state TRƯỚC bước physics gần nhất → nội suy render (mượt trên mọi tần số quét)
 let startX = 0, score = 0, best = 0, bestAtStart = 0, combo = 1;
 let running = false, over = false, paused = false, diving = false, started = false;
-let boostGlow = 0, shake = 0, spaceF = 0, stallT = 0, diveRamp = 0, boostFlight = false;
+let boostGlow = 0, shake = 0, shakeT = 0, spaceF = 0, diveRamp = 0, boostFlight = false, smoothChain = 0, fxT = 0;
 const trail = [], particles = [], STARS = [];
 for (let i = 0; i < 70; i++) STARS.push({ fx: (i * 0.6180339887) % 1, fy: ((i * 0.7548776662) % 1) * 0.72, r: 0.5 + ((i * 13) % 5) * 0.28 });
 
 const el = (id) => document.getElementById(id);
 function setScoreHud() { el('hud-score').textContent = score; }
 function updateBestHud() { el('hud-best').textContent = best; }
-function saveBestLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify({ best })); } catch (e) {} }
+let tutorialSeen = false;                          // đã xem hướng dẫn lần đầu chưa
+const TUT_FORCE = true;                             // TRUE = luôn hiện tutorial (giai đoạn thiết kế); đặt FALSE để chỉ hiện lần đầu
+function saveBestLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify({ best, tutorialSeen })); } catch (e) {} }
 function parseInitialBest() { let n = null, l = null; const raw = getInitialData(); if (raw) { try { n = JSON.parse(raw); } catch (e) {} } const lraw = readLocal(); if (lraw) { try { l = JSON.parse(lraw); } catch (e) {} } return Math.max(n && typeof n.best === 'number' ? n.best : 0, l && typeof l.best === 'number' ? l.best : 0, 0); }
+function parseTutSeen() { let n = null, l = null; const raw = getInitialData(); if (raw) { try { n = JSON.parse(raw); } catch (e) {} } const lraw = readLocal(); if (lraw) { try { l = JSON.parse(lraw); } catch (e) {} } return !!((n && n.tutorialSeen) || (l && l.tutorialSeen)); }
+function showTutorial() { el('tutorial').classList.remove('hidden'); }
+function dismissTutorial() { el('tutorial').classList.add('hidden'); tutorialSeen = true; saveBestLocal(); saveData({ best, tutorialSeen: true }); }
 
 function newRun() {
+  runCount++;                                                          // mỗi 5 LẦN CHƠI → đổi map (seed mới + xoá cache tọa độ)
+  if (runCount % 5 === 0) { mapSeed = 41.7 + (runCount / 5) * 137.51; for (const k in _cx) delete _cx[k]; }
   startX = W * 0.5; bx = startX; by = terrainY(bx) - BALL_R();
   vx = 0; vy = 0; angle = 0;
   grounded = true; wasGround = true; flightMinBy = 1e9;
   score = 0; combo = 1; bestAtStart = best;
   running = true; over = false; paused = false; diving = false; started = false;
-  boostGlow = 0; shake = 0; spaceF = 0; stallT = 0; diveRamp = 0; boostFlight = false;
+  boostGlow = 0; shake = 0; spaceF = 0; diveRamp = 0; boostFlight = false; smoothChain = 0;
   trail.length = 0; particles.length = 0;
   camWX = bx - W * ANCHOR; camWY = by - H * 0.60; Z = 1;
-  setScoreHud(); updateBestHud(); updateComboInd();
-  el('overlay').classList.add('hidden'); showHint();
+  setScoreHud(); updateBestHud();
+  el('overlay').classList.add('hidden');
 }
 function endGame(hard) {
   if (over) return;
   over = true; running = false; diving = false;
-  shake = 0; if (hard) AudioFX.crash(); else AudioFX.land(0.5);   // KHÔNG rung màn hình khi game over
+  if (hard) { shake = 1; AudioFX.crash(); } else { shake = 0.6; AudioFX.land(0.5); }   // RUNG cả màn khi thua
   saveBestLocal();
   const isNew = score > bestAtStart;
   el('ov-title').textContent = isNew ? t('newBest') : t('gameOver');
@@ -333,25 +481,30 @@ function endGame(hard) {
   setTimeout(() => el('overlay').classList.remove('hidden'), 700);
 }
 function crash() { endGame(true); }
-function addScore(n) { score += n; setScoreHud(); if (score > best) { best = score; saveData({ best }); saveBestLocal(); } }
+function addScore(n) { score += n; setScoreHud(); if (score > best) { best = score; saveData({ best, tutorialSeen }); saveBestLocal(); } }
 
 function spawnSand(n, power) { const gy = terrainY(bx); for (let k = 0; k < n; k++) { const a = -Math.PI * (0.15 + Math.random() * 0.7), sp = (0.2 + Math.random() * 0.6) * W * (0.4 + power); particles.push({ x: bx, y: gy, vx: Math.cos(a) * sp * 0.6 + vx * 0.2, vy: Math.sin(a) * sp, life: 0.5 + Math.random() * 0.4, max: 0.9 }); } }
 function onLand(m, impact) {
+  // CRASH: ĐÂM MẠNH vào sườn dốc-lên (mặt trước cồn) → thua — BẤT KỂ đã qua vạch hay chưa
+  if (m < CRASH_UPSLOPE && impact > CRASH_IMPACT * W) { spawnSand(16, 1); crash(); return; }
+  const tiers = linesCrossed(flightMinBy), reachedMoon = flightMinBy <= moonWorldY() + BALL_R() * 4, reachedUFO = flightMinBy <= ufoWorldY() + BALL_R() * 4, basePts = tiers > 0 ? Math.pow(2, tiers - 1) : 0;
+  if (basePts <= 0) { if (impact > 0.18 * W) { spawnSand(6, 0.4); AudioFX.land(0.3); } return; }    // CHƯA ăn điểm (chưa qua vạch) → chuỗi KHÔNG đổi · không cát/tiếng cho hop nhẹ
   spawnSand(6, 0.4);
-  // CRASH: đáp SƯỜN DỐC LÊN khi đâm mạnh, HOẶC đâm thẳng xuống quá mạnh (mọi sườn) → thua
-  if ((m < CRASH_UPSLOPE && impact > CRASH_IMPACT * W) || impact > CRASH_SLAM * W) { spawnSand(16, 1); crash(); return; }
-  const tiers = linesCrossed(flightMinBy), reachedMoon = flightMinBy <= moonWorldY() + BALL_R() * 4, basePts = tiers > 0 ? Math.pow(2, tiers - 1) : 0;
-  if (basePts <= 0) { AudioFX.land(0.3); return; }    // CHƯA qua vạch (hop vặt khi dive…) → KHÔNG đụng combo
   const good = m > -0.2;                              // đáp sườn-xuống/bằng → nối combo; sườn-lên → đứt combo
+  const frac = crestFrac(bx), smooth = good && frac >= 0 && frac <= 0.65;   // SMOOTH = đáp trúng 65% PHÍA ĐẦU của dốc xuống
+  if (smooth) smoothChain++; else smoothChain = 0;   // ĐÃ ăn điểm + đáp ĐÚNG (smooth) → nối chuỗi · đáp sai → mất boost
   if (good) {
-    const perfect = impact < 0.35 * W;
-    const pts = basePts * combo * (reachedMoon ? 2 : 1); addScore(pts); showScorePop(pts, combo, perfect ? t('perfect') : t('smooth'), reachedMoon); AudioFX.score(combo); boostGlow = 0.5;
+    const mult = reachedUFO ? 4 : reachedMoon ? 2 : 1;
+    const pts = basePts * combo * mult; addScore(pts);
+    const lbl = smooth ? (t('smooth') + ' ×' + smoothChain) : '';   // bỏ icon 🚀, giữ số chuỗi smooth
+    showScorePop(pts, combo, lbl, reachedMoon && !reachedUFO, reachedUFO);
+    if (reachedUFO) AudioFX.ufo(); else if (reachedMoon) AudioFX.moon(); else AudioFX.score(combo);   // MOON/UFO có tiếng RIÊNG đặc biệt
+    boostGlow = smooth ? 0.6 : 0.35;
     combo = Math.min(combo + 1, COMBO_MAX);
   } else { addScore(basePts); showScorePop(basePts, 1, '', false); combo = 1; AudioFX.land(0.6); }
-  updateComboInd();
 }
 function stepPhysics(dt) {
-  const s = S(), G = 600;                            // trọng lực (tune)
+  const s = S(), G = 600;                            // trọng lực
   // DIVE RAMP: giữ tay → lực dive tăng dần 0→1 trong ~0.32s (chúc xuống mượt, không giật); thả → tụt nhanh
   if (diving) diveRamp = Math.min(1, diveRamp + dt / 0.5); else diveRamp = Math.max(0, diveRamp - dt / 0.18);
   if (grounded) {
@@ -360,29 +513,32 @@ function stepPhysics(dt) {
     vx += G * s * (m / Math.hypot(1, m)) * dt;      // xuống dốc nhanh, lên dốc chậm
     vx *= 0.99;                                      // MA SÁT: không nhấn → chậm dần → thua
     if (diving) vx += 18 * s * diveRamp;              // GIỮ: đẩy tiến (ramp mượt)
-    if (vx > 750 * s) vx = 750 * s; if (vx < 0) vx = 0;    // trần tốc (CAP tune)
+    if (vx > 540 * s) vx = 540 * s; if (vx < -350 * s) vx = -350 * s;    // bỏ chặn vx<0 → TRỌNG LỰC kéo bi TRƯỢT LÙI trên sườn dốc (chặn lùi quá nhanh)
     bx += vx * dt;
-    const ny = terrainY(bx) - BALL_R(); vy = (ny - by) / dt; by = ny;   // bám sát mặt (mượt, KHÔNG nảy facet)
+    const ny = terrainY(bx) - BALL_R(); vy = (ny - by) / dt; by = ny;   // bám sát mặt
     angle += vx / (8000 * s);
-    // BAY: chỉ khi qua đỉnh đủ nhanh (vx²·độ_cong > g·3) → hết nảy vặt
-    const dd = 6 * s, curv = (terrainY(bx + dd) + terrainY(bx - dd) - 2 * terrainY(bx)) / (dd * dd);
-    if (curv > 0 && vx * vx * curv > G * s * 2.5) {
+    // BAY: qua đỉnh đủ nhanh (vx²·độ_cong > g·2.5). GIỚI HẠN curv 0.02 → CHÓP NHỌN (độ cong cực lớn) KHÔNG bắn bóng lên khi chỉ chạm nhẹ
+    const dd = 6 * s, curv = Math.min(0.02, (terrainY(bx + dd) + terrainY(bx - dd) - 2 * terrainY(bx)) / (dd * dd));
+    if (curv > 0 && vx > 0 && vx * vx * curv > G * s * 2.5) {   // chỉ bật khi đang TIẾN (không bật lúc trượt lùi)
       grounded = false;
       const rampVy = vx * slopeAt(bx - dd);                          // hướng bay theo mặt dốc VỪA LEO (sau lưng), không lấy tại đỉnh (cusp bị trung bình = 0)
       vy = Math.min(vy, rampVy);                                     // giữ hướng LÊN mạnh hơn → CỒN NHỌN/ramp bật hẳn
       if (diving && vx > 0) { vx *= 1.03; vy *= 1.03; }             // rời đất khi GIỮ: boost
-      const lvl = boostLvl(); boostFlight = lvl > 0;                 // COMBO ≥ 3 → BOOST, mạnh dần theo combo
-      if (boostFlight) vy *= 1 + lvl * BOOST_LIFT_STEP;             // lực bật TĂNG theo combo (không phải 1 phát max)
-      const maxUp = (boostFlight ? 7 : 3) * vx; if (vy < -maxUp) vy = -maxUp;   // chặn dựng đứng (boost cho phép cao hơn nhiều)
-      if (vy < -0.05 * W) { AudioFX.jump(); if (boostFlight) boostGlow = 0.6; } flightMinBy = by;
+      const lvl = boostLvl(); boostFlight = lvl > 0;                // chuỗi smooth ≥ 2 → BOOST
+      if (boostFlight) vy *= boostMult();                          // BOOST = cú nhảy CAO hơn (×1.22 → ×1.44 max), rồi bay đạn đạo bình thường
+      const maxUp = (boostFlight ? 12 : 2.4) * vx; if (vy < -maxUp) vy = -maxUp;   // chặn dựng đứng
+      if (boostFlight) vy -= LAUNCH_LIFT * s;                                        // CHỈ khi BOOST mới có lực bật dọc cố định → boost bay cao hẳn; nhảy thường bình thường
+      if (vy < -0.05 * W && boostFlight) boostGlow = 0.6; flightMinBy = by;   // (bỏ tiếng nhảy) · lưu độ cao RỜI ĐẤT
     }
   } else {
     // ── TRÊN KHÔNG: đạn đạo + GIỮ ép xuống ──
     vy += G * s * dt; if (vy > 1000 * s) vy = 1000 * s;
-    if (diving && vy < 1400 * s) { vy += 60 * s * diveRamp; vy += (Math.max(0, vx) / 50) * diveRamp; }   // ép xuống RAMP → chúc mũi xuống TỪ TỪ
-    const capV = (boostFlight ? boostCapV() : 750) * s;                                     // BOOST: trần tốc trên không tăng theo combo → càng combo càng cao
-    const mag = Math.hypot(vx, vy); if (mag > capV) { const k = capV / mag; vx *= k; vy *= k; }
+    if (diving && vy < 1400 * s) { vy += 35 * s * diveRamp; vy += (Math.max(0, vx) / 90) * diveRamp; }   // ép xuống RAMP (DIVEA=35, nhẹ hơn)
+    if (boostFlight) { if (vx > 540 * s) vx = 540 * s; const vc = BOOST_CAP_MAX * s; if (vy < -vc) vy = -vc; }   // BOOST: kẹp DỌC riêng, trần cao → không cắt cú nhảy ×1.44
+    else { if (vx > 540 * s) vx = 540 * s; if (vy < -850 * s) vy = -850 * s; }   // TÁCH trần: NGANG 500 (map chậm) · DỌC 850 (bay CAO) → tốc ngang không ăn độ cao
     bx += vx * dt; by += vy * dt; angle += vx / (8000 * s);
+    const ceil = ceilY() + BALL_R();                                                         // TRẦN vật lý (cao, tách khỏi mặt trăng)
+    if (by < ceil) { by = ceil; if (vy < 0) vy = 0; }                                        // trần an toàn — hầu như không chạm
     if (by < flightMinBy) flightMinBy = by;
     const groundY = terrainY(bx) - BALL_R();
     if (by >= groundY) {
@@ -394,11 +550,11 @@ function stepPhysics(dt) {
     }
   }
   wasGround = grounded;
-  if (started && grounded && Math.hypot(vx, vy) < 0.07 * W) { stallT += dt; if (stallT > 0.5) { endGame(false); return; } } else stallT = 0;   // hết đà nhanh hơn → thua sớm (chặt hơn)
+  // (ĐÃ BỎ) luật hết đà/bóng dừng → thua. Giờ chỉ thua khi đâm sườn dốc-lên.
   // ── CAMERA giống dune-tune: zoom sao cho ĐẤT (cách bóng hAbove) luôn ≤ 0.9H, min-zoom 0.30 ──
-  const hAbove = Math.max(0, BASE() - by), tHigh = Math.min(1, hAbove / (2.0 * W));
-  const ballSY = (0.60 - 0.34 * tHigh) * H;                         // bóng cao → dịch lên trên màn
-  let targetZ = hAbove > 1 ? (0.9 * H - ballSY) / hAbove : 1;
+  const hAbove = Math.max(0, BASE() - by), tHigh = Math.min(1, hAbove / (0.75 * W));
+  const ballSY = (0.60 - 0.42 * tHigh) * H;                         // bay cao → bóng lên ~0.18H (gần mép trên)
+  let targetZ = hAbove > 1 ? (0.9 * H - ballSY) / hAbove : 1;        // kéo cam RA XA để cả bóng (mép trên) lẫn đất (0.9H) đều thấy
   targetZ = Math.max(0.30, Math.min(1, targetZ)); Z += (targetZ - Z) * Math.min(1, 4 * dt);
   camWX += ((bx - (W * ANCHOR) / Z) - camWX) * Math.min(1, 9 * dt);
   camWY += ((by - ballSY / Z) - camWY) * Math.min(1, 6 * dt);
@@ -414,16 +570,18 @@ function sy(wy) { return (wy - camWY) * Z; }
 function mix(a, b, f) { const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16), r = Math.round((pa >> 16 & 255) * (1 - f) + (pb >> 16 & 255) * f), g = Math.round((pa >> 8 & 255) * (1 - f) + (pb >> 8 & 255) * f), c = Math.round((pa & 255) * (1 - f) + (pb & 255) * f); return 'rgb(' + r + ',' + g + ',' + c + ')'; }
 function draw() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  fxT++;                                                                                     // đồng hồ hiệu ứng (hút boost, v.v.)
   let ox = 0, oy = 0;
-  if (shake > 0.01) { ox = (Math.random() - 0.5) * 16 * shake; oy = (Math.random() - 0.5) * 16 * shake; shake *= 0.88; }
+  if (shake > 0.01) { shakeT += 1; const a = 34 * shake; ox = Math.sin(shakeT * 0.5) * a; oy = Math.sin(shakeT * 0.66 + 1.3) * a; shake *= 0.95; }   // rung CHẬM (tần số thấp) + MẠNH (biên 34) + tắt chậm (0.95)
   ctx.clearRect(0, 0, W, H); ctx.save(); ctx.translate(ox, oy);
+  // gradient NỀN CỐ ĐỊNH TRÊN MÀN (0..H) → ĐỨNG YÊN, không trôi theo camera dù bay cao
   const sf = spaceF, sky = ctx.createLinearGradient(0, 0, 0, H);
   sky.addColorStop(0, mix('#2ecab6', '#05060f', sf)); sky.addColorStop(0.5, mix('#a4e6ce', '#0a0a1e', sf)); sky.addColorStop(1, mix('#f6e6b4', '#1a1230', sf));
   ctx.fillStyle = sky; ctx.fillRect(-30, -30, W + 60, H + 60);
   if (sf > 0.02) drawStars(sf);
-  drawMoon();
-  drawRidge(2, mix('#80c4ad', '#0d0b24', sf), 0.30);
-  drawRidge(1, mix('#d5bc72', '#140f2c', sf), 0.55);
+  drawMoon(); drawUFO(); drawClouds();
+  drawRidge(2, mix('#80c4ad', '#3a5f57', sf), 0.30);   // đồi teal xa: chỉ tối NHẸ (không hoá tím-đen)
+  drawRidge(1, '#d5bc72', 0.55);                        // đồi CÁT (gold): GIỮ NGUYÊN màu — bay cao không đổi màu
   drawScoreLines(); drawTerrain(); drawTrail(); drawBall();
   ctx.restore();
 }
@@ -438,25 +596,54 @@ function drawMoon() {
   ctx.fillStyle = 'rgba(190,195,225,0.55)'; ctx.beginPath(); ctx.arc(mx - r * 0.3, my - r * 0.2, r * 0.18, 0, TAU); ctx.fill(); ctx.beginPath(); ctx.arc(mx + r * 0.25, my + r * 0.28, r * 0.13, 0, TAU); ctx.fill();
   ctx.restore();
 }
+function drawUFO() {
+  const ux = sx(camWX + (W * 0.75) / Z), uy = sy(ufoWorldY()) + Math.sin(camWX * 0.01) * 6;   // ĐĨA BAY — BÊN PHẢI mặt trăng, lơ lửng nhẹ
+  if (uy > H + 80 || uy < -160) return;
+  ctx.save(); ctx.globalAlpha = Math.min(1, 0.15 + spaceF * 1.3);                              // hiện rõ dần như mặt trăng
+  const r = Math.max(7, BALL_R() * 1.1 * Z + W * 0.025 * Z);                                    // bé lại một nửa
+  const gl = ctx.createRadialGradient(ux, uy, r * 0.5, ux, uy, r * 2.4); gl.addColorStop(0, 'rgba(120,255,180,0.45)'); gl.addColorStop(1, 'rgba(120,255,180,0)');
+  ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(ux, uy, r * 2.4, 0, TAU); ctx.fill();           // quầng sáng XANH LÁ (soft như moon)
+  ctx.fillStyle = '#e6efe9'; ctx.beginPath(); ctx.ellipse(ux, uy, r * 1.7, r * 0.6, 0, 0, TAU); ctx.fill();            // thân đĩa sáng-mềm (match moon)
+  ctx.fillStyle = '#9fb6a8'; ctx.beginPath(); ctx.ellipse(ux, uy + r * 0.2, r * 1.7, r * 0.35, 0, 0, TAU); ctx.fill();  // đáy đĩa
+  ctx.fillStyle = 'rgba(150,255,200,0.9)'; ctx.beginPath(); ctx.ellipse(ux, uy - r * 0.12, r * 0.68, r * 0.55, 0, Math.PI, 0); ctx.fill();   // vòm kính xanh
+  for (let i = -1; i <= 1; i++) { ctx.fillStyle = ['#7dffb0', '#c8ffde', '#7dffb0'][i + 1]; ctx.beginPath(); ctx.arc(ux + i * r * 0.8, uy + r * 0.3, r * 0.15, 0, TAU); ctx.fill(); }   // đèn xanh
+  ctx.restore();
+}
 function drawStars(sf) { ctx.save(); const ox = -(camWX * 0.05) % W; for (const s of STARS) { let px = (s.fx * W + ox) % W; if (px < 0) px += W; const py = s.fy * H; ctx.globalAlpha = sf * (0.5 + 0.5 * s.r); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(px, py, s.r, 0, TAU); ctx.fill(); } ctx.globalAlpha = 1; ctx.restore(); }
 function drawScoreLines() {
   const y = sy(lineWorldY()); if (y < -60 || y > H + 60) return;
   ctx.save();
-  // ── MÂY trôi ngang trên vạch (như drawTheLine của dune.html) ──
-  ctx.fillStyle = 'rgba(255,255,255,0.30)';
-  const cw = 200 * Z, ch = 30 * Z, wrap = 2000 * Z, drift = ((camWX * 0.5 * Z) % wrap + wrap) % wrap;
-  for (let i = 0; i < 6; i++) {
-    let cx = (i * 450 * Z - drift) % wrap; if (cx < -cw) cx += wrap;
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(cx, y - ch / 2, cw, ch, ch / 2); else ctx.rect(cx, y - ch / 2, cw, ch);
-    ctx.fill();
-  }
-  // ── VẠCH ĂN ĐIỂM duy nhất ──
+  // ── VẠCH ĂN ĐIỂM duy nhất (mây đã tách riêng, không trùng vạch) ──
   ctx.setLineDash([10, 9]); ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 2; ctx.shadowColor = 'rgba(255,255,255,0.5)'; ctx.shadowBlur = 5;
   ctx.beginPath(); ctx.moveTo(-20, y); ctx.lineTo(W + 20, y); ctx.stroke();
   ctx.restore();
 }
-function drawRidge(layer, color, parallax) { ctx.beginPath(); ctx.moveTo(-40, H + 40); for (let sxp = -40; sxp <= W + 40; sxp += 8) ctx.lineTo(sxp, sy(ridgeY(camWX * parallax + sxp / Z, layer))); ctx.lineTo(W + 40, H + 40); ctx.closePath(); ctx.fillStyle = color; ctx.fill(); }
+function drawClouds() {                                                                     // MÂY riêng, nằm CAO hơn vạch → không trùng score line
+  ctx.save();
+  const gap = 0.52 * W, left = camWX - 80 / Z, right = camWX + (W + 80) / Z;
+  const i0 = Math.floor(left / gap) - 1, i1 = Math.ceil(right / gap) + 1;
+  for (let i = i0; i <= i1; i++) {
+    const wx = i * gap + (thash(i * 3.1) - 0.5) * gap * 0.5;
+    const wy = BASE() - (0.30 + thash(i * 7.7) * 0.55) * W;                                 // 0.30–0.85W trên baseline (kéo XUỐNG thấp hơn, vẫn trên vạch 0.25W)
+    const cx = sx(wx), cy = sy(wy); if (cx < -180 || cx > W + 180 || cy > H + 60) continue;
+    const h = (BASE() - wy) / W;                                                            // độ cao mây
+    const r = 0.05 * W * Z * (0.6 + h * 1.2) * (0.85 + thash(i * 5.5) * 0.4);               // càng LÊN CAO mây càng TO
+    ctx.fillStyle = 'rgba(255,255,255,0.26)';
+    ctx.beginPath();
+    ctx.arc(cx - r * 1.3, cy + r * 0.15, r * 0.85, 0, TAU);
+    ctx.arc(cx - r * 0.2, cy - r * 0.5, r * 1.05, 0, TAU);
+    ctx.arc(cx + r * 1.1, cy - r * 0.1, r * 0.95, 0, TAU);
+    ctx.arc(cx + r * 0.4, cy + r * 0.3, r, 0, TAU);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+function drawRidge(layer, color, parallax) {
+  // NEO THEO WORLD (sy): đồi lùi xuống theo mặt đất khi bay lên → KHÔNG trồi lên theo cam
+  ctx.beginPath(); ctx.moveTo(-40, H + 40);
+  for (let sxp = -40; sxp <= W + 40; sxp += 8) ctx.lineTo(sxp, sy(ridgeY(camWX * parallax + sxp / Z, layer)));
+  ctx.lineTo(W + 40, H + 40); ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+}
 function terrainPath() {
   ctx.beginPath(); ctx.moveTo(-40, H + 40); const pts = [];
   for (let sxp = -40; sxp <= W + 40; sxp += 4) { const wx = camWX + sxp / Z, yy = sy(terrainY(wx)); pts.push([sxp, yy]); ctx.lineTo(sxp, yy); }
@@ -465,63 +652,134 @@ function terrainPath() {
 }
 function drawTerrain() {
   const pts = terrainPath();
-  // thân cát (gradient) + VIỀN TRẮNG DÀY ở mép trên — như foreground dune.html
-  const sand = ctx.createLinearGradient(0, H * 0.28, 0, H); sand.addColorStop(0, '#ffe268'); sand.addColorStop(0.5, '#eab54a'); sand.addColorStop(1, '#c98f43');
+  // ĐỔ BÓNG MỀM: gradient neo theo CAO ĐỘ cồn — đỉnh VÀNG TƯƠI, hõm/dưới CAM (cồn tròn có chiều sâu)
+  const sand = ctx.createLinearGradient(0, sy(BASE() - 0.34 * H), 0, sy(BASE() + 0.12 * H));
+  sand.addColorStop(0, '#ffe57e'); sand.addColorStop(0.5, '#f6bd4c'); sand.addColorStop(1, '#e88f35');
   ctx.fillStyle = sand; ctx.fill();
+  // ── DẢI BÓNG NGANG (cũ): bản sao mặt cồn dịch XUỐNG → dải sáng bám mặt, dưới đó CAM đậm (chạy NGANG theo mặt) ──
+  ctx.save(); terrainPath(); ctx.clip();
+  const band = 0.13 * H;                                                                     // độ dày dải sáng bám theo ridge
+  ctx.beginPath(); ctx.moveTo(-40, H + 40);
+  for (let sxp = -40; sxp <= W + 40; sxp += 4) { const wx = camWX + sxp / Z; ctx.lineTo(sxp, sy(terrainY(wx)) + band); }
+  ctx.lineTo(W + 40, H + 40); ctx.closePath();
+  ctx.fillStyle = 'rgba(198,104,36,0.30)';
+  ctx.fill();
+  ctx.restore();
+  // viền trắng mép trên (silhouette cồn)
   ctx.beginPath(); for (let i = 0; i < pts.length; i++) { const p = pts[i]; i === 0 ? ctx.moveTo(p[0], p[1]) : ctx.lineTo(p[0], p[1]); }
   ctx.strokeStyle = 'rgba(255,255,255,0.92)'; ctx.lineWidth = Math.max(4, 6 * Z); ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.stroke();
 }
 function drawTrail() {
-  if (boostFlight && trail.length > 1) {
-    // ── ĐUÔI LỬA COMET khi BOOST (rực hơn theo combo) ──
-    const lvl = Math.max(1, boostLvl()), intf = Math.min(1.6, 0.7 + lvl * 0.13);
-    ctx.save(); ctx.globalCompositeOperation = 'lighter';
-    for (let i = 0; i < trail.length; i++) {
-      const p = trail[i], f = i / trail.length, px = sx(p.x), py = sy(p.y);
-      const r = BALL_R() * Z * (0.35 + 1.3 * f) * intf;                                      // to dần về phía bóng
-      const g = ctx.createRadialGradient(px, py, 0, px, py, r);
-      g.addColorStop(0, 'rgba(255,255,225,' + (0.55 * f * intf).toFixed(3) + ')');           // lõi trắng nóng
-      g.addColorStop(0.4, 'rgba(255,' + Math.floor(110 + 130 * f) + ',40,' + (0.42 * f * intf).toFixed(3) + ')');
-      g.addColorStop(1, 'rgba(255,50,15,0)');                                                // đuôi đỏ tan
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(px, py, r, 0, TAU); ctx.fill();
+  if (boostFlight && trail.length > 1 && boostLvl() >= 2) {
+    // ── BOOST ×3+ : ĐƯỜNG MẢNH màu LỬA (cam→trắng nóng), glow bé + vài tia lửa lấp lánh ──
+    const n = trail.length, P = trail.map(p => [sx(p.x), sy(p.y)]);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.shadowColor = 'rgba(255,150,60,0.9)'; ctx.shadowBlur = BALL_R() * Z * 0.7;
+    for (let i = 1; i < n; i++) {
+      const f = i / (n - 1);
+      ctx.strokeStyle = 'rgba(255,' + Math.floor(160 + 90 * f) + ',' + Math.floor(60 + 150 * f) + ',' + (0.5 * f + 0.15).toFixed(3) + ')';  // cam ở đuôi → trắng nóng ở đầu
+      ctx.lineWidth = Math.max(1, 2.8 * Z * (0.3 + 0.7 * f));
+      ctx.beginPath(); ctx.moveTo(P[i - 1][0], P[i - 1][1]); ctx.lineTo(P[i][0], P[i][1]); ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+    for (let k = 0; k < 7; k++) {                                                              // vài TIA LỬA lấp lánh
+      const t = ((k * 0.19 + fxT * 0.014) % 1), idx = Math.min(n - 1, Math.floor(0.25 * (n - 1) + 0.75 * t * (n - 1))), p = P[idx], f = idx / (n - 1);
+      const ang = k * 2.3999 + fxT * 0.06, rad = BALL_R() * Z * (0.4 + 0.9 * f) * (0.5 + (k % 3) * 0.4);
+      const px = p[0] + Math.cos(ang) * rad, py = p[1] + Math.sin(ang) * rad;
+      const tw = 0.35 + 0.65 * Math.abs(Math.sin(fxT * 0.25 + k * 1.7)), s = Math.max(1, 1.3 * Z) * (0.6 + f);
+      ctx.fillStyle = 'rgba(255,' + Math.floor(200 - 30 * (1 - f)) + ',140,' + (tw * 0.6 * f + 0.06).toFixed(3) + ')';
+      ctx.beginPath(); ctx.arc(px, py, s, 0, TAU); ctx.fill();
     }
     ctx.restore();
-  } else {
-    for (let i = 0; i < trail.length; i++) { const p = trail[i], f = i / trail.length, r = BALL_R() * Z * (0.25 + 0.6 * f); ctx.fillStyle = boostGlow > 0 ? 'rgba(255,' + Math.floor(150 + 80 * f) + ',60,' + (0.28 * f).toFixed(3) + ')' : 'rgba(120,90,60,' + (0.16 * f).toFixed(3) + ')'; ctx.beginPath(); ctx.arc(sx(p.x), sy(p.y), r, 0, TAU); ctx.fill(); }
+  } else if (boostFlight && trail.length > 1) {
+    // ── BOOST ×2 : DẢI TRẮNG có GLOW + SPARKLE, viên bi LẪN vào dải ──
+    const n = trail.length, P = trail.map(p => [sx(p.x), sy(p.y)]);
+    const nrm = i => { const a = P[Math.max(0, i - 1)], b = P[Math.min(n - 1, i + 1)]; let dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1; return [-dy / L, dx / L]; };
+    const ribbon = (hwHead, alpha, blur) => {
+      ctx.shadowColor = 'rgba(255,255,255,0.85)'; ctx.shadowBlur = blur;
+      ctx.beginPath();
+      for (let i = 0; i < n; i++) { const u = nrm(i), f = i / (n - 1), hw = hwHead * Z * (0.22 + 0.55 * f); (i === 0 ? ctx.moveTo : ctx.lineTo).call(ctx, P[i][0] + u[0] * hw, P[i][1] + u[1] * hw); }
+      for (let i = n - 1; i >= 0; i--) { const u = nrm(i), f = i / (n - 1), hw = hwHead * Z * (0.22 + 0.55 * f); ctx.lineTo(P[i][0] - u[0] * hw, P[i][1] - u[1] * hw); }
+      ctx.closePath(); ctx.fillStyle = 'rgba(255,255,255,' + alpha + ')'; ctx.fill();
+    };
+    ctx.save();
+    ribbon(1.25, 0.92, BALL_R() * Z * 0.4);    // VỆT TRẮNG to dày, đặc (glow BÉ)
+    ctx.shadowBlur = 0; ctx.globalCompositeOperation = 'lighter';
+    for (let k = 0; k < 9; k++) {               // SPARKLE trắng lấp lánh
+      const t = ((k * 0.17 + fxT * 0.014) % 1), idx = Math.min(n - 1, Math.floor(0.15 * (n - 1) + 0.85 * t * (n - 1))), p = trail[idx], f = idx / (n - 1);
+      const ang = k * 2.3999 + fxT * 0.05, rad = BALL_R() * Z * (0.5 + 1.1 * f) * (0.5 + (k % 3) * 0.4);
+      const px = sx(p.x) + Math.cos(ang) * rad, py = sy(p.y) + Math.sin(ang) * rad;
+      const tw = 0.4 + 0.6 * Math.abs(Math.sin(fxT * 0.28 + k * 1.7)), s = Math.max(1, 1.4 * Z) * (0.6 + f);
+      ctx.fillStyle = 'rgba(255,255,255,' + (tw * 0.7 * f + 0.08).toFixed(3) + ')';
+      ctx.beginPath(); ctx.arc(px, py, s, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+  } else if (trail.length > 1 && !grounded) {
+    // ── VỆT VẬN TỐC: CHỈ khi ĐANG BAY (lúc lăn dưới đất thì ẩn để không thành "cọng lông") ──
+    // dùng vài điểm CUỐI sát bóng → vệt NGẮN, mềm, thon dần
+    const n = trail.length, P = trail.map(p => [sx(p.x), sy(p.y)]), start = Math.max(0, n - 8);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (let i = start + 1; i < n; i++) {
+      const f = (i - start) / (n - 1 - start);
+      ctx.strokeStyle = boostGlow > 0 ? 'rgba(255,190,90,' + (0.45 * f).toFixed(3) + ')' : 'rgba(255,255,255,' + (0.28 * f).toFixed(3) + ')';
+      ctx.lineWidth = Math.max(1, 2.6 * Z * (0.25 + 0.75 * f));
+      ctx.beginPath(); ctx.moveTo(P[i - 1][0], P[i - 1][1]); ctx.lineTo(P[i][0], P[i][1]); ctx.stroke();
+    }
   }
   ctx.fillStyle = '#f2c078';
   for (const p of particles) { const a = Math.max(0, p.life / p.max); ctx.globalAlpha = a; const s = (2 + a * 2) * Z; ctx.fillRect(sx(p.x) - s / 2, sy(p.y) - s / 2, s, s); }
   ctx.globalAlpha = 1;
 }
+function drawCometHead(px, py, r) {
+  // ── ĐẦU COMET: quầng sáng ẤM rực + xoáy nhẹ ở đầu (khớp ảnh mẫu: đầu trắng nóng, hào quang cam) ──
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const R = r * 2.1, hg = ctx.createRadialGradient(px, py, r * 0.2, px, py, R);
+  hg.addColorStop(0, 'rgba(255,248,225,0.95)');   // lõi trắng nóng
+  hg.addColorStop(0.35, 'rgba(255,185,90,0.5)');  // hào quang cam-vàng
+  hg.addColorStop(1, 'rgba(255,120,40,0)');
+  ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(px, py, R, 0, TAU); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,215,150,0.5)'; ctx.lineWidth = Math.max(1, 1.4 * Z);           // vòng XOÁY mảnh quay quanh đầu
+  ctx.beginPath(); ctx.arc(px, py, r * 1.5, fxT * 0.09, fxT * 0.09 + Math.PI * 1.35); ctx.stroke();
+  ctx.restore();
+}
+function drawWhiteHead(px, py, r) {
+  // ── ĐẦU BOOST ×2: quầng TRẮNG mềm để viên bi LẪN vào dải trắng ──
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const R = r * 1.5, hg = ctx.createRadialGradient(px, py, r * 0.2, px, py, R);
+  hg.addColorStop(0, 'rgba(255,255,255,0.6)'); hg.addColorStop(0.5, 'rgba(230,245,255,0.22)'); hg.addColorStop(1, 'rgba(200,230,255,0)');
+  ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(px, py, R, 0, TAU); ctx.fill();
+  ctx.restore();
+}
 function drawBall() {
   const r = BALL_R() * Z, px = sx(bx), py = sy(by);
-  if (boostGlow > 0) { const g = ctx.createRadialGradient(px, py, r * 0.3, px, py, r * 2.6); g.addColorStop(0, 'rgba(255,180,80,' + (0.6 * boostGlow / 0.5).toFixed(3) + ')'); g.addColorStop(1, 'rgba(255,120,40,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(px, py, r * 2.6, 0, TAU); ctx.fill(); }
-  const bg = ctx.createRadialGradient(px - r * 0.35, py - r * 0.4, r * 0.15, px, py, r); bg.addColorStop(0, '#ffffff'); bg.addColorStop(1, '#dfe3ea');
-  ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(px, py, r, 0, TAU); ctx.fill();
-  ctx.strokeStyle = 'rgba(120,120,140,0.35)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(px, py, r - 0.7, 0, TAU); ctx.stroke();
-  ctx.fillStyle = 'rgba(150,160,180,0.5)';
-  for (let k = 0; k < 2; k++) { const a = angle + k * Math.PI; ctx.beginPath(); ctx.arc(px + Math.cos(a) * r * 0.45, py + Math.sin(a) * r * 0.45, r * 0.13, 0, TAU); ctx.fill(); }
+  if (boostFlight) { boostLvl() >= 2 ? drawCometHead(px, py, r) : drawWhiteHead(px, py, r); }   // (ĐÃ BỎ) quầng cam quanh bóng khi trượt xuống
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(px, py, r, 0, TAU); ctx.fill();   // bóng TRẮNG THUẦN, PHẲNG (không gradient/viền/đốm)
 }
 
-function showScorePop(pts, mult, label, moon) {
-  const e = el('boost-pop'); e.style.color = moon ? '#bfe0ff' : (mult >= 4 ? '#ffd23f' : mult >= 2 ? '#7fe3a0' : '#fff');
-  const top = moon ? t('moon') : label;
-  e.innerHTML = (top ? '<div style="font-size:.62em">' + top + '</div>' : '') + '+' + pts + (mult > 1 ? ' <span style="opacity:.9">×' + mult + '</span>' : '');
+function showScorePop(pts, mult, label, moon, ufo) {
+  const e = el('boost-pop'); e.style.color = ufo ? '#5cff88' : moon ? '#bfe0ff' : (mult >= 4 ? '#ffd23f' : mult >= 2 ? '#7fe3a0' : '#fff');   // UFO = XANH LÁ
+  const top = ufo ? '🛸 UFO' : moon ? t('moon') : label;
+  e.innerHTML = (top ? '<div style="font-size:.62em">' + top + '</div>' : '') + '+' + pts;   // bỏ ×combo sau +điểm
   e.classList.remove('show'); void e.offsetWidth; e.classList.add('show');
-}
-function updateComboInd() {
-  const e = el('combo-ind');
-  if (combo > 1) { e.innerHTML = (combo >= BOOST_COMBO ? '🚀 ' : '') + '<span class="cl">' + t('combo').toUpperCase() + '</span>×' + combo; e.classList.add('on', 'bump'); setTimeout(() => e.classList.remove('bump'), 320); }
-  else e.classList.remove('on');
 }
 
 const TICK_MS = 1000 / 60, DT = 1 / 60, SLOWMO = 0.8;                                      // slow-mo TOÀN CỤC ngay từ đầu: sim chạy 0.8× thời gian thật
 let lastTime = 0, acc = 0;
 function frame(now) {
   if (!lastTime) lastTime = now;
-  let dt = now - lastTime; lastTime = now; if (dt > 250) dt = 250; acc += dt;
-  let n = 0; while (acc >= TICK_MS && n < 8) { if (running && !over && !paused && started) stepPhysics(DT * SLOWMO); acc -= TICK_MS; n++; }
-  draw(); requestAnimationFrame(frame);
+  let dt = now - lastTime; lastTime = now; if (dt > 250) dt = 250;
+  const active = running && !over && !paused && started;
+  // ── PHYSICS bước cố định 60Hz (độc lập tần số quét); lưu prev-state trước MỖI bước để nội suy ──
+  if (active) { acc += dt; let n = 0; while (acc >= TICK_MS && n < 8) { pbx = bx; pby = by; pcamWX = camWX; pcamWY = camWY; pZ = Z; stepPhysics(DT * SLOWMO); acc -= TICK_MS; n++; } }
+  else { acc = 0; pbx = bx; pby = by; pcamWX = camWX; pcamWY = camWY; pZ = Z; }
+  AudioFX.slide(active && grounded ? Math.min(1, Math.abs(vx) / (540 * S())) : 0);   // tiếng LƯỚT CÁT theo tốc lăn
+  AudioFX.boostAir(active && boostFlight ? Math.min(2, boostLvl()) : 0);              // tiếng BAY BOOST: ×2 vù vù · ×3 xèo xèo
+  // ── NỘI SUY RENDER: vẽ ở điểm giữa prev↔current theo phần dư accumulator → MƯỢT ở 120/144Hz ──
+  const a = Math.min(1, acc / TICK_MS), _bx = bx, _by = by, _cx = camWX, _cy = camWY, _z = Z;
+  bx = pbx + (bx - pbx) * a; by = pby + (by - pby) * a; camWX = pcamWX + (camWX - pcamWX) * a; camWY = pcamWY + (camWY - pcamWY) * a; Z = pZ + (Z - pZ) * a;
+  draw();
+  bx = _bx; by = _by; camWX = _cx; camWY = _cy; Z = _z;   // trả lại state THẬT cho physics
+  requestAnimationFrame(frame);
 }
 
 const stage = el('stage');
@@ -529,13 +787,14 @@ stage.addEventListener('pointerdown', (e) => {
   if (over) return; AudioFX.resume();
   if (paused) { paused = false; lastTime = 0; }
   if (!started) { started = true; vx = 0.18 * W; }
-  diving = true; hideHint(); e.preventDefault();
+  diving = true; e.preventDefault();
 });
 window.addEventListener('pointerup', () => { diving = false; });
 window.addEventListener('pointercancel', () => { diving = false; });
 
 el('back-btn').addEventListener('click', (e) => { e.stopPropagation(); sendMessage('quit'); });
 el('ov-btn').addEventListener('click', (e) => { e.stopPropagation(); AudioFX.resume(); sendMessage('retry_level'); newRun(); });
+el('tut-btn').addEventListener('click', (e) => { e.stopPropagation(); AudioFX.resume(); dismissTutorial(); });
 const soundBtn = el('sound-btn');
 function updateSoundBtn() { soundBtn.classList.toggle('muted', !AudioFX.isEnabled()); }
 soundBtn.addEventListener('click', (e) => { e.stopPropagation(); AudioFX.resume(); AudioFX.setEnabled(!AudioFX.isEnabled()); updateSoundBtn(); });
@@ -543,25 +802,27 @@ window.onAppPause = function () { paused = true; diving = false; };
 window.onNextLevel = function () {};
 window.onRetryLevel = function () { newRun(); };
 
-let hintTimer = null;
-function showHint() { const h = el('hint'); h.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a2 2 0 0 1 2 2v7h1V7a2 2 0 0 1 4 0v8.5c0 3.6-2.6 6.5-6.2 6.5H11c-2 0-3.3-.9-4.4-2.6l-2.3-3.7a2 2 0 0 1 3.1-2.5l1 1.1V6a2 2 0 0 1 2-2z"/></svg>' + t('hint'); h.classList.remove('gone'); clearTimeout(hintTimer); hintTimer = setTimeout(hideHint, 3600); }
-function hideHint() { el('hint').classList.add('gone'); }
 function applyStatusBarPad() { el('topbar').style.paddingTop = 'calc(max(' + getStatusBarHeight() + 'px, env(safe-area-inset-top)) + 8px)'; }
-function applyStaticI18n() { el('lbl-score').textContent = t('score').toUpperCase(); el('lbl-best').textContent = t('best').toUpperCase(); el('ov-k-score').textContent = t('score').toUpperCase(); el('ov-k-best').textContent = t('best').toUpperCase(); el('ov-btn-txt').textContent = t('playAgain'); }
+function applyStaticI18n() { el('lbl-score').textContent = t('score').toUpperCase(); el('lbl-best').textContent = t('best').toUpperCase(); el('ov-k-score').textContent = t('score').toUpperCase(); el('ov-k-best').textContent = t('best').toUpperCase(); el('ov-btn-txt').textContent = t('playAgain'); el('tut-title').textContent = t('tutTitle'); el('tut-btn-txt').textContent = t('tutStart'); el('tut-c1').innerHTML = t('tut1'); el('tut-c2').innerHTML = t('tut2'); el('tut-c3').innerHTML = t('tut3'); el('rotate-txt').textContent = t('rotate'); }
 function resize() {
   const wasGrounded = grounded;
   W = stage.clientWidth || window.innerWidth; H = stage.clientHeight || window.innerHeight;
   DPR = Math.min(window.devicePixelRatio || 1, 2); cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
-  const sc = Math.min(Math.max(W / 360, 1), 2.2); document.documentElement.style.setProperty('--sc', sc.toFixed(3));
+  // --sc theo CẠNH NGẮN (chiều cao ở màn ngang) để UI/popup/tutorial vừa khít, không bị phóng to quá
+  const sc = Math.min(Math.max(Math.min(W, H) / 360, 0.9), 1.9); document.documentElement.style.setProperty('--sc', sc.toFixed(3));
   const pill = document.querySelector('.stat'); if (pill) { const ph = pill.getBoundingClientRect().height; if (ph > 0) document.documentElement.style.setProperty('--btn-size', Math.round(ph * 0.92) + 'px'); }
   if (wasGrounded && running) by = terrainY(bx) - BALL_R();
+  // KHOÁ NGANG: để DỌC → tạm dừng game (màn "xoay máy" hiện qua CSS); về NGANG → chơi tiếp
+  if (H > W) { paused = true; diving = false; }
+  else if (paused && !over && document.visibilityState !== 'hidden') { paused = false; lastTime = 0; }
 }
 function boot() {
   LANG = getLanguage(); applyUiFont(LANG); applyStatusBarPad(); applyStaticI18n();
-  best = parseInitialBest(); updateBestHud(); updateSoundBtn();
-  resize(); newRun(); requestAnimationFrame(frame);
+  best = parseInitialBest(); tutorialSeen = parseTutSeen(); updateBestHud(); updateSoundBtn();
+  resize(); newRun(); if (TUT_FORCE || !tutorialSeen) showTutorial(); requestAnimationFrame(frame);
 }
 window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 60));
 window.addEventListener('load', resize);
 document.addEventListener('visibilitychange', function () { if (document.hidden) { paused = true; diving = false; } else if (!over) { paused = false; lastTime = 0; } });
 (function waitForNativeInjection() { const start = Date.now(); (function check() { if (typeof window.language === 'string' || typeof window.data === 'string' || Date.now() - start > 200) boot(); else setTimeout(check, 10); })(); })();
