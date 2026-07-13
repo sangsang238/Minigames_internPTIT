@@ -1,6 +1,6 @@
 # Cursed Knives — QuanKA
 
-> **Knife-Hit arcade game** | HTML5 single-file | Dark fantasy theme | v1.1.0
+> **Knife-Hit arcade game** | HTML5 single-file | Dark-fantasy **FLAT** theme | v1.1.0
 
 ---
 
@@ -15,9 +15,10 @@
 | **Category** | ARCADE |
 | **Entry** | `cursed-knives/index.html` |
 
-> Clone cơ chế **Knife Hit** theo thẩm mỹ dark-fantasy của runic-blaze: dao găm arcane
-> phóng vào **totem đá obsidian** đang xoay, sigil neon 3 lớp stroke (bloom mờ / màu
-> chính / lõi trắng nóng), nền tinh vân + hồn lửa xanh trôi.
+> Clone cơ chế **Knife Hit**, palette dark-fantasy nhưng render theo **THEME PHẲNG (flat)**:
+> dao găm phóng vào **totem** đang xoay — mọi thứ là **fill đặc + stroke 1 nét**, KHÔNG
+> gradient/glow/bloom/shadow. Sigil arcane 1 nét, totem fill đặc, gem lục giác phẳng,
+> nền tối đặc + hồn lửa chấm phẳng trôi. Giữ nguyên màu accent (cyan/green/purple/amber, boss đỏ).
 
 ---
 

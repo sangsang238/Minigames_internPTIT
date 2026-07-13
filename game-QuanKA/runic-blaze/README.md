@@ -1,6 +1,6 @@
 # Runic Blaze — QuanKA
 
-> **Match-3 endless high-score** | HTML5 single-file | Dark fantasy | v3.1 — hazard **Cursed Runes** + events + onboarding
+> **Match-3 endless high-score** | HTML5 single-file | Dark fantasy **THEME PHẲNG (flat)** | v3.2 — hazard **Cursed Runes** + events + onboarding
 
 ---
 
@@ -11,7 +11,8 @@
 | **Tên game** | Runic Blaze |
 | **Package** | `com.falcon.runicblaze` |
 | **Engine** | HTML5 (single-file `index.html`) |
-| **Version** | 3.1.0 |
+| **Version** | 3.2.0 |
+| **Giao diện** | Flat (phẳng) — dark-fantasy khối đặc, không glow/gloss/gradient/3D |
 | **Category** | PUZZLE (điểm-cao, endless) |
 | **Entry** | `runic-blaze/index.html` |
 
@@ -79,6 +80,7 @@ Combo 2 special (Prism+Prism xoá board, Prism+Blaze/Nova biến-cả-màu, Blaz
 - **Hắc Ấn** = kind `K_CURSED`, `tile.curse` = số đếm ngược; loại khỏi mọi logic màu (`collectRuns`/`liveRunAt`/`findHintMove`/prism-target/mostCommonColor), rơi theo gravity; `tickCursed()` giảm số & phát hiện detonate, `maybeSpawnCursed()` sinh theo nhịp, phá = thêm vào tập xoá khi kề ô bị clear (trong `executeWave`)
 - **Persistence (§1.2):** chỉ `{ best, muted, tutorialSeen }` — score-attack **không lưu ván dở**, mở lại = ván mới (giống skydom)
 - **Đa màn hình**: board đo theo `#board-outer`; canvas nền + FX theo `devicePixelRatio`; landscape chỉ căn board
+- **Theme PHẲNG (flat)**: nền đặc `--bg-c`; tile khối đặc + viền màu 1.5px (không gradient/glow/gloss `::after`); glyph 2 nét phẳng (thân màu + phụ tím nhạt, bỏ bloom/lõi trắng); nút `btn3d` phẳng (không lip/inset/đổ bóng); popup/pill/banner phẳng (bỏ text-shadow/box-shadow); FX hạt vẽ `source-over` màu đặc (bỏ `'lighter'`/ember-gradient); giữ chuyển-động (screen-shake, opacity-pulse, vòng rune gạch nét)
 
 ---
 

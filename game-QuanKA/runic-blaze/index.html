@@ -1,6 +1,7 @@
 <!--
   Runic Blaze — QuanKA
-  Match-3 ENDLESS HIGH-SCORE (score-attack), dark-fantasy. Single-file HTML (CSS + JS inline).
+  Match-3 ENDLESS HIGH-SCORE (score-attack), dark-fantasy THEME PHẲNG (flat). Single-file HTML (CSS + JS inline).
+  Flat: nền đặc 1 màu, tile khối đặc + viền màu mảnh, glyph nét phẳng, nút/panel phẳng, hạt FX đặc — KHÔNG gradient/glow/gloss/đổ bóng/nút-3D.
   Board: 7×7 | Runes: 5–6 màu | Base match-3 thoả mãn kiểu skydom (nổ liên hoàn), KHÔNG level, KHÔNG giới hạn lượt.
   HAZARD "Hắc Ấn" (cursed rune): định kỳ sinh 1 ô nguyền có SỐ đếm ngược, bất động/không ghép/không đổi;
     mỗi lượt −1; ghép/nổ CẠNH nó (4 hướng) → phá (+250). Về 0 mà chưa phá → detonate → THUA.
@@ -59,9 +60,7 @@ body {
   font-family: var(--ui-font);
   font-weight: 700;
   color: var(--text);
-  background:
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(100,40,180,.4), transparent),
-    linear-gradient(170deg, var(--bg-a) 0%, var(--bg-b) 55%, var(--bg-c) 100%);
+  background: var(--bg-c);
   -webkit-user-select: none;
   user-select: none;
   touch-action: none;
@@ -114,14 +113,11 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   align-items: center;
   justify-content: center;
   gap: 5px;
-  box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.08),
-              0 3px 8px rgba(0, 0, 0, 0.35);
 }
 .pill-text { display: flex; flex-direction: column; align-items: center; min-width: 0; flex: 1 0 auto; }
 .pill-ico {
   flex: 0 0 auto;
   width: clamp(16px, 4.8vw, 21px); height: clamp(16px, 4.8vw, 21px); display: block;
-  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));
 }
 .hud-pill .label {
   font-size: clamp(9px, 3vw, 12px);
@@ -138,7 +134,6 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   color: var(--text);
   white-space: nowrap;
   font-weight: 800;
-  text-shadow: 0 2px 2px rgba(0, 0, 0, 0.4);
 }
 #best-val { color: #ffd86b; }     /* BEST accent vàng (chuẩn chung) */
 
@@ -168,7 +163,6 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   border-radius: 14px;
   background: rgba(255,255,255,.025);
   border: 1px solid rgba(255,255,255,.07);
-  box-shadow: 0 8px 40px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06);
   padding: 4px;
   will-change: transform;
 }
@@ -231,58 +225,44 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   position: relative;
 }
 
-.tile-inner::after {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 45%;
-  border-radius: 10px 10px 50% 50%;
-  background: linear-gradient(180deg, rgba(255,255,255,.18), transparent);
-  pointer-events: none;
-}
-
 .tile-inner svg {
   width: 72%;
   height: 72%;
   flex-shrink: 0;
   position: relative;
   z-index: 1;
-  filter: drop-shadow(0 1px 3px rgba(0,0,0,.45));
 }
 
-/* Nền kính neon theo màu rune */
-.tile-0 .tile-inner { background: linear-gradient(145deg,#3d0a12,#220610); border:1.5px solid rgba(255,61,90,.55);  box-shadow: 0 0 12px rgba(255,61,90,.28),  inset 0 0 10px rgba(255,61,90,.12); }
-.tile-1 .tile-inner { background: linear-gradient(145deg,#0a1a3d,#060d22); border:1.5px solid rgba(47,123,255,.58); box-shadow: 0 0 12px rgba(47,123,255,.28), inset 0 0 10px rgba(47,123,255,.12); }
-.tile-2 .tile-inner { background: linear-gradient(145deg,#0a2d1a,#051a0e); border:1.5px solid rgba(45,255,138,.55); box-shadow: 0 0 12px rgba(45,255,138,.28), inset 0 0 10px rgba(45,255,138,.12); }
-.tile-3 .tile-inner { background: linear-gradient(145deg,#2d1e06,#1a1103); border:1.5px solid rgba(255,184,48,.55); box-shadow: 0 0 12px rgba(255,184,48,.28), inset 0 0 10px rgba(255,184,48,.12); }
-.tile-4 .tile-inner { background: linear-gradient(145deg,#200a3d,#100420); border:1.5px solid rgba(192,96,255,.55); box-shadow: 0 0 12px rgba(192,96,255,.28), inset 0 0 10px rgba(192,96,255,.12); }
-.tile-5 .tile-inner { background: linear-gradient(145deg,#053039,#02171e); border:1.5px solid rgba(127,239,255,.62); box-shadow: 0 0 13px rgba(127,239,255,.32), inset 0 0 10px rgba(127,239,255,.15); }
+/* Nền khối đặc phẳng theo màu rune (viền màu mảnh, KHÔNG glow) */
+.tile-0 .tile-inner { background:#2f0810; border:1.5px solid rgba(255,61,90,.55); }
+.tile-1 .tile-inner { background:#08132e; border:1.5px solid rgba(47,123,255,.58); }
+.tile-2 .tile-inner { background:#082414; border:1.5px solid rgba(45,255,138,.55); }
+.tile-3 .tile-inner { background:#241705; border:1.5px solid rgba(255,184,48,.55); }
+.tile-4 .tile-inner { background:#180730; border:1.5px solid rgba(192,96,255,.55); }
+.tile-5 .tile-inner { background:#04242c; border:1.5px solid rgba(127,239,255,.62); }
 /* Prism — tinh thể ám tím, viền ánh bạc-tím */
 .tile-p .tile-inner {
-  background: linear-gradient(145deg,#1b1430,#0b0718);
+  background:#150e26;
   border: 1.5px solid rgba(216,180,255,.65);
-  box-shadow: 0 0 16px rgba(190,140,255,.35), inset 0 0 12px rgba(190,140,255,.14);
 }
 
 /* Cursed rune — ấn nguyền đỏ máu với số đếm ngược (không ghép/đổi được) */
 .tile-cursed .tile-inner {
-  background: radial-gradient(circle at 50% 42%, #2a0a16, #0a0410);
+  background:#1a0712;
   border: 1.5px solid rgba(255,60,90,.6);
-  box-shadow: 0 0 14px rgba(255,40,80,.4), inset 0 0 12px rgba(255,40,80,.2);
   cursor: default;
 }
-.tile-cursed .tile-inner::after { display: none; }   /* bỏ gloss */
 .tile-cursed .tile-inner svg { width: 86%; height: 86%; }
 .tile-cursed.cursed-urgent .tile-inner { animation: cursePulse .5s ease-in-out infinite; }
 @keyframes cursePulse {
-  0%, 100% { box-shadow: 0 0 10px rgba(255,40,80,.5),  inset 0 0 12px rgba(255,40,80,.25); }
-  50%      { box-shadow: 0 0 24px rgba(255,40,80,1),   inset 0 0 14px rgba(255,70,100,.55); filter: brightness(1.2); }
+  0%, 100% { border-color: rgba(255,60,90,.6); background:#1a0712; }
+  50%      { border-color: #ff5a7a; background:#3a0a18; }
 }
 
-/* Special: glow thở */
+/* Special: nhịp mờ phẳng (opacity, KHÔNG glow) */
 @keyframes specialBreath {
-  0%, 100% { filter: brightness(1); }
-  50%       { filter: brightness(1.35); }
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .86; }
 }
 .tile.kind-stripeH .tile-inner, .tile.kind-stripeV .tile-inner,
 .tile.kind-nova .tile-inner, .tile.kind-prism .tile-inner {
@@ -313,24 +293,19 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 .tile.selected .tile-inner {
   transform: scale(1.1);
   border-width: 2px !important;
-  animation: runeSelectedPulse 1s ease-in-out infinite;
 }
-@keyframes runeSelectedPulse {
-  0%, 100% { filter: brightness(1.35); }
-  50%       { filter: brightness(1.05); }
-}
-.tile-0.selected .tile-inner { box-shadow: 0 0 0 2px rgba(255,61,90,.85),  0 0 24px rgba(255,61,90,.6); }
-.tile-1.selected .tile-inner { box-shadow: 0 0 0 2px rgba(47,123,255,.85), 0 0 24px rgba(47,123,255,.6); }
-.tile-2.selected .tile-inner { box-shadow: 0 0 0 2px rgba(45,255,138,.85), 0 0 24px rgba(45,255,138,.6); }
-.tile-3.selected .tile-inner { box-shadow: 0 0 0 2px rgba(255,184,48,.85), 0 0 24px rgba(255,184,48,.6); }
-.tile-4.selected .tile-inner { box-shadow: 0 0 0 2px rgba(192,96,255,.85), 0 0 24px rgba(192,96,255,.6); }
-.tile-5.selected .tile-inner { box-shadow: 0 0 0 2px rgba(127,239,255,.85), 0 0 24px rgba(127,239,255,.6); }
-.tile-p.selected .tile-inner { box-shadow: 0 0 0 2px rgba(255,255,255,.9), 0 0 26px rgba(255,255,255,.65); }
+.tile-0.selected .tile-inner { box-shadow: 0 0 0 2px rgba(255,61,90,.9); }
+.tile-1.selected .tile-inner { box-shadow: 0 0 0 2px rgba(47,123,255,.9); }
+.tile-2.selected .tile-inner { box-shadow: 0 0 0 2px rgba(45,255,138,.9); }
+.tile-3.selected .tile-inner { box-shadow: 0 0 0 2px rgba(255,184,48,.9); }
+.tile-4.selected .tile-inner { box-shadow: 0 0 0 2px rgba(192,96,255,.9); }
+.tile-5.selected .tile-inner { box-shadow: 0 0 0 2px rgba(127,239,255,.9); }
+.tile-p.selected .tile-inner { box-shadow: 0 0 0 2px rgba(255,255,255,.9); }
 
 /* Hint pulse — gợi ý nước đi */
 @keyframes hintPulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(255,240,120,0); }
-  50%       { box-shadow: 0 0 0 4px rgba(255,240,120,.55), 0 0 22px rgba(255,220,80,.5); }
+  50%       { box-shadow: 0 0 0 4px rgba(255,240,120,.55); }
 }
 .tile.hint .tile-inner { animation: hintPulse 1.4s ease-in-out infinite; }
 
@@ -361,7 +336,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   font-weight: 800;
   font-size: 15px;
   color: #fff;
-  text-shadow: 0 0 10px rgba(255,200,80,1), 0 2px 4px rgba(0,0,0,.6);
+  -webkit-text-stroke: .7px rgba(0,0,0,.5);
   z-index: 200;
   white-space: nowrap;
   animation: scoreFlyUp .9s ease-out forwards;
@@ -391,13 +366,11 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   font-size: 26px;
   font-weight: 800;
   letter-spacing: 1px;
-  text-shadow: 0 0 26px rgba(255,240,80,.9), 0 2px 6px rgba(0,0,0,.7);
 }
 #combo-mult {
   font-size: 15px;
   letter-spacing: 2px;
   color: #ffe9b0;
-  text-shadow: 0 0 14px rgba(255,180,40,.8);
 }
 @keyframes cascadePop {
   0%   { opacity: 0; transform: translate(-50%,-50%) scale(.4); }
@@ -444,10 +417,9 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   letter-spacing: 1.5px;
   text-align: center;
   color: #fff;
-  text-shadow: 0 0 34px rgba(255,200,60,.9), 0 2px 8px rgba(0,0,0,.8);
   white-space: nowrap;
 }
-#result-banner.lose { text-shadow: 0 0 30px rgba(160,60,255,.8), 0 2px 8px rgba(0,0,0,.8); }
+#result-banner.lose { color: #c060ff; }
 @keyframes resultPop {
   0%   { opacity: 0; transform: translate(-50%,-50%) scale(.5); }
   20%  { opacity: 1; transform: translate(-50%,-50%) scale(1.15); }
@@ -553,9 +525,8 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   padding: 26px 24px 22px;
   text-align: center;
   border-radius: 22px;
-  background: linear-gradient(180deg, #221040, #0e0822);
+  background: #1a0c33;
   border: 1.5px solid rgba(170,110,255,.3);
-  box-shadow: 0 18px 60px rgba(0,0,0,.6);
   transform: scale(1);
   transition: transform .25s;
 }
@@ -566,12 +537,11 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   letter-spacing: 1px;
   margin-bottom: 16px;
   color: #ffcf6b;
-  text-shadow: 0 0 18px rgba(255,140,50,.5), 0 2px 4px rgba(0,0,0,.6);
 }
-.ov-title.newbest { color: #ffe27a; text-shadow: 0 0 22px rgba(255,200,60,.75), 0 2px 4px rgba(0,0,0,.6); }
+.ov-title.newbest { color: #ffe27a; }
 .ov-scores { display: flex; justify-content: center; gap: 30px; margin-bottom: 20px; }
 .ov-k { font-size: 11px; letter-spacing: 2px; color: var(--text-soft); font-weight: 800; text-transform: uppercase; }
-.ov-v { font-size: 32px; color: #fff; font-weight: 800; text-shadow: 0 2px 8px rgba(0,0,0,.5); white-space: nowrap; }
+.ov-v { font-size: 32px; color: #fff; font-weight: 800; white-space: nowrap; }
 .ov-v.best { color: #ffd23f; }
 .btn3d.ov-play {
   --surface-height: 52px;
@@ -581,7 +551,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   --surface-text: #3a2400;
   --radius: 16px;
 }
-.btn3d.ov-play .btn3d-surface { border: none; box-shadow: 0 6px 22px rgba(255,150,30,.35); }
+.btn3d.ov-play .btn3d-surface { border: none; }
 .btn3d.ov-play:active .btn3d-surface { background: var(--surface-color); }
 
 /* ── Onboarding carousel (phủ lên board — 1 scene, không chuyển cảnh) ── */
@@ -603,9 +573,8 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   padding: 20px 22px 18px;
   text-align: center;
   border-radius: 22px;
-  background: linear-gradient(180deg, #221040, #0e0822);
+  background: #1a0c33;
   border: 1.5px solid rgba(170,110,255,.3);
-  box-shadow: 0 18px 55px rgba(0,0,0,.6);
   transform: scale(1);
   transition: transform .25s;
 }
@@ -621,7 +590,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 .ob-illo svg { width: 100%; height: 100%; display: block; }
 .ob-title {
   font-size: 21px; font-weight: 800; letter-spacing: .5px;
-  color: #ffcf6b; text-shadow: 0 0 14px rgba(255,140,50,.4);
+  color: #ffcf6b;
   margin-bottom: 6px;
 }
 .ob-desc {
@@ -637,8 +606,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 .ob-nav { display: flex; gap: 12px; justify-content: center; }
 .btn3d.ob-skip-btn {
   --surface-height: 46px; --surface-padding-x: 22px; --surface-font-size: 15px;
-  --surface-color: #3a2b56; --surface-border-color: #2a1f40; --shadow-color: #17102a;
-  --surface-highlight: rgba(150,120,220,.3); --surface-deep: rgba(10,6,20,.5);
+  --surface-color: #3a2b56;
 }
 
 /* ── Pause veil ────────────────────────────────────────────────── */
@@ -658,7 +626,6 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   font-size: 19px;
   color: #fff;
   letter-spacing: 1px;
-  text-shadow: 0 2px 10px rgba(0,0,0,.7);
 }
 
 /* ── Responsive ────────────────────────────────────────────────── */
@@ -674,19 +641,6 @@ body.landscape #board-outer { padding: 4px; }
 <body>
 
 <canvas id="bg-canvas"></canvas>
-
-<!-- defs SVG dùng chung cho mọi tile (gradient theo màu, prism wheel) -->
-<svg id="shared-defs" width="0" height="0" style="position:absolute" aria-hidden="true">
-  <defs>
-    <radialGradient id="gr0" cx="38%" cy="30%" r="75%"><stop offset="0%" stop-color="#ff8fa3"/><stop offset="55%" stop-color="#ff3d5a"/><stop offset="100%" stop-color="#b3132d"/></radialGradient>
-    <radialGradient id="gr1" cx="38%" cy="30%" r="75%"><stop offset="0%" stop-color="#8fb6ff"/><stop offset="55%" stop-color="#2f7bff"/><stop offset="100%" stop-color="#0c3fa8"/></radialGradient>
-    <radialGradient id="gr2" cx="38%" cy="30%" r="75%"><stop offset="0%" stop-color="#98ffc8"/><stop offset="55%" stop-color="#2dff8a"/><stop offset="100%" stop-color="#0aa552"/></radialGradient>
-    <radialGradient id="gr3" cx="38%" cy="30%" r="75%"><stop offset="0%" stop-color="#ffdf9a"/><stop offset="55%" stop-color="#ffb830"/><stop offset="100%" stop-color="#c77e0a"/></radialGradient>
-    <radialGradient id="gr4" cx="38%" cy="30%" r="75%"><stop offset="0%" stop-color="#e0aaff"/><stop offset="55%" stop-color="#c060ff"/><stop offset="100%" stop-color="#7d1fc4"/></radialGradient>
-    <radialGradient id="gr5" cx="38%" cy="30%" r="75%"><stop offset="0%" stop-color="#d4faff"/><stop offset="55%" stop-color="#7fefff"/><stop offset="100%" stop-color="#1ba0c2"/></radialGradient>
-    <radialGradient id="grGlossy" cx="50%" cy="38%" r="65%"><stop offset="0%" stop-color="rgba(255,255,255,.55)"/><stop offset="100%" stop-color="rgba(255,255,255,0)"/></radialGradient>
-  </defs>
-</svg>
 
 <div id="app">
 
@@ -1867,12 +1821,11 @@ function mainLoop(ts) {
 /* ================================================================
  * §6. Rune art — SVG builders (glyph + overlay special)
  * ================================================================ */
-/* Sigil khắc phát sáng — 3 lớp stroke: bloom mờ / màu chính / lõi trắng nóng.
- * Thẩm mỹ dark fantasy: nét khắc arcane trên đá obsidian, KHÔNG bóng kẹo. */
+/* Sigil khắc PHẲNG — 2 nét: thân màu rune + nét phụ tím nhạt (KHÔNG bloom/glow).
+ * Thẩm mỹ dark fantasy phẳng: nét khắc arcane đặc trên đá obsidian, KHÔNG bóng kẹo. */
 function glyphStrokes(hex, d, extra) {
-  return `<path d="${d}" fill="none" stroke="${hex}" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" opacity=".28"/>`
-       + `<path d="${d}" fill="none" stroke="${hex}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`
-       + `<path d="${d}" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" opacity=".85"/>`
+  return `<path d="${d}" fill="none" stroke="${hex}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`
+       + `<path d="${d}" fill="none" stroke="#f4ecff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`
        + (extra || '');
 }
 
@@ -1895,7 +1848,7 @@ function runeGlyph(color) {
     case 4: // MOON — trăng khuyết + tinh tú
       return glyphStrokes('#c060ff',
         'M62 13 A37 37 0 1 0 62 87 A29 29 0 1 1 62 13 Z',
-        '<circle cx="35" cy="35" r="3" fill="#e0aaff"/><circle cx="29" cy="55" r="2.2" fill="#e0aaff" opacity=".7"/><circle cx="35" cy="70" r="2.6" fill="#e0aaff" opacity=".85"/>');
+        '<circle cx="35" cy="35" r="3" fill="#e0aaff"/><circle cx="29" cy="55" r="2.2" fill="#e0aaff"/><circle cx="35" cy="70" r="2.6" fill="#e0aaff"/>');
     case 5: // STAR — sao 4 cánh
       return glyphStrokes('#7fefff',
         'M50 10 L58 42 L90 50 L58 58 L50 90 L42 58 L10 50 L42 42 Z',
@@ -1904,10 +1857,9 @@ function runeGlyph(color) {
   return '';
 }
 
-/* Overlay special — nét ether trắng phát sáng, cùng ngôn ngữ sigil */
+/* Overlay special — nét ether trắng đặc phẳng, cùng ngôn ngữ sigil */
 function overlayStroke(d) {
-  return `<path d="${d}" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>`
-       + `<path d="${d}" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>`;
+  return `<path d="${d}" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>`;
 }
 
 function specialOverlay(kind) {
@@ -1925,12 +1877,12 @@ function specialOverlay(kind) {
   }
   if (kind === K_NOVA) {
     return `<g class="nova-ring">
-      <circle cx="50" cy="50" r="34" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="3.5" stroke-dasharray="9 7"/>
-      <circle cx="50" cy="50" r="43" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="2"/>
-      <path d="M50 2 L53 10 L50 18 L47 10 Z" fill="#fff" opacity=".9"/>
-      <path d="M50 2 L53 10 L50 18 L47 10 Z" fill="#fff" opacity=".9" transform="rotate(90 50 50)"/>
-      <path d="M50 2 L53 10 L50 18 L47 10 Z" fill="#fff" opacity=".9" transform="rotate(180 50 50)"/>
-      <path d="M50 2 L53 10 L50 18 L47 10 Z" fill="#fff" opacity=".9" transform="rotate(270 50 50)"/>
+      <circle cx="50" cy="50" r="34" fill="none" stroke="#fff" stroke-width="3.5" stroke-dasharray="9 7"/>
+      <circle cx="50" cy="50" r="43" fill="none" stroke="#7fefff" stroke-width="2"/>
+      <path d="M50 2 L53 10 L50 18 L47 10 Z" fill="#fff"/>
+      <path d="M50 2 L53 10 L50 18 L47 10 Z" fill="#fff" transform="rotate(90 50 50)"/>
+      <path d="M50 2 L53 10 L50 18 L47 10 Z" fill="#fff" transform="rotate(180 50 50)"/>
+      <path d="M50 2 L53 10 L50 18 L47 10 Z" fill="#fff" transform="rotate(270 50 50)"/>
     </g>`;
   }
   return '';
@@ -1944,25 +1896,23 @@ function prismArt() {
     const a = (i * 60 - 90) * Math.PI / 180;
     const x1 = 50 + 20 * Math.cos(a), y1 = 50 + 20 * Math.sin(a);
     const x2 = 50 + 38 * Math.cos(a), y2 = 50 + 38 * Math.sin(a);
-    spokes += `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)} L${x2.toFixed(1)} ${y2.toFixed(1)}" stroke="${cols[i]}" stroke-width="3.2" stroke-linecap="round" opacity=".5"/>`;
-    ticks += `<circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" r="2.6" fill="${cols[i]}" opacity=".85"/>`;
+    spokes += `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)} L${x2.toFixed(1)} ${y2.toFixed(1)}" stroke="${cols[i]}" stroke-width="3.2" stroke-linecap="round"/>`;
+    ticks += `<circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" r="2.6" fill="${cols[i]}"/>`;
   }
   return `<g class="prism-core">
-      <circle cx="50" cy="50" r="43" fill="none" stroke="rgba(220,190,255,.45)" stroke-width="2" stroke-dasharray="7 6"/>
+      <circle cx="50" cy="50" r="43" fill="none" stroke="#7a5aad" stroke-width="2" stroke-dasharray="7 6"/>
       ${spokes}${ticks}
     </g>
-    <path d="M50 24 L66 44 L50 76 L34 44 Z" fill="rgba(170,120,255,.22)" stroke="rgba(230,210,255,.9)" stroke-width="3" stroke-linejoin="round"/>
-    <path d="M50 24 L50 76 M34 44 L66 44" fill="none" stroke="rgba(230,210,255,.5)" stroke-width="1.6"/>
-    <circle cx="50" cy="47" r="5.5" fill="#fff"/>
-    <circle cx="50" cy="47" r="10.5" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.5"/>`;
+    <path d="M50 24 L66 44 L50 76 L34 44 Z" fill="#5a3a9e" stroke="#e6d2ff" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M50 24 L50 76 M34 44 L66 44" fill="none" stroke="#c9b4ff" stroke-width="1.6"/>
+    <circle cx="50" cy="47" r="5.5" fill="#fff"/>`;
 }
 
 /* Cursed rune — ấn nguyền đỏ máu: đĩa tối viền đỏ, gai + xích, SỐ đếm ngược lớn */
 function cursedArt(n) {
-  return `<circle cx="50" cy="50" r="41" fill="rgba(14,6,16,.94)" stroke="#c01a3e" stroke-width="4"/>`
-       + `<circle cx="50" cy="50" r="41" fill="none" stroke="#ff6a86" stroke-width="1.4" opacity=".5"/>`
+  return `<circle cx="50" cy="50" r="41" fill="#1a0712" stroke="#c01a3e" stroke-width="4"/>`
        + `<path d="M50 11 L56 23 L50 19 L44 23 Z" fill="#ff3d5a"/>`
-       + `<path d="M21 41 Q13 50 21 59 M79 41 Q87 50 79 59" fill="none" stroke="#ff6a86" stroke-width="3" stroke-linecap="round" opacity=".7"/>`
+       + `<path d="M21 41 Q13 50 21 59 M79 41 Q87 50 79 59" fill="none" stroke="#ff6a86" stroke-width="3" stroke-linecap="round"/>`
        + `<text x="50" y="67" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="900" font-size="46" fill="#ffd23f" stroke="#5a0616" stroke-width="1.6" paint-order="stroke">${n}</text>`;
 }
 
@@ -2504,12 +2454,8 @@ function makeEmberSprite() {
   emberSprite = document.createElement('canvas');
   emberSprite.width = 32; emberSprite.height = 32;
   const c = emberSprite.getContext('2d');
-  const g = c.createRadialGradient(16, 16, 0, 16, 16, 16);
-  g.addColorStop(0, 'rgba(255,200,90,.95)');
-  g.addColorStop(0.35, 'rgba(255,140,40,.5)');
-  g.addColorStop(1, 'rgba(255,120,30,0)');
-  c.fillStyle = g;
-  c.fillRect(0, 0, 32, 32);
+  c.fillStyle = 'rgba(255,140,40,.55)';
+  c.beginPath(); c.arc(16, 16, 7, 0, Math.PI * 2); c.fill();
 }
 
 function initBgItems() {
@@ -2635,7 +2581,6 @@ function drawFx() {
   }
   fxHadContent = true;
   fxCtx.clearRect(0, 0, window.innerWidth, window.innerHeight);
-  fxCtx.globalCompositeOperation = 'lighter';
   for (const p of particles) {
     const k = p.life / p.max;
     const a = 1 - k;
@@ -2661,26 +2606,14 @@ function drawFx() {
         const y = p.y + p.row * cellPx + cellPx / 2;
         const cx = p.x + p.colIdx * cellPx + cellPx / 2;
         const half = p.w * grow;
-        const gr = fxCtx.createLinearGradient(cx - half, 0, cx + half, 0);
-        gr.addColorStop(0, 'rgba(255,255,255,0)');
-        gr.addColorStop(0.5, p.col);
-        gr.addColorStop(1, 'rgba(255,255,255,0)');
-        fxCtx.fillStyle = gr;
+        fxCtx.fillStyle = p.col;
         fxCtx.fillRect(cx - half, y - th / 2, half * 2, th);
-        fxCtx.fillStyle = 'rgba(255,255,255,.85)';
-        fxCtx.fillRect(cx - half, y - th / 6, half * 2, th / 3);
       } else {
         const x = p.x + p.colIdx * cellPx + cellPx / 2;
         const cy = p.y + p.row * cellPx + cellPx / 2;
         const half = p.h * grow;
-        const gr = fxCtx.createLinearGradient(0, cy - half, 0, cy + half);
-        gr.addColorStop(0, 'rgba(255,255,255,0)');
-        gr.addColorStop(0.5, p.col);
-        gr.addColorStop(1, 'rgba(255,255,255,0)');
-        fxCtx.fillStyle = gr;
+        fxCtx.fillStyle = p.col;
         fxCtx.fillRect(x - th / 2, cy - half, th, half * 2);
-        fxCtx.fillStyle = 'rgba(255,255,255,.85)';
-        fxCtx.fillRect(x - th / 6, cy - half, th / 3, half * 2);
       }
     } else if (p.type === 'ring') {
       const rr = p.rMax * easeOutCubic(k);
@@ -2712,11 +2645,8 @@ function drawFx() {
       fxCtx.stroke();
     } else if (p.type === 'flash') {
       const rr = p.rMax * easeOutCubic(k);
-      const gr = fxCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, Math.max(1, rr));
-      gr.addColorStop(0, `rgba(255,255,255,${0.85 * a})`);
-      gr.addColorStop(1, 'rgba(255,255,255,0)');
-      fxCtx.globalAlpha = 1;
-      fxCtx.fillStyle = gr;
+      fxCtx.globalAlpha = 0.5 * a;
+      fxCtx.fillStyle = '#ffffff';
       fxCtx.beginPath();
       fxCtx.arc(p.x, p.y, Math.max(1, rr), 0, Math.PI * 2);
       fxCtx.fill();

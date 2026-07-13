@@ -59,9 +59,7 @@ body {
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
-  background:
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(30,150,95,.30), transparent),
-    linear-gradient(170deg, var(--bg-a) 0%, var(--bg-b) 55%, var(--bg-c) 100%);
+  background: var(--bg-b);        /* FLAT: nền tối đặc 1 màu, bỏ nebula gradient */
 }
 
 /* Chữ Ả Rập là chữ nối — bỏ letter-spacing trên MỌI phần tử kẻo vỡ chữ */
@@ -189,7 +187,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
-  background: rgba(8, 16, 30, 0.55);
+  background: #101a2c;            /* FLAT: fill đặc, bỏ box-shadow bevel */
   border: 2px solid rgba(255, 255, 255, 0.16);
   border-radius: 14px;
   padding: 5px 8px 6px 4px;       /* icon ghim sát mép trái (chuẩn chung) */
@@ -197,14 +195,11 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   align-items: center;
   justify-content: center;
   gap: 5px;
-  box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.08),
-              0 3px 8px rgba(0, 0, 0, 0.35);
 }
 .pill-text { display: flex; flex-direction: column; align-items: center; min-width: 0; flex: 1 0 auto; }
 .pill-ico {
   flex: 0 0 auto;
   width: clamp(16px, 4.8vw, 21px); height: clamp(16px, 4.8vw, 21px); display: block;
-  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.4));
 }
 .hud-pill .label {
   font-size: clamp(9px, 3vw, 12px);
@@ -222,7 +217,6 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   white-space: nowrap;
   font-family: var(--ui-font);
   font-weight: 800;
-  text-shadow: 0 2px 2px rgba(0, 0, 0, 0.4);
 }
 #hud-best { color: #ffd86b; }     /* BEST accent vàng (chuẩn chung) */
 
@@ -278,9 +272,8 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   padding: 26px;
   text-align: center;
   border-radius: 22px;
-  background: linear-gradient(180deg, #172a4a, #0b1530);   /* gradient theo theme (popup-common §7) */
-  border: 2px solid rgba(120,160,255,.22);
-  box-shadow: 0 18px 50px rgba(0,0,0,.5);
+  background: #16233d;            /* FLAT: fill đặc, bỏ gradient + box-shadow */
+  border: 2px solid rgba(120,160,255,.28);
   transform: scale(1);
   transition: transform .25s;
 }
@@ -1378,15 +1371,10 @@ try { if (document.fonts) document.fonts.load("800 22px 'Google Sans Flex'"); } 
  * ================================================================ */
 const SS = 2;               // supersample sprite ×2 cho nét
 
-/** Sigil khắc phát sáng — 3 lớp stroke: bloom mờ / màu chính / lõi trắng
- *  nóng. Thẩm mỹ dark fantasy như runic-blaze: nét khắc arcane trên đá
- *  obsidian, KHÔNG bóng kẹo. */
+/** Sigil khắc — THEME PHẲNG (flat): 1 nét đặc duy nhất, KHÔNG bloom/lõi trắng. */
 function strokeSigil(c, path, hex, w) {
   c.lineCap = 'round'; c.lineJoin = 'round';
-  c.strokeStyle = hex; c.globalAlpha = .28; c.lineWidth = w * 2.2; c.stroke(path);
-  c.globalAlpha = 1;   c.lineWidth = w;      c.stroke(path);
-  c.strokeStyle = '#fff'; c.globalAlpha = .85; c.lineWidth = Math.max(1.2, w * .36); c.stroke(path);
-  c.globalAlpha = 1;
+  c.globalAlpha = 1; c.strokeStyle = hex; c.lineWidth = w; c.stroke(path);
 }
 
 /* 6 sigil (viewBox 100×100): 5 thường + 1 TRÙM (sọ quỷ) */
@@ -1482,15 +1470,11 @@ function buildDiscSprite() {
   c.translate(size / 2, size / 2);
   const ac = cfg.accent;
 
-  /* thân đá obsidian */
-  const g = c.createRadialGradient(0, -R * 0.25, R * 0.1, 0, 0, R);
-  g.addColorStop(0, cfg.boss ? '#2a1220' : '#1c2434');
-  g.addColorStop(0.75, cfg.boss ? '#170a12' : '#101624');
-  g.addColorStop(1, '#07090f');
-  c.fillStyle = g;
+  /* thân đá — FLAT: fill đặc 1 màu, KHÔNG radial gradient */
+  c.fillStyle = cfg.boss ? '#241019' : '#151c2e';
   c.beginPath(); c.arc(0, 0, R, 0, Math.PI * 2); c.fill();
 
-  /* vân nứt đá — chord mờ, seed theo stage (ổn định giữa các frame) */
+  /* vân nứt đá — chord mờ phẳng (trang trí, không tạo chiều sâu) */
   c.strokeStyle = 'rgba(255,255,255,.05)';
   c.lineWidth = 1.5;
   for (let i = 0; i < 7; i++) {
@@ -1502,18 +1486,15 @@ function buildDiscSprite() {
     c.stroke();
   }
 
-  /* vành ngoài: glow accent + mép sáng */
-  c.beginPath(); c.arc(0, 0, R - 5, 0, Math.PI * 2);
-  c.strokeStyle = ac; c.globalAlpha = .16; c.lineWidth = 10; c.stroke();
-  c.beginPath(); c.arc(0, 0, R - 1.5, 0, Math.PI * 2);
-  c.globalAlpha = .8; c.lineWidth = 2.5; c.stroke();
+  /* vành ngoài — FLAT: 1 nét đặc, không glow */
   c.globalAlpha = 1;
+  c.strokeStyle = ac; c.lineWidth = 3;
+  c.beginPath(); c.arc(0, 0, R - 2.5, 0, Math.PI * 2); c.stroke();
 
-  /* vòng arcane đứt nét + nan hoa mờ */
+  /* vòng arcane đứt nét — FLAT: 1 nét + nan hoa mờ phẳng */
   c.setLineDash([10, 14]);
-  c.beginPath(); c.arc(0, 0, R - 26, 0, Math.PI * 2);
-  c.strokeStyle = ac; c.globalAlpha = .2; c.lineWidth = 9; c.stroke();
-  c.globalAlpha = .55; c.lineWidth = 3; c.stroke();
+  c.strokeStyle = ac; c.globalAlpha = .5; c.lineWidth = 3;
+  c.beginPath(); c.arc(0, 0, R - 26, 0, Math.PI * 2); c.stroke();
   c.setLineDash([]);
   c.globalAlpha = .12;
   c.lineWidth = 2;
@@ -1526,7 +1507,7 @@ function buildDiscSprite() {
   }
   c.globalAlpha = 1;
 
-  /* sigil giữa — 3 lớp stroke, scale vào ~54% totem */
+  /* sigil giữa — FLAT (strokeSigil giờ 1 nét), scale vào ~54% totem */
   const sig = new Path2D(SIGIL_D[cfg.sigil]);
   const k = (R * 1.08) / 100;
   c.save();
@@ -1546,9 +1527,9 @@ function drawGem(gm) {
   const gr = disc.R + 13;
   const x = disc.x + Math.cos(th) * gr;
   const y = disc.y + Math.sin(th) * gr;
-  const pulse = 0.72 + 0.28 * Math.sin(timeMs * 0.005 + gm.a * 7);
+  const pulse = 0.78 + 0.22 * Math.sin(timeMs * 0.005 + gm.a * 7);
   const gemCol = gm.skull ? '#ff5d76' : '#52ff9d';
-  const gemFill = gm.skull ? 'rgba(255,93,118,.18)' : 'rgba(82,255,157,.16)';
+  const gemFill = gm.skull ? '#3a1420' : '#123a28';   // FLAT: fill đặc tối, không translucent glow
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(th + Math.PI / 2);                // đỉnh ngọc hướng ra ngoài
@@ -1563,18 +1544,15 @@ function drawGem(gm) {
   ctx.fillStyle = gemFill;
   ctx.fill();
   ctx.lineJoin = 'round';
-  ctx.strokeStyle = gemCol;
-  ctx.globalAlpha = .3 * pulse; ctx.lineWidth = 6; ctx.stroke();
-  ctx.globalAlpha = pulse;      ctx.lineWidth = 2.4; ctx.stroke();
-  ctx.strokeStyle = '#fff';
-  ctx.globalAlpha = .8 * pulse; ctx.lineWidth = 1;   ctx.stroke();
-  ctx.globalAlpha = 1;
+  ctx.strokeStyle = gemCol;                    // FLAT: 1 nét đặc (pulse nhẹ cho biết tương tác)
+  ctx.globalAlpha = pulse; ctx.lineWidth = 2.4; ctx.stroke();
   ctx.beginPath();
   ctx.moveTo(0, -r * 0.5); ctx.lineTo(r * 0.36, 0); ctx.lineTo(0, r * 0.5); ctx.lineTo(-r * 0.36, 0);
   ctx.closePath();
-  ctx.strokeStyle = 'rgba(255,255,255,.4)';
+  ctx.globalAlpha = .55;                        // facet cùng màu accent (flat), bỏ lõi trắng
   ctx.lineWidth = 1;
   ctx.stroke();
+  ctx.globalAlpha = 1;
   ctx.restore();
 }
 
@@ -1586,12 +1564,8 @@ function makeWispSprite() {
   wispSprite = document.createElement('canvas');
   wispSprite.width = 32; wispSprite.height = 32;
   const c = wispSprite.getContext('2d');
-  const g = c.createRadialGradient(16, 16, 0, 16, 16, 16);
-  g.addColorStop(0, 'rgba(140,255,190,.9)');
-  g.addColorStop(0.35, 'rgba(60,220,140,.45)');
-  g.addColorStop(1, 'rgba(40,200,120,0)');
-  c.fillStyle = g;
-  c.fillRect(0, 0, 32, 32);
+  c.fillStyle = 'rgba(82,255,157,.55)';        // FLAT: chấm tròn đặc, không gradient glow
+  c.beginPath(); c.arc(16, 16, 7, 0, Math.PI * 2); c.fill();
 }
 
 function initBgItems() {
@@ -2457,13 +2431,9 @@ function render() {
       if (!echoSigPath) echoSigPath = new Path2D(SIGIL_D[5]);   // cache — không alloc mỗi frame
       const sig = echoSigPath;
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      ctx.strokeStyle = '#b88cff';
+      ctx.strokeStyle = '#b88cff';                              // FLAT: 1 nét (al lo phần mờ ảo), bỏ lõi trắng
       ctx.globalAlpha = al;
       ctx.lineWidth = 5;
-      ctx.stroke(sig);
-      ctx.strokeStyle = '#fff';
-      ctx.globalAlpha = al * 0.7;
-      ctx.lineWidth = 1.8;
       ctx.stroke(sig);
       ctx.restore();
       ctx.globalAlpha = 1;
