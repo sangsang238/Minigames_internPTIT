@@ -2,7 +2,7 @@
   "title": "Runic Blaze",
   "packageName": "com.falcon.runicblaze",
   "engine": "HTML5",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "category": "PUZZLE",
   "tags": ["match3", "puzzle", "highscore", "endless", "fantasy", "rune", "flat"],
   "description": "Endless dark-fantasy match-3 score attack with a clean flat visual style and satisfying chain cascades. Swap adjacent runes to match three or more, forge Blaze, Nova and Prism runes from bigger matches, and chain them into giant combos. Beware the Cursed Runes: every so often a cursed sigil drops onto the board with a ticking countdown — clear a match right next to it to break it before it hits zero, or the run ends. They come faster and harsher the longer you last. Trigger score-milestone events — Arcane Surge gifts a Prism, Blaze Storm sets off a chain-blast. No levels, no move limit — just chase your best score.",

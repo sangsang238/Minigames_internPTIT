@@ -1,6 +1,6 @@
 # Runic Blaze — QuanKA
 
-> **Match-3 endless high-score** | HTML5 single-file | Dark fantasy **THEME PHẲNG (flat)** | v3.2 — hazard **Cursed Runes** + events + onboarding
+> **Match-3 endless high-score** | HTML5 single-file | **Flat-matte (phẳng)** — tile khối màu đặc + icon trắng, nền teal | v3.3 — hazard **Cursed Runes** + events + onboarding
 
 ---
 
@@ -11,8 +11,8 @@
 | **Tên game** | Runic Blaze |
 | **Package** | `com.falcon.runicblaze` |
 | **Engine** | HTML5 (single-file `index.html`) |
-| **Version** | 3.2.0 |
-| **Giao diện** | Flat (phẳng) — dark-fantasy khối đặc, không glow/gloss/gradient/3D |
+| **Version** | 3.3.0 |
+| **Giao diện** | Flat-matte (phẳng) — tile KHỐI MÀU ĐẶC + icon trắng, nền teal-slate dịu, không neon/glow/gloss/gradient/3D |
 | **Category** | PUZZLE (điểm-cao, endless) |
 | **Entry** | `runic-blaze/index.html` |
 

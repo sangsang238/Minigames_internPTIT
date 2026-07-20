@@ -1,6 +1,6 @@
 # Cursed Knives — QuanKA
 
-> **Knife-Hit arcade game** | HTML5 single-file | Dark-fantasy **FLAT** theme | v1.1.0
+> **Knife-Hit arcade game** | HTML5 single-file | **WARM FLAT** carved-wood theme | v1.1.0
 
 ---
 
@@ -15,10 +15,16 @@
 | **Category** | ARCADE |
 | **Entry** | `cursed-knives/index.html` |
 
-> Clone cơ chế **Knife Hit**, palette dark-fantasy nhưng render theo **THEME PHẲNG (flat)**:
-> dao găm phóng vào **totem** đang xoay — mọi thứ là **fill đặc + stroke 1 nét**, KHÔNG
-> gradient/glow/bloom/shadow. Sigil arcane 1 nét, totem fill đặc, gem lục giác phẳng,
-> nền tối đặc + hồn lửa chấm phẳng trôi. Giữ nguyên màu accent (cyan/green/purple/amber, boss đỏ).
+> Clone cơ chế **Knife Hit** theo **THEME PHẲNG ẤM (warm flat)** trên nền **teal trầm**, KHÔNG neon:
+> dao **thép + cán gỗ** phóng vào **mặt cắt ngang thân gỗ** đang xoay. Mọi thứ là **fill đặc +
+> stroke 1 nét** (không gradient/glow/shadow). Mỗi stage là **1 loài gỗ khác nhau** (sồi/phong/
+> bạch dương/thông/óc chó/anh đào) — **vân năm giống thật** (nhiều vòng, đều & đồng tâm, chỉ hơi
+> bầu dục + lệch tâm nhẹ) + vỏ cây + nứt khô, mỗi cái mang **1 rune KHẮC SẮC BÉN nhưng không perfect**
+> (mép gọn, đôi chỗ hơi lệch tay). **Boss = gỗ chết cháy** (vỏ than, lõi đỏ máu,
+> sọ khắc xương). Thu thập = **nấm độc mọc ra từ thân gỗ** (mũ đỏ đốm kem, thân kem — thấp & mập):
+> mũ đỏ máu (boss) / đỏ nấm (thường); **cắm dao vào nấm là GHIM nó vào thân — nấm KHÔNG mất, ở lại**
+> (nén nảy nhẹ + vết đâm). Dao cắm gỗ = **dăm gỗ văng + rung "thunk" + vết toác**.
+> Giữ danh tính "cursed" (sigil/skull-boss/nấm độc), palette tự nhiên ấm — không đụng bản quyền.
 
 ---
 

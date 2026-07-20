@@ -29,17 +29,17 @@
 
 :root {
   --ui-font: 'Google Sans Flex', system-ui, sans-serif;
-  --bg-a: #05070f;
-  --bg-b: #0b1424;
-  --bg-c: #060a16;
-  --text: #eaf2ff;
-  --text-soft: #8ea6c8;
+  --bg-a: #1a2e2f;
+  --bg-b: #22393a;         /* nền teal trầm phẳng (như ảnh ref) */
+  --bg-c: #1c3031;
+  --text: #f4ece0;         /* trắng ấm */
+  --text-soft: #a7a892;    /* xám sage ấm */
   --glass: rgba(255,255,255,.06);
   --glass-border: rgba(255,255,255,.11);
-  --accent: #52ff9d;       /* xanh nguyền — accent chính */
-  --steel: #6fd8ff;        /* thép lạnh — lưỡi dao */
+  --accent: #e08a3c;       /* đất nung — accent chính (WARM FLAT) */
+  --steel: #d6dde2;        /* thép nguội — lưỡi dao */
   --gold: #ffd23f;         /* BEST (popup-common §7 — cố định) */
-  --danger: #ff3d5a;
+  --danger: #d24a30;
   --sat: env(safe-area-inset-top, 0px);
 }
 
@@ -187,7 +187,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
-  background: #101a2c;            /* FLAT: fill đặc, bỏ box-shadow bevel */
+  background: #1b2e2f;            /* FLAT WARM: teal-slate đặc */
   border: 2px solid rgba(255, 255, 255, 0.16);
   border-radius: 14px;
   padding: 5px 8px 6px 4px;       /* icon ghim sát mép trái (chuẩn chung) */
@@ -206,7 +206,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   font-family: system-ui, sans-serif;
   font-weight: 600;
   letter-spacing: 0.5px;
-  color: #8fb4ff;                 /* nhãn xanh (đồng bộ popup-common) */
+  color: #c9b48f;                 /* nhãn cát ấm */
   line-height: 1.05;
   white-space: nowrap;
 }
@@ -230,7 +230,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
-#hud-stage.boss { color: #ff5d76; animation: bossPulse 1s ease-in-out infinite; }
+#hud-stage.boss { color: #e0674f; animation: bossPulse 1s ease-in-out infinite; }
 @keyframes bossPulse { 50% { opacity: .55; } }
 
 /* ── Banner tutorial ─────────────────────────────────────────── */
@@ -243,7 +243,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   width: min(86%, 420px);
   padding: 12px 16px;
   border-radius: 14px;
-  background: rgba(8,14,26,.85);
+  background: rgba(14,28,28,.86);
   border: 1px solid var(--glass-border);
   text-align: center;
   transition: opacity .25s;
@@ -261,7 +261,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(3,9,24,.7);
+  background: rgba(10,22,22,.72);
   opacity: 1;
   transition: opacity .25s;
 }
@@ -272,8 +272,8 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   padding: 26px;
   text-align: center;
   border-radius: 22px;
-  background: #16233d;            /* FLAT: fill đặc, bỏ gradient + box-shadow */
-  border: 2px solid rgba(120,160,255,.28);
+  background: #24403f;            /* FLAT WARM: teal trầm đặc */
+  border: 2px solid rgba(224,150,80,.30);
   transform: scale(1);
   transition: transform .25s;
 }
@@ -282,7 +282,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 .card-title { color: #fff; font-size: 30px; margin-bottom: 14px; }
 
 .sb { display: flex; justify-content: center; gap: 30px; margin-bottom: 18px; }
-.sb .k { font-family: system-ui, sans-serif; font-size: 11px; letter-spacing: 2px; color: #8fb4ff; font-weight: 800; }
+.sb .k { font-family: system-ui, sans-serif; font-size: 11px; letter-spacing: 2px; color: #c9b48f; font-weight: 800; }
 .sb .v { font-size: 32px; color: #fff; }
 .sb .v.best { color: #ffd23f; }
 
@@ -966,8 +966,21 @@ const STAGE_BONUS = 2;      // thưởng phá totem thường
 const BOSS_BONUS = 10;      // thưởng phá totem TRÙM
 
 /* Bảng màu accent theo stage (boss luôn đỏ) */
-const ACCENTS = ['#35e0ff', '#52ff9d', '#c060ff', '#ffb830'];
-const BOSS_ACCENT = '#ff3d5a';
+const BOSS_ACCENT = '#c1452f';                                   // đỏ gạch trầm (không neon)
+
+/* Mỗi stage = mặt cắt ngang 1 loài gỗ (vân + tông riêng); sigil KHẮC imperfect lên gỗ.
+ * bark=vỏ, body=giác gỗ, ring/ringDk=vân năm, sap=gỗ tươi, carve=màu rãnh khắc,
+ * fx=màu hiệu ứng trên nền tối, nR=số vân năm. */
+const WOODS = [
+  { name: 'oak',    bark: '#5a3f26', body: '#c49a5c', ring: '#a9793f', ringDk: '#7f5628', sap: '#dcb87e', carve: '#684019', fx: '#e6a94e', nR: 10 },
+  { name: 'maple',  bark: '#6e4c30', body: '#e3c992', ring: '#c6a460', ringDk: '#9f7d3c', sap: '#efe0b4', carve: '#8a6432', fx: '#f0c266', nR: 13 },
+  { name: 'birch',  bark: '#a99f88', body: '#e9ddc1', ring: '#c3ac82', ringDk: '#9a835c', sap: '#f4ecd9', carve: '#8a744f', fx: '#e8cf8e', nR: 9 },
+  { name: 'pine',   bark: '#7a4a28', body: '#dcb56e', ring: '#b57d38', ringDk: '#8a5824', sap: '#eccb88', carve: '#6e4218', fx: '#eab24e', nR: 12 },
+  { name: 'walnut', bark: '#3a2718', body: '#7c5636', ring: '#5c3c20', ringDk: '#442b16', sap: '#a67c4c', carve: '#c49a68', fx: '#c98a52', nR: 10 },
+  { name: 'cherry', bark: '#5e3320', body: '#b06a44', ring: '#8f4f30', ringDk: '#6e3a22', sap: '#c98a63', carve: '#5a2c1a', fx: '#d98858', nR: 10 },
+];
+/* Boss: gỗ chết cháy — vỏ than đen, lõi đỏ máu, sọ khắc sáng xương-ember. */
+const BOSS_WOOD = { name: 'deadwood', bark: '#160d0a', body: '#3a1f18', ring: '#7a2820', ringDk: '#4c1712', sap: '#5e241b', carve: '#caa079', fx: '#c1452f', nR: 11 };
 
 /* ================================================================
  * §3. State
@@ -985,13 +998,13 @@ let stageT = 0;             // giây từ lúc stage bắt đầu (cho pattern x
 let disc = { x: 0, y: 0, R: 150, rot: 0, w: 0, sprite: null, spriteR: 0 };
 let prevRot = 0;            // rot của frame trước — nội suy sub-frame lúc va chạm
 let stuck = [];             // dao đã cắm: {a: góc trên totem (rad), pre: có sẵn từ đầu}
-let gems = [];              // ngọc hồn: {a}
+let gems = [];              // nấm mọc từ thân gỗ: {a, skull, pinned?, pinT0?}
 let knivesLeft = 0;
 let flying = null;          // dao đang bay: {y}
 let deadKnife = null;       // dao văng khi thua: {x,y,vx,vy,rot,vr}
 let pendingBreakAt = 0;     // timeMs sẽ phá totem (sau khi dao cuối cắm)
 let spawnT0 = 0, breakT0 = 0;
-let shards = [], debris = [], floatTexts = [], rings = [], sparks = [];
+let shards = [], debris = [], floatTexts = [], rings = [], sparks = [], chips = [];
 let flash = 0, shakeAmp = 0;
 let stagePulseT0 = -9999;   // totem nhún nhẹ khi dao cắm
 let overTimer = null;
@@ -1051,13 +1064,14 @@ function stageConfig(idx) {
   // boss: 3 ngọc-sọ (Skull Tithe) — tham thì giàu, tham nữa thì totem nổi giận
   const nGems = boss ? 3 : (idx === 0 ? 1 : (h5 < 0.22 ? 0 : (h5 < 0.72 ? 1 : 2)));
   const placed = placeAngles(idx, nPre, nGems);
+  const wd = boss ? BOSS_WOOD : WOODS[Math.floor(h4 * WOODS.length) % WOODS.length];
   return {
     boss, knives, speed, dir, pattern,
     period: 1.6 + h1 * 1.0,          // chu kỳ wobble (s)
     flipT: 1.5 + h2 * 1.2,           // nhịp đảo chiều (s)
     phase0: h3 * Math.PI * 2,
     pre: placed.pre, gems: placed.gems,
-    accent: boss ? BOSS_ACCENT : ACCENTS[Math.floor(h4 * ACCENTS.length) % ACCENTS.length],
+    wood: wd, accent: wd.fx,         // gỗ theo loài + màu FX ấm (trên nền tối)
     sigil: boss ? 5 : Math.floor(h5 * 5) % 5,
   };
 }
@@ -1387,6 +1401,67 @@ const SIGIL_D = [
   'M32 24 A24 24 0 0 1 68 24 L70 52 L60 60 L60 74 L52 66 L48 66 L40 74 L40 60 L30 52 Z M40 42 A5 5 0 1 0 40 43 M60 42 A5 5 0 1 0 60 43', // sọ quỷ (TRÙM)
 ];
 
+/* ── Khắc rune IMPERFECT ──────────────────────────────────────────
+ * Lấy mẫu ĐÚNG hình rune (SVG path → điểm), rồi vẽ lại bằng nét RUN TAY:
+ * jitter mỗi điểm, độ rộng lệch (te tua), đôi chỗ ĐỨT nét (nguệch ngoạc, "có lúc không").
+ */
+let _sampSvg = null;
+function sampleSigil(d) {
+  if (!_sampSvg) {
+    _sampSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    _sampSvg.style.cssText = 'position:absolute;left:-9999px;top:0;width:0;height:0;overflow:hidden';
+    document.body.appendChild(_sampSvg);
+  }
+  const strokes = [];
+  for (const seg of d.split(/(?=M)/)) {           // tách theo subpath để không nối các nét rời
+    if (!seg.trim()) continue;
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', seg);
+    _sampSvg.appendChild(p);
+    let L = 0;
+    try { L = p.getTotalLength(); } catch (e) { L = 0; }
+    if (L > 0.5) {
+      const n = Math.max(2, Math.round(L / 3.5));
+      const pts = [];
+      for (let i = 0; i <= n; i++) { const q = p.getPointAtLength(L * i / n); pts.push(q.x, q.y); }
+      strokes.push(pts);
+    }
+    _sampSvg.removeChild(p);
+  }
+  return strokes;
+}
+let SIGIL_PTS = null;
+function ensureSigilPts() { if (!SIGIL_PTS) SIGIL_PTS = SIGIL_D.map(sampleSigil); }
+
+/** Vẽ rune (viewBox 100) như KHẮC TAY: seed cố định/stage nên đứng im, khác nhau mỗi stage. */
+function carveRune(c, sigilIdx, color, baseW, seed) {
+  ensureSigilPts();
+  const strokes = SIGIL_PTS[sigilIdx];
+  c.lineCap = 'round'; c.lineJoin = 'round'; c.strokeStyle = color;
+  if (!strokes || !strokes.length) {              // fallback nếu SVG geometry API không dùng được
+    c.lineWidth = baseW; c.stroke(new Path2D(SIGIL_D[sigilIdx])); return;
+  }
+  const A = 1.0;                                   // biên lệch tay — nhỏ: nét SẮC nhưng không perfect
+  for (let si = 0; si < strokes.length; si++) {
+    const raw = strokes[si], m = raw.length / 2, salt = seed * 7 + si * 131;
+    const jx = new Array(m), jy = new Array(m);    // lệch MỖI điểm 1 lần → hơi tay nhưng vẫn dứt khoát
+    for (let i = 0; i < m; i++) {
+      jx[i] = raw[i * 2]     + (hash01(salt, i * 2) - .5) * A;
+      jy[i] = raw[i * 2 + 1] + (hash01(salt, i * 2 + 1) - .5) * A;
+    }
+    for (let i = 1; i < m; i++) {
+      if (hash01(salt, 900 + i) < 0.05) continue;                    // hoạ hoằn mới ĐỨT 1 chỗ
+      c.lineWidth = baseW * (0.84 + hash01(salt, 500 + i) * 0.3);     // rộng gần đều = mép sắc
+      c.beginPath(); c.moveTo(jx[i - 1], jy[i - 1]); c.lineTo(jx[i], jy[i]); c.stroke();
+      if (hash01(salt, 300 + i) < 0.045) {                           // thật hiếm mới tòe 1 sợi mảnh
+        const fa = hash01(salt, 320 + i) * 6.283, fl = 1.0 + hash01(salt, 340 + i) * 1.6;
+        c.lineWidth = baseW * 0.3;
+        c.beginPath(); c.moveTo(jx[i], jy[i]); c.lineTo(jx[i] + Math.cos(fa) * fl, jy[i] + Math.sin(fa) * fl); c.stroke();
+      }
+    }
+  }
+}
+
 /* ── Sprite dao găm ─────────────────────────────────────────────
  * Vẽ 1 lần vào offscreen canvas rồi drawImage xoay — mũi dao hướng LÊN,
  * tâm sprite = tâm dao. 3 biến thể: thép (dao của mình), tím mờ (dao cắm
@@ -1415,7 +1490,7 @@ function buildKnifeSprite(edgeHex, bodyFill, handleFill) {
   const guard = new Path2D();
   guard.roundRect ? guard.roundRect(cx - 13, 64, 26, 7, 3.5)
                   : guard.rect(cx - 13, 64, 26, 7);
-  c.fillStyle = '#0d1524';
+  c.fillStyle = '#2a1c12';
   c.fill(guard);
   c.strokeStyle = edgeHex; c.lineWidth = 2; c.stroke(guard);
   /* cán quấn da */
@@ -1423,14 +1498,14 @@ function buildKnifeSprite(edgeHex, bodyFill, handleFill) {
   grip.roundRect ? grip.roundRect(cx - 6, 71, 12, 33, 6) : grip.rect(cx - 6, 71, 12, 33);
   c.fillStyle = handleFill;
   c.fill(grip);
-  c.strokeStyle = '#3a3358'; c.lineWidth = 2; c.stroke(grip);
-  c.strokeStyle = 'rgba(255,255,255,.18)'; c.lineWidth = 1.4;
+  c.strokeStyle = '#4a3220'; c.lineWidth = 2; c.stroke(grip);
+  c.strokeStyle = 'rgba(255,244,228,.2)'; c.lineWidth = 1.4;
   for (let y = 77; y <= 98; y += 7) {
     c.beginPath(); c.moveTo(cx - 5, y); c.lineTo(cx + 5, y + 3); c.stroke();
   }
   /* chuôi ngọc */
   c.beginPath(); c.arc(cx, 109, 6, 0, Math.PI * 2);
-  c.fillStyle = '#0d1524'; c.fill();
+  c.fillStyle = '#2a1c12'; c.fill();
   c.strokeStyle = edgeHex; c.lineWidth = 2; c.stroke();
   c.beginPath(); c.arc(cx, 109, 2.2, 0, Math.PI * 2);
   c.fillStyle = '#fff'; c.fill();
@@ -1438,9 +1513,9 @@ function buildKnifeSprite(edgeHex, bodyFill, handleFill) {
 }
 
 function buildKnifeSprites() {
-  knifeSpr = buildKnifeSprite('#6fd8ff', '#1b2740', '#141026');
-  preKnifeSpr = buildKnifeSprite('#8a6cd8', '#221a38', '#181226');
-  redKnifeSpr = buildKnifeSprite('#ff3d5a', '#2a1220', '#1a0d16');   // kill-cam: dao thủ phạm
+  knifeSpr = buildKnifeSprite('#e2e8ec', '#5a636b', '#8a5a30');      // WARM: thép sáng + cán gỗ
+  preKnifeSpr = buildKnifeSprite('#9aa2a8', '#3e454b', '#5f4128');   // dao cắm sẵn — thép xỉn / gỗ sẫm
+  redKnifeSpr = buildKnifeSprite('#ef7355', '#4a201a', '#3a1712');   // kill-cam: dao thủ phạm (đỏ nung)
 }
 
 /** Vẽ dao tại (x,y) tâm sprite, xoay rot (0 = mũi hướng lên), scale s. */
@@ -1468,92 +1543,248 @@ function buildDiscSprite() {
   const c = cv.getContext('2d');
   c.scale(SS, SS);
   c.translate(size / 2, size / 2);
-  const ac = cfg.accent;
+  const w = cfg.wood;
 
-  /* thân đá — FLAT: fill đặc 1 màu, KHÔNG radial gradient */
-  c.fillStyle = cfg.boss ? '#241019' : '#151c2e';
+  /* ── MẶT CẮT NGANG GỖ ── giác gỗ (sapwood) làm nền */
+  c.fillStyle = w.body;
   c.beginPath(); c.arc(0, 0, R, 0, Math.PI * 2); c.fill();
 
-  /* vân nứt đá — chord mờ phẳng (trang trí, không tạo chiều sâu) */
-  c.strokeStyle = 'rgba(255,255,255,.05)';
-  c.lineWidth = 1.5;
-  for (let i = 0; i < 7; i++) {
-    const a1 = hash01(stageIdx, 40 + i) * Math.PI * 2;
-    const a2 = a1 + 0.9 + hash01(stageIdx, 50 + i) * 1.6;
-    c.beginPath();
-    c.moveTo(Math.cos(a1) * R * 0.95, Math.sin(a1) * R * 0.95);
-    c.lineTo(Math.cos(a2) * R * 0.6, Math.sin(a2) * R * 0.6);
-    c.stroke();
-  }
+  /* tâm gỗ (pith) hơi LỆCH tâm — thân gỗ thật hiếm khi tròn đều (lệch nhẹ thôi) */
+  const pa = hash01(stageIdx, 7) * Math.PI * 2;
+  const pd = R * (0.035 + hash01(stageIdx, 8) * 0.075);
+  const px = Math.cos(pa) * pd, py = Math.sin(pa) * pd;
 
-  /* vành ngoài — FLAT: 1 nét đặc, không glow */
-  c.globalAlpha = 1;
-  c.strokeStyle = ac; c.lineWidth = 3;
-  c.beginPath(); c.arc(0, 0, R - 2.5, 0, Math.PI * 2); c.stroke();
-
-  /* vòng arcane đứt nét — FLAT: 1 nét + nan hoa mờ phẳng */
-  c.setLineDash([10, 14]);
-  c.strokeStyle = ac; c.globalAlpha = .5; c.lineWidth = 3;
-  c.beginPath(); c.arc(0, 0, R - 26, 0, Math.PI * 2); c.stroke();
-  c.setLineDash([]);
-  c.globalAlpha = .12;
-  c.lineWidth = 2;
-  for (let i = 0; i < 6; i++) {
-    const a = i / 6 * Math.PI * 2;
-    c.beginPath();
-    c.moveTo(Math.cos(a) * (R - 34), Math.sin(a) * (R - 34));
-    c.lineTo(Math.cos(a) * (R - 62), Math.sin(a) * (R - 62));
-    c.stroke();
-  }
-  c.globalAlpha = 1;
-
-  /* sigil giữa — FLAT (strokeSigil giờ 1 nét), scale vào ~54% totem */
-  const sig = new Path2D(SIGIL_D[cfg.sigil]);
-  const k = (R * 1.08) / 100;
+  /* chi tiết vân — CLIP gọn trong lòng gỗ */
   c.save();
-  c.scale(k, k);
-  c.translate(-50, -50);
-  strokeSigil(c, sig, ac, 5);
+  c.beginPath(); c.arc(0, 0, R, 0, Math.PI * 2); c.clip();
+  c.lineCap = 'round';
+
+  /* vân năm (growth rings) — GIỐNG THẬT: 1 trường warp CHUNG (hình thân cây hữu cơ) cho
+     mọi vòng nên chúng lượn ĐỒNG BỘ; hơi bầu dục; quanh pith lệch tâm. */
+  const wa = [0.024 + hash01(stageIdx, 70) * 0.024, 0.015 + hash01(stageIdx, 71) * 0.012,
+              0.008 + hash01(stageIdx, 72) * 0.008, 0.004 + hash01(stageIdx, 73) * 0.006];
+  const wp = [hash01(stageIdx, 74) * 6.283, hash01(stageIdx, 75) * 6.283,
+              hash01(stageIdx, 76) * 6.283, hash01(stageIdx, 77) * 6.283];
+  const warp = (t) => wa[0] * Math.sin(t + wp[0]) + wa[1] * Math.sin(2 * t + wp[1])
+                    + wa[2] * Math.sin(3 * t + wp[2]) + wa[3] * Math.sin(5 * t + wp[3]);
+  const ecc = 0.93 + hash01(stageIdx, 78) * 0.09;      // bầu dục rất nhẹ (thân cây không tròn đều)
+  const eccA = hash01(stageIdx, 79) * Math.PI;
+  c.save();
+  c.translate(px, py); c.rotate(eccA); c.scale(1, ecc);
+  const NSEG = 66;
+  for (let i = w.nR; i >= 1; i--) {
+    const base = (i / (w.nR + 0.4)) * (R * 0.92);
+    const jit = (hash01(stageIdx, 60 + i) - 0.5) * (R * 0.012);
+    c.strokeStyle = i % 2 ? w.ring : w.ringDk;
+    c.lineWidth = 0.9 + hash01(stageIdx, 80 + i) * 1.3;
+    c.beginPath();
+    for (let s = 0; s <= NSEG; s++) {
+      const t = s / NSEG * Math.PI * 2;
+      const rr = Math.max(4, base * (1 + warp(t)) + jit
+                 + Math.sin(t * 7 + i * 1.3 + wp[0]) * R * 0.0035);   // gợn nhỏ riêng mỗi vòng
+      const x = Math.cos(t) * rr, y = Math.sin(t) * rr;
+      s ? c.lineTo(x, y) : c.moveTo(x, y);
+    }
+    c.closePath(); c.stroke();
+  }
+  c.fillStyle = w.ringDk; c.globalAlpha = 0.7;         // pith — chấm tâm sẫm
+  c.beginPath(); c.arc(0, 0, Math.max(2, R * 0.022), 0, Math.PI * 2); c.fill();
+  c.globalAlpha = 1;
+  c.restore();
+
+  /* tia gỗ (rays) toả từ pith — mảnh, mờ */
+  for (let i = 0; i < 6; i++) {
+    const a = hash01(stageIdx, 20 + i) * Math.PI * 2;
+    const r0 = R * (0.12 + hash01(stageIdx, 30 + i) * 0.2);
+    const r1 = R * (0.72 + hash01(stageIdx, 35 + i) * 0.24);
+    c.globalAlpha = 0.1 + hash01(stageIdx, 45 + i) * 0.12;
+    c.strokeStyle = w.ringDk; c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(px + Math.cos(a) * r0, py + Math.sin(a) * r0);
+    c.lineTo(px + Math.cos(a) * r1, py + Math.sin(a) * r1);
+    c.stroke();
+  }
+
+  /* 1-2 vết nứt khô (checks) zig-zag từ tâm ra */
+  c.globalAlpha = 0.5; c.strokeStyle = w.bark;
+  const nCk = 1 + Math.floor(hash01(stageIdx, 9) * 2);
+  for (let i = 0; i < nCk; i++) {
+    const a = hash01(stageIdx, 11 + i) * Math.PI * 2;
+    c.lineWidth = 1.5 + hash01(stageIdx, 13 + i);
+    c.beginPath();
+    c.moveTo(px + Math.cos(a) * 3, py + Math.sin(a) * 3);
+    for (let s = 1; s <= 5; s++) {
+      const rr = (s / 5) * R * 0.96;
+      const aa = a + (hash01(stageIdx, 100 + i * 7 + s) - 0.5) * 0.3;
+      c.lineTo(px + Math.cos(aa) * rr, py + Math.sin(aa) * rr);
+    }
+    c.stroke();
+  }
+  c.globalAlpha = 1;
+  c.restore();                                   // hết clip lòng gỗ
+
+  /* VỎ CÂY (bark) — vành ngoài dày, tông tối */
+  const barkW = Math.max(5, R * 0.065);
+  c.lineWidth = barkW; c.strokeStyle = w.bark;
+  c.beginPath(); c.arc(0, 0, R - barkW / 2, 0, Math.PI * 2); c.stroke();
+  c.globalAlpha = 0.5; c.lineWidth = 1.5; c.strokeStyle = w.ringDk;
+  c.beginPath(); c.arc(0, 0, R - barkW, 0, Math.PI * 2); c.stroke();
+  c.globalAlpha = 1;
+
+  /* vòng ma thuật KHẮC quanh sigil — đứt nét, tông rãnh khắc (giữ danh tính "cursed") */
+  c.setLineDash([9, 13]);
+  c.strokeStyle = w.carve; c.globalAlpha = 0.5; c.lineWidth = 2.4;
+  c.beginPath(); c.arc(0, 0, R * 0.6, 0, Math.PI * 2); c.stroke();
+  c.setLineDash([]); c.globalAlpha = 1;
+
+  /* SIGIL — KHẮC IMPERFECT: nét run tay, rộng lệch (te tua), đôi chỗ ĐỨT (nguệch ngoạc) */
+  const kk = (R * 1.0) / 100;
+  c.save();
+  c.scale(kk, kk); c.translate(-50, -50);
+  carveRune(c, cfg.sigil, w.carve, 5.4, stageIdx + 1);
   c.restore();
 
   disc.sprite = cv;
   disc.spriteR = size / 2;
 }
 
-/** Ngọc hồn — lục giác xanh nguyền, vẽ live (pulse theo timeMs).
- *  Ngọc-sọ (boss, Skull Tithe): đỏ, to hơn — ăn là totem nổi giận. */
-function drawGem(gm) {
-  const th = disc.rot + gm.a;
-  const gr = disc.R + 13;
-  const x = disc.x + Math.cos(th) * gr;
-  const y = disc.y + Math.sin(th) * gr;
-  const pulse = 0.78 + 0.22 * Math.sin(timeMs * 0.005 + gm.a * 7);
-  const gemCol = gm.skull ? '#ff5d76' : '#52ff9d';
-  const gemFill = gm.skull ? '#3a1420' : '#123a28';   // FLAT: fill đặc tối, không translucent glow
+/** NẤM độc mọc ra từ thân gỗ (thay chai bùa) — vẽ live (thở nhẹ theo timeMs).
+ *  Nấm-boss: mũ đỏ máu, to hơn. Cắm dao vào = GHIM nấm vào thân, KHÔNG biến mất.
+ *  `layer`: undefined (nấm chưa ghim, vẽ trọn 1 lần) | 'back' (ĐỈNH mũ — vẽ TRƯỚC dao,
+ *  dao đè lên che đỉnh) | 'front' (MÁI dưới đỉnh + THÂN — vẽ SAU dao, che lưỡi dao)
+ *  → dao trông như xuyên thẳng qua CHÍNH GIỮA nấm từ trên xuống. */
+function drawGem(gm, layer) {
+  const boss = gm.skull;
+
+  let aEff = gm.a;
+  if (gm.pinned && gm.aFrom !== undefined) {       // dao vừa ghim → nấm TRƯỢT về đúng lưỡi dao (~150ms)
+    const tp = timeMs - (gm.pinT0 || timeMs);
+    if (tp < 150) {
+      let d = gm.a - gm.aFrom;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      const k = tp / 150, e = 1 - (1 - k) * (1 - k);   // easeOut
+      aEff = gm.aFrom + d * e;
+    }
+  }
+  const th = disc.rot + aEff;
+
+  const rootR = disc.R - 1;                       // gốc nấm bám sát vành totem, mọc RA NGOÀI
+  const x = disc.x + Math.cos(th) * rootR;
+  const y = disc.y + Math.sin(th) * rootR;
+
+  const capW = boss ? 30 : 26, capH = boss ? 16 : 14;  // MŨ VÒM tròn, đủ to để thò ra 2 bên lưỡi dao khi bị ghim
+  const stemH = boss ? 7 : 6,  stemW = boss ? 8 : 6.5;
+
+  const capCol = boss ? '#a3271a' : '#c33f1e';    // mũ: đỏ máu (boss) / đỏ nấm độc (thường) — nổi rõ trên gỗ ấm
+  const capDk  = boss ? '#4a140c' : '#5e1c0d';    // gân dưới mũ + viền (đậm = tương phản mọi loại gỗ)
+  const spotC  = boss ? '#e7d0a6' : '#f1e3c6';    // đốm kem trên mũ
+  const stemC  = '#eadfc6', stemDk = '#b39a6d';   // thân nấm kem nhạt (luôn tương phản)
+
+  const pinned = !!gm.pinned;
+  let squash = 1;
+  if (pinned) {                                   // vừa bị ghim → nén nảy tắt dần (~300ms)
+    const tp = timeMs - (gm.pinT0 || timeMs);
+    squash = 1 - 0.18 * Math.exp(-tp / 110) * Math.cos(tp * 0.028);
+  }
+  const breath = pinned ? 1 : 1 + 0.03 * Math.sin(timeMs * 0.004 + gm.a * 7);  // nấm "sống" thở nhẹ
+
   ctx.save();
   ctx.translate(x, y);
-  ctx.rotate(th + Math.PI / 2);                // đỉnh ngọc hướng ra ngoài
-  ctx.beginPath();
-  const r = gm.skull ? 15 : 13;
-  for (let i = 0; i < 6; i++) {
-    const a = -Math.PI / 2 + i / 6 * Math.PI * 2;
-    const rr2 = i % 2 ? r * 0.82 : r;
-    ctx[i ? 'lineTo' : 'moveTo'](Math.cos(a) * rr2, Math.sin(a) * rr2);
+  ctx.rotate(th + Math.PI / 2);                   // -y = hướng RA NGOÀI thân gỗ
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+
+  const cw = capW * breath, chh = capH * breath * squash;
+  const capCY = -stemH;                           // đáy mũ (chỗ nối thân)
+  const apexY = capCY - chh;                      // đỉnh mũ (ngoài cùng)
+  const lip = chh * 0.16;                          // mép mũ rủ xuống quá thân = ô nấm
+  const splitY = apexY + chh * 0.34;               // ranh giới ĐỈNH/MÁI — lưỡi dao cắt ngang khoảng đây
+
+  const capP = new Path2D();
+  capP.moveTo(-cw / 2, capCY + lip);
+  capP.quadraticCurveTo(-cw / 2, apexY, 0, apexY);
+  capP.quadraticCurveTo(cw / 2, apexY, cw / 2, capCY + lip);
+  capP.quadraticCurveTo(0, capCY + lip + chh * 0.12, -cw / 2, capCY + lip);
+  capP.closePath();
+
+  const spots = boss
+    ? [[-0.24, 0.55, 2.6], [0.16, 0.66, 2.1], [0.36, 0.30, 1.8], [-0.02, 0.86, 1.7]]
+    : [[-0.22, 0.56, 2.3], [0.22, 0.60, 2.0], [0.03, 0.84, 1.6], [0.37, 0.32, 1.5]];
+
+  function paintCap() {
+    ctx.fillStyle = capCol; ctx.fill(capP);
+    ctx.save(); ctx.clip(capP);
+    /* gân dưới mũ — dải tối ở mép đáy */
+    ctx.strokeStyle = capDk; ctx.globalAlpha = 0.85; ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.moveTo(-cw / 2, capCY + lip); ctx.quadraticCurveTo(0, capCY + lip + chh * 0.16, cw / 2, capCY + lip);
+    ctx.stroke(); ctx.globalAlpha = 1;
+    /* đốm kem — vị trí cố định theo hình mũ (không nhấp nháy) */
+    ctx.fillStyle = spotC;
+    for (const sp of spots) { ctx.beginPath(); ctx.arc(sp[0] * cw, capCY - sp[1] * chh, sp[2], 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+    ctx.strokeStyle = capDk; ctx.lineWidth = 1.5; ctx.stroke(capP);   // viền mũ
   }
-  ctx.closePath();
-  ctx.fillStyle = gemFill;
-  ctx.fill();
-  ctx.lineJoin = 'round';
-  ctx.strokeStyle = gemCol;                    // FLAT: 1 nét đặc (pulse nhẹ cho biết tương tác)
-  ctx.globalAlpha = pulse; ctx.lineWidth = 2.4; ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(0, -r * 0.5); ctx.lineTo(r * 0.36, 0); ctx.lineTo(0, r * 0.5); ctx.lineTo(-r * 0.36, 0);
-  ctx.closePath();
-  ctx.globalAlpha = .55;                        // facet cùng màu accent (flat), bỏ lõi trắng
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  ctx.globalAlpha = 1;
+
+  function paintStem() {                          // THÂN NẤM — trụ ngắn, loe nhẹ ở gốc
+    ctx.beginPath();
+    ctx.moveTo(-stemW / 2, 1);
+    ctx.quadraticCurveTo(-stemW * 0.58, capCY * 0.5, -stemW * 0.4, capCY + 1);
+    ctx.lineTo(stemW * 0.4, capCY + 1);
+    ctx.quadraticCurveTo(stemW * 0.58, capCY * 0.5, stemW / 2, 1);
+    ctx.closePath();
+    ctx.fillStyle = stemC; ctx.fill();
+    ctx.strokeStyle = stemDk; ctx.lineWidth = 1.3; ctx.stroke();
+  }
+
+  function paintPuncture() {                      // vết dao đâm — nằm trên phần MÁI (trước dao), không lấn lên đỉnh
+    ctx.strokeStyle = capDk; ctx.globalAlpha = 0.8; ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(-2.2, splitY + (capCY - splitY) * 0.1); ctx.lineTo(1.3, capCY - chh * 0.06);
+    ctx.moveTo(2.4, splitY + (capCY - splitY) * 0.16); ctx.lineTo(-0.9, capCY - chh * 0.04);
+    ctx.stroke(); ctx.globalAlpha = 1;
+  }
+
+  if (layer === 'back') {
+    ctx.save();
+    ctx.beginPath(); ctx.rect(-1000, -3000, 2000, splitY + 3000); ctx.clip();
+    paintCap();
+    ctx.restore();
+  } else if (layer === 'front') {
+    paintStem();
+    ctx.save();
+    ctx.beginPath(); ctx.rect(-1000, splitY, 2000, 3000); ctx.clip();
+    paintCap();
+    ctx.restore();
+    if (pinned) paintPuncture();
+  } else {                                        // nấm chưa ghim: không có dao xen giữa → vẽ trọn 1 lần
+    paintStem();
+    paintCap();
+  }
+
   ctx.restore();
+}
+
+/** Dăm gỗ văng khi dao cắm vào thân — burst toả ra ngoài + rơi theo trọng lực. */
+function spawnWoodImpact(a) {
+  const w = cfg && cfg.wood; if (!w) return;
+  const th = disc.rot + a;
+  const cx = disc.x + Math.cos(th) * disc.R;
+  const cy = disc.y + Math.sin(th) * disc.R;
+  const cols = [w.body, w.ring, w.sap, w.ringDk, w.sap];
+  const n = 10 + Math.floor(Math.random() * 5);
+  for (let i = 0; i < n; i++) {
+    const sp = 45 + Math.random() * 150;
+    const ang = th + (Math.random() - 0.5) * 1.9;       // toả ra ngoài, xoè
+    chips.push({
+      x0: cx + Math.cos(th) * 3, y0: cy + Math.sin(th) * 3,
+      vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 55,
+      rot0: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 16,
+      born: timeMs, life: 520 + Math.random() * 320,
+      len: 3.5 + Math.random() * 6.5, wdt: 1.5 + Math.random() * 2.1,
+      col: cols[Math.floor(Math.random() * cols.length)],
+    });
+  }
 }
 
 /* ── Nền sao + hồn lửa xanh (bg-canvas, px CSS) ────────────────── */
@@ -1564,7 +1795,7 @@ function makeWispSprite() {
   wispSprite = document.createElement('canvas');
   wispSprite.width = 32; wispSprite.height = 32;
   const c = wispSprite.getContext('2d');
-  c.fillStyle = 'rgba(82,255,157,.55)';        // FLAT: chấm tròn đặc, không gradient glow
+  c.fillStyle = 'rgba(228,162,86,.5)';         // FLAT WARM: tàn lửa ấm bay lên
   c.beginPath(); c.arc(16, 16, 7, 0, Math.PI * 2); c.fill();
 }
 
@@ -1578,7 +1809,7 @@ function initBgItems() {
     vy: Math.random() * 8 + 2,
     op: Math.random() * 0.45 + 0.1,
     ph: Math.random() * Math.PI * 2,
-    col: `hsl(${Math.round(150 + Math.random() * 80)},85%,78%)`,   // string tính sẵn
+    col: `hsl(${Math.round(26 + Math.random() * 24)},55%,70%)`,   // WARM: bụi tàn hổ phách
   }));
   bgWisps = Array.from({ length: 12 }, () => ({
     x: Math.random() * W, y: Math.random() * H,
@@ -1665,7 +1896,7 @@ function spawnStage(idx, quiet) {
   stageIdx = Math.min(idx, 9998);        // chặn giá trị vô lý
   cfg = stageConfig(stageIdx);
   stuck = cfg.pre.map(a => ({ a, pre: true }));
-  gems = cfg.gems.map(a => ({ a, skull: cfg.boss }));   // boss → ngọc-sọ +8
+  gems = cfg.gems.map(a => ({ a, skull: cfg.boss }));   // boss → nấm-sọ +8
   knivesLeft = cfg.knives;
   stageT = 0;
   disc.w = cfg.speed * cfg.dir * 0.6;
@@ -1693,16 +1924,17 @@ function resolveImpact(rotAt) {
   const a = normAng(Math.PI / 2 - rotAt);
   endBreath();                           // slow-mo dao cuối kết thúc ĐÚNG khoảnh khắc chạm
 
-  /* ngọc hồn: dao xuyên qua ngọc rồi vẫn cắm vào totem. Ngọc-sọ (boss) +8
-     nhưng chọc thủng là totem NỔI GIẬN — vọt tốc 0.5s sau telegraph 0.4s */
+  /* nấm: dao cắm vào nấm → GHIM nấm vào thân (không mất), rồi vẫn cắm vào totem.
+     Nấm-boss +8 nhưng chọc thủng là totem NỔI GIẬN — vọt tốc 0.5s sau telegraph 0.4s */
   for (let i = gems.length - 1; i >= 0; i--) {
-    if (angDiff(a, gems[i].a) < GEM_ARC) {
+    if (!gems[i].pinned && angDiff(a, gems[i].a) < GEM_ARC) {
       const gm = gems[i];
+      gm.aFrom = gm.a; gm.a = a;                   // dời nấm về ĐÚNG góc dao → lưỡi dao xuyên qua GIỮA nấm
+      gm.pinned = true; gm.pinT0 = timeMs;         // GHIM vào thân — nấm ở lại, KHÔNG biến mất
       const th = disc.rot + gm.a;
       const gx = disc.x + Math.cos(th) * (disc.R + 13);
       const gy = disc.y + Math.sin(th) * (disc.R + 13);
       const val = gm.skull ? 8 : GEM_SCORE;
-      gems.splice(i, 1);
       if (gm.skull) {
         sShriek();
         const start = Math.max(timeMs + 400, lastWrathEnd);
@@ -1714,13 +1946,13 @@ function resolveImpact(rotAt) {
       }
       if (!tutorial) {
         addScore(val);
-        floatTexts.push({ x: gx, y: gy - 16, born: timeMs, life: 800, size: 30, color: gm.skull ? '#ff5d76' : '#52ff9d', text: '+' + val });
+        floatTexts.push({ x: gx, y: gy - 16, born: timeMs, life: 800, size: 30, color: gm.skull ? '#e0674f' : '#f0b24a', text: '+' + val });
       } else {
         // tutorial: chỉ hiện +5 (không cộng điểm thật để không đụng Best)
-        floatTexts.push({ x: gx, y: gy - 16, born: timeMs, life: 950, size: 32, color: '#52ff9d', text: '+' + GEM_SCORE });
+        floatTexts.push({ x: gx, y: gy - 16, born: timeMs, life: 950, size: 32, color: '#f0b24a', text: '+' + GEM_SCORE });
       }
       for (let s2 = 0; s2 < 6; s2++) sparks.push({ x: gx, y: gy, born: timeMs });
-      rings.push({ x: gx, y: gy, born: timeMs, col: gm.skull ? '#ff5d76' : '#52ff9d' });
+      rings.push({ x: gx, y: gy, born: timeMs, col: gm.skull ? '#e0674f' : '#f0b24a' });
     }
   }
 
@@ -1746,8 +1978,9 @@ function resolveImpact(rotAt) {
   }
 
   /* cắm ngọt */
-  stuck.push({ a, pre: false });
+  stuck.push({ a, pre: false, stickT0: timeMs });
   stagePulseT0 = timeMs;
+  spawnWoodImpact(a);
   flying = null;
   knivesLeft--;
   sStick();
@@ -1775,7 +2008,7 @@ function resolveImpact(rotAt) {
       echoDissolveT0 = timeMs;
       addScore(5);
       sEcho();
-      floatTexts.push({ x: disc.x + disc.R + 40, y: disc.y - disc.R * 0.35, born: timeMs, life: 1000, size: 26, color: '#b8ffd9', text: t('echoBroken') + ' +5' });
+      floatTexts.push({ x: disc.x + disc.R + 40, y: disc.y - disc.R * 0.35, born: timeMs, life: 1000, size: 26, color: '#ffd8a0', text: t('echoBroken') + ' +5' });
     }
 
     if (knivesLeft <= 0) {
@@ -1891,7 +2124,7 @@ function breakDisc() {
     const b = Math.min(cap, base + (cfg.boss ? 3 : 2) * riskyCount);
     if (overkillPending) {
       sOverkill();
-      floatTexts.push({ x: LW / 2, y: disc.y - 52, born: timeMs, life: 1300, size: 44, color: '#ff5d76', text: t('overkill') });
+      floatTexts.push({ x: LW / 2, y: disc.y - 52, born: timeMs, life: 1300, size: 44, color: '#e0674f', text: t('overkill') });
     }
     addScore(b);
     floatTexts.push({ x: LW / 2, y: disc.y, born: timeMs, life: 1100, size: 36, color: riskyCount > 0 ? '#ffd23f' : cfg.accent, text: t('stageClear') + '  +' + b });
@@ -1899,7 +2132,7 @@ function breakDisc() {
     if (stageIdx > deep) {
       deep = stageIdx;
       addScore(5);
-      floatTexts.push({ x: LW / 2, y: disc.y + 46, born: timeMs, life: 1200, size: 26, color: '#52ff9d', text: t('uncharted') + ' +5' });
+      floatTexts.push({ x: LW / 2, y: disc.y + 46, born: timeMs, life: 1200, size: 26, color: '#f0b24a', text: t('uncharted') + ' +5' });
       persistSaved();
     }
   } else {
@@ -1931,7 +2164,7 @@ function newRun() {
   hideTutBanner();
   score = 0;
   bestStart = best;
-  shards = []; debris = []; floatTexts = []; rings = []; sparks = [];
+  shards = []; debris = []; floatTexts = []; rings = []; sparks = []; chips = [];
   deadKnife = null; flash = 0; shakeAmp = 0;
   killCam = null; timeScale = 1; endBreath();
   echoBrokenRun = false;                 // bóng vọng sống lại mỗi run mới
@@ -1951,14 +2184,14 @@ function tutCfg() {
   return {
     boss: false, knives: 99, speed: TUT_CRUISE, dir: 1, pattern: 'steady',
     period: 2, flipT: 2, phase0: 0, pre: [], gems: [TUT_GEM_A],
-    accent: '#35e0ff', sigil: 2,
+    wood: WOODS[0], accent: WOODS[0].fx, sigil: 2,
   };
 }
 
 function startTutorial() {
   clearTimeout(overTimer);
   $('overlay').classList.add('hidden');
-  shards = []; debris = []; floatTexts = []; rings = []; sparks = [];
+  shards = []; debris = []; floatTexts = []; rings = []; sparks = []; chips = [];
   deadKnife = null; flash = 0; shakeAmp = 0;
   killCam = null; timeScale = 1; endBreath();
   score = 0;
@@ -2075,8 +2308,8 @@ function tutorialDeath(killerA) {
     vy: -0.55, rot: 0, vr: (Math.random() < 0.5 ? -1 : 1) * 0.013,
   };
   flying = null;
-  rings.push({ x: LW / 2, y: disc.y + disc.R, born: timeMs, col: '#ff3d5a' });
-  floatTexts.push({ x: LW / 2, y: disc.y + disc.R + 50, born: timeMs, life: 1400, size: 44, color: '#ff5d76', text: '✗' });
+  rings.push({ x: LW / 2, y: disc.y + disc.R, born: timeMs, col: '#d24a30' });
+  floatTexts.push({ x: LW / 2, y: disc.y + disc.R + 50, born: timeMs, life: 1400, size: 44, color: '#e0674f', text: '✗' });
   hideTutBanner();                        // giấu hướng dẫn trong lúc "chết" cho gọn
   tutorial.deathA = killerA;              // dao thủ phạm — render sáng đỏ trong lúc deathWait
   tutorial.mode = 'deathWait';
@@ -2281,6 +2514,7 @@ function update(dt) {
   floatTexts = floatTexts.filter(f => timeMs - f.born < (f.life || 800));
   rings = rings.filter(r => timeMs - r.born < 450);
   sparks = sparks.filter(s => timeMs - s.born < 500);
+  chips = chips.filter(c => timeMs - c.born < c.life);
 }
 
 /* ================================================================
@@ -2312,7 +2546,7 @@ function render() {
     ctx.moveTo(0, 0);
     ctx.arc(0, 0, s.R, s.a0, s.a1);
     ctx.closePath();
-    ctx.fillStyle = '#101624';
+    ctx.fillStyle = '#2a1c14';
     ctx.fill();
     ctx.strokeStyle = s.col;
     ctx.globalAlpha = (1 - p) * 0.5;
@@ -2334,6 +2568,28 @@ function render() {
     }
     const pp = (timeMs - stagePulseT0) / 180;
     if (pp >= 0 && pp < 1) sc *= 1 + 0.03 * Math.sin(pp * Math.PI);   // nhún khi dao cắm
+
+    /* Thứ tự lớp để dao trông XUYÊN QUA CHÍNH GIỮA nấm (từ trên xuống):
+       ĐỈNH nấm (back) → DAO → MÁI+THÂN nấm (front) → THÂN GỖ. Đỉnh vẽ trước nên bị lưỡi dao đè/che;
+       mái dưới đỉnh + thân nấm vẽ sau nên che lưỡi dao; thân gỗ vẽ sau cùng vùi mũi/lưỡi phần trong vành. */
+    for (const gm of gems) drawGemScaled(gm, sc, gm.pinned ? 'back' : undefined);
+
+    /* DAO CẮM — lưỡi cắt ngang qua đỉnh nấm, TRƯỚC thân gỗ (mũi bị gỗ vùi, chỉ cán thò ra) */
+    for (const k of stuck) {
+      const th = disc.rot + k.a;
+      const gk = k.grow0 ? Math.min(1, (timeMs - k.grow0) / 600) : 1;
+      const cd = (disc.R - EMBED * gk + KNIFE_TIP * gk) * sc;
+      let wob = 0;                                     // thunk: dao vừa cắm rung tắt dần ~500ms
+      if (k.stickT0 && !k.pre) {
+        const tw = timeMs - k.stickT0;
+        if (tw < 520) wob = 0.17 * Math.exp(-tw / 150) * Math.sin(tw * 0.05);
+      }
+      drawKnife(k.pre ? preKnifeSpr : knifeSpr,
+        disc.x + Math.cos(th) * cd, disc.y + Math.sin(th) * cd, th - Math.PI / 2 + wob, sc * gk, gk < 1 ? 0.4 + 0.6 * gk : 1);
+    }
+
+    /* MÁI (dưới đỉnh) + THÂN của nấm đã ghim — vẽ SAU dao nên che lưỡi dao */
+    for (const gm of gems) { if (gm.pinned) drawGemScaled(gm, sc, 'front'); }
 
     ctx.save();
     ctx.translate(disc.x, disc.y);
@@ -2369,22 +2625,12 @@ function render() {
       if (stallRing > 0.02 && spikesGrown < 2) {
         ctx.beginPath();
         ctx.arc(disc.x, disc.y, (disc.R + 22) * sc, -Math.PI / 2, -Math.PI / 2 + stallRing * Math.PI * 2);
-        ctx.strokeStyle = '#ff3d5a';
+        ctx.strokeStyle = '#d24a30';
         ctx.globalAlpha = 0.5;
         ctx.lineWidth = 3;
         ctx.stroke();
         ctx.globalAlpha = 1;
       }
-    }
-
-    for (const gm of gems) drawGemScaled(gm, sc);
-    for (const k of stuck) {
-      const th = disc.rot + k.a;
-      /* gai xương Last Stand mọc dần 600ms (vô hại khi chưa mọc xong) */
-      const gk = k.grow0 ? Math.min(1, (timeMs - k.grow0) / 600) : 1;
-      const cd = (disc.R - EMBED * gk + KNIFE_TIP * gk) * sc;
-      drawKnife(k.pre ? preKnifeSpr : knifeSpr,
-        disc.x + Math.cos(th) * cd, disc.y + Math.sin(th) * cd, th - Math.PI / 2, sc * gk, gk < 1 ? 0.4 + 0.6 * gk : 1);
     }
 
     /* kill-cam: soi dao thủ phạm — sprite đỏ pulse 6Hz + cung cấm ±KNIFE_GAP.
@@ -2396,7 +2642,7 @@ function render() {
       drawKnife(redKnifeSpr, disc.x + Math.cos(th) * cd, disc.y + Math.sin(th) * cd, th - Math.PI / 2, sc, 0.45 + 0.55 * pulse);
       ctx.beginPath();
       ctx.arc(disc.x, disc.y, (disc.R + 6) * sc, th - KNIFE_GAP, th + KNIFE_GAP);
-      ctx.strokeStyle = '#ff3d5a';
+      ctx.strokeStyle = '#d24a30';
       ctx.globalAlpha = 0.55 + 0.35 * pulse;
       ctx.lineWidth = 5;
       ctx.stroke();
@@ -2431,7 +2677,7 @@ function render() {
       if (!echoSigPath) echoSigPath = new Path2D(SIGIL_D[5]);   // cache — không alloc mỗi frame
       const sig = echoSigPath;
       ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-      ctx.strokeStyle = '#b88cff';                              // FLAT: 1 nét (al lo phần mờ ảo), bỏ lõi trắng
+      ctx.strokeStyle = '#c9b79a';                              // WARM: sọ vọng xương-tro (al lo phần mờ ảo)
       ctx.globalAlpha = al;
       ctx.lineWidth = 5;
       ctx.stroke(sig);
@@ -2471,20 +2717,20 @@ function render() {
 
   /* Executioner's Breath: màn tối nhẹ khi thế giới nín thở */
   if (timeScale < 0.95 && breath) {
-    ctx.fillStyle = 'rgba(3,6,14,' + ((1 - timeScale) * 0.3).toFixed(3) + ')';
+    ctx.fillStyle = 'rgba(14,10,6,' + ((1 - timeScale) * 0.3).toFixed(3) + ')';
     ctx.fillRect(0, 0, LW, LH);
   }
 
   /* Skull Tithe: vignette đỏ dâng dần 400ms trước cơn thịnh nộ */
   const wt = (state === 'playing' && !paused) ? wrathTele() : 0;
   if (wt > 0) {
-    ctx.fillStyle = 'rgba(255,60,60,' + (wt * 0.1).toFixed(3) + ')';
+    ctx.fillStyle = 'rgba(214,74,42,' + (wt * 0.1).toFixed(3) + ')';
     ctx.fillRect(0, 0, LW, LH);
   }
 
   /* flash đỏ khi chết */
   if (flash > 0) {
-    ctx.fillStyle = 'rgba(255,45,80,' + (flash * 0.3).toFixed(3) + ')';
+    ctx.fillStyle = 'rgba(214,74,42,' + (flash * 0.3).toFixed(3) + ')';
     ctx.fillRect(0, 0, LW, LH);
   }
 
@@ -2494,18 +2740,18 @@ function render() {
     ctx.textAlign = 'center';
     ctx.font = '800 30px ' + CANVAS_FONT_STACK;
     ctx.globalAlpha = ka;
-    ctx.strokeStyle = 'rgba(5,10,20,.85)';
+    ctx.strokeStyle = 'rgba(18,12,6,.85)';
     ctx.lineWidth = 5;
     const txt = t('missedBy').replace('{n}', killCam.missDeg);
     ctx.strokeText(txt, LW / 2, disc.y + disc.R + 78);
-    ctx.fillStyle = '#ff6b81';
+    ctx.fillStyle = '#e88060';
     ctx.fillText(txt, LW / 2, disc.y + disc.R + 78);
     ctx.globalAlpha = 1;
   }
 
   /* màn mờ khi pause */
   if (paused && state === 'playing') {
-    ctx.fillStyle = 'rgba(6,10,20,.5)';
+    ctx.fillStyle = 'rgba(12,22,22,.55)';
     ctx.fillRect(0, 0, LW, LH);
     ctx.textAlign = 'center';
     ctx.fillStyle = '#fff';
@@ -2515,13 +2761,13 @@ function render() {
 }
 
 /** Ngọc hồn có scale spawn (bám theo totem đang phóng to). */
-function drawGemScaled(gm, sc) {
-  if (sc === 1) { drawGem(gm); return; }
+function drawGemScaled(gm, sc, layer) {
+  if (sc === 1) { drawGem(gm, layer); return; }
   ctx.save();
   ctx.translate(disc.x, disc.y);
   ctx.scale(sc, sc);
   ctx.translate(-disc.x, -disc.y);
-  drawGem(gm);
+  drawGem(gm, layer);
   ctx.restore();
 }
 
@@ -2552,7 +2798,7 @@ function drawFx() {
     const p = (now - s.born) / 500;
     if (p >= 1) continue;
     ctx.globalAlpha = 1 - p;
-    ctx.fillStyle = '#b8ffd9';
+    ctx.fillStyle = '#ffe6b0';
     ctx.save();
     ctx.translate(s.x + Math.sin(s.born + s.x) * p * 26, s.y - p * 34);
     ctx.rotate(p * 1.5);
@@ -2561,6 +2807,19 @@ function drawFx() {
     ctx.fillRect(-1.4, -r2, 2.8, r2 * 2);
     ctx.restore();
   }
+  for (const ch of chips) {                          // dăm gỗ văng (impact)
+    const t = (now - ch.born) / 1000;
+    const p = (now - ch.born) / ch.life;
+    if (p >= 1) continue;
+    ctx.save();
+    ctx.translate(ch.x0 + ch.vx * t, ch.y0 + ch.vy * t + 450 * t * t);
+    ctx.rotate(ch.rot0 + ch.vr * t);
+    ctx.globalAlpha = Math.min(1, 2.4 * (1 - p));
+    ctx.fillStyle = ch.col;
+    ctx.fillRect(-ch.len / 2, -ch.wdt / 2, ch.len, ch.wdt);
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
   ctx.textAlign = 'center';
   for (const f of floatTexts) {
     const p = (now - f.born) / (f.life || 800);
@@ -2568,7 +2827,7 @@ function drawFx() {
     ctx.globalAlpha = 1 - p;
     ctx.font = '800 ' + (f.size || 30) + 'px ' + CANVAS_FONT_STACK;
     ctx.fillStyle = f.color || '#fff';
-    ctx.strokeStyle = 'rgba(5,10,20,.8)';
+    ctx.strokeStyle = 'rgba(18,12,6,.82)';
     ctx.lineWidth = 5;
     const y = f.y - p * 46;
     ctx.strokeText(f.text, f.x, y);

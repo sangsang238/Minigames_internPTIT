@@ -1,7 +1,7 @@
 <!--
   Runic Blaze — QuanKA
-  Match-3 ENDLESS HIGH-SCORE (score-attack), dark-fantasy THEME PHẲNG (flat). Single-file HTML (CSS + JS inline).
-  Flat: nền đặc 1 màu, tile khối đặc + viền màu mảnh, glyph nét phẳng, nút/panel phẳng, hạt FX đặc — KHÔNG gradient/glow/gloss/đổ bóng/nút-3D.
+  Match-3 ENDLESS HIGH-SCORE (score-attack), THEME PHẲNG MATTE (flat). Single-file HTML (CSS + JS inline).
+  Flat-matte: tile KHỐI MÀU ĐẶC (fill var(--c0..5)) + ICON TRẮNG phẳng; nền teal-slate dịu có sọc dọc nhẹ; panel/nút phẳng; hạt FX màu đặc — KHÔNG neon/glow/gloss/gradient/đổ bóng/nút-3D. Bảng màu matte (đỏ/lam/lục/hổ phách/tím/hồng) trên nền teal.
   Board: 7×7 | Runes: 5–6 màu | Base match-3 thoả mãn kiểu skydom (nổ liên hoàn), KHÔNG level, KHÔNG giới hạn lượt.
   HAZARD "Hắc Ấn" (cursed rune): định kỳ sinh 1 ô nguyền có SỐ đếm ngược, bất động/không ghép/không đổi;
     mỗi lượt −1; ghép/nổ CẠNH nó (4 hướng) → phá (+250). Về 0 mà chưa phá → detonate → THUA.
@@ -34,23 +34,23 @@
 
 :root {
   --ui-font: 'Google Sans Flex', system-ui, sans-serif;
-  /* Background palette — deep purple-black nebula */
-  --bg-a: #090614;
-  --bg-b: #180b2e;
-  --bg-c: #0e0822;
-  /* Glass panels */
+  /* Background — calm flat teal-slate (matte) */
+  --bg-a: #223438;
+  --bg-b: #22353a;
+  --bg-c: #26393e;
+  /* Panels */
   --glass: rgba(255,255,255,0.06);
-  --glass-border: rgba(255,255,255,0.11);
+  --glass-border: rgba(255,255,255,0.13);
   /* Text */
-  --text: #eddeff;
-  --text-soft: rgba(237,222,255,0.5);
-  /* Rune colors (0 flame, 1 droplet, 2 leaf, 3 bolt, 4 moon, 5 star) */
-  --c0: #ff3d5a;
-  --c1: #2f7bff;
-  --c2: #2dff8a;
-  --c3: #ffb830;
-  --c4: #c060ff;
-  --c5: #7fefff;
+  --text: #eaf1f1;
+  --text-soft: rgba(230,240,240,0.55);
+  /* Rune fills — solid matte tiles (0 flame,1 water,2 nature,3 bolt,4 moon,5 star) */
+  --c0: #df5b4c;
+  --c1: #4a86c5;
+  --c2: #5aa85f;
+  --c3: #d89a3a;
+  --c4: #8f6fbf;
+  --c5: #d76f9c;
   --sat: env(safe-area-inset-top, 0px);
 }
 
@@ -60,7 +60,7 @@ body {
   font-family: var(--ui-font);
   font-weight: 700;
   color: var(--text);
-  background: var(--bg-c);
+  background: repeating-linear-gradient(90deg, var(--bg-c) 0 32px, var(--bg-b) 32px 64px);
   -webkit-user-select: none;
   user-select: none;
   touch-action: none;
@@ -105,7 +105,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
-  background: rgba(20, 12, 40, 0.55);
+  background: rgba(0,0,0,.2);
   border: 2px solid rgba(255, 255, 255, 0.16);
   border-radius: 14px;
   padding: 5px 8px 6px 4px;       /* icon ghim sát mép trái (chuẩn chung) */
@@ -173,7 +173,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   position: absolute;
   inset: -14%;
   border-radius: 50%;
-  border: 2px dashed rgba(160,90,255,.10);
+  border: 2px dashed rgba(255,255,255,.06);
   animation: runeRing 60s linear infinite;
   pointer-events: none;
 }
@@ -234,29 +234,29 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 }
 
 /* Nền khối đặc phẳng theo màu rune (viền màu mảnh, KHÔNG glow) */
-.tile-0 .tile-inner { background:#2f0810; border:1.5px solid rgba(255,61,90,.55); }
-.tile-1 .tile-inner { background:#08132e; border:1.5px solid rgba(47,123,255,.58); }
-.tile-2 .tile-inner { background:#082414; border:1.5px solid rgba(45,255,138,.55); }
-.tile-3 .tile-inner { background:#241705; border:1.5px solid rgba(255,184,48,.55); }
-.tile-4 .tile-inner { background:#180730; border:1.5px solid rgba(192,96,255,.55); }
-.tile-5 .tile-inner { background:#04242c; border:1.5px solid rgba(127,239,255,.62); }
+.tile-0 .tile-inner { background:var(--c0); border:2px solid rgba(0,0,0,.18); }
+.tile-1 .tile-inner { background:var(--c1); border:2px solid rgba(0,0,0,.18); }
+.tile-2 .tile-inner { background:var(--c2); border:2px solid rgba(0,0,0,.18); }
+.tile-3 .tile-inner { background:var(--c3); border:2px solid rgba(0,0,0,.18); }
+.tile-4 .tile-inner { background:var(--c4); border:2px solid rgba(0,0,0,.18); }
+.tile-5 .tile-inner { background:var(--c5); border:2px solid rgba(0,0,0,.18); }
 /* Prism — tinh thể ám tím, viền ánh bạc-tím */
 .tile-p .tile-inner {
-  background:#150e26;
-  border: 1.5px solid rgba(216,180,255,.65);
+  background:#6a6f96;
+  border: 2px solid rgba(0,0,0,.18);
 }
 
 /* Cursed rune — ấn nguyền đỏ máu với số đếm ngược (không ghép/đổi được) */
 .tile-cursed .tile-inner {
-  background:#1a0712;
-  border: 1.5px solid rgba(255,60,90,.6);
+  background:#5f2a2f;
+  border: 2px solid rgba(0,0,0,.22);
   cursor: default;
 }
 .tile-cursed .tile-inner svg { width: 86%; height: 86%; }
 .tile-cursed.cursed-urgent .tile-inner { animation: cursePulse .5s ease-in-out infinite; }
 @keyframes cursePulse {
-  0%, 100% { border-color: rgba(255,60,90,.6); background:#1a0712; }
-  50%      { border-color: #ff5a7a; background:#3a0a18; }
+  0%, 100% { border-color: rgba(0,0,0,.22); background:#5f2a2f; }
+  50%      { border-color: #ff7a6a; background:#7a3238; }
 }
 
 /* Special: nhịp mờ phẳng (opacity, KHÔNG glow) */
@@ -294,13 +294,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   transform: scale(1.1);
   border-width: 2px !important;
 }
-.tile-0.selected .tile-inner { box-shadow: 0 0 0 2px rgba(255,61,90,.9); }
-.tile-1.selected .tile-inner { box-shadow: 0 0 0 2px rgba(47,123,255,.9); }
-.tile-2.selected .tile-inner { box-shadow: 0 0 0 2px rgba(45,255,138,.9); }
-.tile-3.selected .tile-inner { box-shadow: 0 0 0 2px rgba(255,184,48,.9); }
-.tile-4.selected .tile-inner { box-shadow: 0 0 0 2px rgba(192,96,255,.9); }
-.tile-5.selected .tile-inner { box-shadow: 0 0 0 2px rgba(127,239,255,.9); }
-.tile-p.selected .tile-inner { box-shadow: 0 0 0 2px rgba(255,255,255,.9); }
+.tile.selected .tile-inner { box-shadow: 0 0 0 3px #ffffff; }
 
 /* Hint pulse — gợi ý nước đi */
 @keyframes hintPulse {
@@ -386,8 +380,8 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   top: 24%;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(20,10,40,.92);
-  border: 1px solid rgba(200,140,255,.35);
+  background: rgba(18,32,36,.94);
+  border: 1px solid rgba(255,255,255,.2);
   color: #fff;
   border-radius: 14px;
   padding: 10px 20px;
@@ -412,6 +406,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   z-index: 220;
   pointer-events: none;
   opacity: 0;
+  transition: opacity .3s ease;
   font-size: 30px;
   font-weight: 800;
   letter-spacing: 1.5px;
@@ -419,7 +414,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   color: #fff;
   white-space: nowrap;
 }
-#result-banner.lose { color: #c060ff; }
+#result-banner.lose { color: #df5b4c; }
 @keyframes resultPop {
   0%   { opacity: 0; transform: translate(-50%,-50%) scale(.5); }
   20%  { opacity: 1; transform: translate(-50%,-50%) scale(1.15); }
@@ -515,7 +510,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(4,2,12,.72);
+  background: rgba(6,16,18,.72);
   opacity: 1;
   transition: opacity .25s;
 }
@@ -525,8 +520,8 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   padding: 26px 24px 22px;
   text-align: center;
   border-radius: 22px;
-  background: #1a0c33;
-  border: 1.5px solid rgba(170,110,255,.3);
+  background: #2f4a50;
+  border: 1.5px solid rgba(255,255,255,.16);
   transform: scale(1);
   transition: transform .25s;
 }
@@ -563,7 +558,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(4,2,12,.78);
+  background: rgba(6,16,18,.78);
   opacity: 1;
   transition: opacity .25s;
 }
@@ -573,8 +568,8 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   padding: 20px 22px 18px;
   text-align: center;
   border-radius: 22px;
-  background: #1a0c33;
-  border: 1.5px solid rgba(170,110,255,.3);
+  background: #2f4a50;
+  border: 1.5px solid rgba(255,255,255,.16);
   transform: scale(1);
   transition: transform .25s;
 }
@@ -606,7 +601,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 .ob-nav { display: flex; gap: 12px; justify-content: center; }
 .btn3d.ob-skip-btn {
   --surface-height: 46px; --surface-padding-x: 22px; --surface-font-size: 15px;
-  --surface-color: #3a2b56;
+  --surface-color: #33474d;
 }
 
 /* ── Pause veil ────────────────────────────────────────────────── */
@@ -617,7 +612,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(6,3,16,.74);
+  background: rgba(8,18,20,.74);
   opacity: 1;
   transition: opacity .2s;
 }
@@ -1416,7 +1411,7 @@ const ADS_EVERY      = 3;    // xin quảng cáo mỗi 3 lần thua
 // Cursed Runes ("Hắc Ấn") — hazard đếm ngược, càng về sau càng khó
 const CURSE_GRACE        = 4;         // số lượt đầu chưa sinh hắc ấn
 const CURSE_DEFUSE_BONUS = 250;       // điểm thưởng khi phá 1 hắc ấn
-const CURSE_HEX          = '#ff3d5a'; // màu FX nguyền (đỏ máu)
+const CURSE_HEX          = '#e05a4d'; // màu FX nguyền
 // Events (mốc điểm)
 const SURGE_EVERY = 5000;             // Arcane Surge — tặng 1 rune special
 const STORM_EVERY = 12000;            // Blaze Storm — bão nổ dây chuyền
@@ -1824,8 +1819,7 @@ function mainLoop(ts) {
 /* Sigil khắc PHẲNG — 2 nét: thân màu rune + nét phụ tím nhạt (KHÔNG bloom/glow).
  * Thẩm mỹ dark fantasy phẳng: nét khắc arcane đặc trên đá obsidian, KHÔNG bóng kẹo. */
 function glyphStrokes(hex, d, extra) {
-  return `<path d="${d}" fill="none" stroke="${hex}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`
-       + `<path d="${d}" fill="none" stroke="#f4ecff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`
+  return `<path d="${d}" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`
        + (extra || '');
 }
 
@@ -1848,7 +1842,7 @@ function runeGlyph(color) {
     case 4: // MOON — trăng khuyết + tinh tú
       return glyphStrokes('#c060ff',
         'M62 13 A37 37 0 1 0 62 87 A29 29 0 1 1 62 13 Z',
-        '<circle cx="35" cy="35" r="3" fill="#e0aaff"/><circle cx="29" cy="55" r="2.2" fill="#e0aaff"/><circle cx="35" cy="70" r="2.6" fill="#e0aaff"/>');
+        '<circle cx="35" cy="35" r="3" fill="#fff"/><circle cx="29" cy="55" r="2.2" fill="#fff"/><circle cx="35" cy="70" r="2.6" fill="#fff"/>');
     case 5: // STAR — sao 4 cánh
       return glyphStrokes('#7fefff',
         'M50 10 L58 42 L90 50 L58 58 L50 90 L42 58 L10 50 L42 42 Z',
@@ -1878,7 +1872,7 @@ function specialOverlay(kind) {
   if (kind === K_NOVA) {
     return `<g class="nova-ring">
       <circle cx="50" cy="50" r="34" fill="none" stroke="#fff" stroke-width="3.5" stroke-dasharray="9 7"/>
-      <circle cx="50" cy="50" r="43" fill="none" stroke="#7fefff" stroke-width="2"/>
+      <circle cx="50" cy="50" r="43" fill="none" stroke="#fff" stroke-width="2"/>
       <path d="M50 2 L53 10 L50 18 L47 10 Z" fill="#fff"/>
       <path d="M50 2 L53 10 L50 18 L47 10 Z" fill="#fff" transform="rotate(90 50 50)"/>
       <path d="M50 2 L53 10 L50 18 L47 10 Z" fill="#fff" transform="rotate(180 50 50)"/>
@@ -1890,7 +1884,7 @@ function specialOverlay(kind) {
 
 function prismArt() {
   // tinh thể ám tím + vòng phép quay với nan quang phổ mờ — huyền bí, không "kẹo"
-  const cols = ['#ff3d5a', '#ffb830', '#2dff8a', '#7fefff', '#2f7bff', '#c060ff'];
+  const cols = ['#df5b4c', '#d89a3a', '#5aa85f', '#d76f9c', '#4a86c5', '#8f6fbf'];
   let spokes = '', ticks = '';
   for (let i = 0; i < 6; i++) {
     const a = (i * 60 - 90) * Math.PI / 180;
@@ -1900,20 +1894,20 @@ function prismArt() {
     ticks += `<circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" r="2.6" fill="${cols[i]}"/>`;
   }
   return `<g class="prism-core">
-      <circle cx="50" cy="50" r="43" fill="none" stroke="#7a5aad" stroke-width="2" stroke-dasharray="7 6"/>
+      <circle cx="50" cy="50" r="43" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2" stroke-dasharray="7 6"/>
       ${spokes}${ticks}
     </g>
-    <path d="M50 24 L66 44 L50 76 L34 44 Z" fill="#5a3a9e" stroke="#e6d2ff" stroke-width="3" stroke-linejoin="round"/>
-    <path d="M50 24 L50 76 M34 44 L66 44" fill="none" stroke="#c9b4ff" stroke-width="1.6"/>
+    <path d="M50 24 L66 44 L50 76 L34 44 Z" fill="#eef1f6" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M50 24 L50 76 M34 44 L66 44" fill="none" stroke="rgba(0,0,0,.3)" stroke-width="1.6"/>
     <circle cx="50" cy="47" r="5.5" fill="#fff"/>`;
 }
 
 /* Cursed rune — ấn nguyền đỏ máu: đĩa tối viền đỏ, gai + xích, SỐ đếm ngược lớn */
 function cursedArt(n) {
-  return `<circle cx="50" cy="50" r="41" fill="#1a0712" stroke="#c01a3e" stroke-width="4"/>`
-       + `<path d="M50 11 L56 23 L50 19 L44 23 Z" fill="#ff3d5a"/>`
-       + `<path d="M21 41 Q13 50 21 59 M79 41 Q87 50 79 59" fill="none" stroke="#ff6a86" stroke-width="3" stroke-linecap="round"/>`
-       + `<text x="50" y="67" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="900" font-size="46" fill="#ffd23f" stroke="#5a0616" stroke-width="1.6" paint-order="stroke">${n}</text>`;
+  return `<circle cx="50" cy="50" r="41" fill="#5f2a2f" stroke="#e05a4d" stroke-width="4"/>`
+       + `<path d="M50 11 L56 23 L50 19 L44 23 Z" fill="#ffd257"/>`
+       + `<path d="M21 41 Q13 50 21 59 M79 41 Q87 50 79 59" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="3" stroke-linecap="round"/>`
+       + `<text x="50" y="67" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="900" font-size="46" fill="#ffd23f" stroke="#3a1214" stroke-width="1.6" paint-order="stroke">${n}</text>`;
 }
 
 function tileSVG(color, kind) {
@@ -2507,7 +2501,7 @@ function stepBg(dt) {
 /* ================================================================
  * §13. FX canvas — particles / beam / nova ring / prism arc
  * ================================================================ */
-const RUNE_HEX = ['#ff3d5a', '#2f7bff', '#2dff8a', '#ffb830', '#c060ff', '#7fefff', '#ffffff'];
+const RUNE_HEX = ['#df5b4c', '#4a86c5', '#5aa85f', '#d89a3a', '#8f6fbf', '#d76f9c', '#ffffff'];
 let particles = [];
 const MAX_PARTICLES = 420;
 
@@ -3016,7 +3010,7 @@ async function doSwap(r1, c1, r2, c2) {
       ended = true;
       const ctr = boardCellCenter(boom.r, boom.c);
       spawnFlash(ctr.x, ctr.y, cellPx * 3.2);
-      spawnBurst(ctr.x, ctr.y, '#ff3d5a', 30, 380);
+      spawnBurst(ctr.x, ctr.y, '#df5b4c', 30, 380);
       screenShake(18);
       await sleep(220);
       if (ep !== levelEpoch) return;
@@ -3256,7 +3250,7 @@ function arcaneSurge() {
 async function blazeStorm(ep) {
   const picks = randomNormals(4);
   if (picks.length < 3) return;
-  showResultBanner(t('blazeStorm'), false);
+  showResultBanner(t('blazeStorm'), false, 1400);
   sStripe();
   const initial = [];
   for (const p of picks) {
@@ -3343,17 +3337,22 @@ function showToast(msg) {
  * ================================================================ */
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
-function showResultBanner(text, lose) {
+let bannerTimer = null;
+function showResultBanner(text, lose, holdMs) {
   $('combo-badge').classList.remove('cascade-anim');   // tránh đè lên banner
   const el = $('result-banner');
+  clearTimeout(bannerTimer); bannerTimer = null;
   el.textContent = text;
   el.classList.toggle('lose', !!lose);
   el.classList.remove('show');
   void el.offsetWidth;
   el.classList.add('show');
+  // event flash → tự ẩn sau holdMs; Game Over gọi không có holdMs → giữ tới Play Again
+  if (holdMs) bannerTimer = setTimeout(hideResultBanner, holdMs);
 }
 function hideResultBanner() {
   const el = $('result-banner');
+  clearTimeout(bannerTimer); bannerTimer = null;
   el.classList.remove('show');
   el.classList.remove('lose');
 }

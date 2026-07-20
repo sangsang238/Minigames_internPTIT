@@ -350,8 +350,8 @@ body {
    riêng cần Chromium 104+ (WebView cũ sẽ drop → shake câm) */
 @keyframes tileShake {
   0%, 100% { margin-left: 0; }
-  20% { margin-left: -5px; } 40% { margin-left: 5px; }
-  60% { margin-left: -3px; } 80% { margin-left: 3px; }
+  20% { margin-left: -2.5px; } 40% { margin-left: 2.5px; }
+  60% { margin-left: -1.5px; } 80% { margin-left: 1.5px; }
 }
 .tile.shake { animation: tileShake .24s ease-in-out; }
 
@@ -1794,11 +1794,10 @@ function handleTap(r, c) {
   }
 
   if (same && path) { doMatch([sr, sc], [r, c], path); return; }
-  // Không nối được / khác loại → rung nhẹ cả hai, đổi ô chọn
+  // Không nối được / khác loại → rung nhẹ cả hai, bỏ chọn (không chọn tile mới)
   SND.bad();
   shakeTile(sr, sc); shakeTile(r, c);
   deselect();
-  select(r, c);
 }
 
 function select(r, c) {
