@@ -903,10 +903,11 @@ function readLocal() {
 
 /** Gộp data native + localStorage: số lấy MAX, cờ lấy OR — không bao giờ mất best.
  *  Cặp echo (eS/eK) phải đi CÙNG NHAU: lấy từ nguồn có best cao hơn (echo gắn với run best).
- *  skipNative: ?reset=1 phải bỏ qua window.data/?data= (payload cũ còn trong session). */
+ *  skipNative: ?reset=1 phải bỏ qua window.data/?data= (payload cũ còn trong session).
+ *  Trả thêm `game` (run snapshot) từ localStorage nếu có. */
 function loadSaved(skipNative) {
-  const out = { best: 0, tut: 0, muted: 0, mutedSet: false, deep: -1, eS: -1, eK: -1 };
-  const pick = raw => {
+  const out = { best: 0, tut: 0, muted: 0, mutedSet: false, deep: -1, eS: -1, eK: -1, game: null };
+  const pick = (raw, fromNative) => {
     try {
       const o = JSON.parse(raw || 'null');
       if (o) {
@@ -919,19 +920,25 @@ function loadSaved(skipNative) {
         if (Number.isFinite(+o.deep)) out.deep = Math.max(out.deep, Math.floor(+o.deep));
         if (o.tut) out.tut = 1;
         if (typeof o.muted !== 'undefined') { out.muted = o.muted ? 1 : 0; out.mutedSet = true; }
+        // game snapshot chỉ lấy từ localStorage (native không giữ phần này)
+        if (!fromNative && o.game && typeof o.game.score === 'number') out.game = o.game;
       }
     } catch (e) { /* data bẩn → bỏ qua */ }
   };
-  if (!skipNative) pick(getInitialData());
-  pick(readLocal());      // local đọc sau → thắng cho cờ muted (người chơi vừa chỉnh)
+  if (!skipNative) pick(getInitialData(), true);
+  pick(readLocal(), false);      // local đọc sau → thắng cho cờ muted (người chơi vừa chỉnh)
   return out;
 }
 
-/** Data NHẸ → native + localStorage (best/tut/muted/deep/echo — game-common §1.2). */
+/** Data NHẸ → native + localStorage (best/tut/muted/deep/echo — game-common §1.2).
+ *  Kèm game snapshot nếu đang chơi (game-common §1.2 tier-2). */
 function persistSaved() {
   const light = { best, tut: tutSeen ? 1 : 0, muted: muted ? 1 : 0, deep, eS: echoS, eK: echoK };
-  saveData(light);
-  saveLocal(light);
+  saveData(light);   // data nhẹ → native
+  const snap = (state === 'playing' && score > 0 && !tutorial)
+    ? { score, stageIdx, knivesLeft, stuck: stuck.map(k => ({ a: k.a, pre: k.pre })), gems: gems.map(g => ({ a: g.a, skull: g.skull })) }
+    : null;
+  saveLocal({ ...light, game: snap });
 }
 
 /* ================================================================
@@ -1928,17 +1935,31 @@ function resolveImpact(rotAt) {
      Nấm-boss +8 nhưng chọc thủng là totem NỔI GIẬN — vọt tốc 0.5s sau telegraph 0.4s */
   for (let i = gems.length - 1; i >= 0; i--) {
     if (!gems[i].pinned && angDiff(a, gems[i].a) < GEM_ARC) {
-      const gm = gems[i];
-      gm.aFrom = gm.a; gm.a = a;                   // dời nấm về ĐÚNG góc dao → lưỡi dao xuyên qua GIỮA nấm
-      gm.pinned = true; gm.pinT0 = timeMs;         // GHIM vào thân — nấm ở lại, KHÔNG biến mất
+      const gm = gems.splice(i, 1)[0];             // Cắt đứt nấm: xoá khỏi totem
       const th = disc.rot + gm.a;
       const gx = disc.x + Math.cos(th) * (disc.R + 13);
       const gy = disc.y + Math.sin(th) * (disc.R + 13);
+      
+      // Spawn 2 mảnh nấm văng xuống (debris)
+      debris.push({
+        isGem: true, gm, half: -1,
+        x: gx, y: gy,
+        vx: Math.cos(th) * 0.1 - Math.sin(th) * 0.15,
+        vy: Math.sin(th) * 0.1 + Math.cos(th) * 0.15,
+        rot: th, vr: -0.012, born: timeMs
+      });
+      debris.push({
+        isGem: true, gm, half: 1,
+        x: gx, y: gy,
+        vx: Math.cos(th) * 0.1 + Math.sin(th) * 0.15,
+        vy: Math.sin(th) * 0.1 - Math.cos(th) * 0.15,
+        rot: th, vr: 0.012, born: timeMs
+      });
+
       const val = gm.skull ? 8 : GEM_SCORE;
       if (gm.skull) {
         sShriek();
         const start = Math.max(timeMs + 400, lastWrathEnd);
-        // dir đóng băng THEO TỪNG CƠN — gem thứ 2 không được đảo hướng cơn đã lên lịch
         wraths.push({ start, end: start + 500, dir: disc.w >= 0 ? 1 : -1 });
         lastWrathEnd = start + 500;
       } else {
@@ -2016,6 +2037,7 @@ function resolveImpact(rotAt) {
       if (lastStand && lastStand.mult > 1) overkillPending = true;
       pendingBreakAt = timeMs + 140;     // để dao cuối kịp hiện rồi mới vỡ
     }
+    persistSaved();
   } else {
     tutorialOnStick();
   }
@@ -2154,6 +2176,36 @@ function addScore(n) {
     best = score;
     persistSaved();
   }
+}
+
+/** Khôi phục ván dở từ localStorage (game-common §1.2). */
+function resumeRun(g) {
+  clearTimeout(overTimer);
+  $('overlay').classList.add('hidden');
+  tutorial = null;
+  hideTutBanner();
+  score = Number.isFinite(+g.score) ? Math.floor(+g.score) : 0;
+  bestStart = best;
+  shards = []; debris = []; floatTexts = []; rings = []; sparks = []; chips = [];
+  deadKnife = null; flash = 0; shakeAmp = 0;
+  killCam = null; timeScale = 1; endBreath();
+  echoBrokenRun = false;
+
+  spawnStage(Number.isFinite(+g.stageIdx) ? Math.floor(+g.stageIdx) : 0, false);
+  
+  if (Number.isFinite(+g.knivesLeft)) knivesLeft = g.knivesLeft;
+  if (Array.isArray(g.stuck)) {
+    stuck = g.stuck.map(k => ({ a: k.a, pre: !!k.pre, stickT0: 0 }));
+  }
+  if (Array.isArray(g.gems)) {
+    gems = g.gems.map(gm => ({ a: gm.a, skull: !!gm.skull }));
+  }
+
+  updateScoreHud();
+  updateBestHud();
+  updateStageHud();
+  state = 'playing';
+  paused = false;
 }
 
 /** Ván mới (boot / Play Again / onRetryLevel) — không còn menu, vào thẳng. */
@@ -2444,6 +2496,7 @@ function update(dt) {
   /* pha break → stage kế (tutorial thì đứng chờ tutDone) */
   if (phase === 'break' && timeMs - breakT0 >= BREAK_MS && !tutorial && state === 'playing') {
     spawnStage(stageIdx + 1, false);
+    persistSaved();   // lưu tiến độ sau mỗi totem bị phá
   }
 
   /* dao cuối vừa cắm → vỡ totem */
@@ -2556,8 +2609,11 @@ function render() {
   }
   ctx.globalAlpha = 1;
 
-  /* dao văng (debris) */
-  for (const d of debris) drawKnife(d.spr, d.x, d.y, d.rot, 1, Math.min(1, 2.5 - (timeMs - d.born) / 1000));
+  /* dao văng (debris) + nấm vỡ */
+  for (const d of debris) {
+    if (d.isGem) drawGemDebris(d);
+    else drawKnife(d.spr, d.x, d.y, d.rot, 1, Math.min(1, 2.5 - (timeMs - d.born) / 1000));
+  }
 
   /* totem + dao cắm + ngọc */
   if (cfg && phase !== 'break') {
@@ -2768,6 +2824,78 @@ function drawGemScaled(gm, sc, layer) {
   ctx.scale(sc, sc);
   ctx.translate(-disc.x, -disc.y);
   drawGem(gm, layer);
+  ctx.restore();
+}
+
+/** Vẽ mảnh nấm vỡ rơi xuống */
+function drawGemDebris(d) {
+  const gm = d.gm;
+  const boss = gm.skull;
+
+  const capW = boss ? 30 : 26, capH = boss ? 16 : 14;
+  const stemH = boss ? 7 : 6,  stemW = boss ? 8 : 6.5;
+
+  const capCol = boss ? '#a3271a' : '#c33f1e';
+  const capDk  = boss ? '#4a140c' : '#5e1c0d';
+  const spotC  = boss ? '#e7d0a6' : '#f1e3c6';
+  const stemC  = '#eadfc6', stemDk = '#b39a6d';
+
+  ctx.save();
+  ctx.translate(d.x, d.y);
+  ctx.rotate(d.rot + Math.PI / 2);
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+
+  ctx.beginPath();
+  if (d.half === -1) ctx.rect(-100, -100, 100, 200);
+  else ctx.rect(0, -100, 100, 200);
+  ctx.clip();
+
+  const cw = capW, chh = capH;
+  const capCY = -stemH;
+  const apexY = capCY - chh;
+  const lip = chh * 0.16;
+
+  const capP = new Path2D();
+  capP.moveTo(-cw / 2, capCY + lip);
+  capP.quadraticCurveTo(-cw / 2, apexY, 0, apexY);
+  capP.quadraticCurveTo(cw / 2, apexY, cw / 2, capCY + lip);
+  capP.quadraticCurveTo(0, capCY + lip + chh * 0.12, -cw / 2, capCY + lip);
+  capP.closePath();
+
+  const spots = boss
+    ? [[-0.24, 0.55, 2.6], [0.16, 0.66, 2.1], [0.36, 0.30, 1.8], [-0.02, 0.86, 1.7]]
+    : [[-0.22, 0.56, 2.3], [0.22, 0.60, 2.0], [0.03, 0.84, 1.6], [0.37, 0.32, 1.5]];
+
+  // Thân nấm
+  ctx.beginPath();
+  ctx.moveTo(-stemW / 2, 1);
+  ctx.quadraticCurveTo(-stemW * 0.58, capCY * 0.5, -stemW * 0.4, capCY + 1);
+  ctx.lineTo(stemW * 0.4, capCY + 1);
+  ctx.quadraticCurveTo(stemW * 0.58, capCY * 0.5, stemW / 2, 1);
+  ctx.closePath();
+  ctx.fillStyle = stemC; ctx.fill();
+  ctx.strokeStyle = stemDk; ctx.lineWidth = 1.3; ctx.stroke();
+
+  // Mũ nấm
+  ctx.fillStyle = capCol; ctx.fill(capP);
+  ctx.save(); ctx.clip(capP);
+  ctx.strokeStyle = capDk; ctx.globalAlpha = 0.85; ctx.lineWidth = 2.6;
+  ctx.beginPath();
+  ctx.moveTo(-cw / 2, capCY + lip); ctx.quadraticCurveTo(0, capCY + lip + chh * 0.16, cw / 2, capCY + lip);
+  ctx.stroke(); ctx.globalAlpha = 1;
+  ctx.fillStyle = spotC;
+  for (const sp of spots) { ctx.beginPath(); ctx.arc(sp[0] * cw, capCY - sp[1] * chh, sp[2], 0, Math.PI * 2); ctx.fill(); }
+  ctx.restore();
+  ctx.strokeStyle = capDk; ctx.lineWidth = 1.5; ctx.stroke(capP);
+
+  // Viền cắt dọc
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(0, capCY + lip);
+  ctx.lineTo(0, apexY);
+  ctx.stroke();
+
   ctx.restore();
 }
 
@@ -3020,8 +3148,9 @@ function boot() {
   updateScoreHud();
   updateBestHud();
   requestAnimationFrame(loop);
-  /* Không còn menu: lần đầu chơi → tutorial; các lần sau vào thẳng ván */
-  if (!tutSeen) startTutorial();
+  // Restore ván dở nếu có; không thì: lần đầu tutorial, sau đó newRun
+  if (sv.game && sv.game.score > 0) resumeRun(sv.game);
+  else if (!tutSeen) startTutorial();
   else newRun();
 }
 

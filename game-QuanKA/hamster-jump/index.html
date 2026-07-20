@@ -869,21 +869,24 @@ function getInitialData() {
   return fromWin != null ? fromWin : (fromUrl || '');
 }
 
-/** Đọc {best, tut, mute} từ native (ưu tiên) + localStorage; lấy max để không mất dữ liệu. */
+/** Đọc {best, tut, mute} từ native (ưu tiên) + localStorage; lấy max để không mất dữ liệu.
+ *  Trả thêm `game` (tower snapshot) từ localStorage nếu có. */
 function loadSaved() {
-  const out = { best: 0, tut: 0, mute: 0 };
-  const pick = raw => {
+  const out = { best: 0, tut: 0, mute: 0, game: null };
+  const pick = (raw, fromNative) => {
     try {
       const o = JSON.parse(raw || 'null');
       if (o) {
         if (Number.isFinite(+o.best)) out.best = Math.max(out.best, Math.floor(+o.best));
         if (o.tut) out.tut = 1;
         if (o.mute) out.mute = 1;
+        // game snapshot chỉ lấy từ localStorage (native không giữ phần này)
+        if (!fromNative && o.game && Array.isArray(o.game.tower)) out.game = o.game;
       }
     } catch (e) { /* data bẩn → bỏ qua */ }
   };
-  pick(getInitialData());
-  pick(readLocal());
+  pick(getInitialData(), true);
+  pick(readLocal(), false);
   return out;
 }
 
@@ -2408,8 +2411,12 @@ function updateStreakHud() {
 
 function persistSaved() {
   const light = { best, tut: tutSeen ? 1 : 0, mute: muted ? 1 : 0 };
-  saveData(light);
-  saveLocal(light);
+  saveData(light);   // data nhẹ → native
+  // game snapshot: chỉ lưu khi đang chơi và táp có ít nhất 2 tầng (khác miếng gốc)
+  const snap = (state === 'playing' && tower.length > 1)
+    ? { tower: tower.map(({ cx, kind, w, seed }) => ({ cx, kind, w, seed })), combo }
+    : null;
+  saveLocal({ ...light, game: snap });
 }
 
 /* Điểm = SỐ PHÔ MAI trong tháp (kể cả miếng gốc). Gọi sau mỗi lần tháp
@@ -2491,6 +2498,7 @@ function pinSlider(s) {
     }
   }
   scheduleCycle();
+  if (!tutorial) persistSaved();   // lưu táp sau mỗi miếng đáp thành công
 }
 
 /* Biến 1 miếng đang trượt thành miếng rơi tự do */
@@ -3188,6 +3196,32 @@ function localizeDom() {
   $('back-btn').setAttribute('aria-label', t('back'));
 }
 
+/** Khôi phục tháp từ localStorage snapshot — chơi tiếp ở đúng chiều cao đã đạt. */
+function tryRestoreTower(g) {
+  try {
+    resetWorld();   // thiết lập canvas + ham + bestStart, reset visual state
+    tower = g.tower.map(function (t) {
+      return {
+        cx:   Number.isFinite(+t.cx)   ? +t.cx   : LW / 2,
+        kind: t.kind || 'normal',
+        w:    Number.isFinite(+t.w)    ? +t.w    : BLOCK_W,
+        seed: t.seed || 0,
+      };
+    });
+    combo = Number.isFinite(+g.combo) ? Math.floor(+g.combo) : 0;
+    ham.x = topCx();
+    ham.state = 'idle';
+    syncScore();         // score = tower.length
+    updateStreakHud();
+    state = 'playing';
+    scheduleCycle();
+  } catch (e) {
+    resetWorld();
+    state = 'playing';
+    scheduleCycle();
+  }
+}
+
 function boot() {
   LANG = getLanguage();
   applyUiFont(LANG);
@@ -3227,11 +3261,16 @@ function boot() {
   localizeDom();
   resize();
   window.addEventListener('resize', resize);
-  resetWorld();
-  /* KHÔNG còn menu: vào thẳng gameplay. Lần đầu (chưa xem tutorial) -> tutorial,
-     xong tutorial chảy thẳng vào ván thật (không reset). */
-  if (!tutSeen) startTutorial();
-  else { state = 'playing'; scheduleCycle(); }
+  /* Không còn menu: restore ván dở nếu có, không thì bắt đầu mới.
+     Lần đầu chưa xem tutorial → tutorial, xong trướt thẳng vào ván thật. */
+  const savedGame = saved.game;
+  if (savedGame && savedGame.tower && savedGame.tower.length > 1 && tutSeen) {
+    tryRestoreTower(savedGame);
+  } else {
+    resetWorld();
+    if (!tutSeen) startTutorial();
+    else { state = 'playing'; scheduleCycle(); }
+  }
 
   /* input */
   canvas.addEventListener('pointerdown', function (e) { e.preventDefault(); onTap(); });

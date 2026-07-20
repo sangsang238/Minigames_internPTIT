@@ -3024,7 +3024,10 @@ async function doSwap(r1, c1, r2, c2) {
     if (ep !== levelEpoch) return;
     checkEnd(ep);
   } finally {
-    if (ep === levelEpoch) busy = false;
+    if (ep === levelEpoch) {
+      if (!ended) saveCurrentState();   // persist board sau mỗi nước đi hợp lệ
+      busy = false;
+    }
   }
 }
 
@@ -3414,17 +3417,32 @@ function fitOverlayScores() {
 }
 
 /* ================================================================
- * §20. Persistence (game-common §1.2) — chỉ best/muted/tutorialSeen
- *      Score-attack: KHÔNG lưu ván dở, mở lại = ván mới (giống skydom).
+ * §20. Persistence (game-common §1.2) — 2 tầng:
+ *   - persistBest: data nhẹ → native + localStorage
+ *   - saveCurrentState: board snapshot → localStorage (để restore khi refresh)
  * ================================================================ */
 function persistBest() {
   const p = { best, muted, tutorialSeen };
   saveData(p);   // native save_data
-  saveLocal(p);  // localStorage
+  // localStorage cập nhật qua saveCurrentState / clearSavedGame
 }
-function persistLight()     { persistBest(); }
-function saveCurrentState() { persistBest(); }   // endless: không snapshot ván
-function clearSavedGame()   { persistBest(); }
+function persistLight() { persistBest(); }
+
+/** Lưu toàn bộ trạng thái ván vào localStorage (game-common §1.2). */
+function saveCurrentState() {
+  if (ended || !board.length) return;
+  const snap = board.map(row => row.map(t => t ? { c: t.color, k: t.kind } : null));
+  saveLocal({
+    best, muted, tutorialSeen,
+    game: { snap, score, turnCount, cursedIdx, sinceCursed, nColors, nextSurge, nextStorm },
+  });
+}
+
+/** Xoá game state khỏi localStorage (giữ meta: best/muted/tut). */
+function clearSavedGame() {
+  saveData({ best, muted, tutorialSeen });
+  saveLocal({ best, muted, tutorialSeen });
+}
 
 /* ================================================================
  * §21. New run (score-attack — không level, không intro)
@@ -3468,6 +3486,59 @@ function newRun() {
     busy = false;
     if (!tutorialSeen) showOnboard();   // lần đầu: onboarding phủ lên board (1 scene, không chuyển)
   })();
+}
+
+/* ================================================================
+ * §21b. Restore ván dở từ localStorage (game-common §1.2)
+ * ================================================================ */
+function tryRestoreRunState(g) {
+  try {
+    if (!g || !g.snap || !Array.isArray(g.snap) || g.snap.length !== ROWS) { newRun(); return; }
+    levelEpoch++;
+    const ep = levelEpoch;
+    flushTweens(); clearTimeout(resultTimer);
+    tutorialMode = false;
+    $('overlay').classList.add('hidden');
+
+    score       = Number.isFinite(+g.score)       ? Math.floor(+g.score)       : 0;
+    turnCount   = Number.isFinite(+g.turnCount)   ? Math.floor(+g.turnCount)   : 0;
+    cursedIdx   = Number.isFinite(+g.cursedIdx)   ? Math.floor(+g.cursedIdx)   : 0;
+    sinceCursed = Number.isFinite(+g.sinceCursed) ? Math.floor(+g.sinceCursed) : 99;
+    nColors     = Number.isFinite(+g.nColors)     ? Math.floor(+g.nColors)     : 5;
+    nextSurge   = Number.isFinite(+g.nextSurge)   ? Math.floor(+g.nextSurge)   : SURGE_EVERY;
+    nextStorm   = Number.isFinite(+g.nextStorm)   ? Math.floor(+g.nextStorm)   : STORM_EVERY;
+    runRecord = best; recordHit = false;
+    busy = true; ended = false;
+    selected = null; lastSwapCells = null;
+    clearHint(); particles = []; shakeAmp = 0; wrapEl.style.transform = '';
+    hideResultBanner();
+    $('score-val').textContent = String(score);
+    renderBest(); updateLabels();
+
+    tileIdCtr = 0;
+    boardEl.innerHTML = '';
+    board = Array.from({ length: ROWS }, () => new Array(COLS).fill(null));
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const cell = g.snap[r] && g.snap[r][c];
+        if (cell !== null && cell !== undefined && typeof cell.c === 'number') {
+          const k = (typeof cell.k === 'number' && cell.k >= 0 && cell.k <= 5) ? cell.k : K_NORMAL;
+          board[r][c] = makeTile(cell.c, k);
+        }
+      }
+    }
+    resize(); layoutAllStatic();
+    (async () => {
+      await sleep(30);
+      if (ep !== levelEpoch) return;
+      await ensureMovable(ep);
+      if (ep !== levelEpoch) return;
+      busy = false;
+    })();
+  } catch (e) {
+    clearSavedGame();
+    newRun();
+  }
 }
 
 /* ================================================================
@@ -3605,8 +3676,10 @@ function bootGame() {
   initBgItems();
   requestAnimationFrame(mainLoop);
 
-  // MENTOR MANDATE: không menu — vào thẳng ván; lần đầu newRun() bật onboarding phủ lên board
-  newRun();
+  // Không menu: restore ván dở nếu có, không thì newRun (lần đầu sẽ bật onboarding)
+  const g = saved && saved.game;
+  if (g && g.snap) tryRestoreRunState(g);
+  else newRun();
 }
 
 // Poll native inject, fallback 200ms (game-common §3)
