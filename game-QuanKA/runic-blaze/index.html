@@ -167,22 +167,6 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   will-change: transform;
 }
 
-/* vòng tròn rune mờ xoay chậm phía sau board */
-#board-wrap::before {
-  content: '';
-  position: absolute;
-  inset: -14%;
-  border-radius: 50%;
-  border: 2px dashed rgba(255,255,255,.06);
-  animation: runeRing 60s linear infinite;
-  pointer-events: none;
-}
-
-@keyframes runeRing {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-
 #grid-bg {
   position: absolute;
   inset: 4px;
@@ -267,6 +251,9 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 .tile.kind-stripeH .tile-inner, .tile.kind-stripeV .tile-inner,
 .tile.kind-nova .tile-inner, .tile.kind-prism .tile-inner {
   animation: specialBreath 1.6s ease-in-out infinite;
+  /* viền TRẮNG dày — special nhận ra ngay từ xa (tile thường viền đen mảnh) */
+  border-color: rgba(255,255,255,.92);
+  border-width: 3px;
 }
 /* mũi tên stripe chạy shimmer */
 @keyframes stripeSlide {
@@ -275,13 +262,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   100% { opacity: .55; }
 }
 .tile .stripe-arrows { animation: stripeSlide 1.1s ease-in-out infinite; }
-/* lõi prism quay */
-@keyframes prismSpin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-.tile.kind-prism svg .prism-core { transform-origin: 50px 50px; animation: prismSpin 5s linear infinite; }
-/* vòng nova phập phồng */
+/* icon nova phập phồng */
 @keyframes novaPulse {
   0%, 100% { transform: scale(1);    opacity: .85; }
   50%       { transform: scale(1.12); opacity: 1; }
@@ -759,513 +740,143 @@ const LATIN_LANGS = new Set([
 ]);
 const DEFAULT_LANG = 'en';
 
+/* i18n gọn theo QA 2026-07-22: CHỈ TUTORIAL được dịch (23 locale);
+   mọi text UI khác (Score/Best/nhãn HUD/popup…) dùng tiếng Anh — t() fallback 'en'. */
 const I18N = {
-  en: {
-    title:'RUNIC BLAZE', level:'Level', score:'SCORE', goal:'GOAL', moves:'MOVES', combo:'COMBO',
-    back:'Back', restart:'Restart', home:'Menu', sound:'Sound', close:'Close',
-    play:'Play', tutorial:'Tutorial', skip:'Skip', howto:'How to play',
-    tagline:'Match runes · Forge specials · Reach the goal',
-    tapToResume:'Tap to resume', noMoves:'No moves left — shuffling!', shuffled:'Shuffle!',
-    levelClear:'Level Clear!', outOfMoves:'Out of moves…', blazeRush:'BLAZE RUSH!',
-    praise:['Nice!','Great!','Awesome!','Blazing!','Legendary!'],
-    confirmMenu:'Back to menu?',
-    tut1:'Swap two runes next to each other to line up 3 of a kind.',
-    tut2:'Line up 4 runes to forge a Blaze Rune — it blasts the whole line!',
-    tut3:'Swap the Prism with any rune to burn every rune of its color!',
-    tutDone:'Perfect — you are ready. Blaze on!',
-    infoSwap:'Swap two adjacent runes to match 3 or more of the same kind. Chain cascades to multiply your score!',
-    infoCombo:'Swap two special runes together for a giant blast. Prism + Blaze turns a whole color into Blaze Runes!',
-    spBlaze:'Blaze', spBlazeHow:'Match 4 — clears a line',
-    spNova:'Nova', spNovaHow:'L/T match — blasts twice',
-    spPrism:'Prism', spPrismHow:'Match 5 — burns a color',
-    infoGoal:'Reach the score goal', infoMoves:'Before moves run out',
-  },
-  vi: {
-    title:'RUNIC BLAZE', level:'Màn', score:'ĐIỂM', goal:'MỤC TIÊU', moves:'LƯỢT', combo:'COMBO',
-    back:'Thoát', restart:'Chơi lại', home:'Menu', sound:'Âm thanh', close:'Đóng',
-    play:'Chơi', tutorial:'Hướng dẫn', skip:'Bỏ qua', howto:'Cách chơi',
-    tagline:'Ghép rune · Rèn rune đặc biệt · Đạt mục tiêu',
-    tapToResume:'Chạm để tiếp tục', noMoves:'Hết nước đi — xáo lại!', shuffled:'Xáo bài!',
-    levelClear:'Qua màn!', outOfMoves:'Hết lượt…', blazeRush:'BLAZE RUSH!',
-    praise:['Hay!','Tuyệt!','Đỉnh!','Rực cháy!','Huyền thoại!'],
-    confirmMenu:'Về menu chính?',
-    tut1:'Chạm và đổi chỗ 2 rune kề nhau để xếp 3 rune giống nhau thành hàng.',
-    tut2:'Xếp 4 rune thành hàng để rèn Rune Lửa — nó quét sạch cả hàng!',
-    tut3:'Đổi Prism với rune bất kỳ để thiêu toàn bộ rune cùng màu!',
-    tutDone:'Chuẩn rồi — chiến thôi!',
-    infoSwap:'Đổi chỗ 2 rune kề nhau để ghép 3+ rune cùng loại. Ăn liên hoàn để nhân điểm!',
-    infoCombo:'Đổi 2 rune đặc biệt với nhau để tạo vụ nổ lớn. Prism + Lửa biến cả một màu thành Rune Lửa!',
-    spBlaze:'Lửa', spBlazeHow:'Ghép 4 — nổ nguyên hàng',
-    spNova:'Nova', spNovaHow:'Ghép chữ L/T — nổ 2 lần',
-    spPrism:'Prism', spPrismHow:'Ghép 5 — thiêu 1 màu',
-    infoGoal:'Đạt mốc điểm mục tiêu', infoMoves:'Trước khi hết lượt',
-  },
-  'zh-Hans': {
-    title:'符文烈焰', level:'关卡', score:'分数', goal:'目标', moves:'步数', combo:'连击',
-    back:'返回', restart:'重玩', home:'菜单', sound:'声音', close:'关闭',
-    play:'开始', tutorial:'教程', skip:'跳过', howto:'玩法说明',
-    tagline:'消除符文 · 锻造神符 · 达成目标',
-    tapToResume:'点击继续', noMoves:'没有可消除的组合了——重新洗牌！', shuffled:'洗牌！',
-    levelClear:'过关！', outOfMoves:'步数用尽…', blazeRush:'烈焰冲刺！',
-    praise:['不错！','很棒！','超赞！','燃爆了！','传奇！'],
-    confirmMenu:'返回主菜单？',
-    tut1:'交换相邻的两个符文，使3个相同符文连成一线。',
-    tut2:'连成4个可锻造烈焰符文——引爆整行！',
-    tut3:'将棱镜与任意符文交换，烧尽所有同色符文！',
-    tutDone:'完美——出发吧！',
-    infoSwap:'交换相邻符文，凑齐3个及以上相同符文即可消除。连锁消除最高可获得5倍加分！',
-    infoCombo:'交换两个特殊符文可引发巨大爆炸。棱镜+烈焰会把整个颜色变成烈焰符文！',
-    spBlaze:'烈焰', spBlazeHow:'4连——清除整行',
-    spNova:'新星', spNovaHow:'L/T形——爆炸两次',
-    spPrism:'棱镜', spPrismHow:'5连——烧尽一色',
-    infoGoal:'达到目标分数', infoMoves:'在步数用尽前',
-  },
-  'zh-Hant': {
-    title:'符文烈焰', level:'關卡', score:'分數', goal:'目標', moves:'步數', combo:'連擊',
-    back:'返回', restart:'重玩', home:'選單', sound:'聲音', close:'關閉',
-    play:'開始', tutorial:'教學', skip:'跳過', howto:'玩法說明',
-    tagline:'消除符文 · 鍛造神符 · 達成目標',
-    tapToResume:'點擊繼續', noMoves:'沒有可消除的組合了——重新洗牌！', shuffled:'洗牌！',
-    levelClear:'過關！', outOfMoves:'步數用盡…', blazeRush:'烈焰衝刺！',
-    praise:['不錯！','很棒！','超讚！','火力全開！','傳奇！'],
-    confirmMenu:'返回主選單？',
-    tut1:'交換相鄰的兩個符文，使3個相同符文連成一線。',
-    tut2:'連成4個可鍛造烈焰符文——引爆整行！',
-    tut3:'將稜鏡與任意符文交換，燒盡所有同色符文！',
-    tutDone:'完美——出發吧！',
-    infoSwap:'交換相鄰符文，湊齊3個以上相同符文即可消除。連鎖消除最高可獲得5倍加分！',
-    infoCombo:'交換兩個特殊符文可引發巨大爆炸。稜鏡+烈焰會把整個顏色變成烈焰符文！',
-    spBlaze:'烈焰', spBlazeHow:'4連——清除整行',
-    spNova:'新星', spNovaHow:'L/T形——爆炸兩次',
-    spPrism:'稜鏡', spPrismHow:'5連——燒盡一色',
-    infoGoal:'達到目標分數', infoMoves:'在步數用盡前',
-  },
-  ja: {
-    title:'ルーンブレイズ', level:'レベル', score:'スコア', goal:'目標', moves:'手数', combo:'コンボ',
-    back:'戻る', restart:'やり直す', home:'メニュー', sound:'サウンド', close:'閉じる',
-    play:'プレイ', tutorial:'チュートリアル', skip:'スキップ', howto:'遊び方',
-    tagline:'ルーンをそろえて 目標スコアを目指せ',
-    tapToResume:'タップで再開', noMoves:'動かせる手がない——シャッフル！', shuffled:'シャッフル！',
-    levelClear:'レベルクリア！', outOfMoves:'手数切れ…', blazeRush:'ブレイズラッシュ！',
-    praise:['いいね！','すごい！','最高！','燃えてる！','伝説級！'],
-    confirmMenu:'メニューに戻る？',
-    tut1:'隣り合うルーンを入れ替えて、同じルーンを3つ並べよう。',
-    tut2:'4つ並べるとブレイズルーンが誕生——ライン全体を吹き飛ばす！',
-    tut3:'プリズムを好きなルーンと入れ替えると、その色を全部燃やせる！',
-    tutDone:'準備OK——燃やし尽くせ！',
-    infoSwap:'隣接するルーンを入れ替えて同じ種類を3つ以上そろえよう。連鎖でスコア倍増！',
-    infoCombo:'特殊ルーン同士を入れ替えると大爆発。プリズム＋ブレイズは1色すべてをブレイズ化！',
-    spBlaze:'ブレイズ', spBlazeHow:'4つ並べ——1列消去',
-    spNova:'ノヴァ', spNovaHow:'L/T字——2回爆発',
-    spPrism:'プリズム', spPrismHow:'5つ並べ——1色燃焼',
-    infoGoal:'目標スコアに到達', infoMoves:'手数が尽きる前に',
-  },
-  ko: {
-    title:'루닉 블레이즈', level:'레벨', score:'점수', goal:'목표', moves:'이동', combo:'콤보',
-    back:'뒤로', restart:'다시하기', home:'메뉴', sound:'소리', close:'닫기',
-    play:'플레이', tutorial:'튜토리얼', skip:'건너뛰기', howto:'게임 방법',
-    tagline:'룬을 맞추고 목표를 달성하세요',
-    tapToResume:'탭하여 계속', noMoves:'움직일 수 없어요 — 섞는 중!', shuffled:'셔플!',
-    levelClear:'레벨 클리어!', outOfMoves:'이동 횟수 소진…', blazeRush:'블레이즈 러시!',
-    praise:['좋아요!','대단해요!','굉장해요!','불타올라요!','전설이에요!'],
-    confirmMenu:'메뉴로 돌아갈까요?',
-    tut1:'옆에 있는 룬 두 개를 바꿔 같은 룬 3개를 한 줄로 만드세요.',
-    tut2:'4개를 한 줄로 만들면 블레이즈 룬 탄생 — 한 줄을 통째로 날려요!',
-    tut3:'프리즘을 아무 룬과 바꾸면 그 색 전부를 태워요!',
-    tutDone:'완벽해요 — 시작!',
-    infoSwap:'인접한 룬을 교환해 같은 종류 3개 이상을 맞추세요. 연쇄로 점수 배가!',
-    infoCombo:'특수 룬 두 개를 서로 바꾸면 대폭발! 프리즘+블레이즈는 한 색 전체를 블레이즈로!',
-    spBlaze:'블레이즈', spBlazeHow:'4개 일치 — 한 줄 제거',
-    spNova:'노바', spNovaHow:'L/T 모양 — 2회 폭발',
-    spPrism:'프리즘', spPrismHow:'5개 일치 — 한 색 소각',
-    infoGoal:'목표 점수 달성', infoMoves:'이동 소진 전에',
-  },
-  es: {
-    title:'RUNIC BLAZE', level:'Nivel', score:'PUNTOS', goal:'META', moves:'MOVS', combo:'COMBO',
-    back:'Atrás', restart:'Reiniciar', home:'Menú', sound:'Sonido', close:'Cerrar',
-    play:'Jugar', tutorial:'Tutorial', skip:'Saltar', howto:'Cómo jugar',
-    tagline:'Combina runas · Forja especiales · Alcanza la meta',
-    tapToResume:'Toca para continuar', noMoves:'¡Sin jugadas — barajando!', shuffled:'¡Barajar!',
-    levelClear:'¡Nivel superado!', outOfMoves:'Sin movimientos…', blazeRush:'¡BLAZE RUSH!',
-    praise:['¡Bien!','¡Genial!','¡Increíble!','¡En llamas!','¡Legendario!'],
-    confirmMenu:'¿Volver al menú?',
-    tut1:'Intercambia dos runas vecinas para alinear 3 iguales.',
-    tut2:'¡Alinea 4 para forjar una Runa de Fuego — arrasa toda la línea!',
-    tut3:'¡Cambia el Prisma por cualquier runa para quemar todas las de su color!',
-    tutDone:'¡Perfecto — a arder!',
-    infoSwap:'Intercambia dos runas adyacentes para juntar 3 o más iguales. ¡Encadena cascadas para multiplicar puntos!',
-    infoCombo:'Intercambia dos runas especiales para una explosión gigante. ¡Prisma + Fuego convierte todo un color en Runas de Fuego!',
-    spBlaze:'Fuego', spBlazeHow:'Junta 4: limpia una línea',
-    spNova:'Nova', spNovaHow:'Forma L/T: explota 2 veces',
-    spPrism:'Prisma', spPrismHow:'Junta 5: quema un color',
-    infoGoal:'Alcanza la meta de puntos', infoMoves:'Antes de agotar los movimientos',
-  },
-  'es-MX': {
-    title:'RUNIC BLAZE', level:'Nivel', score:'PUNTOS', goal:'META', moves:'MOVS', combo:'COMBO',
-    back:'Atrás', restart:'Reiniciar', home:'Menú', sound:'Sonido', close:'Cerrar',
-    play:'Jugar', tutorial:'Tutorial', skip:'Saltar', howto:'Cómo jugar',
-    tagline:'Combina runas · Forja especiales · Alcanza la meta',
-    tapToResume:'Toca para continuar', noMoves:'¡Sin jugadas — barajando!', shuffled:'¡Barajar!',
-    levelClear:'¡Nivel superado!', outOfMoves:'Sin movimientos…', blazeRush:'¡BLAZE RUSH!',
-    praise:['¡Bien!','¡Genial!','¡Increíble!','¡En llamas!','¡Legendario!'],
-    confirmMenu:'¿Volver al menú?',
-    tut1:'Intercambia dos runas vecinas para alinear 3 iguales.',
-    tut2:'¡Alinea 4 para forjar una Runa de Fuego — arrasa toda la línea!',
-    tut3:'¡Cambia el Prisma por cualquier runa para quemar todas las de su color!',
-    tutDone:'¡Perfecto — a arder!',
-    infoSwap:'Intercambia dos runas adyacentes para juntar 3 o más iguales. ¡Encadena cascadas para multiplicar puntos!',
-    infoCombo:'Intercambia dos runas especiales para una explosión gigante. ¡Prisma + Fuego convierte todo un color en Runas de Fuego!',
-    spBlaze:'Fuego', spBlazeHow:'Junta 4: limpia una línea',
-    spNova:'Nova', spNovaHow:'Forma L/T: explota 2 veces',
-    spPrism:'Prisma', spPrismHow:'Junta 5: quema un color',
-    infoGoal:'Alcanza la meta de puntos', infoMoves:'Antes de agotar los movimientos',
-  },
-  'es-AR': {
-    title:'RUNIC BLAZE', level:'Nivel', score:'PUNTOS', goal:'META', moves:'MOVS', combo:'COMBO',
-    back:'Atrás', restart:'Reiniciar', home:'Menú', sound:'Sonido', close:'Cerrar',
-    play:'Jugar', tutorial:'Tutorial', skip:'Saltar', howto:'Cómo jugar',
-    tagline:'Combiná runas · Forjá especiales · Alcanzá la meta',
-    tapToResume:'Tocá para continuar', noMoves:'¡Sin jugadas — barajando!', shuffled:'¡Barajar!',
-    levelClear:'¡Nivel superado!', outOfMoves:'Sin movimientos…', blazeRush:'¡BLAZE RUSH!',
-    praise:['¡Bien!','¡Genial!','¡Increíble!','¡En llamas!','¡Legendario!'],
-    confirmMenu:'¿Volver al menú?',
-    tut1:'Intercambiá dos runas vecinas para alinear 3 iguales.',
-    tut2:'¡Alineá 4 para forjar una Runa de Fuego — arrasa toda la línea!',
-    tut3:'¡Cambiá el Prisma por cualquier runa para quemar todas las de su color!',
-    tutDone:'¡Perfecto — a arder!',
-    infoSwap:'Intercambiá dos runas adyacentes para juntar 3 o más iguales. ¡Encadená cascadas para multiplicar puntos!',
-    infoCombo:'Intercambiá dos runas especiales para una explosión gigante. ¡Prisma + Fuego convierte todo un color en Runas de Fuego!',
-    spBlaze:'Fuego', spBlazeHow:'Juntá 4: limpia una línea',
-    spNova:'Nova', spNovaHow:'Forma L/T: explota 2 veces',
-    spPrism:'Prisma', spPrismHow:'Juntá 5: quema un color',
-    infoGoal:'Alcanzá la meta de puntos', infoMoves:'Antes de agotar los movimientos',
-  },
-  'pt-BR': {
-    title:'RUNIC BLAZE', level:'Nível', score:'PONTOS', goal:'META', moves:'JOGADAS', combo:'COMBO',
-    back:'Voltar', restart:'Reiniciar', home:'Menu', sound:'Som', close:'Fechar',
-    play:'Jogar', tutorial:'Tutorial', skip:'Pular', howto:'Como jogar',
-    tagline:'Combine runas · Forje especiais · Alcance a meta',
-    tapToResume:'Toque para continuar', noMoves:'Sem jogadas — embaralhando!', shuffled:'Embaralhar!',
-    levelClear:'Fase concluída!', outOfMoves:'Acabaram as jogadas…', blazeRush:'BLAZE RUSH!',
-    praise:['Bom!','Ótimo!','Incrível!','Em chamas!','Lendário!'],
-    confirmMenu:'Voltar ao menu?',
-    tut1:'Troque duas runas vizinhas para alinhar 3 iguais.',
-    tut2:'Alinhe 4 para forjar uma Runa Flamejante — ela varre a linha inteira!',
-    tut3:'Troque o Prisma com qualquer runa para queimar todas da mesma cor!',
-    tutDone:'Perfeito — pode brilhar!',
-    infoSwap:'Troque duas runas adjacentes para juntar 3 ou mais iguais. Encadeie cascatas para multiplicar pontos!',
-    infoCombo:'Troque duas runas especiais para uma explosão gigante. Prisma + Chama transforma uma cor inteira em Runas Flamejantes!',
-    spBlaze:'Chama', spBlazeHow:'Junte 4: limpa a linha',
-    spNova:'Nova', spNovaHow:'Forma L/T: explode 2x',
-    spPrism:'Prisma', spPrismHow:'Junte 5: queima uma cor',
-    infoGoal:'Alcance a meta de pontos', infoMoves:'Antes de acabar as jogadas',
-  },
-  pt: {
-    title:'RUNIC BLAZE', level:'Nível', score:'PONTOS', goal:'META', moves:'JOGADAS', combo:'COMBO',
-    back:'Voltar', restart:'Reiniciar', home:'Menu', sound:'Som', close:'Fechar',
-    play:'Jogar', tutorial:'Tutorial', skip:'Saltar', howto:'Como jogar',
-    tagline:'Combina runas · Forja especiais · Alcança a meta',
-    tapToResume:'Toca para continuar', noMoves:'Sem jogadas — a baralhar!', shuffled:'Baralhar!',
-    levelClear:'Nível concluído!', outOfMoves:'Acabaram as jogadas…', blazeRush:'BLAZE RUSH!',
-    praise:['Bom!','Ótimo!','Incrível!','Em chamas!','Lendário!'],
-    confirmMenu:'Voltar ao menu?',
-    tut1:'Troca duas runas vizinhas para alinhar 3 iguais.',
-    tut2:'Alinha 4 para forjar uma Runa Flamejante — varre a linha inteira!',
-    tut3:'Troca o Prisma com qualquer runa para queimar todas da mesma cor!',
-    tutDone:'Perfeito — vamos a isso!',
-    infoSwap:'Troca duas runas adjacentes para juntar 3 ou mais iguais. Encadeia cascatas para multiplicar pontos!',
-    infoCombo:'Troca duas runas especiais para uma explosão gigante. Prisma + Chama transforma uma cor inteira em Runas Flamejantes!',
-    spBlaze:'Chama', spBlazeHow:'Junta 4: limpa a linha',
-    spNova:'Nova', spNovaHow:'Forma L/T: explode 2x',
-    spPrism:'Prisma', spPrismHow:'Junta 5: queima uma cor',
-    infoGoal:'Alcança a meta de pontos', infoMoves:'Antes de acabarem as jogadas',
-  },
-  fr: {
-    title:'RUNIC BLAZE', level:'Niveau', score:'SCORE', goal:'OBJECTIF', moves:'COUPS', combo:'COMBO',
-    back:'Retour', restart:'Rejouer', home:'Menu', sound:'Son', close:'Fermer',
-    play:'Jouer', tutorial:'Tutoriel', skip:'Passer', howto:'Comment jouer',
-    tagline:'Alignez les runes · Forgez des bonus · Atteignez l’objectif',
-    tapToResume:'Touchez pour reprendre', noMoves:'Plus de coups — mélange !', shuffled:'Mélange !',
-    levelClear:'Niveau terminé !', outOfMoves:'Plus de coups…', blazeRush:'BLAZE RUSH !',
-    praise:['Bien !','Super !','Génial !','Enflammé !','Légendaire !'],
-    confirmMenu:'Retour au menu ?',
-    tut1:'Échangez deux runes voisines pour aligner 3 runes identiques.',
-    tut2:'Alignez-en 4 pour forger une Rune de Feu — elle balaie toute la ligne !',
-    tut3:'Échangez le Prisme avec n’importe quelle rune pour brûler toute sa couleur !',
-    tutDone:'Parfait — enflammez tout !',
-    infoSwap:'Échangez deux runes adjacentes pour en aligner 3 ou plus. Enchaînez les cascades pour multiplier le score !',
-    infoCombo:'Échangez deux runes spéciales pour une explosion géante. Prisme + Feu transforme toute une couleur en Runes de Feu !',
-    spBlaze:'Feu', spBlazeHow:'4 alignées : nettoie une ligne',
-    spNova:'Nova', spNovaHow:'Forme L/T : explose 2 fois',
-    spPrism:'Prisme', spPrismHow:'5 alignées : brûle une couleur',
-    infoGoal:'Atteignez le score objectif', infoMoves:'Avant la fin des coups',
-  },
-  de: {
-    title:'RUNIC BLAZE', level:'Level', score:'PUNKTE', goal:'ZIEL', moves:'ZÜGE', combo:'KOMBO',
-    back:'Zurück', restart:'Neustart', home:'Menü', sound:'Ton', close:'Schließen',
-    play:'Spielen', tutorial:'Tutorial', skip:'Überspringen', howto:'Spielanleitung',
-    tagline:'Runen kombinieren · Spezialrunen schmieden · Ziel erreichen',
-    tapToResume:'Tippen zum Fortsetzen', noMoves:'Keine Züge mehr — es wird gemischt!', shuffled:'Mischen!',
-    levelClear:'Level geschafft!', outOfMoves:'Keine Züge mehr…', blazeRush:'BLAZE RUSH!',
-    praise:['Gut!','Super!','Fantastisch!','Brennend!','Legendär!'],
-    confirmMenu:'Zurück zum Menü?',
-    tut1:'Tausche zwei benachbarte Runen, um 3 gleiche in eine Reihe zu bringen.',
-    tut2:'Bringe 4 in eine Reihe und schmiede eine Flammenrune — sie fegt die ganze Linie weg!',
-    tut3:'Tausche das Prisma mit einer beliebigen Rune, um alle ihrer Farbe zu verbrennen!',
-    tutDone:'Perfekt — leg los!',
-    infoSwap:'Tausche zwei benachbarte Runen, um 3 oder mehr gleiche zu sammeln. Kettenreaktionen vervielfachen die Punkte!',
-    infoCombo:'Tausche zwei Spezialrunen für eine Riesenexplosion. Prisma + Flamme verwandelt eine ganze Farbe in Flammenrunen!',
-    spBlaze:'Flamme', spBlazeHow:'4er-Reihe: löscht eine Linie',
-    spNova:'Nova', spNovaHow:'L/T-Form: explodiert 2×',
-    spPrism:'Prisma', spPrismHow:'5er-Reihe: verbrennt eine Farbe',
-    infoGoal:'Erreiche das Punkteziel', infoMoves:'Bevor die Züge ausgehen',
-  },
-  it: {
-    title:'RUNIC BLAZE', level:'Livello', score:'PUNTI', goal:'OBIETTIVO', moves:'MOSSE', combo:'COMBO',
-    back:'Indietro', restart:'Ricomincia', home:'Menu', sound:'Audio', close:'Chiudi',
-    play:'Gioca', tutorial:'Tutorial', skip:'Salta', howto:'Come si gioca',
-    tagline:'Combina le rune · Forgia le speciali · Raggiungi l’obiettivo',
-    tapToResume:'Tocca per riprendere', noMoves:'Nessuna mossa — rimescolo!', shuffled:'Mescola!',
-    levelClear:'Livello completato!', outOfMoves:'Mosse finite…', blazeRush:'BLAZE RUSH!',
-    praise:['Bene!','Ottimo!','Fantastico!','Infuocato!','Leggendario!'],
-    confirmMenu:'Tornare al menu?',
-    tut1:'Scambia due rune vicine per allineare 3 rune uguali.',
-    tut2:'Allineane 4 per forgiare una Runa di Fuoco — spazza via l’intera linea!',
-    tut3:'Scambia il Prisma con qualsiasi runa per bruciare tutte quelle del suo colore!',
-    tutDone:'Perfetto — si parte!',
-    infoSwap:'Scambia due rune adiacenti per unirne 3 o più uguali. Concatena cascate per moltiplicare i punti!',
-    infoCombo:'Scambia due rune speciali per un’esplosione gigante. Prisma + Fuoco trasforma un intero colore in Rune di Fuoco!',
-    spBlaze:'Fuoco', spBlazeHow:'4 in fila: pulisce una linea',
-    spNova:'Nova', spNovaHow:'Forma L/T: esplode 2 volte',
-    spPrism:'Prisma', spPrismHow:'5 in fila: brucia un colore',
-    infoGoal:'Raggiungi l’obiettivo punti', infoMoves:'Prima di esaurire le mosse',
-  },
-  nl: {
-    title:'RUNIC BLAZE', level:'Level', score:'SCORE', goal:'DOEL', moves:'ZETTEN', combo:'COMBO',
-    back:'Terug', restart:'Opnieuw', home:'Menu', sound:'Geluid', close:'Sluiten',
-    play:'Spelen', tutorial:'Tutorial', skip:'Overslaan', howto:'Hoe te spelen',
-    tagline:'Combineer runen · Smeed specials · Haal het doel',
-    tapToResume:'Tik om verder te gaan', noMoves:'Geen zetten meer — schudden!', shuffled:'Schudden!',
-    levelClear:'Level gehaald!', outOfMoves:'Zetten op…', blazeRush:'BLAZE RUSH!',
-    praise:['Mooi!','Top!','Geweldig!','Vlammend!','Legendarisch!'],
-    confirmMenu:'Terug naar het menu?',
-    tut1:'Wissel twee aangrenzende runen om 3 dezelfde op een rij te krijgen.',
-    tut2:'Zet er 4 op een rij en smeed een Vuurrune — die veegt de hele lijn weg!',
-    tut3:'Wissel het Prisma met een willekeurige rune om alle runen van die kleur te verbranden!',
-    tutDone:'Perfect — branden maar!',
-    infoSwap:'Wissel twee aangrenzende runen om 3 of meer dezelfde te maken. Kettingreacties vermenigvuldigen je score!',
-    infoCombo:'Wissel twee speciale runen voor een gigantische explosie. Prisma + Vuur verandert een hele kleur in Vuurrunen!',
-    spBlaze:'Vuur', spBlazeHow:'4 op een rij: wist een lijn',
-    spNova:'Nova', spNovaHow:'L/T-vorm: ontploft 2×',
-    spPrism:'Prisma', spPrismHow:'5 op een rij: verbrandt een kleur',
-    infoGoal:'Haal de doelscore', infoMoves:'Voordat je zetten op zijn',
-  },
-  pl: {
-    title:'RUNIC BLAZE', level:'Poziom', score:'WYNIK', goal:'CEL', moves:'RUCHY', combo:'KOMBO',
-    back:'Wstecz', restart:'Od nowa', home:'Menu', sound:'Dźwięk', close:'Zamknij',
-    play:'Graj', tutorial:'Samouczek', skip:'Pomiń', howto:'Jak grać',
-    tagline:'Łącz runy · Wykuwaj specjalne · Osiągnij cel',
-    tapToResume:'Dotknij, aby wznowić', noMoves:'Brak ruchów — tasowanie!', shuffled:'Tasowanie!',
-    levelClear:'Poziom ukończony!', outOfMoves:'Koniec ruchów…', blazeRush:'BLAZE RUSH!',
-    praise:['Nieźle!','Świetnie!','Niesamowicie!','Płomiennie!','Legendarnie!'],
-    confirmMenu:'Wrócić do menu?',
-    tut1:'Zamień dwie sąsiednie runy, aby ustawić 3 takie same w linii.',
-    tut2:'Ustaw 4 w linii, aby wykuć Runę Ognia — zmiata całą linię!',
-    tut3:'Zamień Pryzmat z dowolną runą, aby spalić wszystkie runy tego koloru!',
-    tutDone:'Idealnie — do dzieła!',
-    infoSwap:'Zamieniaj sąsiednie runy, aby połączyć 3 lub więcej takich samych. Kaskady mnożą punkty!',
-    infoCombo:'Zamień dwie specjalne runy, aby wywołać wielki wybuch. Pryzmat + Ogień zmienia cały kolor w Runy Ognia!',
-    spBlaze:'Ogień', spBlazeHow:'4 w linii: czyści linię',
-    spNova:'Nova', spNovaHow:'Kształt L/T: wybucha 2×',
-    spPrism:'Pryzmat', spPrismHow:'5 w linii: spala kolor',
-    infoGoal:'Osiągnij cel punktowy', infoMoves:'Zanim skończą się ruchy',
-  },
-  ru: {
-    title:'РУНИК БЛЕЙЗ', level:'Уровень', score:'ОЧКИ', goal:'ЦЕЛЬ', moves:'ХОДЫ', combo:'КОМБО',
-    back:'Назад', restart:'Заново', home:'Меню', sound:'Звук', close:'Закрыть',
-    play:'Играть', tutorial:'Обучение', skip:'Пропустить', howto:'Как играть',
-    tagline:'Собирайте руны · Куйте особые · Достигайте цели',
-    tapToResume:'Нажмите, чтобы продолжить', noMoves:'Нет ходов — перемешиваем!', shuffled:'Перемешано!',
-    levelClear:'Уровень пройден!', outOfMoves:'Ходы закончились…', blazeRush:'ОГНЕННЫЙ РЫВОК!',
-    praise:['Хорошо!','Отлично!','Класс!','Пылает!','Легендарно!'],
-    confirmMenu:'Вернуться в меню?',
-    tut1:'Меняйте местами две соседние руны, чтобы собрать 3 одинаковые в ряд.',
-    tut2:'Соберите 4 в ряд и выкуйте Огненную руну — она сметает всю линию!',
-    tut3:'Поменяйте Призму с любой руной, чтобы сжечь все руны её цвета!',
-    tutDone:'Отлично — вперёд!',
-    infoSwap:'Меняйте соседние руны, чтобы собрать 3 и более одинаковых. Цепочки каскадов умножают очки!',
-    infoCombo:'Поменяйте две особые руны для гигантского взрыва. Призма + Огонь превращает целый цвет в Огненные руны!',
-    spBlaze:'Огонь', spBlazeHow:'4 в ряд: чистит линию',
-    spNova:'Нова', spNovaHow:'Форма L/T: взрывается 2 раза',
-    spPrism:'Призма', spPrismHow:'5 в ряд: сжигает цвет',
-    infoGoal:'Наберите нужные очки', infoMoves:'Пока не кончились ходы',
-  },
-  tr: {
-    title:'RUNIC BLAZE', level:'Seviye', score:'PUAN', goal:'HEDEF', moves:'HAMLE', combo:'KOMBO',
-    back:'Geri', restart:'Yeniden', home:'Menü', sound:'Ses', close:'Kapat',
-    play:'Oyna', tutorial:'Eğitim', skip:'Atla', howto:'Nasıl oynanır',
-    tagline:'Rünleri eşleştir · Özel rünler yarat · Hedefe ulaş',
-    tapToResume:'Devam etmek için dokun', noMoves:'Hamle kalmadı — karıştırılıyor!', shuffled:'Karıştır!',
-    levelClear:'Seviye tamamlandı!', outOfMoves:'Hamleler bitti…', blazeRush:'ALEV FIRTINASI!',
-    praise:['Güzel!','Harika!','Muhteşem!','Alev alev!','Efsane!'],
-    confirmMenu:'Menüye dönülsün mü?',
-    tut1:'Yan yana iki rünü değiştirerek 3 aynı rünü hizala.',
-    tut2:'4 rünü hizalayarak Alev Rünü döv — tüm satırı süpürür!',
-    tut3:'Prizmayı herhangi bir rünle değiştir, o rengin tüm rünlerini yak!',
-    tutDone:'Mükemmel — başlayalım!',
-    infoSwap:'Bitişik iki rünü değiştirerek 3 veya daha fazla aynı rünü eşleştir. Zincirleme patlamalar puanı katlar!',
-    infoCombo:'İki özel rünü birbiriyle değiştirerek dev bir patlama yarat. Prizma + Alev, bir rengin tamamını Alev Rünlerine çevirir!',
-    spBlaze:'Alev', spBlazeHow:'4’lü dizi: satırı temizler',
-    spNova:'Nova', spNovaHow:'L/T şekli: 2 kez patlar',
-    spPrism:'Prizma', spPrismHow:'5’li dizi: bir rengi yakar',
-    infoGoal:'Hedef puana ulaş', infoMoves:'Hamleler bitmeden',
-  },
-  ar: {
-    title:'رونيك بليز', level:'المستوى', score:'النقاط', goal:'الهدف', moves:'الحركات', combo:'كومبو',
-    back:'رجوع', restart:'إعادة', home:'القائمة', sound:'الصوت', close:'إغلاق',
-    play:'العب', tutorial:'تعليمي', skip:'تخطَّ', howto:'طريقة اللعب',
-    tagline:'طابق الأحجار · اصنع الخواص · حقق الهدف',
-    tapToResume:'انقر للمتابعة', noMoves:'لا حركات متبقية — إعادة خلط!', shuffled:'خلط!',
-    levelClear:'اجتزت المستوى!', outOfMoves:'انتهت الحركات…', blazeRush:'اندفاع اللهب!',
-    praise:['جيد!','رائع!','مذهل!','ملتهب!','أسطوري!'],
-    confirmMenu:'العودة إلى القائمة؟',
-    tut1:'بدّل بين حجرين متجاورين لاصطفاف 3 أحجار متشابهة.',
-    tut2:'اصطف 4 أحجار لصنع حجر اللهب — يمسح الصف بأكمله!',
-    tut3:'بدّل المنشور بأي حجر لحرق كل أحجار لونه!',
-    tutDone:'ممتاز — انطلق!',
-    infoSwap:'بدّل بين حجرين متجاورين لمطابقة 3 أو أكثر من نفس النوع. سلاسل الانهيار تضاعف نقاطك!',
-    infoCombo:'بدّل بين حجرين خاصين لانفجار هائل. المنشور + اللهب يحول لونًا كاملًا إلى أحجار لهب!',
-    spBlaze:'اللهب', spBlazeHow:'طابق 4: يمسح خطًا',
-    spNova:'نوفا', spNovaHow:'شكل L/T: ينفجر مرتين',
-    spPrism:'المنشور', spPrismHow:'طابق 5: يحرق لونًا',
-    infoGoal:'حقق هدف النقاط', infoMoves:'قبل نفاد الحركات',
-  },
-  hi: {
-    title:'रूनिक ब्लेज़', level:'स्तर', score:'स्कोर', goal:'लक्ष्य', moves:'चालें', combo:'कॉम्बो',
-    back:'वापस', restart:'फिर से', home:'मेन्यू', sound:'ध्वनि', close:'बंद करें',
-    play:'खेलें', tutorial:'ट्यूटोरियल', skip:'छोड़ें', howto:'कैसे खेलें',
-    tagline:'रून मिलाएँ · विशेष रून बनाएँ · लक्ष्य पाएँ',
-    tapToResume:'जारी रखने के लिए टैप करें', noMoves:'कोई चाल नहीं बची — फेंट रहे हैं!', shuffled:'फेंटा!',
-    levelClear:'स्तर पूरा!', outOfMoves:'चालें खत्म…', blazeRush:'ब्लेज़ रश!',
-    praise:['बढ़िया!','शानदार!','कमाल!','धधकता!','महान!'],
-    confirmMenu:'मेन्यू पर लौटें?',
-    tut1:'पास-पास की दो रूनों की अदला-बदली करके 3 एक जैसी रूनें एक पंक्ति में लाएँ।',
-    tut2:'4 को पंक्ति में लाकर ब्लेज़ रून बनाएँ — यह पूरी पंक्ति उड़ा देती है!',
-    tut3:'प्रिज़्म को किसी भी रून से बदलें और उस रंग की सारी रूनें जला दें!',
-    tutDone:'बहुत बढ़िया — शुरू करें!',
-    infoSwap:'पास की दो रूनों की अदला-बदली करके 3 या अधिक एक जैसी मिलाएँ। लगातार कैस्केड से स्कोर कई गुना!',
-    infoCombo:'दो विशेष रूनों की अदला-बदली से विशाल धमाका। प्रिज़्म + ब्लेज़ पूरे रंग को ब्लेज़ रून बना देता है!',
-    spBlaze:'ब्लेज़', spBlazeHow:'4 मिलाएँ: पंक्ति साफ़',
-    spNova:'नोवा', spNovaHow:'L/T आकार: 2 बार धमाका',
-    spPrism:'प्रिज़्म', spPrismHow:'5 मिलाएँ: एक रंग जलाएँ',
-    infoGoal:'लक्ष्य स्कोर पाएँ', infoMoves:'चालें खत्म होने से पहले',
-  },
-  th: {
-    title:'รูนิค เบลซ', level:'ด่าน', score:'คะแนน', goal:'เป้าหมาย', moves:'ตาเดิน', combo:'คอมโบ',
-    back:'กลับ', restart:'เริ่มใหม่', home:'เมนู', sound:'เสียง', close:'ปิด',
-    play:'เล่น', tutorial:'สอนเล่น', skip:'ข้าม', howto:'วิธีเล่น',
-    tagline:'จับคู่รูน · สร้างรูนพิเศษ · พิชิตเป้าหมาย',
-    tapToResume:'แตะเพื่อเล่นต่อ', noMoves:'ไม่มีตาเดินแล้ว — กำลังสับ!', shuffled:'สับ!',
-    levelClear:'ผ่านด่าน!', outOfMoves:'ตาเดินหมดแล้ว…', blazeRush:'เบลซ รัช!',
-    praise:['เยี่ยม!','เก่งมาก!','สุดยอด!','ลุกเป็นไฟ!','ระดับตำนาน!'],
-    confirmMenu:'กลับสู่เมนูหรือไม่?',
-    tut1:'สลับรูนสองอันที่อยู่ติดกันให้เรียงรูนเหมือนกัน 3 อัน',
-    tut2:'เรียง 4 อันเพื่อสร้างรูนเพลิง — ระเบิดทั้งแถว!',
-    tut3:'สลับปริซึมกับรูนใดก็ได้เพื่อเผารูนสีนั้นทั้งหมด!',
-    tutDone:'เยี่ยมมาก — ลุยเลย!',
-    infoSwap:'สลับรูนที่อยู่ติดกันเพื่อจับคู่ 3 อันขึ้นไป ต่อเนื่องเป็นคาสเคดเพื่อคูณคะแนน!',
-    infoCombo:'สลับรูนพิเศษสองอันเพื่อระเบิดครั้งใหญ่ ปริซึม + เพลิงเปลี่ยนทั้งสีให้เป็นรูนเพลิง!',
-    spBlaze:'เพลิง', spBlazeHow:'เรียง 4: ล้างทั้งแถว',
-    spNova:'โนวา', spNovaHow:'รูปตัว L/T: ระเบิด 2 ครั้ง',
-    spPrism:'ปริซึม', spPrismHow:'เรียง 5: เผาทั้งสี',
-    infoGoal:'ทำคะแนนถึงเป้าหมาย', infoMoves:'ก่อนตาเดินจะหมด',
-  },
-  id: {
-    title:'RUNIC BLAZE', level:'Level', score:'SKOR', goal:'TARGET', moves:'LANGKAH', combo:'KOMBO',
-    back:'Kembali', restart:'Ulangi', home:'Menu', sound:'Suara', close:'Tutup',
-    play:'Main', tutorial:'Tutorial', skip:'Lewati', howto:'Cara bermain',
-    tagline:'Cocokkan rune · Tempa rune spesial · Capai target',
-    tapToResume:'Ketuk untuk lanjut', noMoves:'Tidak ada langkah — mengocok ulang!', shuffled:'Kocok!',
-    levelClear:'Level selesai!', outOfMoves:'Langkah habis…', blazeRush:'BLAZE RUSH!',
-    praise:['Bagus!','Hebat!','Keren!','Membara!','Legendaris!'],
-    confirmMenu:'Kembali ke menu?',
-    tut1:'Tukar dua rune yang bersebelahan untuk menjajarkan 3 rune yang sama.',
-    tut2:'Jajarkan 4 untuk menempa Rune Api — meledakkan satu baris penuh!',
-    tut3:'Tukar Prisma dengan rune apa pun untuk membakar semua rune sewarnanya!',
-    tutDone:'Sempurna — ayo mulai!',
-    infoSwap:'Tukar dua rune bersebelahan untuk mencocokkan 3 atau lebih. Rangkai cascade untuk menggandakan skor!',
-    infoCombo:'Tukar dua rune spesial untuk ledakan raksasa. Prisma + Api mengubah seluruh warna menjadi Rune Api!',
-    spBlaze:'Api', spBlazeHow:'Cocokkan 4: bersihkan baris',
-    spNova:'Nova', spNovaHow:'Bentuk L/T: meledak 2×',
-    spPrism:'Prisma', spPrismHow:'Cocokkan 5: bakar satu warna',
-    infoGoal:'Capai target skor', infoMoves:'Sebelum langkah habis',
-  },
-  fil: {
-    title:'RUNIC BLAZE', level:'Antas', score:'ISKOR', goal:'LAYUNIN', moves:'GALAW', combo:'KOMBO',
-    back:'Bumalik', restart:'Ulitin', home:'Menu', sound:'Tunog', close:'Isara',
-    play:'Maglaro', tutorial:'Tutorial', skip:'Laktawan', howto:'Paano maglaro',
-    tagline:'Itugma ang mga rune · Gumawa ng espesyal · Abutin ang layunin',
-    tapToResume:'I-tap para magpatuloy', noMoves:'Walang galaw — binabalasa!', shuffled:'Balasa!',
-    levelClear:'Tapos ang antas!', outOfMoves:'Ubos na ang galaw…', blazeRush:'BLAZE RUSH!',
-    praise:['Ayos!','Galing!','Astig!','Nag-aapoy!','Alamat!'],
-    confirmMenu:'Bumalik sa menu?',
-    tut1:'Magpalit ng dalawang magkatabing rune para pumila ang 3 magkakapareho.',
-    tut2:'Pumila ng 4 para makagawa ng Blaze Rune — buburahin nito ang buong linya!',
-    tut3:'Ipagpalit ang Prism sa kahit anong rune para sunugin lahat ng kakulay nito!',
-    tutDone:'Perpekto — simulan na!',
-    infoSwap:'Magpalit ng magkatabing rune para tumugma ang 3 o higit pa. Mag-chain ng cascade para dumami ang iskor!',
-    infoCombo:'Ipagpalit ang dalawang espesyal na rune para sa malaking pagsabog. Prism + Blaze: nagiging Blaze Rune ang buong kulay!',
-    spBlaze:'Blaze', spBlazeHow:'Tugma ng 4: bura ang linya',
-    spNova:'Nova', spNovaHow:'Hugis L/T: 2 beses sasabog',
-    spPrism:'Prism', spPrismHow:'Tugma ng 5: sunog ang kulay',
-    infoGoal:'Abutin ang target na iskor', infoMoves:'Bago maubos ang galaw',
-  },
+  en: { score:'SCORE', best:'BEST', combo:'COMBO', back:'Back', sound:'Sound', play:'Play', next:'Next',
+    skip:'Skip', tapToResume:'Tap to resume', noMoves:'No moves left — shuffling!',
+    shuffled:'Shuffle!', gameOver:'Game Over', newBest:'New Record!', playAgain:'Play Again',
+    cursedSpawn:'A cursed rune appears!', surge:'Arcane Surge!', blazeStorm:'Blaze Storm!',
+    praise:['Nice!','Great!','Awesome!','Blazing!','Legendary!'], ob1T:'Match Runes',
+    ob1D:'Swap two adjacent runes to line up 3 or more of the same kind. They burst — and cascading matches multiply your score!',
+    ob2T:'Forge Specials',
+    ob2D:'Match 4 for a Blaze (clears a line), an L/T for a Nova (3×3 double blast), 5 for a Prism (burns a whole color). Swap two specials for a huge combo!',
+    ob3T:'Cursed Runes',
+    ob3D:'A cursed rune counts down every turn. Clear a match right next to it to break it before it hits 0 — or the run ends. They come faster and harsher the longer you last!' },
+  vi: { play:'Chơi', next:'Tiếp', skip:'Bỏ qua', ob1T:'Ghép Rune',
+    ob1D:'Đổi chỗ 2 rune kề nhau để xếp 3+ rune cùng loại. Chúng nổ — ăn liên hoàn (cascade) nhân điểm!',
+    ob2T:'Rèn Rune Đặc Biệt',
+    ob2D:'Ghép 4 ra Blaze (nổ nguyên hàng), chữ L/T ra Nova (nổ 3×3 hai lần), 5 ra Prism (thiêu 1 màu). Đổi 2 special → combo cực lớn!',
+    ob3T:'Hắc Ấn',
+    ob3D:'Hắc ấn đếm ngược mỗi lượt. Ghép ngay CẠNH nó để phá trước khi về 0 — nếu không sẽ thua! Càng chơi lâu chúng càng tới nhanh và khó hơn.' },
+  'zh-Hans': { play:'开始', next:'下一步', skip:'跳过', ob1T:'消除符文', ob1D:'交换相邻的两个符文，凑齐3个或更多相同符文即可消除。连锁消除还能成倍加分！',
+    ob2T:'锻造特殊符文', ob2D:'4连消出烈焰（清除一行），L/T形消出新星（3×3双重爆炸），5连消出棱镜（烧尽一种颜色）。交换两个特殊符文可引发超大连击！',
+    ob3T:'诅咒符文', ob3D:'诅咒符文每回合倒数。在它旁边完成消除即可在归零前破除它——否则游戏结束。坚持越久，它们来得越快越狠！' },
+  'zh-Hant': { play:'開始', next:'下一步', skip:'跳過', ob1T:'消除符文', ob1D:'交換相鄰的兩個符文，湊齐3個或更多相同符文即可消除。連鎖消除還能成倍加分！',
+    ob2T:'鍛造特殊符文', ob2D:'4連消出烈焰（清除一行），L/T形消出新星（3×3雙重爆炸），5連消出稜鏡（燒盡一種顏色）。交換兩個特殊符文可引發超大連擊！',
+    ob3T:'詛咒符文', ob3D:'詛咒符文每回合倒數。在它旁邊完成消除即可在歸零前破除它——否則遊戲結束。堅持越久，它們來得越快越狠！' },
+  ja: { play:'プレイ', next:'次へ', skip:'スキップ', ob1T:'ルーンをそろえる',
+    ob1D:'隣り合う2つのルーンを入れ替えて、同じ種類を3つ以上並べよう。連鎖するとスコアがどんどん増える！', ob2T:'スペシャルを作る',
+    ob2D:'4つそろえるとブレイズ（1列消し）、L/T字でノヴァ（3×3を2回爆発）、5つでプリズム（1色を全消し）。スペシャル同士を入れ替えると大コンボ！', ob3T:'呪いのルーン',
+    ob3D:'呪いのルーンは毎ターンカウントダウン。0になる前にすぐ隣でマッチして破壊しよう——間に合わないとゲームオーバー。長く続くほど速く、厳しくなる！' },
+  ko: { play:'플레이', next:'다음', skip:'건너뛰기', ob1T:'룬 맞추기',
+    ob1D:'인접한 룬 2개를 바꿔 같은 종류 3개 이상을 한 줄로 만드세요. 연쇄 매치로 점수가 배로 늘어납니다!', ob2T:'스페셜 룬 제작',
+    ob2D:'4개 매치 = 블레이즈(한 줄 제거), L/T 매치 = 노바(3×3 2연폭발), 5개 매치 = 프리즘(한 색 전부 제거). 스페셜 둘을 맞바꾸면 초대형 콤보!',
+    ob3T:'저주받은 룬',
+    ob3D:'저주받은 룬은 턴마다 숫자가 줄어듭니다. 0이 되기 전에 바로 옆에서 매치해 부수세요 — 못 부수면 게임 오버! 오래 버틸수록 더 빨리, 더 혹독하게 나타납니다.' },
+  es: { play:'Jugar', next:'Siguiente', skip:'Saltar', ob1T:'Combina runas',
+    ob1D:'Intercambia dos runas adyacentes para alinear 3 o más iguales. ¡Estallan, y las cascadas multiplican tu puntuación!',
+    ob2T:'Forja especiales',
+    ob2D:'Combina 4 para una Llama (limpia una línea), una L/T para una Nova (doble explosión 3×3), 5 para un Prisma (quema todo un color). ¡Intercambia dos especiales para un combo enorme!',
+    ob3T:'Runas malditas',
+    ob3D:'Una runa maldita cuenta atrás cada turno. Haz una combinación justo a su lado para romperla antes de llegar a 0, o la partida termina. ¡Cuanto más aguantes, más rápido y duro llegan!' },
+  'es-MX': { play:'Jugar', next:'Siguiente', skip:'Saltar', ob1T:'Combina runas',
+    ob1D:'Intercambia dos runas adyacentes para alinear 3 o más iguales. ¡Estallan, y las cascadas multiplican tu puntuación!',
+    ob2T:'Forja especiales',
+    ob2D:'Combina 4 para una Llama (limpia una línea), una L/T para una Nova (doble explosión 3×3), 5 para un Prisma (quema todo un color). ¡Intercambia dos especiales para un combo enorme!',
+    ob3T:'Runas malditas',
+    ob3D:'Una runa maldita cuenta atrás cada turno. Haz una combinación justo a su lado para romperla antes de llegar a 0, o la partida termina. ¡Cuanto más aguantes, más rápido y duro llegan!' },
+  'es-AR': { play:'Jugar', next:'Siguiente', skip:'Saltar', ob1T:'Combina runas',
+    ob1D:'Intercambiá dos runas adyacentes para alinear 3 o más iguales. ¡Estallan, y las cascadas multiplican tu puntuación!',
+    ob2T:'Forja especiales',
+    ob2D:'Combiná 4 para una Llama (limpia una línea), una L/T para una Nova (doble explosión 3×3), 5 para un Prisma (quema todo un color). ¡Intercambiá dos especiales para un combo enorme!',
+    ob3T:'Runas malditas',
+    ob3D:'Una runa maldita cuenta atrás cada turno. Hacé una combinación justo al lado para romperla antes de llegar a 0, o la partida termina. ¡Cuanto más aguantes, más rápido y duro llegan!' },
+  'pt-BR': { play:'Jogar', next:'Próximo', skip:'Pular', ob1T:'Combine runas',
+    ob1D:'Troque duas runas vizinhas para alinhar 3 ou mais do mesmo tipo. Elas explodem — e combinações em cascata multiplicam sua pontuação!',
+    ob2T:'Forje especiais',
+    ob2D:'Combine 4 para uma Chama (limpa uma linha), um L/T para uma Nova (explosão dupla 3×3), 5 para um Prisma (queima uma cor inteira). Troque dois especiais para um combo gigante!',
+    ob3T:'Runas malditas',
+    ob3D:'A runa maldita faz contagem regressiva a cada jogada. Combine bem ao lado dela para quebrá-la antes de chegar a 0 — ou a partida acaba. Quanto mais você durar, mais rápido e pesado elas chegam!' },
+  pt: { play:'Jogar', next:'Seguinte', skip:'Saltar', ob1T:'Combina runas',
+    ob1D:'Troca duas runas vizinhas para alinhar 3 ou mais do mesmo tipo. Elas explodem — e as combinações em cascata multiplicam a pontuação!',
+    ob2T:'Forja especiais',
+    ob2D:'Combina 4 para uma Chama (limpa uma linha), um L/T para uma Nova (explosão dupla 3×3), 5 para um Prisma (queima uma cor inteira). Troca dois especiais para um combo enorme!',
+    ob3T:'Runas malditas',
+    ob3D:'A runa maldita faz contagem decrescente a cada jogada. Combina mesmo ao lado dela para a quebrar antes de chegar a 0 — ou a partida termina. Quanto mais durares, mais rápido e duro elas chegam!' },
+  fr: { play:'Jouer', next:'Suivant', skip:'Passer', ob1T:'Alignez les runes',
+    ob1D:'Échangez deux runes voisines pour aligner 3 exemplaires ou plus. Elles explosent — et les cascades multiplient votre score !',
+    ob2T:'Forgez des spéciales',
+    ob2D:'Alignez-en 4 pour un Brasier (efface une ligne), un L/T pour une Nova (double explosion 3×3), 5 pour un Prisme (brûle toute une couleur). Échangez deux spéciales pour un combo géant !',
+    ob3T:'Runes maudites',
+    ob3D:'Une rune maudite décompte à chaque tour. Faites une combinaison juste à côté pour la briser avant 0 — sinon la partie s’arrête. Plus vous tenez, plus elles arrivent vite et fort !' },
+  de: { play:'Spielen', next:'Weiter', skip:'Überspringen', ob1T:'Runen kombinieren',
+    ob1D:'Tausche zwei benachbarte Runen, um 3 oder mehr gleiche in eine Reihe zu bringen. Sie zerplatzen — und Kaskaden vervielfachen deine Punkte!',
+    ob2T:'Spezialrunen schmieden',
+    ob2D:'4 in einer Reihe = Flamme (löscht eine Linie), L/T = Nova (doppelte 3×3-Explosion), 5 = Prisma (verbrennt eine ganze Farbe). Tausche zwei Spezialrunen für einen Riesen-Combo!',
+    ob3T:'Verfluchte Runen',
+    ob3D:'Eine verfluchte Rune zählt jede Runde herunter. Kombiniere direkt daneben, um sie vor 0 zu brechen — sonst ist der Lauf vorbei. Je länger du durchhältst, desto schneller und härter kommen sie!' },
+  it: { play:'Gioca', next:'Avanti', skip:'Salta', ob1T:'Combina le rune',
+    ob1D:'Scambia due rune adiacenti per allinearne 3 o più uguali. Esplodono — e le cascate moltiplicano il punteggio!',
+    ob2T:'Forgia le speciali',
+    ob2D:'Combina 4 per una Fiamma (pulisce una linea), una L/T per una Nova (doppia esplosione 3×3), 5 per un Prisma (brucia un intero colore). Scambia due speciali per un combo enorme!',
+    ob3T:'Rune maledette',
+    ob3D:'La runa maledetta fa il conto alla rovescia a ogni turno. Combina proprio accanto per spezzarla prima dello 0 — o la partita finisce. Più resisti, più arrivano veloci e dure!' },
+  nl: { play:'Spelen', next:'Volgende', skip:'Overslaan', ob1T:'Runen matchen',
+    ob1D:'Wissel twee aangrenzende runen om 3 of meer dezelfde op een rij te krijgen. Ze knallen — en kettingreacties vermenigvuldigen je score!',
+    ob2T:'Specials smeden',
+    ob2D:'Match er 4 voor een Vlam (wist een lijn), een L/T voor een Nova (dubbele 3×3-knal), 5 voor een Prisma (verbrandt een hele kleur). Wissel twee specials voor een enorme combo!',
+    ob3T:'Vervloekte runen',
+    ob3D:'Een vervloekte rune telt elke beurt af. Match er direct naast om hem vóór 0 te breken — anders is het spel voorbij. Hoe langer je volhoudt, hoe sneller en harder ze komen!' },
+  pl: { play:'Graj', next:'Dalej', skip:'Pomiń', ob1T:'Dopasuj runy',
+    ob1D:'Zamień dwie sąsiednie runy, aby ułożyć 3 lub więcej takich samych. Pękają — a kaskady mnożą twój wynik!',
+    ob2T:'Wykuj specjalne',
+    ob2D:'Ułóż 4 dla Płomienia (czyści linię), L/T dla Novy (podwójny wybuch 3×3), 5 dla Pryzmatu (spala cały kolor). Zamień dwie specjalne runy dla ogromnego combo!',
+    ob3T:'Przeklęte runy',
+    ob3D:'Przeklęta runa odlicza co turę. Zbij dopasowanie tuż obok niej, by ją złamać, zanim dojdzie do 0 — inaczej koniec gry. Im dłużej grasz, tym szybciej i mocniej nadchodzą!' },
+  ru: { play:'Играть', next:'Далее', skip:'Пропустить', ob1T:'Собирайте руны',
+    ob1D:'Меняйте местами две соседние руны, чтобы выстроить 3 и более одинаковых. Они взрываются — а каскады умножают счёт!',
+    ob2T:'Куйте особые руны',
+    ob2D:'Соберите 4 — Пламя (сжигает линию), L/T — Нова (двойной взрыв 3×3), 5 — Призма (выжигает целый цвет). Поменяйте две особые руны местами — получите огромное комбо!',
+    ob3T:'Проклятые руны',
+    ob3D:'Проклятая руна отсчитывает ход за ходом. Соберите совпадение рядом с ней, чтобы разбить её до 0, — иначе игра окончена. Чем дольше держитесь, тем быстрее и жёстче они приходят!' },
+  tr: { play:'Oyna', next:'İleri', skip:'Atla', ob1T:'Rünleri eşleştir',
+    ob1D:'Aynı türden 3 veya daha fazlasını dizmek için iki komşu rünü yer değiştir. Patlarlar — zincirleme eşleşmeler puanını katlar!',
+    ob2T:'Özel Rünler',
+    ob2D:'4’lü eşleşme = Alev (bir hattı temizler), L/T = Nova (3×3 çifte patlama), 5’li = Prizma (bir rengi tamamen yakar). İki özeli takas et, dev kombo yap!',
+    ob3T:'Lanetli Rünler',
+    ob3D:'Lanetli rün her turda geri sayar. 0 olmadan hemen yanında eşleşme yaparak kır — yoksa oyun biter. Ne kadar uzun dayanırsan o kadar hızlı ve sert gelirler!' },
+  ar: { play:'العب', next:'التالي', skip:'تخطَّ', ob1T:'طابق الأحرف الرونية',
+    ob1D:'بدّل حرفين متجاورين لاصطفاف 3 أو أكثر من نفس النوع. تنفجر — والمطابقات المتتالية تضاعف نقاطك!',
+    ob2T:'اصنع الرونات الخاصة',
+    ob2D:'طابق 4 للهب (يمسح سطرًا)، وشكل L/T للنوفا (انفجار مزدوج 3×3)، و5 للموشور (يحرق لونًا كاملًا). بدّل رونين خاصين لكومبو هائل!',
+    ob3T:'الرونات الملعونة',
+    ob3D:'الرون الملعون يعدّ تنازليًا كل دور. طابق بجانبه مباشرة لكسره قبل أن يصل إلى 0 — وإلا انتهت الجولة. كلما صمدت أطول، أتت أسرع وأقسى!' },
+  hi: { play:'खेलें', next:'आगे', skip:'छोड़ें', ob1T:'रून मिलाएँ',
+    ob1D:'एक जैसे 3 या ज़्यादा रून की कतार बनाने के लिए दो पड़ोसी रून बदलें। वे फटते हैं — और लगातार मैच से स्कोर कई गुना बढ़ता है!',
+    ob2T:'ख़ास रून बनाएँ',
+    ob2D:'4 मिलाएँ तो ब्लेज़ (एक लाइन साफ़), L/T से नोवा (3×3 दोहरा धमाका), 5 से प्रिज़्म (पूरा एक रंग जलाए)। दो ख़ास रून आपस में बदलें — ज़बरदस्त कॉम्बो!',
+    ob3T:'शापित रून',
+    ob3D:'शापित रून हर चाल पर उलटी गिनती करता है। 0 होने से पहले उसके ठीक बगल में मैच करके उसे तोड़ें — वरना खेल ख़त्म। जितना लंबा टिकेंगे, वे उतनी तेज़ और कठोर आएँगी!' },
+  th: { play:'เล่น', next:'ถัดไป', skip:'ข้าม', ob1T:'จับคู่รูน',
+    ob1D:'สลับรูนสองอันที่ติดกันให้เรียงเหมือนกัน 3 อันขึ้นไป มันจะระเบิด — และการจับคู่ต่อเนื่องจะคูณคะแนนของคุณ!',
+    ob2T:'สร้างรูนพิเศษ',
+    ob2D:'เรียง 4 ได้เบลซ (ล้างทั้งแถว), รูปตัว L/T ได้โนวา (ระเบิดคู่ 3×3), เรียง 5 ได้ปริซึม (เผาทั้งสี) สลับรูนพิเศษสองอันเพื่อคอมโบมหาศาล!',
+    ob3T:'รูนต้องสาป',
+    ob3D:'รูนต้องสาปจะนับถอยหลังทุกตา จับคู่ติดกับมันเพื่อทำลายก่อนถึง 0 — ไม่งั้นจบเกม ยิ่งอยู่นานมันยิ่งมาเร็วและโหดขึ้น!' },
+  id: { play:'Main', next:'Lanjut', skip:'Lewati', ob1T:'Cocokkan Rune',
+    ob1D:'Tukar dua rune bersebelahan untuk menjajarkan 3 atau lebih yang sama. Mereka meledak — dan match beruntun melipatgandakan skormu!',
+    ob2T:'Tempa Rune Spesial',
+    ob2D:'Cocokkan 4 untuk Blaze (membersihkan satu baris), bentuk L/T untuk Nova (ledakan ganda 3×3), 5 untuk Prisma (membakar satu warna penuh). Tukar dua spesial untuk kombo raksasa!',
+    ob3T:'Rune Terkutuk',
+    ob3D:'Rune terkutuk menghitung mundur tiap giliran. Buat match tepat di sebelahnya untuk menghancurkannya sebelum 0 — atau permainan berakhir. Makin lama bertahan, makin cepat dan ganas mereka datang!' },
+  fil: { play:'Maglaro', next:'Susunod', skip:'Laktawan', ob1T:'Itugma ang mga Rune',
+    ob1D:'Magpalit ng dalawang magkatabing rune para makabuo ng 3 o higit pang magkakapareho. Sasabog ang mga ito — at ang sunud-sunod na tugma ay nagpaparami ng iskor mo!',
+    ob2T:'Gumawa ng Espesyal',
+    ob2D:'Itugma ang 4 para sa Blaze (buburahin ang isang linya), L/T para sa Nova (dobleng pagsabog na 3×3), 5 para sa Prism (susunugin ang buong kulay). Ipagpalit ang dalawang espesyal para sa napakalaking combo!',
+    ob3T:'Mga Sinumpang Rune',
+    ob3D:'Nagbibilang pababa ang sinumpang rune bawat tira. Tumugma mismo sa tabi nito para basagin bago mag-0 — kung hindi, tapos ang laro. Habang tumatagal ka, mas mabilis at mas mahirap silang darating!' },
 };
-
-/* Khoá bổ sung cho score-attack + corruption (đủ 23 locale — giữ chuẩn i18n) */
-const EXTRA_I18N = {
-  en:{ best:'BEST', corruption:'Corruption', gameOver:'Game Over', newBest:'New Record!', playAgain:'Play Again', consumed:'The Blight consumes all…' },
-  vi:{ best:'KỶ LỤC', corruption:'Ăn mòn', gameOver:'Kết thúc', newBest:'Kỷ lục mới!', playAgain:'Chơi lại', consumed:'Hắc khí nuốt trọn…' },
-  'zh-Hans':{ best:'最高', corruption:'腐蚀', gameOver:'游戏结束', newBest:'新纪录！', playAgain:'再玩一次', consumed:'腐蚀吞噬一切…' },
-  'zh-Hant':{ best:'最高', corruption:'腐蝕', gameOver:'遊戲結束', newBest:'新紀錄！', playAgain:'再玩一次', consumed:'腐蝕吞噬一切…' },
-  ja:{ best:'ベスト', corruption:'侵食', gameOver:'ゲームオーバー', newBest:'新記録！', playAgain:'もう一度', consumed:'侵食に飲まれた…' },
-  ko:{ best:'최고', corruption:'부패', gameOver:'게임 오버', newBest:'신기록!', playAgain:'다시하기', consumed:'부패가 모든 것을 삼켰다…' },
-  es:{ best:'MEJOR', corruption:'Corrupción', gameOver:'Fin', newBest:'¡Récord!', playAgain:'Jugar otra vez', consumed:'La plaga lo consume todo…' },
-  'es-MX':{ best:'MEJOR', corruption:'Corrupción', gameOver:'Fin', newBest:'¡Récord!', playAgain:'Jugar otra vez', consumed:'La plaga lo consume todo…' },
-  'es-AR':{ best:'MEJOR', corruption:'Corrupción', gameOver:'Fin', newBest:'¡Récord!', playAgain:'Jugar otra vez', consumed:'La plaga lo consume todo…' },
-  'pt-BR':{ best:'RECORDE', corruption:'Corrupção', gameOver:'Fim de Jogo', newBest:'Novo recorde!', playAgain:'Jogar de novo', consumed:'A praga consome tudo…' },
-  pt:{ best:'RECORDE', corruption:'Corrupção', gameOver:'Fim de Jogo', newBest:'Novo recorde!', playAgain:'Jogar de novo', consumed:'A praga consome tudo…' },
-  fr:{ best:'MEILLEUR', corruption:'Corruption', gameOver:'Fin', newBest:'Nouveau record !', playAgain:'Rejouer', consumed:'La corruption dévore tout…' },
-  de:{ best:'BESTE', corruption:'Verderben', gameOver:'Game Over', newBest:'Neuer Rekord!', playAgain:'Nochmal', consumed:'Das Verderben verschlingt alles…' },
-  it:{ best:'RECORD', corruption:'Corruzione', gameOver:'Fine', newBest:'Nuovo record!', playAgain:'Rigioca', consumed:'La corruzione divora tutto…' },
-  nl:{ best:'BESTE', corruption:'Verval', gameOver:'Game Over', newBest:'Nieuw record!', playAgain:'Opnieuw', consumed:'Het verval verzwelgt alles…' },
-  pl:{ best:'REKORD', corruption:'Zepsucie', gameOver:'Koniec gry', newBest:'Nowy rekord!', playAgain:'Zagraj ponownie', consumed:'Zepsucie pochłania wszystko…' },
-  ru:{ best:'РЕКОРД', corruption:'Порча', gameOver:'Игра окончена', newBest:'Новый рекорд!', playAgain:'Ещё раз', consumed:'Порча поглощает всё…' },
-  tr:{ best:'EN İYİ', corruption:'Çürüme', gameOver:'Oyun Bitti', newBest:'Yeni rekor!', playAgain:'Tekrar oyna', consumed:'Çürüme her şeyi yutuyor…' },
-  ar:{ best:'الأفضل', corruption:'الفساد', gameOver:'انتهت اللعبة', newBest:'رقم قياسي جديد!', playAgain:'إعادة اللعب', consumed:'الفساد يبتلع كل شيء…' },
-  hi:{ best:'सर्वश्रेष्ठ', corruption:'क्षय', gameOver:'खेल समाप्त', newBest:'नया रिकॉर्ड!', playAgain:'फिर खेलें', consumed:'क्षय सब कुछ निगल गया…' },
-  th:{ best:'สูงสุด', corruption:'ความเสื่อม', gameOver:'จบเกม', newBest:'สถิติใหม่!', playAgain:'เล่นอีกครั้ง', consumed:'ความเสื่อมกลืนกินทุกสิ่ง…' },
-  id:{ best:'TERBAIK', corruption:'Korupsi', gameOver:'Permainan Selesai', newBest:'Rekor baru!', playAgain:'Main Lagi', consumed:'Wabah melahap semuanya…' },
-  fil:{ best:'PINAKA', corruption:'Pagkabulok', gameOver:'Tapos na', newBest:'Bagong rekord!', playAgain:'Ulitin', consumed:'Nilalamon ng salot ang lahat…' },
-};
-Object.keys(EXTRA_I18N).forEach(k => { if (I18N[k]) Object.assign(I18N[k], EXTRA_I18N[k]); });
-
-/* Onboarding + events. `next` đủ 23 locale; mô tả onboarding en+vi (còn lại fallback en). */
-const OB_I18N = {
-  en:{ next:'Next', cursedSpawn:'A cursed rune appears!', surge:'Arcane Surge!', blazeStorm:'Blaze Storm!',
-       ob1T:'Match Runes', ob1D:'Swap two adjacent runes to line up 3 or more of the same kind. They burst — and cascading matches multiply your score!',
-       ob2T:'Forge Specials', ob2D:'Match 4 for a Blaze (clears a line), an L/T for a Nova (3×3 double blast), 5 for a Prism (burns a whole color). Swap two specials for a huge combo!',
-       ob3T:'Cursed Runes', ob3D:'A cursed rune counts down every turn. Clear a match right next to it to break it before it hits 0 — or the run ends. They come faster and harsher the longer you last!' },
-  vi:{ next:'Tiếp', cursedSpawn:'Hắc ấn xuất hiện!', surge:'Bùng Phép!', blazeStorm:'Bão Lửa!',
-       ob1T:'Ghép Rune', ob1D:'Đổi chỗ 2 rune kề nhau để xếp 3+ rune cùng loại. Chúng nổ — ăn liên hoàn (cascade) nhân điểm!',
-       ob2T:'Rèn Rune Đặc Biệt', ob2D:'Ghép 4 ra Blaze (nổ nguyên hàng), chữ L/T ra Nova (nổ 3×3 hai lần), 5 ra Prism (thiêu 1 màu). Đổi 2 special → combo cực lớn!',
-       ob3T:'Hắc Ấn', ob3D:'Hắc ấn đếm ngược mỗi lượt. Ghép ngay CẠNH nó để phá trước khi về 0 — nếu không sẽ thua! Càng chơi lâu chúng càng tới nhanh và khó hơn.' },
-  'zh-Hans':{next:'下一步'},'zh-Hant':{next:'下一步'},ja:{next:'次へ'},ko:{next:'다음'},
-  es:{next:'Siguiente'},'es-MX':{next:'Siguiente'},'es-AR':{next:'Siguiente'},'pt-BR':{next:'Próximo'},pt:{next:'Seguinte'},
-  fr:{next:'Suivant'},de:{next:'Weiter'},it:{next:'Avanti'},nl:{next:'Volgende'},pl:{next:'Dalej'},ru:{next:'Далее'},
-  tr:{next:'İleri'},ar:{next:'التالي'},hi:{next:'आगे'},th:{next:'ถัดไป'},id:{next:'Lanjut'},fil:{next:'Susunod'},
-};
-Object.keys(OB_I18N).forEach(k => { if (I18N[k]) Object.assign(I18N[k], OB_I18N[k]); });
 
 let LANG = DEFAULT_LANG;
 function t(key) {
@@ -1851,55 +1462,48 @@ function runeGlyph(color) {
   return '';
 }
 
-/* Overlay special — nét ether trắng đặc phẳng, cùng ngôn ngữ sigil */
-function overlayStroke(d) {
-  return `<path d="${d}" fill="none" stroke="#fff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>`;
-}
-
-function specialOverlay(kind) {
+/* Icon special — THAY HẲN glyph rune bằng 1 icon trắng đậm duy nhất (không vẽ
+   chồng lên rune nữa): tile giữ MÀU nền, icon nói rõ "đây là special gì". */
+function specialIcon(kind) {
   if (kind === K_SH) {
+    // mũi tên 2 đầu NGANG — quét nguyên hàng
     return `<g class="stripe-arrows">
-      ${overlayStroke('M28 50 L8 50 M16 41 L8 50 L16 59')}
-      ${overlayStroke('M72 50 L92 50 M84 41 L92 50 L84 59')}
+      <path d="M8 50 L30 32 L30 42 L70 42 L70 32 L92 50 L70 68 L70 58 L30 58 L30 68 Z"
+            fill="#fff" stroke="rgba(0,0,0,.18)" stroke-width="2" stroke-linejoin="round"/>
     </g>`;
   }
   if (kind === K_SV) {
+    // mũi tên 2 đầu DỌC — quét nguyên cột
     return `<g class="stripe-arrows">
-      ${overlayStroke('M50 28 L50 8 M41 16 L50 8 L59 16')}
-      ${overlayStroke('M50 72 L50 92 M41 84 L50 92 L59 84')}
+      <path d="M8 50 L30 32 L30 42 L70 42 L70 32 L92 50 L70 68 L70 58 L30 58 L30 68 Z"
+            fill="#fff" stroke="rgba(0,0,0,.18)" stroke-width="2" stroke-linejoin="round"
+            transform="rotate(90 50 50)"/>
     </g>`;
   }
   if (kind === K_NOVA) {
+    // ngôi sao nổ 8 cánh — vụ nổ 3×3
     return `<g class="nova-ring">
-      <circle cx="50" cy="50" r="34" fill="none" stroke="#fff" stroke-width="3.5" stroke-dasharray="9 7"/>
-      <circle cx="50" cy="50" r="43" fill="none" stroke="#fff" stroke-width="2"/>
-      <path d="M50 2 L53 10 L50 18 L47 10 Z" fill="#fff"/>
-      <path d="M50 2 L53 10 L50 18 L47 10 Z" fill="#fff" transform="rotate(90 50 50)"/>
-      <path d="M50 2 L53 10 L50 18 L47 10 Z" fill="#fff" transform="rotate(180 50 50)"/>
-      <path d="M50 2 L53 10 L50 18 L47 10 Z" fill="#fff" transform="rotate(270 50 50)"/>
+      <path d="M50 8 L56.5 34.3 L79.7 20.3 L65.7 43.5 L92 50 L65.7 56.5 L79.7 79.7 L56.5 65.7 L50 92 L43.5 65.7 L20.3 79.7 L34.3 56.5 L8 50 L34.3 43.5 L20.3 20.3 L43.5 34.3 Z"
+            fill="#fff" stroke="rgba(0,0,0,.18)" stroke-width="2" stroke-linejoin="round"/>
     </g>`;
   }
   return '';
 }
 
 function prismArt() {
-  // tinh thể ám tím + vòng phép quay với nan quang phổ mờ — huyền bí, không "kẹo"
+  // tinh thể trắng lớn + 6 chấm màu TĨNH quanh viền — "thiêu 1 màu bất kỳ",
+  // không vòng xoay/nan hoa (gọn, phẳng)
   const cols = ['#df5b4c', '#d89a3a', '#5aa85f', '#d76f9c', '#4a86c5', '#8f6fbf'];
-  let spokes = '', ticks = '';
+  let dots = '';
   for (let i = 0; i < 6; i++) {
     const a = (i * 60 - 90) * Math.PI / 180;
-    const x1 = 50 + 20 * Math.cos(a), y1 = 50 + 20 * Math.sin(a);
-    const x2 = 50 + 38 * Math.cos(a), y2 = 50 + 38 * Math.sin(a);
-    spokes += `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)} L${x2.toFixed(1)} ${y2.toFixed(1)}" stroke="${cols[i]}" stroke-width="3.2" stroke-linecap="round"/>`;
-    ticks += `<circle cx="${x2.toFixed(1)}" cy="${y2.toFixed(1)}" r="2.6" fill="${cols[i]}"/>`;
+    const x = 50 + 41 * Math.cos(a), y = 50 + 41 * Math.sin(a);
+    dots += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="${cols[i]}"/>`;
   }
-  return `<g class="prism-core">
-      <circle cx="50" cy="50" r="43" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2" stroke-dasharray="7 6"/>
-      ${spokes}${ticks}
-    </g>
-    <path d="M50 24 L66 44 L50 76 L34 44 Z" fill="#eef1f6" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
-    <path d="M50 24 L50 76 M34 44 L66 44" fill="none" stroke="rgba(0,0,0,.3)" stroke-width="1.6"/>
-    <circle cx="50" cy="47" r="5.5" fill="#fff"/>`;
+  return `${dots}
+    <path d="M50 18 L70 42 L50 82 L30 42 Z" fill="#eef1f6" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M50 18 L50 82 M30 42 L70 42" fill="none" stroke="rgba(0,0,0,.3)" stroke-width="1.6"/>
+    <circle cx="50" cy="45" r="5.5" fill="#fff"/>`;
 }
 
 /* Cursed rune — ấn nguyền đỏ máu: đĩa tối viền đỏ, gai + xích, SỐ đếm ngược lớn */
@@ -1913,7 +1517,8 @@ function cursedArt(n) {
 function tileSVG(color, kind) {
   if (kind === K_CURSED) return cursedArt(0);   // số thật do renderCursed() đặt sau khi morph
   if (kind === K_PRISM) return prismArt();
-  return runeGlyph(color) + specialOverlay(kind);
+  if (kind === K_SH || kind === K_SV || kind === K_NOVA) return specialIcon(kind);
+  return runeGlyph(color);
 }
 
 /* ================================================================
@@ -3570,8 +3175,8 @@ function obIllo(kind) {
   }
   if (kind === 'special') {
     return `<svg viewBox="0 0 300 96" aria-hidden="true">`
-      + obTile(30, 20, runeGlyph(3) + specialOverlay(K_SH))
-      + obTile(123, 20, runeGlyph(0) + specialOverlay(K_NOVA))
+      + obTile(30, 20, specialIcon(K_SH))
+      + obTile(123, 20, specialIcon(K_NOVA))
       + obTile(216, 20, prismArt()) + `</svg>`;
   }
   // cursed: hắc ấn + 2 rune cùng màu kề nó → phá

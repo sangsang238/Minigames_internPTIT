@@ -93,7 +93,7 @@
   `--ui-font` (ngoài Latinh → `system-ui`); reset CSS + tắt tap-highlight.
 - ✅ **popup-common.md** — không tự vẽ popup kết quả (app lo, `showModal:true`).
 - ✅ **zip-common.md** — single-file, `game.json` đủ field, 3 cover đúng kích thước.
-- ✅ **i18n** — inline, đủ 23 ngôn ngữ, fallback `en`.
+- ✅ **i18n** — inline; **chỉ TUTORIAL dịch đủ 23 ngôn ngữ** (theo QA 2026-07-22: "thừa localize"); Level/SCORE/BEST/toast… dùng tiếng Anh qua fallback `en` — deviation chủ đích so với game-common §5.
 - ℹ️ Mở bằng browser thường (không có `ReactNativeWebView`): tự giả lập popup
   app (next/retry sau 1.4s) để playtest — trong app thật không chạy.
 

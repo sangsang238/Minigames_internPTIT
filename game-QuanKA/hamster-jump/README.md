@@ -83,8 +83,9 @@ chồng nhau) và **năng lượng > 4kHz ≈ 0** (không gắt tai).
 - **popup-common.md** — game điểm cao tự vẽ popup: 1 tiêu đề `New Best!`/`Game
   Over`, màu accent cố định, `fitScores()`, delay 700ms có guard `clearTimeout`.
 - **zip-common.md** — single-file, `game.json` đủ field, 3 cover đúng tên/kích thước.
-- **i18n** — inline đủ 23 ngôn ngữ, fallback `en`; đã xử lý RLM tiếng Ả Rập +
-  NBSP tiếng Pháp.
+- **i18n** — inline; **chỉ TUTORIAL dịch đủ 23 ngôn ngữ** (theo QA 2026-07-22:
+  "thừa localize"); SCORE/BEST/popup… dùng tiếng Anh qua fallback `en` —
+  deviation chủ đích so với game-common §5.
 
 ## Backlog
 

@@ -112,7 +112,7 @@ Best **persist ngay khi vượt** (không chờ hết ván) qua `save_data` + lo
 - ✅ **Lưu 2 tầng (§1.2)** — `save_data` chỉ data nhẹ `{best, tut, muted}`, mirror localStorage, load merge MAX; best lưu **ngay khi vượt**, HUD Best chỉ refresh khi hết ván
 - ✅ **popup-common.md** — game điểm cao tự vẽ popup: 1 tiêu đề đổi chữ (không badge riêng), màu cố định (nhãn `#8fb4ff`, BEST `#ffd23f`, Play Again `#ffb02e`), ẩn/hiện bằng opacity + scale, delay 0.7s, `fitScores()`
 - ✅ **zip-common.md** — single-file, `game.json` đủ field, 3 cover đúng tên/kích thước (1920×1080 / 800×1200 / 800×800)
-- ✅ **i18n** — inline `I18N` **đủ 23 ngôn ngữ** cho toàn bộ UI + tutorial + how-to-play + aria-label; Google Sans Flex, ngôn ngữ ngoài Latin tự chuyển `system-ui` (cả chữ vẽ canvas); tiếng Ả Rập bỏ letter-spacing
+- ✅ **i18n** — inline `I18N`, **chỉ TUTORIAL dịch đủ 23 ngôn ngữ** (theo QA 2026-07-22: "thừa localize"); mọi text UI khác (SCORE/BEST/popup/floatText…) dùng tiếng Anh qua fallback `en` — deviation chủ đích so với game-common §5. Google Sans Flex, ngôn ngữ ngoài Latin tự chuyển `system-ui` (cả chữ vẽ canvas)
 
 > Không có event `victory`/`next_level` — game điểm cao không level (đúng spec §1.1, không phải deviation).
 

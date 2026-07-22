@@ -89,13 +89,12 @@ Combo 2 special (Prism+Prism xoá board, Prism+Blaze/Nova biến-cả-màu, Blaz
 - ✅ **game-common.md** — **game điểm-cao (§1.1):** `game_result` `result:null, showModal:false`, game **tự vẽ popup**; **Play Again → `retry_level`**; `ads` mỗi 3 lần thua; `level` luôn `null`; Back = `quit`; `statusBarHeight`; `onAppPause` (lưu best + pause) / `onRetryLevel` (ván mới) / `onNextLevel` (no-op). **Không dùng `victory`/`next_level`**
 - ✅ **popup-common.md** — game không-level tự vẽ popup kết quả (SCORE/BEST/Play Again), auto-fit cỡ số nhiều chữ số
 - ✅ **zip-common.md** — single-file, `game.json` đủ field, 3 ảnh cover đúng tên/kích thước
-- ✅ **i18n** — inline `I18N` **đủ 23 ngôn ngữ** cho UI/popup/aria + khoá `next`; mô tả onboarding + tên events hiện en+vi (còn lại fallback en — xem Backlog)
+- ✅ **i18n** — inline `I18N`, **chỉ ONBOARDING/tutorial dịch đủ 23 ngôn ngữ** (khoá `ob1T…ob3D`, `next`, `skip`, `play` — đã dịch nốt 21 locale còn thiếu); mọi text UI khác (SCORE/BEST/popup/toast events…) dùng tiếng Anh qua fallback `en` — theo QA 2026-07-22 "localize thừa", deviation chủ đích so với game-common §5
 
 ---
 
 ## 📋 Backlog
 
-- [ ] Dịch nốt mô tả onboarding + tên events (surge/storm/cursedSpawn) cho 21 locale còn lại
 - [ ] Hắc Ấn nhiều lớp (cần phá 2–3 lần) ở mốc điểm rất cao
 - [ ] Milestone điểm (5k/10k/20k) → toast + FX ăn mừng riêng
 - [ ] Haptic khi Hắc Ấn còn 1 lượt (cần native)
