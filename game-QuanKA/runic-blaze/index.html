@@ -1440,26 +1440,41 @@ function runeGlyph(color) {
       return glyphStrokes('#ff3d5a',
         'M50 12 L63 35 L55 42 L69 58 L50 88 L31 58 L45 42 L37 35 Z',
         glyphStrokes('#ff8fa3', 'M50 56 L56 66 L50 78 L44 66 Z'));
-    case 1: // WATER — giọt kết tinh + gợn sóng
+    case 1: // WATER — GIỌT nước tròn trịa (bỏ tinh thể nhọn + gợn zigzag: nét
+            // nhọn/gãy khúc dễ lẫn với icon nổ đặc biệt — QA 2026-07-27)
       return glyphStrokes('#2f7bff',
-        'M50 12 L67 44 L62 72 L50 84 L38 72 L33 44 Z',
-        glyphStrokes('#a9ccff', 'M39 58 L45 52 L50 58 L55 52 L61 58'));
+        'M50 13 Q76 42 76 62 A26 26 0 0 1 24 62 Q24 42 50 13 Z',
+        glyphStrokes('#a9ccff', 'M34 63 Q34 74 43 79'));
     case 2: // NATURE — rune cây cổ, nhánh vươn lên
       return glyphStrokes('#2dff8a',
         'M50 86 L50 22 M50 42 L32 26 M50 42 L68 26 M50 64 L36 52 M50 64 L64 52');
-    case 3: // BOLT — tia sét
+    case 3: // SEAL — ấn LỤC GIÁC + gạch ngang (thay tia sét: nét nhọn toả ra
+            // đọc thành "nổ", lẫn với nova/blaze — QA 2026-07-27)
       return glyphStrokes('#ffb830',
-        'M57 10 L35 48 L49 50 L41 90 L67 46 L52 44 Z');
+        'M50 12 L83 31 L83 69 L50 88 L17 69 L17 31 Z',
+        glyphStrokes('#ffe0a0', 'M33 50 L67 50'));
     case 4: // MOON — trăng khuyết + tinh tú
       return glyphStrokes('#c060ff',
         'M62 13 A37 37 0 1 0 62 87 A29 29 0 1 1 62 13 Z',
         '<circle cx="35" cy="35" r="3" fill="#fff"/><circle cx="29" cy="55" r="2.2" fill="#fff"/><circle cx="35" cy="70" r="2.6" fill="#fff"/>');
-    case 5: // STAR — sao 4 cánh
-      return glyphStrokes('#7fefff',
-        'M50 10 L58 42 L90 50 L58 58 L50 90 L42 58 L10 50 L42 42 Z',
-        '<circle cx="50" cy="50" r="4.5" fill="#fff"/>');
+    case 5: // SPIRAL — xoáy ốc (thay sao 4 cánh: gần như trùng icon nova 8 cánh
+            // = "bom nổ" — QA 2026-07-27). Nét cuộn KHÔNG toả tia nên không lẫn.
+      return glyphStrokes('#7fefff', spiralD());
   }
   return '';
+}
+
+/* Polyline xoáy ốc mượt: 1.55 vòng, bán kính 7 → 41 (cách vòng ~22px ≫ nét 6px). */
+function spiralD() {
+  let d = '';
+  for (let i = 0; i <= 56; i++) {
+    const t = i / 56;
+    const a = t * Math.PI * 3.1 - Math.PI / 2;
+    const r = 7 + t * 34;
+    d += (i ? ' L' : 'M') + (50 + r * Math.cos(a)).toFixed(1)
+       + ' ' + (50 + r * Math.sin(a)).toFixed(1);
+  }
+  return d;
 }
 
 /* Icon special — THAY HẲN glyph rune bằng 1 icon trắng đậm duy nhất (không vẽ
@@ -1491,19 +1506,23 @@ function specialIcon(kind) {
 }
 
 function prismArt() {
-  // tinh thể trắng lớn + 6 chấm màu TĨNH quanh viền — "thiêu 1 màu bất kỳ",
-  // không vòng xoay/nan hoa (gọn, phẳng)
-  const cols = ['#df5b4c', '#d89a3a', '#5aa85f', '#d76f9c', '#4a86c5', '#8f6fbf'];
-  let dots = '';
+  /* BÁNH XE 6 MÚI MÀU đầy ô — nói thẳng "thiêu TOÀN BỘ rune của 1 màu".
+     Bản cũ (tinh thể trắng to + 6 chấm màu bé quanh viền) bị QA 2026-07-27 chấm
+     "chưa rõ biểu tượng": chấm màu quá nhỏ nên chỉ còn đọc ra "một viên đá trắng".
+     Nay MÀU là phần chính, lõi trắng = "tia thiêu"; vẫn phẳng, KHÔNG xoay. */
+  const cols = ['#df5b4c', '#d89a3a', '#5aa85f', '#4a86c5', '#8f6fbf', '#d76f9c'];
+  const R = 41;
+  let wedges = '';
   for (let i = 0; i < 6; i++) {
-    const a = (i * 60 - 90) * Math.PI / 180;
-    const x = 50 + 41 * Math.cos(a), y = 50 + 41 * Math.sin(a);
-    dots += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="${cols[i]}"/>`;
+    const a0 = (i * 60 - 90) * Math.PI / 180;
+    const a1 = ((i + 1) * 60 - 90) * Math.PI / 180;
+    const x0 = (50 + R * Math.cos(a0)).toFixed(1), y0 = (50 + R * Math.sin(a0)).toFixed(1);
+    const x1 = (50 + R * Math.cos(a1)).toFixed(1), y1 = (50 + R * Math.sin(a1)).toFixed(1);
+    wedges += `<path d="M50 50 L${x0} ${y0} A${R} ${R} 0 0 1 ${x1} ${y1} Z"`
+            + ` fill="${cols[i]}" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>`;
   }
-  return `${dots}
-    <path d="M50 18 L70 42 L50 82 L30 42 Z" fill="#eef1f6" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
-    <path d="M50 18 L50 82 M30 42 L70 42" fill="none" stroke="rgba(0,0,0,.3)" stroke-width="1.6"/>
-    <circle cx="50" cy="45" r="5.5" fill="#fff"/>`;
+  return `<circle cx="50" cy="50" r="45" fill="#fff"/>${wedges}`
+       + `<circle cx="50" cy="50" r="13" fill="#fff"/>`;
 }
 
 /* Cursed rune — ấn nguyền đỏ máu: đĩa tối viền đỏ, gai + xích, SỐ đếm ngược lớn */

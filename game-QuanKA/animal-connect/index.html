@@ -887,21 +887,36 @@ function getInitialData() {
  *  cols×rows (số ô, luôn chẵn) | types: số loại thú
  * ================================================================ */
 /* ĐỘ KHÓ TĂNG DẦN CẢM NHẬN ĐƯỢC — 2 pha:
- *  • Pha 1 (level 1–5): BÀN lớn dần 6×6 → 8×10 (thấy rõ bàn to ra mỗi màn).
- *  • Pha 2 (level 6+):  bàn giữ MAX 8×10, `perPair` (giây/cặp) SIẾT dần tới sàn
+ *  • Pha 1 (level 1–10): BÀN lớn dần 6×6 → 10×12 (36 → 120 ô). Mỗi màn bàn TO
+ *    RA THẬT, không dừng ở màn 5 nữa (QA 2026-07-27: "đang giữ 1 kích thước nên
+ *    ko có thử thách lắm" — cũ chốt MAX 8×10 ngay từ level 5).
+ *  • Pha 2 (level 11+): bàn giữ MAX 10×12, `perPair` (giây/cặp) SIẾT dần tới sàn
  *    → cùng bàn to nhưng THỜI GIAN GIẢM ĐỀU mỗi màn = tín hiệu khó rõ ràng.
  * Thêm: loại thú 12→14, tỉ lệ cặp-kề `f` giảm (bàn khó tìm hơn), điểm cộng dồn.
- * Tile LUÔN đứng yên; không "màn cuối" → chỉ game_result win/lose. */
-const SIZE_RAMP = [[6,6],[6,8],[8,8],[8,9],[8,10]];   // tiles 36→48→64→72→80
-const SIZE_MAX  = [8,10];                             // level 6+ giữ ở max
+ * Tile LUÔN đứng yên; không "màn cuối" → chỉ game_result win/lose.
+ *
+ * TRẦN 10 CỘT là giới hạn LAYOUT, không phải con số tuỳ hứng: resize() lấy
+ * cellPx = min(availW/COLS, availH/(ROWS+1), 58) với sàn 16px — quá sàn thì
+ * `#board-outer overflow:hidden` sẽ CẮT bàn. Máy 412px: availW 376 → 10 cột =
+ * 37px/ô; máy hẹp 320px: availW 284 → 28px/ô (vẫn > sàn 16, mặt thú còn đọc
+ * được). 12 hàng cần availH ≥ 13×28 = 364px — thừa sức trên mọi màn hình.
+ * cols×rows LUÔN CHẴN (đủ cặp) → không được để cả 2 chiều cùng lẻ. */
+const SIZE_RAMP = [
+  [6,6],  [6,8],  [7,8],  [8,8],  [8,9],     // 36 → 48 → 56 → 64 → 72
+  [8,10], [8,11], [8,12], [9,12], [10,12],   // 80 → 88 → 96 → 108 → 120
+];
+const SIZE_MAX  = SIZE_RAMP[SIZE_RAMP.length - 1];   // level 11+ giữ ở max 10×12
 
 function levelConfig(idx) {
   const [cols, rows] = idx < SIZE_RAMP.length ? SIZE_RAMP[idx] : SIZE_MAX;
   // types cao để ít cặp trùng: màn 1 = 12 loại, từ màn 3 đủ 14
   const types = Math.min(ANIMALS.length, 12 + Math.min(idx, 2));
-  // giây/cặp siết từ 4.5 → sàn 2.0 (đạt sàn ~màn 15) → nhịp bắt buộc nhanh dần
+  /* giây/cặp siết từ 4.4 → sàn 2.0 (đạt sàn ~màn 16). Dốc thoải hơn trước
+     (0.16/màn thay vì 0.18) vì nay BÀN cũng đang to dần: tìm được 1 cặp trong
+     120 ô lâu hơn trong 80 ô, hai trục khó không được cộng dồn thành bất khả.
+     → tổng giờ tăng 80s→180s suốt pha 1 (bàn to), rồi tụt đều về 120s ở pha 2. */
   const pairs = (cols * rows) / 2;
-  const perPair = Math.max(2.0, 4.5 - idx * 0.18);
+  const perPair = Math.max(2.0, 4.4 - idx * 0.16);
   const time = Math.round(pairs * perPair / 5) * 5;   // làm tròn 5s
   return { cols, rows, types, time };
 }

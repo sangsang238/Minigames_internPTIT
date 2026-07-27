@@ -67,10 +67,20 @@
 `levelConfig` trả `{cols, rows, types, time}`; xếp tile random mỗi lần chơi.
 
 - **Độ khó tăng dần CẢM NHẬN ĐƯỢC — 2 pha:**
-  - **Pha 1 (L1–5)**: bàn lớn dần `6×6 → 8×10` (36→80 ô) — thấy rõ bàn to ra.
-  - **Pha 2 (L6+)**: bàn giữ **MAX 8×10**, `perPair = max(2.0, 4.5−idx×0.18)` siết
-    dần → **timer GIẢM ĐỀU mỗi màn** (150→80s tới ~L15 rồi plateau). Cùng bàn to
+  - **Pha 1 (L1–10)**: bàn lớn dần `6×6 → 6×8 → 7×8 → 8×8 → 8×9 → 8×10 → 8×11 →
+    8×12 → 9×12 → 10×12` (36→120 ô) — **mỗi màn bàn to ra thật**.
+  - **Pha 2 (L11+)**: bàn giữ **MAX 10×12**, `perPair = max(2.0, 4.4−idx×0.16)` siết
+    dần → **timer GIẢM ĐỀU mỗi màn** (180→120s tới ~L16 rồi plateau). Cùng bàn to
     nhưng ít giờ dần = tín hiệu khó rõ. `time = round(pairs × perPair / 5) × 5`.
+  - Tổng giờ: **80s (L1) → 180s (L10) → 120s (L16+)** — leo theo bàn rồi siết lại.
+  - 🔧 **Sửa theo QA 2026-07-27** ("map rộng hơn qua các level, hiện tại đang giữ
+    1 kích thước nên ko có thử thách lắm"): trước đây bàn **chốt MAX 8×10 ngay từ
+    L5** nên từ màn 6 trở đi chỉ còn timer đổi. Dốc `perPair` cũng thoải hơn
+    (0.18→0.16/màn) vì bàn to đã gánh bớt độ khó — tìm 1 cặp trong 120 ô lâu hơn
+    trong 80 ô, không để hai trục khó cộng dồn.
+  - **Trần 10×12 là giới hạn LAYOUT**: `cellPx = min(availW/COLS, availH/(ROWS+1), 58)`
+    có sàn 16px — quá sàn thì `overflow:hidden` cắt bàn. Đã đo: máy 412px → 37px/ô,
+    máy hẹp 320px → 28px/ô, landscape 915×412 → 22px/ô — **mọi cấu hình vẫn > sàn**.
 - **Loại thú**: 12 → 13 → 14 từ màn 3 (nhiều loại để ít cặp trùng).
 - **Sinh bàn = SINH NGƯỢC (reverse-gen)**: đặt từng cặp vào 2 ô **nối được** trên
   bàn đang lấp → bàn **luôn giải được**. Với xác suất `f = max(0.2, 0.28−idx×0.01)`
@@ -106,6 +116,10 @@
   (`tutorialSeen` đã lưu) bấm Play vào thẳng ván.
 - Review đa-agent (33 agents): 20 lỗi xác nhận đã sửa hết (race thắng/thua sát giờ,
   continuation async sống sót qua loadLevel, desync grid/DOM khi restore, v.v.).
+- **Bàn to (2026-07-27)**: sinh 150 bàn/màn × 16 màn — **100% lấp kín**, 0.08–0.21 ms/bàn
+  (bàn 120 ô không chậm hơn đáng kể), tỉ lệ phải auto-xáo **0–4%** ở mọi cỡ bàn
+  (bàn 10×12 KHÔNG deadlock nhiều hơn bàn 8×10). Boot `levelIdx` 9/15 → đúng
+  `10×12`, 120 tile trong DOM, board 460×552 lọt viewport, 0 lỗi JS.
 
 ## 📋 Backlog
 

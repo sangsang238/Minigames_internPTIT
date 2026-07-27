@@ -47,9 +47,33 @@
 
 | Special | Cách tạo | Hiệu ứng |
 |---|---|---|
-| **Blaze Rune** (mũi tên ↔/↕) | Match 4 thẳng hàng | Nổ nguyên hàng/cột |
-| **Nova Rune** (vòng tròn) | Match hình L / T | Nổ 3×3 — **nổ 2 lần** |
-| **Prism Rune** (bánh xe 6 màu) | Match 5 thẳng hàng | Swap với rune bất kỳ → thiêu toàn bộ rune màu đó |
+| **Blaze Rune** (mũi tên 2 đầu ↔/↕) | Match 4 thẳng hàng | Nổ nguyên hàng/cột |
+| **Nova Rune** (sao nổ 8 cánh) | Match hình L / T | Nổ 3×3 — **nổ 2 lần** |
+| **Prism Rune** (bánh xe 6 múi màu) | Match 5 thẳng hàng | Swap với rune bất kỳ → thiêu toàn bộ rune màu đó |
+
+Special **KHÔNG vẽ glyph màu nữa** — chỉ 1 icon trắng đậm + **viền trắng 3px**
+(rune thường viền đen mảnh) → nhìn là biết ngay ô nào đặc biệt.
+
+#### 🔧 Sửa nhầm lẫn biểu tượng (QA 2026-07-27)
+
+QA báo 2 lỗi đọc-hình, đã sửa:
+
+1. *"thay ký tự runic ở màu vàng, xanh dương, hồng cho đỡ nhầm với icon bom nổ đặc biệt"* —
+   3 glyph này đều **nhọn/toả tia** nên đọc thành "nổ", nhất là **hồng** (sao 4 cánh)
+   gần trùng icon **Nova** (sao 8 cánh = "bom"). Thay bằng hình **KHÔNG toả tia**:
+
+   | Màu | Cũ | Mới |
+   |---|---|---|
+   | Xanh dương `--c1` | tinh thể nhọn + gợn zigzag | **giọt nước** tròn + nét sáng |
+   | Vàng `--c3` | tia sét | **ấn lục giác** + gạch ngang |
+   | Hồng `--c5` | sao 4 cánh + chấm giữa | **xoáy ốc** (1.55 vòng) |
+
+   Đỏ (lửa) / lục (cây) / tím (trăng khuyết) giữ nguyên — QA không chấm, và cả 3
+   đều bất đối xứng nên không lẫn với sao nổ đối xứng tâm.
+2. *"ô đặc biệt nổ toàn bộ màu chưa rõ biểu tượng"* — **Prism** cũ là tinh thể
+   trắng to + 6 chấm màu **bé xíu** quanh viền → chỉ còn đọc ra "viên đá trắng".
+   Nay là **bánh xe 6 múi màu đầy ô** + lõi trắng: MÀU thành phần chính, nói thẳng
+   "thiêu **toàn bộ** rune của **một màu**".
 
 Combo 2 special (Prism+Prism xoá board, Prism+Blaze/Nova biến-cả-màu, Blaze+Blaze chữ thập, Nova+Nova 5×5…) giữ nguyên.
 
