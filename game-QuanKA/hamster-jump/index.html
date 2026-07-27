@@ -1079,25 +1079,27 @@ const BLOCK_H = 92;         // chiều cao miếng phô mai
 const HAM_HALF = 26;        // nửa thân hamster (vùng bị xô ngã — khớp thân vẽ rx 27)
 const JUMP_DUR = 613;       // thời gian 1 cú nhảy (ms) — tăng 15% khớp độ cao mới
 const JUMP_H = 141;         // độ cao nhảy (px logic) — đủ qua miếng phô mai thoải mái
-const BASE_SPEED = 8.1;     // tốc độ trượt phô mai (px logic / frame @60fps) — nhanh ngay từ đầu
+const BASE_SPEED = 6.9;     // tốc độ trượt phô mai (px logic / frame @60fps) — nhanh ngay từ đầu
 const SPEED_INC = 0.07;     // tăng theo số tầng
 const MAX_SPEED = 10.5;     // trần tốc độ — khó nhưng không thành Dark Souls
-/* Jitter tốc độ HẸP LẠI (QA 2026-07-27: "giật giật, ko giữ đc nhịp chơi").
-   Cũ ×0.85–1.20 (biên 41%) cố ý đánh lạc nhịp → người chơi không bắt được beat.
-   Nay ×0.92–1.08 (biên 17%): vẫn có biến thiên nhẹ, nhưng nhịp ĐỌC ĐƯỢC. */
+/* Jitter tốc độ HẸP LẠI (QA 2026-07-27: "randomize tốc độ phô mai hẹp lại để
+   giữ được nhịp chơi"). Cũ ×0.85–1.20 (biên 41%) cố ý đánh lạc nhịp → người
+   chơi không bắt được beat. Nay ×0.92–1.08 (biên 17%): vẫn biến thiên nhẹ
+   nhưng nhịp ĐỌC ĐƯỢC. Tâm jitter vẫn = 1.0 → tốc độ TRUNG BÌNH không đổi. */
 const SPEED_JITTER = 0.16;
 const SPEED_JIT_MIN = 0.92; // hệ số nhỏ nhất của jitter (min + rand×JITTER)
-const PERFECT_EPS = 7;      // sàn px của cửa sổ Perfect (miếng chậm)
-const PERFECT_MS = 42;      // cửa sổ THỜI GIAN bấm Perfect — hằng số ở mọi tốc độ
+const PERFECT_EPS = 7;      // lệch ≤ 7px → Perfect (nới theo tốc độ lúc xét)
 const STUMBLE_EDGE = 30;    // đáp cách mép miếng < 30px → loạng choạng
 const STUMBLE_MS = 1000;    // thời gian loạng choạng (nghiêng người 1s)
 const MAX_OVERSHOOT = 0.45; // giới hạn kẹp vị trí miếng khi xô ngã hamster
 const BOUNCE_MS = 240;      // nhún của miếng phô mai khi hamster đáp xuống
 const SETTLE_MS = 100;      // tầng vừa ghim trượt nốt về vị trí thật (không snap lùi)
-/* KHOẢNG CHẾT giữa 2 lượt — thủ phạm chính của "ra hơi chậm" (QA 2026-07-27):
-   cũ ván gỗ thò ra 260ms rồi miếng còn đứng im 344–688ms nữa mới trượt
-   → mỗi tầng có tới ~0.6–0.9s KHÔNG CÓ GÌ CHUYỂN ĐỘNG, đứt nhịp.
-   Nay ván bung nhanh hơn + chờ 221–299ms (biên hẹp) → vào nhịp liền mạch. */
+/* KHOẢNG CHẾT giữa 2 lượt — thủ phạm của "ra hơi chậm" (QA 2026-07-27, đã làm
+   rõ: "thanh gỗ RA nhanh, còn phô mai giữ nguyên TỐC ĐỘ trước đó"). Cũ ván gỗ
+   thò ra 260ms rồi miếng còn đứng im 344–688ms nữa mới trượt → mỗi tầng có tới
+   ~0.6–0.9s KHÔNG CÓ GÌ CHUYỂN ĐỘNG, đứt nhịp. Nay ván bung nhanh + chờ
+   221–299ms (biên hẹp) → vào nhịp liền mạch.
+   ĐÂY chỉ sửa lúc RA — vận tốc trượt (BASE_SPEED/speedRamp) giữ nguyên như cũ. */
 const WAIT_MS = 260;        // miếng đậu chờ trên ván trước khi trượt
 const WAIT_JIT_MIN = 0.85;  // ×(0.85–1.15) — dao động nhỏ, không phá beat
 const WAIT_JITTER = 0.30;
@@ -2166,13 +2168,12 @@ function pickKind() {
 }
 
 /* Sinh 1 miếng + ván gỗ của nó (mốc bay ở làn cao hơn) */
-/* Nhịp độ đầu ván dịu hơn: 2 tầng đầu ×0.9, đạt tốc chuẩn ×1.0 ở tầng 10.
-   Cũ ×0.75 kéo tới tầng 20 → cả khúc đầu (đoạn QA chơi nhiều nhất) ì ạch.
-   (Vẫn nhanh dần theo độ cao qua SPEED_INC — ramp chỉ làm mềm 2 tầng mở đầu.) */
+/* Nhịp độ đầu ván dịu hơn: 3 tầng đầu ×0.75, tăng dần lên ×1.0 tại tầng 20.
+   (Vẫn nhanh dần theo độ cao qua SPEED_INC — ramp chỉ làm mềm khúc mở đầu.) */
 function speedRamp(level) {
-  if (level <= 2) return 0.9;
-  if (level >= 10) return 1;
-  return 0.9 + (level - 2) / 8 * 0.1;
+  if (level <= 3) return 0.75;
+  if (level >= 20) return 1;
+  return 0.75 + (level - 3) / 17 * 0.25;
 }
 
 function spawnOne(dir, kind, extraDelay) {
@@ -2294,10 +2295,9 @@ function pinSlider(s) {
     if (!b.retractT0 && !sliders.some(o => o.board === b)) b.retractT0 = timeMs;
   }
 
-  /* Perfect là kỹ năng CANH GIỜ → giữ nguyên cửa sổ THỜI GIAN (PERFECT_MS), quy
-     ra px theo tốc độ thực của miếng. Công thức cũ neo vào BASE_SPEED nên khi
-     tăng tốc (QA 2026-07-27) cửa sổ tự co lại — Perfect thành may rủi. */
-  const eps = Math.max(PERFECT_EPS, s.speed * 60 * (PERFECT_MS / 1000) / 2);
+  /* epsilon nới theo tốc độ để cửa sổ THỜI GIAN bấm Perfect (~55ms) không co lại
+     khi phô mai chạy nhanh */
+  const eps = PERFECT_EPS * Math.max(1, s.speed / BASE_SPEED);
   const perfect = Math.abs(offset) <= eps;
 
   if (tutorial) {
@@ -2532,8 +2532,7 @@ function tutorialSpawn() {
   const dir = rand01() < 0.5 ? 1 : -1;
   spawnOne(dir, 'normal', 250);
   const s = sliders[sliders.length - 1];
-  s.speed = 5.8;                        // trôi vào từ tốn rồi FREEZE (đợi người chơi bấm)
-                                        // — chậm hơn ván thật nhưng không lệch hẳn nhịp
+  s.speed = 4.6;                        // trôi vào từ tốn rồi FREEZE (đợi người chơi bấm)
   tutorial.s = s;
   tutorial.phase = 'approach';
   setTutHint(null);

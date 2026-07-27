@@ -22,38 +22,39 @@
   1). Không còn cơ chế xu, không còn đồng hồ đếm độ cao riêng — chỉ **một con số**
   đếm số phô mai xếp được cho tới lúc **Game Over** (ground cheese cũng được tính).
 - Miếng phô mai **trượt vào trên ván gỗ** ở đúng tầm mặt tháp (hướng ngẫu nhiên;
-  nhanh dần theo độ cao, nền 8.1 → trần 10.5px/frame). **Khởi đầu dịu**: 2 tầng
-  đầu chạy ×0.9, đạt tốc chuẩn (×1.0) ở tầng 10.
+  nhanh dần theo độ cao, nền 6.9 → trần 10.5px/frame). **Khởi đầu dịu**: 3 tầng
+  đầu chạy ×0.75, tăng dần lên tốc chuẩn (×1.0) ở tầng 20.
 
 #### 🔧 Nhịp chơi — sửa theo QA 2026-07-27
 
-*"tốc độ ra thanh gỗ và phô mai ra hơi chậm nên cảm giác giật giật ko giữ đc nhịp chơi"*.
-Đây là **vấn đề TIẾT TẤU**, không phải render (khựng do render đã sửa đợt trước).
-Thủ phạm là **khoảng chết** + **jitter quá rộng**:
+*"tốc độ ra thanh gỗ và phô mai ra hơi chậm nên cảm giác giật giật ko giữ đc nhịp chơi"*,
+làm rõ thêm: ***"thanh gỗ RA nhanh, còn phô mai giữ nguyên TỐC ĐỘ trước đó. Và
+randomize tốc độ phô mai hẹp lại để giữ được nhịp chơi."***
+
+Nên đây là vấn đề **TIẾT TẤU**, không phải vận tốc, cũng không phải render
+(khựng do render đã sửa đợt trước). **VẬN TỐC TRƯỢT GIỮ NGUYÊN** — chỉ sửa lúc
+*ra* và độ *ngẫu nhiên*:
 
 | | Cũ | Mới | Vì sao |
 |---|---|---|---|
-| `BASE_SPEED` | 6.9 | **8.1** | miếng vào nhanh, đỡ lê thê |
-| `speedRamp` | ×0.75 tới tầng 20 | **×0.9, chuẩn ở tầng 10** | khúc đầu (QA chơi nhiều nhất) hết ì |
 | `WAIT_MS` (miếng đứng im chờ) | 430 ×(0.8–1.4) = **344–602ms** | **260 ×(0.85–1.15) = 221–299ms** | cắt hơn nửa khoảng "không có gì chuyển động" |
 | `BOARD_MS` (ván gỗ thò ra) | 260 | **175** | ván bung dứt khoát |
-| jitter tốc độ | ×0.85–1.20 (**biên 41%**) | ×0.92–1.08 (**biên 17%**) | cũ **cố ý** đánh lạc nhịp → không bắt được beat; nay nhịp **đọc được** |
-| cửa sổ Perfect | neo vào `BASE_SPEED` → **tự co khi tăng tốc** | `PERFECT_MS = 42ms` **hằng số** | Perfect vẫn là kỹ năng canh giờ, không thành may rủi |
+| jitter tốc độ | ×0.85–1.20 (**biên 41%**) | ×0.92–1.08 (**biên 17%**) | cũ **cố ý** đánh lạc nhịp → không bắt được beat; nay nhịp **đọc được**. Tâm jitter vẫn 1.0 → **tốc độ trung bình không đổi** |
+| `BASE_SPEED`, `speedRamp`, cửa sổ Perfect | — | **giữ nguyên** | QA chốt: phô mai giữ tốc độ cũ |
 
-**Đo bằng bot headless** — RAF shim 60fps ảo, bot canh tap tối ưu, **cùng 15 tầng
-đầu từ ván mới**, chạy lại y hệt với bộ hằng cũ để so:
+**Đo bằng bot headless** — RAF shim 60fps ảo, bot canh tap tối ưu, **15 tầng đầu
+từ tháp mới**, chạy lại y hệt với bộ hằng cũ để so:
 
 | Chỉ số | Cũ | Mới |
 |---|---|---|
-| Nhịp mỗi tầng | 1744 ms (**1167–3267**) | **1129 ms** (933–1250) |
-| Khoảng chết giữa 2 tầng | 468 ms | **261 ms** |
-| Cửa sổ canh đáp | 327 ms | 241 ms |
-| Cửa sổ Perfect | 36 ms | **42 ms** |
+| Nhịp mỗi tầng | 1744 ms (**1167–3267**) | **1502 ms** (1167–1767) |
+| Khoảng chết giữa 2 tầng | 468 ms | **266 ms** |
+| Cửa sổ canh đáp | 327 ms | 353 ms *(không hẹp đi — tốc độ giữ nguyên)* |
 | Perfect | 8/15 | **11/15** |
 
 Điểm mấu chốt đúng thứ QA phàn nàn: **độ dao động nhịp** từ **1167–3267 ms
-(chênh 2.8×)** xuống **933–1250 ms (chênh 1.34×)** — hết "giật giật", giữ được
-nhịp. 0 lỗi JS, tutorial vẫn chạy trọn.
+(chênh 2.8×)** xuống **1167–1767 ms (chênh 1.51×)** — hết "giật giật", giữ được
+nhịp, mà **không hề làm game nhanh/khó hơn**. 0 lỗi JS.
 - **Tap / Space** → hamster nhảy thẳng lên (~0.61s); miếng trượt qua bên dưới và
   **dừng ngay chỗ hamster đáp lên** → thành tầng mới (**+1 điểm**; miếng **nhún &
   nghiêng** về phía đáp cho đã tay). Đáp lệch thì tháp xiêu vẹo (không cắt miếng,
