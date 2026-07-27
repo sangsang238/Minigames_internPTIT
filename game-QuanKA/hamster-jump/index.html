@@ -1106,9 +1106,16 @@ const WAIT_JITTER = 0.30;
 const BOARD_MS = 175;       // thời gian ván gỗ thò ra / rút về
 const ADS_EVERY = 3;        // mỗi 3 ván thua → xin app hiện quảng cáo
 
+const FLOAT_MS = 800;       // đời mặc định của chữ nổi (mỗi chữ có thể tự đặt .life)
+
 /* Miếng phô mai đặc biệt */
 const MINI_W = 80;          // mini: bề rộng ~60% — miếng hẹp, khó canh đáp hơn
 const GOLD_SPEED = 1.25;    // vàng: chạy nhanh hơn (không quá gắt) — thử phản xạ
+/* Nhá cảnh báo TRƯỚC khi miếng vàng (lấp lánh) lọt vào khung — người chơi kịp
+   chuyển sang nhịp nhanh thay vì bị úp sọt. */
+const GOLD_CUE_MS = 520;    // hiển thị nhanh rồi tắt, vừa lúc miếng vào khung
+const GOLD_CUE_TILT = -15 * Math.PI / 180;   // nghiêng TRÁI 15° (canvas: âm = ngược kim đồng hồ)
+const GOLD_CUE_INSET = 80;  // ghim vào trong mép màn hình bên miếng sắp trôi ra
 const SPRING_MULT = 1.35;   // lò xo: cú nhảy KẾ TIẾP cao & lâu hơn 35%
 const MOLD_LIFT = 105;      // mốc: bay cao hơn mặt tháp — KHÔNG được nhảy
 const DOUBLE_FROM = 25;     // từ tầng 25: thi thoảng 2 miếng vào từ 2 phía
@@ -1999,16 +2006,25 @@ function drawFx() {
   /* chữ nổi */
   ctx.textAlign = 'center';
   for (const f of floatTexts) {
-    const p = (now - f.born) / 800;
+    const p = (now - f.born) / (f.life || FLOAT_MS);
     if (p >= 1) continue;
     ctx.globalAlpha = 1 - p;
     ctx.font = '800 ' + (f.size || 34) + 'px ' + CANVAS_FONT_STACK;
     ctx.fillStyle = f.color || '#fff';
     ctx.strokeStyle = 'rgba(120,80,30,.8)';
     ctx.lineWidth = 5;
-    const y = sy(f.y) - p * 52;
-    ctx.strokeText(f.text, sx(f.x), y);
-    ctx.fillText(f.text, sx(f.x), y);
+    const y = sy(f.y) - p * (f.rise != null ? f.rise : 52);
+    if (f.rot) {                       // chữ nghiêng (cảnh báo miếng vàng)
+      ctx.save();
+      ctx.translate(sx(f.x), y);
+      ctx.rotate(f.rot);
+      ctx.strokeText(f.text, 0, 0);
+      ctx.fillText(f.text, 0, 0);
+      ctx.restore();
+    } else {
+      ctx.strokeText(f.text, sx(f.x), y);
+      ctx.fillText(f.text, sx(f.x), y);
+    }
   }
   ctx.globalAlpha = 1;
 }
@@ -2202,6 +2218,25 @@ function spawnOne(dir, kind, extraDelay) {
     dead: false,
     passed: false,
   });
+
+  /* Cảnh báo miếng VÀNG (lấp lánh, chạy ×1.25): nhá "Quick!" ngay TẠI mép mà nó
+     sắp trôi vào, TRƯỚC khi thấy miếng. Miếng sinh ngoài khung (cách tâm
+     LW/2+99 = 459px > nửa khung 360px) rồi còn chờ slideAt nữa, nên chữ phải
+     GHIM vào trong mép — đặt đúng cx sinh thì nằm ngoài màn hình, không ai thấy.
+     Miếng vào khung sau ~410–490ms; cue sống 520ms → tắt vừa lúc miếng hiện. */
+  if (kind === 'gold') {
+    floatTexts.push({
+      x: topCx() - dir * (LW * 0.5 - GOLD_CUE_INSET),   // -dir = phía miếng đi vào
+      y: surfaceY() - BLOCK_H - 26,                     // ngang làn miếng sắp trượt
+      born: timeMs,
+      life: GOLD_CUE_MS,
+      rise: 18,                                         // trôi lên nhẹ, không bay đi
+      text: 'Quick!',
+      color: BLOCK_SKINS.gold.body,       // cùng vàng với miếng (C không có .gold)
+      size: 30,
+      rot: GOLD_CUE_TILT,
+    });
+  }
 }
 
 function scheduleCycle() {
@@ -2839,7 +2874,7 @@ function update(dt) {
   }
 
   /* dọn FX hết hạn */
-  floatTexts = floatTexts.filter(f => timeMs - f.born < 800);
+  floatTexts = floatTexts.filter(f => timeMs - f.born < (f.life || FLOAT_MS));
   rings = rings.filter(r => timeMs - r.born < 450);
   sparkles = sparkles.filter(s => timeMs - s.born < 500);
 }
