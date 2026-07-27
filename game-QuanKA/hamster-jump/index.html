@@ -1113,7 +1113,7 @@ const MINI_W = 80;          // mini: bề rộng ~60% — miếng hẹp, khó ca
 const GOLD_SPEED = 1.25;    // vàng: chạy nhanh hơn (không quá gắt) — thử phản xạ
 /* Nhá cảnh báo TRƯỚC khi miếng "khó" (vàng chạy nhanh / mốc không được nhảy)
    lọt vào khung — người chơi kịp đổi nhịp thay vì bị úp sọt. */
-const CUE_MS = 520;         // hiển thị nhanh rồi tắt, vừa lúc miếng vào khung
+const CUE_MS = 820;         // hiện xuyên qua lúc miếng vào khung rồi mới tắt
 const CUE_TILT = -15 * Math.PI / 180;   // nghiêng TRÁI 15° (canvas: âm = ngược kim đồng hồ)
 const CUE_INSET = 80;       // ghim tối thiểu vào trong mép, bên miếng sắp trôi ra
 const CUE_SIZE = 30;
@@ -2232,8 +2232,8 @@ function spawnOne(dir, kind, extraDelay) {
 /* Nhá chữ cảnh báo ngay TẠI mép mà miếng sắp trôi vào, TRƯỚC khi thấy miếng.
    Miếng sinh NGOÀI khung (cách tâm LW/2 + 99 = 459px > nửa khung 360px) rồi còn
    chờ slideAt nữa → đặt chữ đúng cx sinh là nằm ngoài màn hình, không ai thấy;
-   phải GHIM vào trong mép. Miếng lọt vào khung sau ~410–520ms, cue sống 520ms
-   → tắt vừa lúc miếng hiện ra.
+   phải GHIM vào trong mép. Miếng lọt vào khung sau ~410–520ms, cue sống 820ms
+   → chữ hiện TRƯỚC, còn nán lại ~300ms sau khi thấy miếng rồi mới mờ hẳn.
    dyW = lệch dọc so với MẶT THÁP (world; âm = cao hơn mặt tháp). */
 function spawnCue(dir, text, color, dyW) {
   /* Đo bề rộng THẬT rồi nới inset nếu cần: "Watch out!" dài gần gấp đôi

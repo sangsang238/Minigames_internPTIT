@@ -60,8 +60,8 @@ nhịp, mà **không hề làm game nhanh/khó hơn**. 0 lỗi JS.
 
 Miếng vàng chạy ×1.25 và miếng mốc chạm là thua, cả hai đều hay úp sọt. Nay ngay
 lúc miếng sinh, game nhá một chữ cảnh báo tại **mép nó sắp trôi vào**, **nghiêng
-trái 15°**, sống **520ms** rồi tắt — vừa lúc miếng lọt vào khung (~410–520ms sau
-khi sinh) nên đúng nghĩa **báo TRƯỚC khi thấy miếng**.
+trái 15°**, sống **820ms**. Miếng lọt vào khung sau ~410–520ms nên chữ hiện
+**TRƯỚC khi thấy miếng**, rồi còn nán lại ~300ms cùng miếng mới mờ hẳn.
 
 | Miếng | Chữ | Màu | Chỗ đặt |
 |---|---|---|---|
@@ -80,7 +80,7 @@ Chữ nổi (`floatTexts`) được bổ sung 3 thuộc tính tuỳ chọn: `lif
 mặc định `FLOAT_MS` 800ms), `rot` (radian) và `rise` (độ trôi lên).
 
 Verify headless (ép sinh từng loại rồi lấy `canvas.toDataURL`): cả 2 cue đúng
-`rotDeg=-15.0`, `life=520`; vàng ở `screenX=80`, mốc ở `96` (vào từ trái) /
+`rotDeg=-15.0`, `life=820`; vàng ở `screenX=80`, mốc ở `96` (vào từ trái) /
 `624` (vào từ phải), **nằm trọn trong khung** cả 2 phía; cue mốc có
 `cueBaseline=221 > blockBottom=184` = đúng **bên dưới** miếng; và lúc chụp miếng
 vẫn **`onScreen=false`** — cue hiện trước thật. 0 lỗi JS.
@@ -100,11 +100,11 @@ vẫn **`onScreen=false`** — cue hiện trước thật. 0 lỗi JS.
 
 | Loại | Mở từ tầng | Hiệu ứng |
 |---|---|---|
-| ✨ Vàng | 5 | Chạy **nhanh ×1.25** — thử phản xạ (không thưởng riêng). **Báo trước:** nhá nhanh chữ **"Quick!"** (vàng, nghiêng trái 15°, 520ms) ngay tại mép mà nó sắp trôi vào, **trước khi thấy miếng** |
+| ✨ Vàng | 5 | Chạy **nhanh ×1.25** — thử phản xạ (không thưởng riêng). **Báo trước:** nhá chữ **"Quick!"** (vàng, nghiêng trái 15°, 820ms) ngay tại mép mà nó sắp trôi vào, **trước khi thấy miếng** |
 | 🪀 Lò xo | 6 | Cú nhảy **kế tiếp** cao & lâu hơn 35% (báo bằng ▲) |
 | 🐭 Mini | 8 | Miếng **hẹp ~60%** — khó canh đáp hơn |
 | 🧊 Băng | 12 | Đáp xong **trượt mạnh theo đà** (ma sát nhỏ) — dễ tuột tới mép, loạng choạng |
-| 🦠 Mốc | 15 | Bay ở **làn cao** — đứng yên cho nó qua (an toàn), nhảy trúng = thua. **Báo trước:** nhá **"Watch out!"** (xanh mốc, nghiêng trái 15°, 520ms) **BÊN DƯỚI** làn nó sắp bay vào |
+| 🦠 Mốc | 15 | Bay ở **làn cao** — đứng yên cho nó qua (an toàn), nhảy trúng = thua. **Báo trước:** nhá **"Watch out!"** (xanh mốc, nghiêng trái 15°, 820ms) **BÊN DƯỚI** làn nó sắp bay vào |
 | 👯 Double | 25 | ~9% round: 2 miếng từ 2 phía so le — đáp 1, miếng kia tự rơi |
 
 ## Điểm
