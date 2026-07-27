@@ -1111,11 +1111,12 @@ const FLOAT_MS = 800;       // đời mặc định của chữ nổi (mỗi ch�
 /* Miếng phô mai đặc biệt */
 const MINI_W = 80;          // mini: bề rộng ~60% — miếng hẹp, khó canh đáp hơn
 const GOLD_SPEED = 1.25;    // vàng: chạy nhanh hơn (không quá gắt) — thử phản xạ
-/* Nhá cảnh báo TRƯỚC khi miếng vàng (lấp lánh) lọt vào khung — người chơi kịp
-   chuyển sang nhịp nhanh thay vì bị úp sọt. */
-const GOLD_CUE_MS = 520;    // hiển thị nhanh rồi tắt, vừa lúc miếng vào khung
-const GOLD_CUE_TILT = -15 * Math.PI / 180;   // nghiêng TRÁI 15° (canvas: âm = ngược kim đồng hồ)
-const GOLD_CUE_INSET = 80;  // ghim vào trong mép màn hình bên miếng sắp trôi ra
+/* Nhá cảnh báo TRƯỚC khi miếng "khó" (vàng chạy nhanh / mốc không được nhảy)
+   lọt vào khung — người chơi kịp đổi nhịp thay vì bị úp sọt. */
+const CUE_MS = 520;         // hiển thị nhanh rồi tắt, vừa lúc miếng vào khung
+const CUE_TILT = -15 * Math.PI / 180;   // nghiêng TRÁI 15° (canvas: âm = ngược kim đồng hồ)
+const CUE_INSET = 80;       // ghim tối thiểu vào trong mép, bên miếng sắp trôi ra
+const CUE_SIZE = 30;
 const SPRING_MULT = 1.35;   // lò xo: cú nhảy KẾ TIẾP cao & lâu hơn 35%
 const MOLD_LIFT = 105;      // mốc: bay cao hơn mặt tháp — KHÔNG được nhảy
 const DOUBLE_FROM = 25;     // từ tầng 25: thi thoảng 2 miếng vào từ 2 phía
@@ -2219,24 +2220,40 @@ function spawnOne(dir, kind, extraDelay) {
     passed: false,
   });
 
-  /* Cảnh báo miếng VÀNG (lấp lánh, chạy ×1.25): nhá "Quick!" ngay TẠI mép mà nó
-     sắp trôi vào, TRƯỚC khi thấy miếng. Miếng sinh ngoài khung (cách tâm
-     LW/2+99 = 459px > nửa khung 360px) rồi còn chờ slideAt nữa, nên chữ phải
-     GHIM vào trong mép — đặt đúng cx sinh thì nằm ngoài màn hình, không ai thấy.
-     Miếng vào khung sau ~410–490ms; cue sống 520ms → tắt vừa lúc miếng hiện. */
+  /* Cảnh báo miếng khó: vàng "Quick!" (ngang làn trượt) · mốc "Watch out!"
+     (DƯỚI làn bay của nó — mốc bay cao hơn mặt tháp MOLD_LIFT px). */
   if (kind === 'gold') {
-    floatTexts.push({
-      x: topCx() - dir * (LW * 0.5 - GOLD_CUE_INSET),   // -dir = phía miếng đi vào
-      y: surfaceY() - BLOCK_H - 26,                     // ngang làn miếng sắp trượt
-      born: timeMs,
-      life: GOLD_CUE_MS,
-      rise: 18,                                         // trôi lên nhẹ, không bay đi
-      text: 'Quick!',
-      color: BLOCK_SKINS.gold.body,       // cùng vàng với miếng (C không có .gold)
-      size: 30,
-      rot: GOLD_CUE_TILT,
-    });
+    spawnCue(dir, 'Quick!', BLOCK_SKINS.gold.body, -BLOCK_H - 26);
+  } else if (kind === 'mold') {
+    spawnCue(dir, 'Watch out!', BLOCK_SKINS.mold.body, -MOLD_LIFT + 37);
   }
+}
+
+/* Nhá chữ cảnh báo ngay TẠI mép mà miếng sắp trôi vào, TRƯỚC khi thấy miếng.
+   Miếng sinh NGOÀI khung (cách tâm LW/2 + 99 = 459px > nửa khung 360px) rồi còn
+   chờ slideAt nữa → đặt chữ đúng cx sinh là nằm ngoài màn hình, không ai thấy;
+   phải GHIM vào trong mép. Miếng lọt vào khung sau ~410–520ms, cue sống 520ms
+   → tắt vừa lúc miếng hiện ra.
+   dyW = lệch dọc so với MẶT THÁP (world; âm = cao hơn mặt tháp). */
+function spawnCue(dir, text, color, dyW) {
+  /* Đo bề rộng THẬT rồi nới inset nếu cần: "Watch out!" dài gần gấp đôi
+     "Quick!", để inset cứng 80px là chữ thò ra ngoài mép trái/phải. */
+  ctx.save();
+  ctx.font = '800 ' + CUE_SIZE + 'px ' + CANVAS_FONT_STACK;
+  const halfW = ctx.measureText(text).width / 2;
+  ctx.restore();
+  const inset = Math.max(CUE_INSET, halfW + 14);
+  floatTexts.push({
+    x: topCx() - dir * (LW * 0.5 - inset),   // -dir = phía miếng đi vào
+    y: surfaceY() + dyW,
+    born: timeMs,
+    life: CUE_MS,
+    rise: 16,                                // trôi lên nhẹ, không bay đi
+    text: text,
+    color: color,
+    size: CUE_SIZE,
+    rot: CUE_TILT,
+  });
 }
 
 function scheduleCycle() {

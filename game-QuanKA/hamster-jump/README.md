@@ -56,21 +56,34 @@ từ tháp mới**, chạy lại y hệt với bộ hằng cũ để so:
 (chênh 2.8×)** xuống **1167–1767 ms (chênh 1.51×)** — hết "giật giật", giữ được
 nhịp, mà **không hề làm game nhanh/khó hơn**. 0 lỗi JS.
 
-#### Cue "Quick!" báo miếng vàng (2026-07-27)
+#### Cue cảnh báo miếng khó (2026-07-27) — `spawnCue()`
 
-Miếng vàng chạy ×1.25 nên hay úp sọt. Nay ngay lúc nó sinh, game nhá chữ
-**"Quick!"** tại **mép nó sắp trôi vào** (ghim vào trong 80px — sinh ở tận
-±459px, ngoài nửa khung 360px nên đặt đúng chỗ sinh thì không ai thấy), màu
-vàng như miếng, **nghiêng trái 15°**, sống **520ms** rồi tắt — vừa lúc miếng lọt
-vào khung (~410–490ms sau khi sinh) nên đúng nghĩa **báo TRƯỚC**.
+Miếng vàng chạy ×1.25 và miếng mốc chạm là thua, cả hai đều hay úp sọt. Nay ngay
+lúc miếng sinh, game nhá một chữ cảnh báo tại **mép nó sắp trôi vào**, **nghiêng
+trái 15°**, sống **520ms** rồi tắt — vừa lúc miếng lọt vào khung (~410–520ms sau
+khi sinh) nên đúng nghĩa **báo TRƯỚC khi thấy miếng**.
+
+| Miếng | Chữ | Màu | Chỗ đặt |
+|---|---|---|---|
+| ✨ Vàng | `Quick!` | `BLOCK_SKINS.gold.body` | **ngang** làn trượt |
+| 🦠 Mốc | `Watch out!` | `BLOCK_SKINS.mold.body` | **DƯỚI** làn bay (mốc bay cao hơn mặt tháp `MOLD_LIFT`) |
+
+Hai chi tiết dễ sai, đã xử lý:
+
+- **Ghim vào trong mép**: miếng sinh ở tận ±459px trong khi nửa khung chỉ 360px
+  → đặt chữ đúng toạ độ sinh là nằm ngoài màn hình, không ai thấy.
+- **Inset theo bề rộng THẬT** (`ctx.measureText`), tối thiểu 80px: `"Watch out!"`
+  dài gần gấp đôi `"Quick!"` — để inset cứng 80px thì mép trái chữ rơi ra ngoài
+  khung (`cueLeft=-2`). Nay tự nới lên 96px → `cueLeft=14`.
 
 Chữ nổi (`floatTexts`) được bổ sung 3 thuộc tính tuỳ chọn: `life` (đời riêng,
 mặc định `FLOAT_MS` 800ms), `rot` (radian) và `rise` (độ trôi lên).
 
-Verify headless (ép sinh miếng vàng rồi lấy `canvas.toDataURL`): cue đúng
-`rotDeg=-15.0`, `life=520`, nằm ở `screenX=80` khi miếng vào từ trái và `640`
-khi vào từ phải; tại thời điểm chụp miếng vàng còn **`onScreen=false`** — cue
-hiện trước thật. 0 lỗi JS.
+Verify headless (ép sinh từng loại rồi lấy `canvas.toDataURL`): cả 2 cue đúng
+`rotDeg=-15.0`, `life=520`; vàng ở `screenX=80`, mốc ở `96` (vào từ trái) /
+`624` (vào từ phải), **nằm trọn trong khung** cả 2 phía; cue mốc có
+`cueBaseline=221 > blockBottom=184` = đúng **bên dưới** miếng; và lúc chụp miếng
+vẫn **`onScreen=false`** — cue hiện trước thật. 0 lỗi JS.
 - **Tap / Space** → hamster nhảy thẳng lên (~0.61s); miếng trượt qua bên dưới và
   **dừng ngay chỗ hamster đáp lên** → thành tầng mới (**+1 điểm**; miếng **nhún &
   nghiêng** về phía đáp cho đã tay). Đáp lệch thì tháp xiêu vẹo (không cắt miếng,
@@ -91,7 +104,7 @@ hiện trước thật. 0 lỗi JS.
 | 🪀 Lò xo | 6 | Cú nhảy **kế tiếp** cao & lâu hơn 35% (báo bằng ▲) |
 | 🐭 Mini | 8 | Miếng **hẹp ~60%** — khó canh đáp hơn |
 | 🧊 Băng | 12 | Đáp xong **trượt mạnh theo đà** (ma sát nhỏ) — dễ tuột tới mép, loạng choạng |
-| 🦠 Mốc | 15 | Bay ở **làn cao** — đứng yên cho nó qua (an toàn), nhảy trúng = thua |
+| 🦠 Mốc | 15 | Bay ở **làn cao** — đứng yên cho nó qua (an toàn), nhảy trúng = thua. **Báo trước:** nhá **"Watch out!"** (xanh mốc, nghiêng trái 15°, 520ms) **BÊN DƯỚI** làn nó sắp bay vào |
 | 👯 Double | 25 | ~9% round: 2 miếng từ 2 phía so le — đáp 1, miếng kia tự rơi |
 
 ## Điểm
