@@ -584,6 +584,23 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 #result-banner.show { animation: resultPop .9s ease-out forwards; }
 #result-banner.immediate.show { animation: bannerFade .16s ease-out forwards; }
 
+/* Banner GÓC (Blaze Storm) phải có KEYFRAMES RIÊNG.
+   Mọi keyframe của `resultPop` đều đặt `transform`, mà animation GHI ĐÈ khai báo
+   thường → `transform` tĩnh của `.corner` (translate + rotate) bị nuốt sạch và
+   phép xoay KHÔNG BAO GIỜ chạy trong game thật. Đo được: animationName=resultPop,
+   computed transform = matrix(0.5,0,0,0.5,…) ⇒ góc xoay 0°.
+   (Ảnh chụp trước đó thấy có xoay chỉ vì harness tắt animation — nó chứng minh
+   rule CSS tồn tại, KHÔNG chứng minh nó sống sót khi chơi thật.)
+   Nên góc xoay phải nằm TRONG từng keyframe. */
+@keyframes cornerPop {
+  0%   { opacity: 0; transform: translate(0,-100%) rotate(-30deg) scale(.6); }
+  22%  { opacity: 1; transform: translate(0,-100%) rotate(-30deg) scale(1.1); }
+  40%  { opacity: 1; transform: translate(0,-100%) rotate(-30deg) scale(1); }
+  100% { opacity: 1; transform: translate(0,-100%) rotate(-30deg) scale(1); }
+}
+/* #id + 2 class → thắng #result-banner.show (#id + 1 class) */
+#result-banner.corner.show { animation: cornerPop .9s ease-out forwards; }
+
 /* ── btn3d (game-common §1.4 / popup-common §6 — bản kính phẳng) ── */
 .btn3d {
   --radius: 12px;

@@ -132,6 +132,21 @@ nó**, chữ cũ bị đẩy lên 34px nhường chỗ, tuổi thọ giữ nguy�
 - **`Blaze Storm!`**: bỏ nền, đặt ở **góc trên-trái của BOARD** (theo rect board
   thật, không phải góc màn hình), **thấp xuống 1 ô** (`+cellPx`) và **nghiêng
   30° sang trái**.
+  > ⚠️ **Phép xoay ban đầu KHÔNG hề chạy trong game thật.** Mọi keyframe của
+  > `resultPop` đều đặt `transform`, mà **animation ghi đè khai báo thường** →
+  > `transform` tĩnh của `.corner` bị nuốt sạch. Đo được: `animationName =
+  > resultPop`, computed `transform = matrix(0.5,0,0,0.5,…)` ⇒ **góc xoay 0°**.
+  > Sửa bằng keyframes riêng `cornerPop` mang sẵn `rotate(-30deg)` trong TỪNG
+  > khung, chọn qua `#result-banner.corner.show` (id + 2 class nên thắng
+  > `#result-banner.show`). Đo lại: `animationName = cornerPop`, **góc xoay −30°**;
+  > banner Game Over vẫn `resultPop`, **0°** — không bị ảnh hưởng.
+  >
+  > **Bài học kiểm thử:** ảnh chụp trước đó thấy có xoay là do harness chèn
+  > `animation: none !important`. Ảnh đó chỉ chứng minh **rule CSS tồn tại**,
+  > KHÔNG chứng minh nó sống sót khi animation chạy. Với thuộc tính mà animation
+  > cũng đụng tới (`transform`/`opacity`), phải đo `getComputedStyle` trên trang
+  > THẬT (animation đang chạy), hoặc chụp bằng `animation-delay` âm để nhảy tới
+  > khung cuối mà vẫn giữ animation sống.
 - **Màu SÁNG không được làm outline cho chữ trắng.** `✦ Arcane Surge!` dùng
   `#ffd23f` → viền vàng dày quanh chữ trắng đọc ra thành *"chữ trắng nền vàng"*,
   chói và khó nhìn. Nay xét **độ sáng cảm nhận** (Rec. 601, ngưỡng 150) để tự
