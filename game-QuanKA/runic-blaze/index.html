@@ -238,6 +238,12 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 }
 .tile-cursed .tile-inner svg { width: 86%; height: 86%; }
 .tile-cursed.cursed-urgent .tile-inner { animation: cursePulse .5s ease-in-out infinite; }
+/* Vừa sinh: nhấp 3 nhịp NGAY TRÊN Ô (thay cho toast text đã bỏ) */
+@keyframes curseArrive {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.12); }
+}
+.tile.curse-arrive .tile-inner { animation: curseArrive .3s ease-in-out 3; }
 @keyframes cursePulse {
   0%, 100% { border-color: rgba(0,0,0,.22); background:#5f2a2f; }
   50%      { border-color: #ff7a6a; background:#7a3238; }
@@ -323,7 +329,13 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   100% { opacity: 0; transform: translate(-50%,-150%) scale(.9); }
 }
 
-/* ── Combo badge + chữ khen ────────────────────────────────────── */
+/* ── Combo badge + chữ khen ────────────────────────────────────────
+   QA 2026-07-27: "combo cho nổi lên, hiện chữ trắng và mờ nên user ko để ý"
+   + "thời gian giữ lại lâu hơn, giờ biến mất nhanh quá".
+   Cũ: chữ trần nổi trên board (nền board cũng sáng màu → chữ chìm), animation
+   .8s mà đã gồm cả fade → chỉ ~0.6s đọc được. Nay bọc CHIP nền đặc + viền
+   theo màu bậc combo (phẳng, cùng kiểu #toast — không glow/gradient/đổ bóng),
+   chữ to hơn, và animation có ĐOẠN GIỮ NGUYÊN trước khi mờ. */
 #combo-badge {
   position: fixed;
   top: 42%;
@@ -332,28 +344,37 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   pointer-events: none;
   z-index: 100;
   opacity: 0;
+  background: rgba(18,32,36,.94);
+  border: 3px solid #ffd23f;      /* màu bậc combo — JS ghi đè */
+  border-radius: 18px;
+  padding: 11px 26px;
 }
 #combo-praise {
-  font-size: 26px;
+  font-size: 32px;
   font-weight: 800;
   letter-spacing: 1px;
+  line-height: 1.1;
 }
 #combo-mult {
-  font-size: 15px;
+  font-size: 17px;
+  font-weight: 800;
   letter-spacing: 2px;
   color: #ffe9b0;
 }
+/* 1.5s: bung nhanh (10%) → về cỡ thật (20%) → GIỮ NGUYÊN tới 76% (~0.84s
+   đứng yên, rõ mồn một) → mới trôi lên & mờ. Cũ không có đoạn giữ này. */
 @keyframes cascadePop {
-  0%   { opacity: 0; transform: translate(-50%,-50%) scale(.4); }
-  25%  { opacity: 1; transform: translate(-50%,-50%) scale(1.22); }
-  60%  { opacity: 1; transform: translate(-50%,-52%) scale(1); }
-  100% { opacity: 0; transform: translate(-50%,-64%) scale(.9); }
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(.5); }
+  10%  { opacity: 1; transform: translate(-50%,-50%) scale(1.18); }
+  20%  { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+  76%  { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%,-62%) scale(.95); }
 }
-#combo-badge.cascade-anim { animation: cascadePop .8s ease-out forwards; }
+#combo-badge.cascade-anim { animation: cascadePop 1.5s ease-out forwards; }
 
 /* ── Toast (shuffle / thông báo) ───────────────────────────────── */
 #toast {
@@ -746,7 +767,7 @@ const I18N = {
   en: { score:'SCORE', best:'BEST', combo:'COMBO', back:'Back', sound:'Sound', play:'Play', next:'Next',
     skip:'Skip', tapToResume:'Tap to resume', noMoves:'No moves left — shuffling!',
     shuffled:'Shuffle!', gameOver:'Game Over', newBest:'New Record!', playAgain:'Play Again',
-    cursedSpawn:'A cursed rune appears!', surge:'Arcane Surge!', blazeStorm:'Blaze Storm!',
+    surge:'Arcane Surge!', blazeStorm:'Blaze Storm!',
     praise:['Nice!','Great!','Awesome!','Blazing!','Legendary!'], ob1T:'Match Runes',
     ob1D:'Swap two adjacent runes to line up 3 or more of the same kind. They burst — and cascading matches multiply your score!',
     ob2T:'Forge Specials',
@@ -2836,9 +2857,13 @@ function maybeSpawnCursed() {
   renderCursed(tl);
   cursedIdx++; sinceCursed = 0;
   sCurse();
+  /* QA 2026-07-27: "thông báo có boom xuất hiện bằng text ở ngoài map cũng
+     khiến user ko để ý" → BỎ hẳn toast. Báo hiệu dồn hết VÀO Ô đó: vòng nổ to
+     hơn + ô tự nhấp nháy 1 nhịp, chỗ mắt người chơi đang nhìn. */
   const ctr = boardCellCenter(tg.r, tg.c);
-  spawnRing(ctr.x, ctr.y, CURSE_HEX, cellPx * 1.15);
-  showToast(t('cursedSpawn'));
+  spawnRing(ctr.x, ctr.y, CURSE_HEX, cellPx * 1.6);
+  tl.el.classList.add('curse-arrive');
+  setTimeout(() => tl.el && tl.el.classList.remove('curse-arrive'), 900);
 }
 
 /** Đầu mỗi lượt: giảm đếm ngược mọi hắc ấn. Trả {r,c} nếu có ô detonate. */
@@ -2945,6 +2970,7 @@ function showComboBadge(chain) {
   $('combo-mult').textContent = `${t('combo')} ×${Math.min(chain, CHAIN_CAP)}`;
   const cols = ['#9fd0ff', '#7dffb0', '#ffd23f', '#ff9a3d', '#ff5a8f'];
   $('combo-praise').style.color = cols[tier];
+  badge.style.borderColor = cols[tier];   // viền chip cùng bậc → combo cao thấy ngay
   badge.classList.remove('cascade-anim');
   void badge.offsetWidth;
   badge.classList.add('cascade-anim');

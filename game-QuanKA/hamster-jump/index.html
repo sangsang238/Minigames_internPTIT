@@ -1263,8 +1263,34 @@ function layoutHud() {
 
 function surfaceY() { return -tower.length * BLOCK_H; }   // mặt trên tháp (world)
 function topCx() { return tower[tower.length - 1].cx; }
-function camTargetOff() { return LH * 0.62 + tower.length * BLOCK_H; }
-function camTargetX() { return topCx() - LW / 2; }
+/* ĐỘ CAO TIÊU ĐIỂM của camera — BẮT BUỘC LIÊN TỤC.
+   Cũ: mục tiêu = mặt tháp, mà `tower.length` +1 NGAY khoảnh khắc ghim miếng
+   → mục tiêu nhảy nguyên 1 tầng (92px) trong đúng 1 frame. Camera ease
+   12%/frame nên hamster bị đẩy ~11px chỉ trong frame đó rồi mới trôi về.
+   VỊ TRÍ vẫn liền (C0) nhưng VẬN TỐC đứt (C1): đang rơi ~4px/frame bỗng
+   thành 15px/frame — mắt đọc ra thành một cú "khựng", và LẦN ĐÁP NÀO CŨNG CÓ.
+   Đo được: mọi bước jump->idle đều đúng 15.1px/frame, lớn nhất cả ván.
+   Nay khi hamster đang bay, tiêu điểm ĐI TRƯỚC theo độ cao của nó nhưng KẸP
+   tối đa 1 tầng. Frame cuối trước khi ghim h vẫn > BLOCK_H nên kẹp = BLOCK_H;
+   ghim xong mặt tháp cao thêm đúng BLOCK_H → hai bên BẰNG NHAU, hết bước nhảy.
+   Bonus: camera dâng mượt theo cú nhảy, đáp xuống không phải bù thêm gì. */
+function camFocusY() {
+  let f = surfaceY();
+  if (ham && ham.state === 'jump') {
+    const p = Math.min(1, (timeMs - ham.t0) / (ham.jumpDur || JUMP_DUR));
+    const h = (ham.jumpH || JUMP_H) * Math.sin(p * Math.PI);
+    f -= Math.min(BLOCK_H, h);
+  }
+  return f;
+}
+function camTargetOff() { return LH * 0.62 - camFocusY(); }
+/* Trục NGANG cũng đứt y hệt trục dọc: mục tiêu cũ là topCx() — tâm miếng trên
+   cùng — mà lúc ghim, "miếng trên cùng" đổi sang miếng vừa đáp, lệch tới ±w/2
+   so với miếng cũ → mục tiêu nhảy một phát (đo được 7.5px/frame rồi tắt dần,
+   càng đáp lệch càng nặng — đúng kiểu người chơi thật). Bám theo HAMSTER thì
+   liên tục tuyệt đối: lúc ghim ham.x không hề đổi. Khung hình gần như y cũ vì
+   hamster luôn đứng trên miếng trên cùng (lệch tối đa nửa miếng). */
+function camTargetX() { return (ham ? ham.x : topCx()) - LW / 2; }
 function sx(wx) { return wx - camX; }                      // world → screen X
 function sy(wy) { return wy + camOff; }                    // world → screen Y
 /* biên cull nới theo zoom (zoom < 1 nhìn thấy nhiều thế giới hơn) */

@@ -56,6 +56,47 @@ từ tháp mới**, chạy lại y hệt với bộ hằng cũ để so:
 (chênh 2.8×)** xuống **1167–1767 ms (chênh 1.51×)** — hết "giật giật", giữ được
 nhịp, mà **không hề làm game nhanh/khó hơn**. 0 lỗi JS.
 
+#### "Giật giật" — nguyên nhân THẬT: camera đứt vận tốc (2026-07-28)
+
+Sau khi đã sửa render (DPR/alpha/gradient) và nhịp (WAIT/jitter) mà QA **vẫn**
+báo giật, đo lại bằng cách bọc `drawHam` ghi đúng toạ độ **màn hình** mỗi frame
+(bot chơi 30–40 tầng). Kết quả: **không có frame nào nhảy > 20px** — nên đây
+KHÔNG phải "nhảy hình". Nhưng bước lớn nhất cả ván là **15.1px/frame, xuất hiện
+ở ĐÚNG mọi lần `jump→idle`** (lần đáp nào cũng có, không sót).
+
+Thủ phạm: mục tiêu camera bám **đại lượng RỜI RẠC**.
+
+- `camTargetOff` = mặt tháp, mà `tower.length` +1 **ngay khoảnh khắc ghim miếng**
+  → mục tiêu nhảy trọn 1 tầng (92px) trong đúng 1 frame. Camera ease 12%/frame
+  nên hamster bị đẩy ~11px chỉ trong frame đó rồi mới trôi về.
+- Vị trí vẫn liền (C0) nhưng **vận tốc đứt (C1)**: đang rơi ~4px/frame bỗng
+  thành 15px/frame. Mắt đọc ra đúng thành một cú "khựng" — và vì nó bám vào
+  hành động lặp lại nhiều nhất (đáp), cảm giác là "giật giật" suốt ván.
+- `camTargetX` = `topCx()` đứt y hệt: lúc ghim, "miếng trên cùng" đổi sang miếng
+  vừa đáp, lệch tới ±nửa miếng → càng đáp lệch càng nặng (đúng kiểu người chơi
+  thật, không phải bot).
+
+Sửa: cho camera bám **đại lượng LIÊN TỤC**.
+
+- `camFocusY()` — khi hamster đang bay, tiêu điểm đi trước theo độ cao của nó
+  nhưng **kẹp tối đa 1 tầng**. Frame cuối trước khi ghim `h` vẫn > `BLOCK_H` nên
+  kẹp = `BLOCK_H`; ghim xong mặt tháp cao thêm đúng `BLOCK_H` → **hai bên bằng
+  nhau**, hết bước nhảy. Bonus: camera dâng mượt theo cú nhảy.
+- `camTargetX()` bám **hamster** thay vì tâm miếng trên cùng — lúc ghim `ham.x`
+  không hề đổi nên liên tục tuyệt đối. Khung hình gần như y cũ vì hamster luôn
+  đứng trên miếng trên cùng (lệch tối đa nửa miếng).
+
+| Bước lớn nhất mỗi frame | Trước | Sau |
+|---|---|---|
+| Lúc đáp (`jump→idle`) | **15.1 px** | **4.6 px** |
+| Trục ngang lúc đáp | 7.5 px (camera) | **0 px do camera** |
+| Lúc bật nhảy (`idle→jump`) | 12.0 px | 10.6 px |
+
+Sau khi sửa, **mọi** bước ngang còn lại đều quy được về cơ chế **trượt băng**
+(`slideVx` khớp đúng `dx`, `topKind=ice`) — không còn bước nào do camera. Bước
+lúc bật nhảy là **lực bật của cú nhảy, cố ý giữ** (đứng yên → bật lên phải dứt
+khoát); đó cũng là lý do nó không đọc thành lỗi.
+
 #### Cue cảnh báo miếng khó (2026-07-27) — `spawnCue()`
 
 Miếng vàng chạy ×1.25 và miếng mốc chạm là thua, cả hai đều hay úp sọt. Nay ngay

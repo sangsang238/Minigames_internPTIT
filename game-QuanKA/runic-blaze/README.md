@@ -77,6 +77,20 @@ QA báo 2 lỗi đọc-hình, đã sửa:
 
 Combo 2 special (Prism+Prism xoá board, Prism+Blaze/Nova biến-cả-màu, Blaze+Blaze chữ thập, Nova+Nova 5×5…) giữ nguyên.
 
+### 🔧 Đọc-được-hay-không (QA 2026-07-28)
+
+- **Combo giờ NỔI HẲN** — *"combo cho nổi lên, hiện chữ trắng và mờ nên user ko
+  để ý"* + *"thời gian giữ lại lâu hơn, giờ biến mất nhanh quá"*. Cũ là chữ trần
+  nổi trên board (board cũng sáng màu → chữ chìm), animation .8s mà đã gồm cả
+  fade nên chỉ ~0.6s đọc được. Nay bọc **chip nền đặc + viền theo màu bậc combo**
+  (phẳng, cùng kiểu `#toast`), chữ khen **26→32px**, và animation 1.5s có **đoạn
+  GIỮ NGUYÊN ~0.84s** trước khi mờ — trước đây hoàn toàn không có đoạn giữ này.
+- **Bỏ toast báo Hắc Ấn** — *"thông báo có boom xuất hiện bằng text ở ngoài map
+  cũng khiến user ko để ý"* → **bỏ hẳn**. Báo hiệu dồn hết **vào chính ô đó**,
+  nơi mắt người chơi đang nhìn: vòng nổ to hơn (`cellPx×1.15 → ×1.6`) + ô **nhấp
+  3 nhịp** (`curse-arrive`) + tiếng `sCurse()` như cũ. Khoá i18n `cursedSpawn`
+  đã xoá.
+
 ### Điểm & Best
 - Mỗi wave: `số tile × 40 × chain` (chain ×1→×5), mỗi special +80, mỗi Hắc Ấn phá +250
 - **Best (kỷ lục) chạy LIVE** ở header, persist ngay khi vượt; ván sau vẫn nhớ
