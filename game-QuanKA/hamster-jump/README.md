@@ -97,6 +97,31 @@ Sau khi sửa, **mọi** bước ngang còn lại đều quy được về cơ c
 lúc bật nhảy là **lực bật của cú nhảy, cố ý giữ** (đứng yên → bật lên phải dứt
 khoát); đó cũng là lý do nó không đọc thành lỗi.
 
+#### Độc lập TẦN SỐ QUÉT — đo lại sau khi đổi camera (2026-07-28)
+
+Chạy bot với đồng hồ tổng hợp bước `1000/hz` ms mỗi frame, cùng 25 tầng:
+
+| Hz | frames | nhịp/tầng | bước lúc đáp |
+|---|---|---|---|
+| 30 | 1172 | 1551 ms | 521 px/s |
+| 60 | 2195 | 1455 ms | 431 px/s |
+| 90 | 3396 | 1497 ms | 401 px/s |
+| 120 | 3960 | 1519 ms | 525 px/s |
+| 144 | 3630 | 1474 ms | 194 px/s |
+
+**Nhịp chơi lệch ±3.3%** quanh ~1500ms ở mọi Hz → tốc độ ván chơi không đổi theo
+màn hình. `camFocusY()` mới cũng độc lập Hz **theo thiết kế**: nó là hàm thuần
+của `timeMs`, và mốc kẹp `BLOCK_H` trùng đúng điều kiện ghim (`h > BLOCK_H` thì
+bỏ qua) nên hai vế bằng nhau ở mọi bước thời gian. 0 lỗi JS ở cả 5 mức.
+
+⚠️ **Còn 1 điểm phụ thuộc Hz — không phải bug, nhưng nên biết**: `onTap()` gán
+`ham.t0 = timeMs`, mà `timeMs` chỉ nhích 1 lần/frame → **thời điểm bấm bị làm
+tròn về frame**. Cửa sổ Perfect ~44ms nên ở 60Hz sai số làm tròn 16.7ms (chấp
+nhận được), nhưng ở 30Hz lên 33ms → Perfect khó hơn hẳn. Vị trí ĐÁP thì đã nội
+suy dưới khung hình (`overMs`) nên không lệch. Muốn công bằng tuyệt đối thì lấy
+`event.timeStamp` để lùi mốc bấm về đúng lúc chạm — chưa làm vì máy đích tối
+thiểu 60Hz.
+
 #### Cue cảnh báo miếng khó (2026-07-27) — `spawnCue()`
 
 Miếng vàng chạy ×1.25 và miếng mốc chạm là thua, cả hai đều hay úp sọt. Nay ngay
