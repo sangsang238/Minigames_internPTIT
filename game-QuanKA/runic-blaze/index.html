@@ -320,9 +320,14 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 }
 .tile.spin .tile-inner { animation: tileSpin .5s ease-in-out; }
 
-/* ── Popup chip dùng chung (score-fly + nhãn special) ───────────────
-   Mọi text nổi đều BỌC CHIP nền đặc + viền (cùng kiểu #toast / combo-badge)
-   → format nhất quán, đọc rõ trên board sáng, không còn chữ trần đè lẫn nhau. */
+/* ── Text nổi trong màn (score-fly + nhãn special) ──────────────────
+   QA 2026-07-28 (mentor): "txt combo thì mình ko làm nền nhá, xấu lắm" —
+   "em chỉ cần cho chữ to hơn với thời gian tồn tại lâu hơn thôi".
+   → BỎ HẲN nền + viền + bo góc + padding. Để chữ vẫn đọc được trên board
+   sáng thì thay bằng OUTLINE MẢNH (--pop-outline), màu = đúng màu viền cũ.
+   Outline làm bằng text-shadow 8 hướng thay vì -webkit-text-stroke: stroke
+   của WebKit vẽ ĐÈ LÊN mặt chữ làm nét mảnh đi, còn text-shadow nằm phía sau
+   nên giữ nguyên độ dày chữ. */
 .pop-chip {
   position: fixed;
   pointer-events: none;
@@ -332,14 +337,16 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   font-weight: 800;
   white-space: nowrap;
   color: #fff;
-  background: var(--chip-bg);
-  border: 2px solid rgba(255,255,255,.22);
-  border-radius: 12px;
-  padding: 4px 11px;
+  --pop-outline: rgba(9,18,20,.92);   /* JS ghi đè cho nhãn special */
+  text-shadow:
+     1px 0 var(--pop-outline), -1px 0 var(--pop-outline),
+     0  1px var(--pop-outline),  0 -1px var(--pop-outline),
+     1px 1px var(--pop-outline), -1px -1px var(--pop-outline),
+     1px -1px var(--pop-outline), -1px 1px var(--pop-outline);
 }
-/* Score fly-up: chip trôi lên & mờ */
+/* Score fly-up: chữ trôi lên & mờ (to hơn chút vì không còn nền đỡ) */
 .score-fly {
-  font-size: 15px;
+  font-size: 17px;
   letter-spacing: .5px;
   animation: scoreFlyUp 1s ease-out forwards;
 }
@@ -348,11 +355,11 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   18%  { opacity: 1; transform: translate(-50%,-92%) scale(1.12); }
   100% { opacity: 0; transform: translate(-50%,-168%) scale(.92); }
 }
-/* Nhãn special (Blaze!/Nova!/Prism!) neo theo tile — bung, giữ, mờ */
+/* Nhãn special (Blaze!/Nova!/Prism!) neo theo tile — bung, giữ, mờ.
+   Outline lấy ĐÚNG màu viền cũ (theo loại rune) — JS đặt --pop-outline. */
 .special-label {
-  font-size: 17px;
+  font-size: 19px;
   letter-spacing: .5px;
-  border-width: 3px;   /* viền màu theo loại — JS ghi đè borderColor */
 }
 @keyframes labelPop {
   0%   { opacity: 0; transform: translate(-50%,-50%) scale(.6); }
@@ -364,12 +371,11 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 .special-label.pop { animation: labelPop 1.15s ease-out forwards; }
 
 /* ── Combo badge + chữ khen ────────────────────────────────────────
-   QA 2026-07-27: "combo cho nổi lên, hiện chữ trắng và mờ nên user ko để ý"
-   + "thời gian giữ lại lâu hơn, giờ biến mất nhanh quá".
-   Cũ: chữ trần nổi trên board (nền board cũng sáng màu → chữ chìm), animation
-   .8s mà đã gồm cả fade → chỉ ~0.6s đọc được. Nay bọc CHIP nền đặc + viền
-   theo màu bậc combo (phẳng, cùng kiểu #toast — không glow/gradient/đổ bóng),
-   chữ to hơn, và animation có ĐOẠN GIỮ NGUYÊN trước khi mờ. */
+   QA 2026-07-27 muốn combo "nổi lên" và "giữ lâu hơn" → đợt đó tôi bọc chip
+   nền + viền. Mentor 2026-07-28 bác: "txt combo thì mình ko làm nền nhá, xấu
+   lắm — em chỉ cần cho chữ TO HƠN với THỜI GIAN TỒN TẠI LÂU HƠN thôi".
+   Nay: BỎ nền/viền/bo góc/padding, chữ to hơn nữa (32→38px) và giữ nguyên
+   animation 1.5s có đoạn đứng yên. Đọc được nhờ OUTLINE mảnh thay vì nền. */
 #combo-badge {
   position: fixed;
   top: 42%;
@@ -382,22 +388,31 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   pointer-events: none;
   z-index: 100;
   opacity: 0;
-  background: var(--chip-bg);
-  border: 3px solid #ffd23f;      /* màu bậc combo — JS ghi đè */
-  border-radius: 18px;
-  padding: 11px 26px;
+  --pop-outline: rgba(9,18,20,.92);
 }
 #combo-praise {
-  font-size: 32px;
+  font-size: 38px;
   font-weight: 800;
   letter-spacing: 1px;
   line-height: 1.1;
+  /* outline tối: chữ khen ĐÃ có màu theo bậc combo nên viền cùng màu sẽ vô
+     dụng — dùng màu nền chip cũ (thứ vốn tạo ra độ tương phản) làm outline. */
+  text-shadow:
+     1.5px 0 var(--pop-outline), -1.5px 0 var(--pop-outline),
+     0  1.5px var(--pop-outline),  0 -1.5px var(--pop-outline),
+     1.5px 1.5px var(--pop-outline), -1.5px -1.5px var(--pop-outline),
+     1.5px -1.5px var(--pop-outline), -1.5px 1.5px var(--pop-outline);
 }
 #combo-mult {
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 800;
   letter-spacing: 2px;
   color: #ffe9b0;
+  text-shadow:
+     1px 0 var(--pop-outline), -1px 0 var(--pop-outline),
+     0  1px var(--pop-outline),  0 -1px var(--pop-outline),
+     1px 1px var(--pop-outline), -1px -1px var(--pop-outline),
+     1px -1px var(--pop-outline), -1px 1px var(--pop-outline);
 }
 /* 1.5s: bung nhanh (10%) → về cỡ thật (20%) → GIỮ NGUYÊN tới 76% (~0.84s
    đứng yên, rõ mồn một) → mới trôi lên & mờ. Cũ không có đoạn giữ này. */
@@ -464,17 +479,23 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 .board-tut .tile:not(.tut-target):not(.tut-show) .tile-inner { opacity: .4; }
 
 /* ── Toast (shuffle / thông báo) ───────────────────────────────── */
+/* Thông báo trong màn (hết nước đi / đã xáo) — BỎ nền + viền theo QA
+   2026-07-28, thay bằng outline mảnh (màu = màu viền cũ, ở đây là trắng nhạt
+   nên dùng nền chip cũ để còn tương phản trên board sáng). */
 #toast {
   position: fixed;
   top: 24%;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--chip-bg);
-  border: 1px solid rgba(255,255,255,.2);
   color: #fff;
-  border-radius: 14px;
-  padding: 10px 20px;
-  font-size: 15px;
+  --pop-outline: rgba(9,18,20,.92);
+  text-shadow:
+     1px 0 var(--pop-outline), -1px 0 var(--pop-outline),
+     0  1px var(--pop-outline),  0 -1px var(--pop-outline),
+     1px 1px var(--pop-outline), -1px -1px var(--pop-outline),
+     1px -1px var(--pop-outline), -1px 1px var(--pop-outline);
+  font-weight: 800;
+  font-size: 17px;
   z-index: 240;
   opacity: 0;
   pointer-events: none;
@@ -2306,6 +2327,21 @@ function stepParticles(dt) {
   if (anyDead) particles = particles.filter(p => p.life < p.max);
 }
 
+/* Sprite hạt tròn pha sẵn theo màu — dựng 1 lần, tra bằng Map (số màu hữu hạn:
+   6 màu rune + trắng + màu hắc ấn). */
+const dotSprites = new Map();
+function dotSprite(col) {
+  let cv = dotSprites.get(col);
+  if (cv) return cv;
+  cv = document.createElement('canvas');
+  cv.width = cv.height = 16;
+  const c = cv.getContext('2d');
+  c.fillStyle = col;
+  c.beginPath(); c.arc(8, 8, 7, 0, Math.PI * 2); c.fill();
+  dotSprites.set(col, cv);
+  return cv;
+}
+
 let fxHadContent = false;
 function drawFx() {
   if (!particles.length) {
@@ -2320,17 +2356,20 @@ function drawFx() {
     const a = 1 - k;
     if (p.type === 'dot') {
       fxCtx.globalAlpha = a;
-      fxCtx.fillStyle = p.col;
       if (p.shape === 'diamond') {
+        fxCtx.fillStyle = p.col;
         fxCtx.save();
         fxCtx.translate(p.x, p.y);
         fxCtx.rotate(k * 4);
         fxCtx.fillRect(-p.size, -p.size, p.size * 2, p.size * 2);
         fxCtx.restore();
       } else {
-        fxCtx.beginPath();
-        fxCtx.arc(p.x, p.y, p.size * (1 - k * 0.5), 0, Math.PI * 2);
-        fxCtx.fill();
+        /* HẠT TRÒN là loại đông nhất (trần 420): cũ mỗi hạt tốn đổi fillStyle +
+           beginPath+arc+fill = 4 việc → lúc chuỗi combo dài chạm trần là ~1700
+           việc mỗi khung. Nay dùng sprite pha sẵn theo màu → còn 1 drawImage. */
+        const r = p.size * (1 - k * 0.5);
+        const sp = dotSprite(p.col);
+        fxCtx.drawImage(sp, p.x - r, p.y - r, r * 2, r * 2);
       }
     } else if (p.type === 'beam') {
       const grow = Math.min(1, p.life / 130);
@@ -3051,17 +3090,27 @@ function updateLabels() {
   $('sound-btn').setAttribute('aria-label', t('sound'));
 }
 
-let activePops = [];   // vị trí các chip nổi đang sống → chống đè
-/** Nhích chip mới lên khi trùng chỗ chip đang sống (score-fly / special). */
-function dodgeOverlap(x, y) {
-  let guard = 0;
-  while (guard < 6 && activePops.some(p => Math.abs(p.x - x) < cellPx * 1.25 && Math.abs(p.y - y) < 30)) {
-    y -= 30; guard++;
+let activePops = [];   // các chữ nổi đang sống → chữ mới "đá" chữ cũ lên
+
+/* CHỮ MỚI ĐÁ CHỮ CŨ LÊN (mentor 2026-07-28):
+   "toàn bộ chữ combo xuất hiện từ dưới lên; nếu chữ mới xuất hiện, nó sẽ có
+    hiệu ứng ĐÁ chữ cũ lên trên — chữ cũ sống nốt thời gian còn lại rồi mất."
+   Cũ là `dodgeOverlap`: chữ MỚI tự né lên trên chữ cũ → chuỗi combo dài thì chữ
+   mới bị đẩy mỗi lúc một cao, rời khỏi chỗ vừa nổ, và vẫn đè nhau khi 2 chữ ra
+   gần như cùng lúc. Nay ngược lại: chữ mới LUÔN hiện đúng chỗ của nó, chữ cũ bị
+   đẩy lên nhường chỗ — thứ tự đọc từ dưới lên, không cần né.
+   KHÔNG đụng vào tuổi thọ: mỗi chữ vẫn tự tắt theo timer riêng của nó. */
+const POP_KICK = 34;   // px mỗi lần bị đá lên
+
+function kickPopsUp() {
+  for (const p of activePops) {
+    p.y -= POP_KICK;
+    p.el.style.top = p.y + 'px';
   }
-  return y;
 }
+
 function trackPop(el, x, y, ms) {
-  const rec = { x, y };
+  const rec = { x, y, el };
   activePops.push(rec);
   const kill = () => { if (el.parentNode) el.remove(); activePops = activePops.filter(p => p !== rec); };
   el.addEventListener('animationend', kill, { once: true });
@@ -3076,8 +3125,8 @@ function clearPops() {
 function spawnScoreFly(boardR, boardC, pts, mult) {
   const rect = boardRect();
   const x = rect.left + boardC * cellPx + cellPx * 0.5;
-  let y = rect.top + boardR * cellPx + cellPx * 0.5;
-  y = dodgeOverlap(x, y);
+  const y = rect.top + boardR * cellPx + cellPx * 0.5;
+  kickPopsUp();                       // nhường chỗ: chữ cũ bị đá lên trên
   const el = document.createElement('div');
   el.className = 'pop-chip score-fly';
   el.textContent = (mult > 1 ? `×${mult} ` : '') + `+${pts}`;
@@ -3098,7 +3147,7 @@ function spawnTileLabel(r, c, text, borderColor) {
   const badgeY = window.innerHeight * 0.42;                 // vị trí câu khen (#combo-badge)
   const below = (tileTop + tileBot) / 2 >= badgeY;          // tile dưới câu khen → nhãn xuống dưới tile
   let y = below ? tileBot + 22 : tileTop - 22;
-  y = dodgeOverlap(cx, y);                                  // né các chip nổi khác
+  kickPopsUp();                                             // nhường chỗ cho nhãn mới
   const badge = $('combo-badge');
   if (badge && badge.classList.contains('cascade-anim')) {
     const b = badge.getBoundingClientRect();
@@ -3112,7 +3161,7 @@ function spawnTileLabel(r, c, text, borderColor) {
   el.className = 'pop-chip special-label pop';
   el.textContent = text;
   el.style.top = y + 'px';
-  el.style.borderColor = borderColor;
+  el.style.setProperty('--pop-outline', borderColor);   // outline = ĐÚNG màu viền cũ
   document.body.appendChild(el);
   // kẹp ngang: chip dài (vd "✦ Arcane Surge!") ở cột rìa không được tràn khỏi màn
   const half = el.offsetWidth / 2 + 8;
@@ -3123,7 +3172,10 @@ function spawnTileLabel(r, c, text, borderColor) {
 /** Nhãn special vừa rèn (Blaze!/Nova!/Prism!) — viền màu theo loại rune. */
 function spawnSpecialLabel(r, c, kind, color) {
   const key = kind === K_PRISM ? 'nmPrism' : (kind === K_NOVA ? 'nmNova' : 'nmBlaze');
-  spawnTileLabel(r, c, t(key), kind === K_PRISM ? '#dfe6ee' : RUNE_HEX[color]);
+  /* Prism: viền cũ là bạc #dfe6ee — dùng làm outline cho chữ TRẮNG thì gần như
+     vô hình, trái mục đích "để tránh khó đọc". Lấy màu THÂN ô prism (#6a6f96)
+     — vẫn là "màu của chính nó" mà đủ tương phản. */
+  spawnTileLabel(r, c, t(key), kind === K_PRISM ? '#4d5273' : RUNE_HEX[color]);
 }
 
 function showComboBadge(chain) {
@@ -3132,8 +3184,7 @@ function showComboBadge(chain) {
   $('combo-praise').textContent = t('praise')[tier];
   $('combo-mult').textContent = `${t('combo')} ×${Math.min(chain, CHAIN_CAP)}`;
   const cols = ['#9fd0ff', '#7dffb0', '#ffd23f', '#ff9a3d', '#ff5a8f'];
-  $('combo-praise').style.color = cols[tier];
-  badge.style.borderColor = cols[tier];   // viền chip cùng bậc → combo cao thấy ngay
+  $('combo-praise').style.color = cols[tier];   // màu bậc combo nằm ở CHỮ, không phải viền nền
   badge.classList.remove('cascade-anim');
   void badge.offsetWidth;
   badge.classList.add('cascade-anim');
@@ -3198,6 +3249,13 @@ function checkEnd(ep) {
   }
 }
 
+/* DEATH SCREEN phải đủ dài để người chơi KỊP THẤY mình thua vì cái gì, trước
+   khi popup che mất (QA 2026-07-28). Cũ: hết nước đi 0.95s, hắc ấn nổ ~1.36s —
+   popup ập lên gần như ngay lúc cảnh nổ còn đang chạy (riêng transition bóng
+   tối đã 1s). */
+const DEATH_HOLD_MS = 2300;   // nhánh "hết nước đi"
+const BOOM_HOLD_MS  = 1900;   // nhánh hắc ấn nổ, CỘNG THÊM 160+340 ở trên ⇒ ~2.4s
+
 /* Game Over — game điểm-cao tự vẽ popup (popup-common §1.1) */
 async function gameOver(ep, boom) {
   deselect(); clearHint();
@@ -3210,7 +3268,7 @@ async function gameOver(ep, boom) {
     showResultBanner(t('overBanner'), { lose: true });   // hết nước đi → banner giữa màn
     screenShake(10);
     spawnFlash(window.innerWidth * 0.5, window.innerHeight * 0.42, 160);
-    await sleep(950);
+    await sleep(DEATH_HOLD_MS);
     if (ep !== levelEpoch) return;
   }
   maybeAds();
@@ -3254,10 +3312,10 @@ async function cursedDetonate(ep, boom) {
   let by = tileTop - 30; if (by < 84) by = tileBot + 30;
   const bx = clamp(ctr.x, window.innerWidth * 0.32, window.innerWidth * 0.68);
   showResultBanner(t('overBanner'), { lose: true, small: true, immediate: true, x: bx, y: by });
-  await sleep(300);
+  await sleep(340);
   if (ep !== levelEpoch) return;
   spawnRing(ctr.x, ctr.y, CURSE_HEX, cellPx * 7);
-  await sleep(900);                    // tổng ~1.36s trước khi popup
+  await sleep(BOOM_HOLD_MS);           // tổng ~2.4s trước khi popup (transition tối đã 1s)
 }
 
 function showGameOverPopup() {

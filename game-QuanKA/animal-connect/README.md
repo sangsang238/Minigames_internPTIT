@@ -92,6 +92,16 @@
 - Vô hạn → **không có màn cuối, không bắn `victory`**; thắng luôn gửi
   `game_result win` + `save_data {levelIdx: n+1, best}`.
 
+## Text nổi trong màn: bỏ nền (2026-07-28)
+
+Theo QA/mentor: text nổi trong màn **không dùng nền/viền**, thay bằng **outline
+mảnh** cùng màu nền cũ. Ở game này chỉ `#toast` (thông báo tự xáo) có nền — đã bỏ
+`background` + `border-radius` + `padding`, chữ **14→16px** đậm hơn, outline
+`rgba(19,48,35,.95)` (đúng màu nền cũ) để vẫn đọc rõ trên nền đồng cỏ sáng.
+
+`#praise` ("Nhanh!/Cực nhanh!") vốn đã không có nền (chỉ `text-shadow`) nên giữ
+nguyên. SCORE/BEST và popup kết quả **không đụng** (là UI mặc định).
+
 ## Tối ưu hiệu năng (2026-07-28) — theo bộ tiêu chí mentor dùng cho hamster-jump
 
 Đo bằng **đếm lệnh canvas**, không đoán từ đọc code (`performance.now()` đứng yên

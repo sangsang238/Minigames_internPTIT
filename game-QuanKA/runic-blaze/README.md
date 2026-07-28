@@ -91,6 +91,42 @@ Combo 2 special (Prism+Prism xoá board, Prism+Blaze/Nova biến-cả-màu, Blaz
   3 nhịp** (`curse-arrive`) + tiếng `sCurse()` như cũ. Khoá i18n `cursedSpawn`
   đã xoá.
 
+### 🔧 Text nổi: bỏ nền, thêm outline + "đá chữ cũ lên" (2026-07-28, mentor)
+
+Mentor bác cách làm chip nền của đợt trước: *"tại sao em lại làm viền với nền
+vậy… txt combo thì mình ko làm nền nhá, xấu lắm — em chỉ cần cho chữ TO HƠN với
+THỜI GIAN TỒN TẠI LÂU HƠN thôi."*
+
+- **Bỏ hẳn nền + viền + bo góc + padding** ở mọi text nổi trong màn: combo badge,
+  score-fly, nhãn special (`Blaze!/Nova!/Prism!`), toast. Chữ to hơn bù lại:
+  combo **32→38px**, score-fly **15→17px**, nhãn special **17→19px**.
+- **Outline mảnh thay cho nền**, màu = **đúng màu viền cũ**: nhãn special lấy màu
+  rune (đỏ/lam/lục/hổ phách/tím/hồng). Làm bằng `text-shadow` 8 hướng chứ không
+  phải `-webkit-text-stroke` — stroke của WebKit vẽ **đè lên mặt chữ** làm nét
+  mảnh đi, `text-shadow` nằm phía sau nên giữ nguyên độ dày.
+- **KHÔNG đụng** SCORE/BEST, popup Game Over, và thanh hướng dẫn tutorial (đó là
+  panel chữ 2 dòng, bỏ nền là không đọc nổi trên board).
+
+**Chữ mới ĐÁ chữ cũ lên** — mentor: *"toàn bộ chữ combo xuất hiện từ dưới lên;
+nếu chữ mới xuất hiện, nó sẽ có hiệu ứng đá chữ cũ lên trên… chữ cũ tồn tại nốt
+thời gian còn lại rồi mất."* Cũ là `dodgeOverlap`: **chữ mới** tự né lên trên chữ
+cũ → chuỗi dài thì chữ mới bị đẩy mỗi lúc một cao, rời khỏi chỗ vừa nổ, mà vẫn đè
+nhau khi 2 chữ ra gần cùng lúc. Nay ngược lại: chữ mới **luôn hiện đúng chỗ của
+nó**, chữ cũ bị đẩy lên 34px nhường chỗ, tuổi thọ giữ nguyên.
+
+### 🔧 Death screen dài hơn + hạ tải lúc chuỗi dài
+
+- **Death screen**: hết nước đi **0.95s → 2.3s**; hắc ấn nổ **~1.36s → ~2.4s**
+  (riêng transition bóng tối đã 1s, trước đây popup ập lên lúc cảnh nổ còn đang
+  chạy). Hai hằng `DEATH_HOLD_MS` / `BOOM_HOLD_MS` để chỉnh nhanh.
+- **Lag lúc combo liên tục**: hạt tròn là loại đông nhất (trần 420). Cũ mỗi hạt
+  tốn `fillStyle` + `beginPath`+`arc`+`fill`; nay dùng **sprite pha sẵn theo màu**
+  → còn **1 `drawImage`**. Đo được `fx.drawImage` 11.8/frame ⇒ dưới code cũ chỗ
+  đó là ~35.4 lệnh path, tức tổng FX **~50 → 26.6 lệnh/frame**; càng chạm trần
+  particle thì càng lợi.
+  > Đã **loại trừ** 2 nghi can khác bằng số đo, không phải đoán: `morphTile` chỉ
+  > 9 lần và `querySelector` 0.01/frame trong cả phiên → **không phải** thủ phạm.
+
 ### Điểm & Best
 - Mỗi wave: `số tile × 40 × chain` (chain ×1→×5), mỗi special +80, mỗi Hắc Ấn phá +250
 - **Best (kỷ lục) chạy LIVE** ở header, persist ngay khi vượt; ván sau vẫn nhớ

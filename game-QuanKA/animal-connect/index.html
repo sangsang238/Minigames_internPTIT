@@ -421,16 +421,22 @@ body {
 .praise-anim { animation: praisePop 1s ease-out forwards; }
 
 /* ── Toast (auto-shuffle notice…) ─────────────────────────────── */
+/* Thông báo trong màn (tự xáo…) — BỎ nền theo QA 2026-07-28, thay bằng outline
+   mảnh màu đúng bằng nền cũ để vẫn đọc rõ trên nền đồng cỏ sáng. */
 #toast {
   position: fixed;
   left: 50%;
   top: 22%;
   transform: translateX(-50%);
-  background: rgba(30,70,52,.88);
   color: #fff;
-  font-size: 14px;
-  padding: 9px 18px;
-  border-radius: 20px;
+  font-size: 16px;
+  font-weight: 800;
+  --pop-outline: rgba(19,48,35,.95);
+  text-shadow:
+     1px 0 var(--pop-outline), -1px 0 var(--pop-outline),
+     0  1px var(--pop-outline),  0 -1px var(--pop-outline),
+     1px 1px var(--pop-outline), -1px -1px var(--pop-outline),
+     1px -1px var(--pop-outline), -1px 1px var(--pop-outline);
   z-index: 150;
   pointer-events: none;
   opacity: 0;
