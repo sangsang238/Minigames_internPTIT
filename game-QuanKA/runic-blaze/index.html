@@ -421,6 +421,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   letter-spacing: 1px;
   line-height: 1.1;
 }
+.combo-pop.kicked .combo-mult { display: none; }
 .combo-mult {
   font-size: 16px;
   font-weight: 800;
@@ -3119,20 +3120,39 @@ let activePops = [];   // các chữ nổi đang sống → chữ mới "đá" c
    gần như cùng lúc. Nay ngược lại: chữ mới LUÔN hiện đúng chỗ của nó, chữ cũ bị
    đẩy lên nhường chỗ — thứ tự đọc từ dưới lên, không cần né.
    KHÔNG đụng vào tuổi thọ: mỗi chữ vẫn tự tắt theo timer riêng của nó. */
-const POP_KICK = 34;   // px mỗi lần bị đá lên
+/* Độ sáng cảm nhận (Rec. 601) — dùng để quyết định outline tối hay sáng */
+function isLightHex(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex).trim());
+  if (!m) return false;
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 150;
+}
 
-function kickPopsUp() {
+const POP_KICK = 24;        // px mỗi lần bị đá lên (QA: "giảm 1 nửa")
+const COMBO_KICK = 30;      // câu khen: cách nhau vừa đủ, không rời khỏi chữ mới
+
+/* comboOnly = true  → chỉ câu khen bị đá (do CÓ câu khen mới)
+   comboOnly = false → chỉ chữ điểm/nhãn bị đá (do có chữ điểm/nhãn mới)
+   QA 2026-07-28: "PHẢI có chữ mới xuất hiện thì chữ khen cũ mới bị đẩy lên chứ!"
+   — trước đây score-fly/nhãn special cũng đá câu khen, nên câu khen tự nhảy lên
+   dù chẳng có câu khen nào mới, và mỗi combo bị đá 2 lần ⇒ khoảng cách gấp đôi. */
+function kickPopsUp(comboOnly) {
   for (const p of activePops) {
+    if (!!p.combo !== !!comboOnly) continue;   // khác nhóm → không đụng
     p.kick = (p.kick || 0) + 1;
     if (p.combo) {
       /* câu khen: đá lên + NHỎ LẠI + MỜ ĐI (đúng mô tả "nice bị đá lên trên
          nhỏ lại và mờ đi"). Opacity ở lớp ngoài nhân với opacity của animation
          lớp trong → mờ dần cộng hưởng, không giật. */
-      const dy = p.kick * 40;
+      const dy = p.kick * COMBO_KICK;
       const sc = Math.max(0.55, 1 - p.kick * 0.16);
       const op = Math.max(0, 1 - p.kick * 0.26);
       p.el.style.transform = `translate(-50%, calc(-50% - ${dy}px)) scale(${sc})`;
       p.el.style.opacity = String(op);
+      /* Câu đã bị đá thì bỏ dòng "COMBO ×n", chỉ còn CHỮ KHEN — nhờ vậy khối
+         thấp lại (~33px) nên khoảng cách 30px vẫn không chồng chữ. */
+      p.el.classList.add('kicked');
     } else {
       p.y -= POP_KICK;
       p.el.style.top = p.y + 'px';
@@ -3157,7 +3177,7 @@ function spawnScoreFly(boardR, boardC, pts, mult) {
   const rect = boardRect();
   const x = rect.left + boardC * cellPx + cellPx * 0.5;
   const y = rect.top + boardR * cellPx + cellPx * 0.5;
-  kickPopsUp();                       // nhường chỗ: chữ cũ bị đá lên trên
+  kickPopsUp(false);                  // nhường chỗ: chỉ chữ điểm/nhãn cũ bị đá
   const el = document.createElement('div');
   el.className = 'pop-chip score-fly';
   el.textContent = (mult > 1 ? `×${mult} ` : '') + `+${pts}`;
@@ -3178,7 +3198,7 @@ function spawnTileLabel(r, c, text, borderColor) {
   const badgeY = window.innerHeight * 0.42;                 // dải câu khen combo
   const below = (tileTop + tileBot) / 2 >= badgeY;          // tile dưới câu khen → nhãn xuống dưới tile
   let y = below ? tileBot + 22 : tileTop - 22;
-  kickPopsUp();                                             // nhường chỗ cho nhãn mới
+  kickPopsUp(false);                                        // nhường chỗ cho nhãn mới
   /* Né dải câu khen ở giữa màn (câu khen nay là các .combo-pop chồng nhau) */
   if (document.querySelector('.combo-pop') && Math.abs(y - badgeY) < 46) {
     y = below ? badgeY + 52 : badgeY - 52;
@@ -3188,7 +3208,16 @@ function spawnTileLabel(r, c, text, borderColor) {
   el.className = 'pop-chip special-label pop';
   el.textContent = text;
   el.style.top = y + 'px';
-  el.style.setProperty('--pop-outline', borderColor);   // outline = ĐÚNG màu viền cũ
+  /* Màu SÁNG (vd Arcane Surge #ffd23f) làm outline quanh chữ TRẮNG thì thành
+     "chữ trắng nền vàng", chói và khó đọc (QA 2026-07-28). Xét độ sáng để tự
+     đảo vai: màu sáng → cho vào CHỮ, outline lấy nền tối; màu tối/đậm (Blaze
+     đỏ, Cursed đỏ máu…) thì giữ chữ trắng + outline màu như cũ. */
+  if (isLightHex(borderColor)) {
+    el.style.color = borderColor;
+    el.style.setProperty('--pop-outline', 'rgba(9,18,20,.92)');
+  } else {
+    el.style.setProperty('--pop-outline', borderColor);
+  }
   document.body.appendChild(el);
   // kẹp ngang: chip dài (vd "✦ Arcane Surge!") ở cột rìa không được tràn khỏi màn
   const half = el.offsetWidth / 2 + 8;
@@ -3210,7 +3239,7 @@ function spawnSpecialLabel(r, c, kind, color) {
 function showComboBadge(chain) {
   const tier = Math.min(chain - 2, 4);
   const cols = ['#9fd0ff', '#7dffb0', '#ffd23f', '#ff9a3d', '#ff5a8f'];
-  kickPopsUp();                                  // câu mới đá mọi chữ cũ lên
+  kickPopsUp(true);                              // CHỈ câu khen cũ bị đá lên
 
   const el = document.createElement('div');
   el.className = 'combo-pop';
@@ -3268,7 +3297,7 @@ function showResultBanner(text, opts) {
     /* Góc TRÊN-TRÁI của board thật (không phải của màn hình) */
     const r = boardRect();
     el.style.left = Math.max(10, r.left + 6) + 'px';
-    el.style.top  = Math.max(64, r.top - 10) + 'px';
+    el.style.top  = Math.max(64, r.top - 10 + cellPx) + 'px';   // QA: kéo xuống 1 tile
   } else if (opts.x != null && opts.y != null) {
     el.style.left = opts.x + 'px'; el.style.top = opts.y + 'px';
   } else { el.style.left = '50%'; el.style.top = '40%'; }

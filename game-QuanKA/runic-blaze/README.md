@@ -129,8 +129,23 @@ nó**, chữ cũ bị đẩy lên 34px nhường chỗ, tuổi thọ giữ nguy�
   **`paint-order: stroke fill`** cho nét liền mạch mà **không** làm mảnh chữ
   (mặc định WebKit vẽ stroke đè lên mặt chữ; `paint-order` đẩy nó ra sau). Có
   `@supports not (paint-order: stroke)` lùi về text-shadow 4 hướng cho WebView cũ.
-- **`Blaze Storm!`**: bỏ nền, chuyển ra **góc trên-trái của BOARD** (theo rect
-  board thật, không phải góc màn hình) và **nghiêng 30° sang trái**.
+- **`Blaze Storm!`**: bỏ nền, đặt ở **góc trên-trái của BOARD** (theo rect board
+  thật, không phải góc màn hình), **thấp xuống 1 ô** (`+cellPx`) và **nghiêng
+  30° sang trái**.
+- **Màu SÁNG không được làm outline cho chữ trắng.** `✦ Arcane Surge!` dùng
+  `#ffd23f` → viền vàng dày quanh chữ trắng đọc ra thành *"chữ trắng nền vàng"*,
+  chói và khó nhìn. Nay xét **độ sáng cảm nhận** (Rec. 601, ngưỡng 150) để tự
+  đảo vai: màu sáng → cho vào **CHỮ**, outline lấy nền tối; màu tối/đậm (Blaze
+  đỏ, Cursed đỏ máu…) giữ chữ trắng + outline màu như cũ. Quy tắc chung nên
+  không phải chữa từng ca.
+- **Chỉ CÂU KHEN MỚI mới đá câu khen cũ.** Trước đây `spawnScoreFly` và
+  `spawnTileLabel` cũng gọi `kickPopsUp()`, nên câu khen **tự nhảy lên dù không
+  có câu khen nào mới**, và mỗi combo bị đá 2 lần ⇒ **khoảng cách gấp đôi** —
+  đúng 2 điều QA phàn nàn. Nay `kickPopsUp(comboOnly)` tách 2 nhóm: câu khen chỉ
+  bị đá bởi câu khen, chữ điểm/nhãn chỉ bị đá bởi chữ điểm/nhãn.
+- **Khoảng cách gần lại**: câu khen `40 → 30px`, chữ điểm/nhãn `34 → 24px`. Câu
+  đã bị đá thì **ẩn dòng `COMBO ×n`**, chỉ còn chữ khen — khối thấp lại (~33px)
+  nên 30px vẫn không chồng chữ.
 - **Hắc ấn nổ → popup**: cắt một nửa, `160+340+700 ≈ **1.2s**` (trước ~2.4s).
 - **Tự động Play Again** — *lỗi thật, đã sửa*: `devSimulateNative` tự gọi
   `onRetryLevel()` sau 2.5s mỗi khi nhận `game_result`. Game này gửi
