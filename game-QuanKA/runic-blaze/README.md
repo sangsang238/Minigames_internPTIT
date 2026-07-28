@@ -114,6 +114,31 @@ cũ → chuỗi dài thì chữ mới bị đẩy mỗi lúc một cao, rời kh
 nhau khi 2 chữ ra gần cùng lúc. Nay ngược lại: chữ mới **luôn hiện đúng chỗ của
 nó**, chữ cũ bị đẩy lên 34px nhường chỗ, tuổi thọ giữ nguyên.
 
+### 🔧 Vòng 2 (QA 2026-07-28, sau khi bỏ nền)
+
+- **Câu khen nhỏ lại** 38 → **30px** ("hơi to").
+- **CHỒNG câu khen, chữ mới đá chữ cũ**: trước đây câu khen là **một** phần tử bị
+  ghi đè nên chuỗi combo dài chỉ thấy đúng câu cuối. Nay mỗi combo sinh **một
+  câu mới**; câu cũ bị đá lên **40px**, **nhỏ lại** (×0.84 mỗi bậc, sàn 0.55) và
+  **mờ đi** (−0.26 mỗi bậc), sống nốt tuổi thọ của nó rồi tự mất — đúng
+  *"great đá nice lên trên… cái nào xuất hiện sau thì đá cái trước"*. Dựng 2 lớp
+  lồng nhau vì cả "đá lên" lẫn "bung–giữ–mờ" đều cần `transform`: lớp ngoài cho
+  JS đá (transition), lớp trong cho animation.
+- **Outline hết lấm lem**: cách cũ chồng **8 bản `text-shadow`** lệch 1px — chỗ
+  giao thì đậm, khe giữa thì hở nên nhìn nhoè. Nay `-webkit-text-stroke` +
+  **`paint-order: stroke fill`** cho nét liền mạch mà **không** làm mảnh chữ
+  (mặc định WebKit vẽ stroke đè lên mặt chữ; `paint-order` đẩy nó ra sau). Có
+  `@supports not (paint-order: stroke)` lùi về text-shadow 4 hướng cho WebView cũ.
+- **`Blaze Storm!`**: bỏ nền, chuyển ra **góc trên-trái của BOARD** (theo rect
+  board thật, không phải góc màn hình) và **nghiêng 30° sang trái**.
+- **Hắc ấn nổ → popup**: cắt một nửa, `160+340+700 ≈ **1.2s**` (trước ~2.4s).
+- **Tự động Play Again** — *lỗi thật, đã sửa*: `devSimulateNative` tự gọi
+  `onRetryLevel()` sau 2.5s mỗi khi nhận `game_result`. Game này gửi
+  `showModal:false` và **tự vẽ popup + nút Play Again**, nên app thật KHÔNG bao
+  giờ gọi lại — đoạn mô phỏng đó tạo ra hành vi không có thật và làm popup tự
+  đóng. Đã bỏ. **Verify:** sau khi thua 8s → `onRetryLevel` gọi **0 lần**, popup
+  vẫn hiện, `levelEpoch` không đổi.
+
 ### 🔧 Death screen dài hơn + hạ tải lúc chuỗi dài
 
 - **Death screen**: hết nước đi **0.95s → 2.3s**; hắc ấn nổ **~1.36s → ~2.4s**

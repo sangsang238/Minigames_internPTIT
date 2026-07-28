@@ -325,9 +325,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
    "em chỉ cần cho chữ to hơn với thời gian tồn tại lâu hơn thôi".
    → BỎ HẲN nền + viền + bo góc + padding. Để chữ vẫn đọc được trên board
    sáng thì thay bằng OUTLINE MẢNH (--pop-outline), màu = đúng màu viền cũ.
-   Outline làm bằng text-shadow 8 hướng thay vì -webkit-text-stroke: stroke
-   của WebKit vẽ ĐÈ LÊN mặt chữ làm nét mảnh đi, còn text-shadow nằm phía sau
-   nên giữ nguyên độ dày chữ. */
+   Cách vẽ outline: xem khối `.pop-chip, #toast, .combo-pop` ngay bên dưới. */
 .pop-chip {
   position: fixed;
   pointer-events: none;
@@ -338,11 +336,26 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   white-space: nowrap;
   color: #fff;
   --pop-outline: rgba(9,18,20,.92);   /* JS ghi đè cho nhãn special */
-  text-shadow:
-     1px 0 var(--pop-outline), -1px 0 var(--pop-outline),
-     0  1px var(--pop-outline),  0 -1px var(--pop-outline),
-     1px 1px var(--pop-outline), -1px -1px var(--pop-outline),
-     1px -1px var(--pop-outline), -1px 1px var(--pop-outline);
+}
+/* OUTLINE SẮC NÉT.
+   Cách cũ (8 bản text-shadow lệch 1px) cho ra viền LẤM LEM: 8 bản sao chồng
+   nhau, chỗ giao thì đậm, khe giữa thì hở → nhìn nhoè. `-webkit-text-stroke`
+   cho nét liền, nhưng mặc định nó vẽ ĐÈ LÊN mặt chữ làm chữ mảnh đi —
+   `paint-order: stroke fill` đẩy nét ra SAU mặt chữ nên chữ giữ nguyên độ dày
+   mà viền vẫn liền mạch. */
+.pop-chip, #toast, .combo-pop {
+  -webkit-text-stroke: 3px var(--pop-outline);
+  paint-order: stroke fill;
+}
+/* WebView quá cũ không có paint-order → nét sẽ đè lên chữ; lúc đó bỏ stroke và
+   quay lại text-shadow 4 hướng (ít bản chồng hơn nên đỡ lấm lem hơn 8 hướng). */
+@supports not (paint-order: stroke) {
+  .pop-chip, #toast, .combo-pop {
+    -webkit-text-stroke: 0;
+    text-shadow:
+       1px 0 var(--pop-outline), -1px 0 var(--pop-outline),
+       0 1px var(--pop-outline),  0 -1px var(--pop-outline);
+  }
 }
 /* Score fly-up: chữ trôi lên & mờ (to hơn chút vì không còn nền đỡ) */
 .score-fly {
@@ -376,54 +389,46 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
    lắm — em chỉ cần cho chữ TO HƠN với THỜI GIAN TỒN TẠI LÂU HƠN thôi".
    Nay: BỎ nền/viền/bo góc/padding, chữ to hơn nữa (32→38px) và giữ nguyên
    animation 1.5s có đoạn đứng yên. Đọc được nhờ OUTLINE mảnh thay vì nền. */
-#combo-badge {
+/* CHỒNG CÂU KHEN — mỗi lần combo là MỘT chữ mới, chữ cũ bị ĐÁ LÊN, nhỏ lại và
+   mờ đi (QA 2026-07-28: "great đá nice lên trên… cái nào xuất hiện sau thì đá
+   cái trước"). Trước đây chỉ có 1 phần tử duy nhất bị ghi đè nên chuỗi combo
+   dài chỉ thấy đúng chữ cuối.
+   2 lớp lồng nhau vì cả 2 việc đều cần `transform`: lớp NGOÀI cho JS đá lên
+   (transition), lớp TRONG cho animation bung–giữ–mờ. */
+.combo-pop {
   position: fixed;
   top: 42%;
   left: 50%;
   transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
   pointer-events: none;
   z-index: 100;
-  opacity: 0;
+  text-align: center;
   --pop-outline: rgba(9,18,20,.92);
+  transition: transform .22s cubic-bezier(.2,.8,.3,1), opacity .22s ease;
+  will-change: transform, opacity;
 }
-#combo-praise {
-  font-size: 38px;
+.combo-pop-in { animation: comboIn 1.5s ease-out forwards; }
+@keyframes comboIn {
+  0%   { opacity: 0; transform: scale(.5); }
+  10%  { opacity: 1; transform: scale(1.18); }
+  20%  { opacity: 1; transform: scale(1); }
+  76%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(.95); }
+}
+.combo-praise {
+  font-size: 30px;          /* QA 2026-07-28: 38px "hơi to" → nhỏ lại */
   font-weight: 800;
   letter-spacing: 1px;
   line-height: 1.1;
-  /* outline tối: chữ khen ĐÃ có màu theo bậc combo nên viền cùng màu sẽ vô
-     dụng — dùng màu nền chip cũ (thứ vốn tạo ra độ tương phản) làm outline. */
-  text-shadow:
-     1.5px 0 var(--pop-outline), -1.5px 0 var(--pop-outline),
-     0  1.5px var(--pop-outline),  0 -1.5px var(--pop-outline),
-     1.5px 1.5px var(--pop-outline), -1.5px -1.5px var(--pop-outline),
-     1.5px -1.5px var(--pop-outline), -1.5px 1.5px var(--pop-outline);
 }
-#combo-mult {
-  font-size: 19px;
+.combo-mult {
+  font-size: 16px;
   font-weight: 800;
   letter-spacing: 2px;
   color: #ffe9b0;
-  text-shadow:
-     1px 0 var(--pop-outline), -1px 0 var(--pop-outline),
-     0  1px var(--pop-outline),  0 -1px var(--pop-outline),
-     1px 1px var(--pop-outline), -1px -1px var(--pop-outline),
-     1px -1px var(--pop-outline), -1px 1px var(--pop-outline);
+  margin-top: 3px;
 }
-/* 1.5s: bung nhanh (10%) → về cỡ thật (20%) → GIỮ NGUYÊN tới 76% (~0.84s
-   đứng yên, rõ mồn một) → mới trôi lên & mờ. Cũ không có đoạn giữ này. */
-@keyframes cascadePop {
-  0%   { opacity: 0; transform: translate(-50%,-50%) scale(.5); }
-  10%  { opacity: 1; transform: translate(-50%,-50%) scale(1.18); }
-  20%  { opacity: 1; transform: translate(-50%,-50%) scale(1); }
-  76%  { opacity: 1; transform: translate(-50%,-50%) scale(1); }
-  100% { opacity: 0; transform: translate(-50%,-62%) scale(.95); }
-}
-#combo-badge.cascade-anim { animation: cascadePop 1.5s ease-out forwards; }
+/* (@keyframes cascadePop đã xoá — câu khen nay dùng .combo-pop-in / comboIn) */
 
 /* ── Tutorial TRỰC TIẾP TRONG MÀN (QA 2026-07-28) ─────────────────
    Thay 3 thẻ text phủ kín bàn bằng: 1 thanh hướng dẫn mỏng NGOÀI bàn + tô
@@ -489,11 +494,6 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   transform: translateX(-50%);
   color: #fff;
   --pop-outline: rgba(9,18,20,.92);
-  text-shadow:
-     1px 0 var(--pop-outline), -1px 0 var(--pop-outline),
-     0  1px var(--pop-outline),  0 -1px var(--pop-outline),
-     1px 1px var(--pop-outline), -1px -1px var(--pop-outline),
-     1px -1px var(--pop-outline), -1px 1px var(--pop-outline);
   font-weight: 800;
   font-size: 17px;
   z-index: 240;
@@ -531,6 +531,27 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 }
 #result-banner.lose { color: #df5b4c; border-color: rgba(223,91,76,.5); }
 #result-banner.small { font-size: 19px; letter-spacing: .5px; padding: 6px 14px; }
+/* Banner SỰ KIỆN (Blaze Storm) — QA 2026-07-28: bỏ nền, đặt ở GÓC TRÊN-TRÁI của
+   board và NGHIÊNG 30° sang trái. JS đặt left/top theo rect board thật. */
+#result-banner.corner {
+  background: none;
+  border: none;
+  padding: 0;
+  max-width: none;
+  font-size: 23px;
+  text-align: left;
+  color: #ffb02e;
+  --pop-outline: rgba(9,18,20,.92);
+  -webkit-text-stroke: 3px var(--pop-outline);
+  paint-order: stroke fill;
+  transform: translate(0, -100%) rotate(-30deg);
+  transform-origin: 0% 100%;
+}
+@supports not (paint-order: stroke) {
+  #result-banner.corner { -webkit-text-stroke: 0;
+    text-shadow: 1px 0 var(--pop-outline), -1px 0 var(--pop-outline),
+                 0 1px var(--pop-outline), 0 -1px var(--pop-outline); }
+}
 
 /* Bóng tối khi hắc ấn nổ — HÌNH TRÒN to dần từ chỗ ô nguyền (clip-path, không tràn layout) */
 #doom-veil {
@@ -813,7 +834,6 @@ body.landscape #board-outer { padding: 4px; }
 <!-- Overlays -->
 <div id="doom-veil" class="hidden"></div>
 <div id="result-banner"></div>
-<div id="combo-badge" aria-live="polite"><span id="combo-praise"></span><span id="combo-mult"></span></div>
 <div id="toast" role="status"></div>
 <div id="pause-veil" class="hidden"><div class="pv-txt" id="pause-txt">Tap to resume</div></div>
 
@@ -1090,11 +1110,10 @@ function parseInitialData() {
 let devTimer = null;
 function devSimulateNative(msg) {
   if (window.ReactNativeWebView) return;
-  // Endless: game tự vẽ popup Game Over → dev tự bấm Play Again sau ít giây
-  if (msg.type === 'game_result') {
-    clearTimeout(devTimer);
-    devTimer = setTimeout(() => { if (typeof window.onRetryLevel === 'function') window.onRetryLevel(); }, 2500);
-  }
+  /* KHÔNG mô phỏng gì cho game_result (QA 2026-07-28: "người chơi không click
+     play again mà game tự động play again"). Game này gửi showModal:false và TỰ
+     VẼ popup + nút Play Again, nên app thật KHÔNG hề gọi lại onRetryLevel —
+     mô phỏng chỉ tạo ra hành vi không có thật và làm popup tự đóng sau 2.5s. */
 }
 
 /* ================================================================
@@ -3043,7 +3062,7 @@ function arcaneSurge() {
 async function blazeStorm(ep) {
   const picks = randomNormals(4);
   if (picks.length < 3) return;
-  showResultBanner(t('blazeStorm'), { holdMs: 1400 });
+  showResultBanner(t('blazeStorm'), { holdMs: 1400, corner: true });
   sStripe();
   const initial = [];
   for (const p of picks) {
@@ -3104,13 +3123,25 @@ const POP_KICK = 34;   // px mỗi lần bị đá lên
 
 function kickPopsUp() {
   for (const p of activePops) {
-    p.y -= POP_KICK;
-    p.el.style.top = p.y + 'px';
+    p.kick = (p.kick || 0) + 1;
+    if (p.combo) {
+      /* câu khen: đá lên + NHỎ LẠI + MỜ ĐI (đúng mô tả "nice bị đá lên trên
+         nhỏ lại và mờ đi"). Opacity ở lớp ngoài nhân với opacity của animation
+         lớp trong → mờ dần cộng hưởng, không giật. */
+      const dy = p.kick * 40;
+      const sc = Math.max(0.55, 1 - p.kick * 0.16);
+      const op = Math.max(0, 1 - p.kick * 0.26);
+      p.el.style.transform = `translate(-50%, calc(-50% - ${dy}px)) scale(${sc})`;
+      p.el.style.opacity = String(op);
+    } else {
+      p.y -= POP_KICK;
+      p.el.style.top = p.y + 'px';
+    }
   }
 }
 
-function trackPop(el, x, y, ms) {
-  const rec = { x, y, el };
+function trackPop(el, x, y, ms, combo) {
+  const rec = { x, y, el, combo: !!combo, kick: 0 };
   activePops.push(rec);
   const kill = () => { if (el.parentNode) el.remove(); activePops = activePops.filter(p => p !== rec); };
   el.addEventListener('animationend', kill, { once: true });
@@ -3118,7 +3149,7 @@ function trackPop(el, x, y, ms) {
 }
 /** Dọn sạch mọi chip nổi còn sót khi vào ván mới. */
 function clearPops() {
-  document.querySelectorAll('.pop-chip').forEach(el => el.remove());
+  document.querySelectorAll('.pop-chip, .combo-pop').forEach(el => el.remove());
   activePops = [];
 }
 
@@ -3144,17 +3175,13 @@ function spawnTileLabel(r, c, text, borderColor) {
   const cx = rect.left + c * cellPx + cellPx * 0.5;
   const tileTop = rect.top + r * cellPx;
   const tileBot = tileTop + cellPx;
-  const badgeY = window.innerHeight * 0.42;                 // vị trí câu khen (#combo-badge)
+  const badgeY = window.innerHeight * 0.42;                 // dải câu khen combo
   const below = (tileTop + tileBot) / 2 >= badgeY;          // tile dưới câu khen → nhãn xuống dưới tile
   let y = below ? tileBot + 22 : tileTop - 22;
   kickPopsUp();                                             // nhường chỗ cho nhãn mới
-  const badge = $('combo-badge');
-  if (badge && badge.classList.contains('cascade-anim')) {
-    const b = badge.getBoundingClientRect();
-    if (b.width && Math.abs(cx - (b.left + b.width / 2)) < b.width / 2 + 50) {
-      if (below) y = Math.max(y, b.bottom + 24);
-      else       y = Math.min(y, b.top - 24);
-    }
+  /* Né dải câu khen ở giữa màn (câu khen nay là các .combo-pop chồng nhau) */
+  if (document.querySelector('.combo-pop') && Math.abs(y - badgeY) < 46) {
+    y = below ? badgeY + 52 : badgeY - 52;
   }
   y = Math.max(52, Math.min(window.innerHeight - 34, y));   // kẹp trong màn
   const el = document.createElement('div');
@@ -3178,16 +3205,33 @@ function spawnSpecialLabel(r, c, kind, color) {
   spawnTileLabel(r, c, t(key), kind === K_PRISM ? '#4d5273' : RUNE_HEX[color]);
 }
 
+/* Mỗi lần combo sinh MỘT câu khen mới; câu cũ bị đá lên, nhỏ lại, mờ đi rồi tự
+   hết đời (giữ nguyên tuổi thọ của nó — không bị cắt sớm). */
 function showComboBadge(chain) {
   const tier = Math.min(chain - 2, 4);
-  const badge = $('combo-badge');
-  $('combo-praise').textContent = t('praise')[tier];
-  $('combo-mult').textContent = `${t('combo')} ×${Math.min(chain, CHAIN_CAP)}`;
   const cols = ['#9fd0ff', '#7dffb0', '#ffd23f', '#ff9a3d', '#ff5a8f'];
-  $('combo-praise').style.color = cols[tier];   // màu bậc combo nằm ở CHỮ, không phải viền nền
-  badge.classList.remove('cascade-anim');
-  void badge.offsetWidth;
-  badge.classList.add('cascade-anim');
+  kickPopsUp();                                  // câu mới đá mọi chữ cũ lên
+
+  const el = document.createElement('div');
+  el.className = 'combo-pop';
+  const inner = document.createElement('div');
+  inner.className = 'combo-pop-in';
+  const p = document.createElement('div');
+  p.className = 'combo-praise';
+  p.textContent = t('praise')[tier];
+  p.style.color = cols[tier];                    // màu bậc combo nằm ở CHỮ
+  const m = document.createElement('div');
+  m.className = 'combo-mult';
+  m.textContent = `${t('combo')} ×${Math.min(chain, CHAIN_CAP)}`;
+  inner.appendChild(p); inner.appendChild(m);
+  el.appendChild(inner);
+  document.body.appendChild(el);
+  trackPop(el, window.innerWidth / 2, window.innerHeight * 0.42, 1550, true);
+}
+/** Dọn câu khen (vào ván mới / hiện banner kết quả). */
+function clearComboPops() {
+  document.querySelectorAll('.combo-pop').forEach(el => el.remove());
+  activePops = activePops.filter(p => !p.combo);
 }
 
 let toastTimer = null;
@@ -3212,15 +3256,22 @@ let bannerTimer = null;
  *   - holdMs    → tự ẩn sau ms (event); bỏ trống → giữ tới Play Again (game over) */
 function showResultBanner(text, opts) {
   opts = opts || {};
-  $('combo-badge').classList.remove('cascade-anim');   // tránh đè lên banner
+  clearComboPops();                    // don cau khen -> khong de len banner
   const el = $('result-banner');
   clearTimeout(bannerTimer); bannerTimer = null;
   el.textContent = text;
   el.classList.toggle('lose', !!opts.lose);
   el.classList.toggle('small', !!opts.small);
   el.classList.toggle('immediate', !!opts.immediate);
-  if (opts.x != null && opts.y != null) { el.style.left = opts.x + 'px'; el.style.top = opts.y + 'px'; }
-  else { el.style.left = '50%'; el.style.top = '40%'; }
+  el.classList.toggle('corner', !!opts.corner);
+  if (opts.corner) {
+    /* Góc TRÊN-TRÁI của board thật (không phải của màn hình) */
+    const r = boardRect();
+    el.style.left = Math.max(10, r.left + 6) + 'px';
+    el.style.top  = Math.max(64, r.top - 10) + 'px';
+  } else if (opts.x != null && opts.y != null) {
+    el.style.left = opts.x + 'px'; el.style.top = opts.y + 'px';
+  } else { el.style.left = '50%'; el.style.top = '40%'; }
   el.classList.remove('show');
   void el.offsetWidth;
   el.classList.add('show');
@@ -3229,7 +3280,7 @@ function showResultBanner(text, opts) {
 function hideResultBanner() {
   const el = $('result-banner');
   clearTimeout(bannerTimer); bannerTimer = null;
-  el.classList.remove('show', 'lose', 'small', 'immediate');
+  el.classList.remove('show', 'lose', 'small', 'immediate', 'corner');
   el.style.left = '50%'; el.style.top = '40%';
   const veil = $('doom-veil');   // dọn màn đêm khi vào ván mới
   if (veil) { veil.classList.remove('spread'); veil.classList.add('hidden'); }
@@ -3254,7 +3305,7 @@ function checkEnd(ep) {
    popup ập lên gần như ngay lúc cảnh nổ còn đang chạy (riêng transition bóng
    tối đã 1s). */
 const DEATH_HOLD_MS = 2300;   // nhánh "hết nước đi"
-const BOOM_HOLD_MS  = 1900;   // nhánh hắc ấn nổ, CỘNG THÊM 160+340 ở trên ⇒ ~2.4s
+const BOOM_HOLD_MS  = 700;    // QA cat 1 nua: 160+340+700 = ~1.2s (truoc ~2.4s)
 
 /* Game Over — game điểm-cao tự vẽ popup (popup-common §1.1) */
 async function gameOver(ep, boom) {
@@ -3315,7 +3366,7 @@ async function cursedDetonate(ep, boom) {
   await sleep(340);
   if (ep !== levelEpoch) return;
   spawnRing(ctr.x, ctr.y, CURSE_HEX, cellPx * 7);
-  await sleep(BOOM_HOLD_MS);           // tổng ~2.4s trước khi popup (transition tối đã 1s)
+  await sleep(BOOM_HOLD_MS);           // tổng ~1.2s trước khi popup
 }
 
 function showGameOverPopup() {
