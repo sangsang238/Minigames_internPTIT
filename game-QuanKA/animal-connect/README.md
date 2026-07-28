@@ -92,6 +92,43 @@
 - Vô hạn → **không có màn cuối, không bắn `victory`**; thắng luôn gửi
   `game_result win` + `save_data {levelIdx: n+1, best}`.
 
+## Tối ưu hiệu năng (2026-07-28) — theo bộ tiêu chí mentor dùng cho hamster-jump
+
+Đo bằng **đếm lệnh canvas**, không đoán từ đọc code (`performance.now()` đứng yên
+dưới `--virtual-time-budget` nên mọi phép đo ms đều ra `0.0000`).
+
+| | Trước | Sau |
+|---|---|---|
+| Lệnh canvas nền / frame | **139** | **14** |
+| → quy ra mỗi giây | **8 340** | **840** |
+| `backdrop-filter` đè lên canvas động | 2 | **0** |
+
+**1. Lá & dấu chân — vẽ sẵn thành sprite.** Mỗi vật thể trước đây tô lại bằng
+path **mỗi frame**: lá = `beginPath`+`moveTo`+2×`quadraticCurveTo`+`fill`, dấu
+chân = 4×(`beginPath`+`arc`/`ellipse`+`fill`), cộng `save`+`translate`+`rotate`
++`restore`. Tất cả để vẽ 26 hình **y hệt khung trước**, trôi 0.05–0.21px/frame.
+Nay: sprite vẽ ở cỡ lớn nhất rồi thu nhỏ khi blit (không vỡ nét), và
+**`setTransform` gộp luôn translate+rotate+scale** → thay cả cụm 4 lệnh bằng
+**đúng 1 lệnh**. Thêm `BG_STEP_MS = 33` (~30fps), `dt` gộp nên tốc độ trôi thực
+không đổi.
+
+**2. `backdrop-filter` đè lên canvas vẽ lại liên tục.** `.hud-pill` (blur 6px) và
+`.btn3d` (blur 8px) **luôn hiện suốt ván** và nằm đè lên canvas nền → trình duyệt
+phải **blur lại vùng nền dưới chúng mỗi khung**. Đã bỏ: nền dưới pill vốn gần
+phẳng (lá chỉ opacity .07–.23) và `--glass` đã là trắng 42%, `--surface-color`
+trắng 50% — bỏ blur gần như không đổi hình. **Giữ** blur ở lớp phủ pause/kết quả
+vì nó chỉ hiện lúc dừng, và nay `mainLoop` **ngừng vẽ nền khi pause** (trước vẫn
+vẽ 60fps cho một màn hình bị che kín).
+
+**3. Lỗi thật, không phải hiệu năng.** `@media (max-height: 640px)` chứa
+`#tut-banner { padding: 9px 12px }` nhưng **đứng TRƯỚC** rule gốc cùng độ ưu tiên
+→ rule gốc ghi đè ngược lại, **override cho màn thấp chưa từng có tác dụng**. Đã
+chuyển khối `@media` xuống cuối `<style>`. Gộp thêm `#time-bar-fill.danger` (khai
+báo 2 khối cùng selector).
+
+**Kiểm chứng:** boot màn 3 → **56 tile** đúng `7×8`, nền trích ra PNG vẫn đủ lá +
+dấu chân xoay đúng góc, **0 lỗi JS**.
+
 ## Tuân thủ quy ước chung
 
 - ✅ **game-common.md** — `sendMessage` 5 trường, level 1-indexed; `game_result`

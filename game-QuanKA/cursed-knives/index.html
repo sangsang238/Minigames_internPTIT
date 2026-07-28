@@ -1050,6 +1050,19 @@ window.addEventListener('orientationchange', () => setTimeout(resize, 120));
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => resize());
 try { if (document.fonts) document.fonts.load("800 22px 'Google Sans Flex'"); } catch (e) {}
 
+/* Dọn mảng hiệu ứng mà KHÔNG cấp phát khi không có gì hết hạn.
+   `arr.filter()` LUÔN trả về mảng MỚI, kể cả khi không loại phần tử nào — đo
+   được 6 lần/frame = 360 mảng/giây và 100% trong số đó là mảng RÁC y hệt mảng
+   cũ, để GC dọn đúng lúc đang chơi. Nay chỉ cấp phát khi thật sự có phần tử
+   hết hạn; còn lại trả về chính mảng cũ. */
+function prune(arr, keep) {
+  if (!arr.length) return arr;
+  for (let i = 0; i < arr.length; i++) {
+    if (!keep(arr[i], i)) return arr.filter(keep);   // có đứa hết hạn → mới lọc
+  }
+  return arr;                                        // không đổi → không cấp phát
+}
+
 /* ================================================================
  * §7. Art — sprite vẽ sẵn (không shadowBlur per-frame — đắt trên WebView)
  * ================================================================ */
@@ -1460,6 +1473,7 @@ function spawnWoodImpact(a) {
 /* ── Nền sao + hồn lửa xanh (bg-canvas, px CSS) ────────────────── */
 let bgStars = [], bgWisps = [];
 let wispSprite = null;      // sprite vẽ sẵn — không shadowBlur per-frame
+let starSprites = null;     // 4 sprite bụi tàn pha sẵn màu (xem BG_STEP_MS)
 
 function makeWispSprite() {
   wispSprite = document.createElement('canvas');
@@ -1469,8 +1483,25 @@ function makeWispSprite() {
   c.beginPath(); c.arc(16, 16, 7, 0, Math.PI * 2); c.fill();
 }
 
+/* BỤI TÀN: vẽ sẵn 4 sprite theo 4 tông hổ phách.
+   Cũ mỗi hạt 1 bộ beginPath+arc+fill + 1 lần đổi fillStyle → ĐO ĐƯỢC 40 hạt =
+   120 lệnh path/frame = 2400 lệnh/giây, chỉ để vẽ mấy chấm 1–2px gần như đứng
+   yên. Nay mỗi hạt còn ĐÚNG 1 drawImage, không còn đổi fillStyle lần nào. */
+function makeStarSprites() {
+  starSprites = [];
+  for (let i = 0; i < 4; i++) {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 12;
+    const c = cv.getContext('2d');
+    c.fillStyle = `hsl(${26 + i * 8},55%,70%)`;
+    c.beginPath(); c.arc(6, 6, 5, 0, Math.PI * 2); c.fill();
+    starSprites.push(cv);
+  }
+}
+
 function initBgItems() {
   if (!wispSprite) makeWispSprite();
+  if (!starSprites) makeStarSprites();
   const W = window.innerWidth, H = window.innerHeight;
   const nStars = Math.min(90, Math.floor(W * H / 9000));
   bgStars = Array.from({ length: nStars }, () => ({
@@ -1479,7 +1510,7 @@ function initBgItems() {
     vy: Math.random() * 8 + 2,
     op: Math.random() * 0.45 + 0.1,
     ph: Math.random() * Math.PI * 2,
-    col: `hsl(${Math.round(26 + Math.random() * 24)},55%,70%)`,   // WARM: bụi tàn hổ phách
+    sp: (Math.random() * 4) | 0,                 // sprite pha sẵn — thay string hsl()
   }));
   bgWisps = Array.from({ length: 12 }, () => ({
     x: Math.random() * W, y: Math.random() * H,
@@ -1489,19 +1520,27 @@ function initBgItems() {
   }));
 }
 
+/* Nền KHÔNG cần 60fps: bụi tàn trôi ≤10px/s (≈0.17px mỗi frame 60Hz) và nhấp
+   nháy rất chậm. Vẽ lại mỗi ~33ms là mắt không phân biệt được, mà cắt nửa chi
+   phí. Frame bỏ qua thì GIỮ NGUYÊN canvas (không clear) → không nháy. */
+const BG_STEP_MS = 33;
+let bgAcc = 0;
+
 function stepBg(dt) {
+  bgAcc += dt;
+  if (bgAcc < BG_STEP_MS) return;
+  const s = bgAcc / 1000;      // dt gộp — hạt vẫn trôi đúng tốc độ thực
+  bgAcc = 0;
+
   const W = window.innerWidth, H = window.innerHeight;
-  const s = dt / 1000;
   bgCtx.clearRect(0, 0, W, H);
   const tw = timeMs * 0.001;
   for (const p of bgStars) {
     p.y -= p.vy * s;
     if (p.y < -4) { p.y = H + 4; p.x = Math.random() * W; }
     bgCtx.globalAlpha = p.op * (0.65 + 0.35 * Math.sin(tw * 2 + p.ph));
-    bgCtx.fillStyle = p.col;
-    bgCtx.beginPath();
-    bgCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-    bgCtx.fill();
+    const d = p.r * 2.2;
+    bgCtx.drawImage(starSprites[p.sp], p.x - d / 2, p.y - d / 2, d, d);
   }
   for (const e of bgWisps) {
     e.y -= e.vy * s;
@@ -2217,11 +2256,11 @@ function update(dt) {
   for (const s of shards) {
     s.x += s.vx * dt; s.y += s.vy * dt; s.vy += G * dt; s.rot += s.vr * dt;
   }
-  shards = shards.filter(s => timeMs - s.born < 1100);
+  shards = prune(shards, s => timeMs - s.born < 1100);
   for (const d of debris) {
     d.x += d.vx * dt; d.y += d.vy * dt; d.vy += G * dt; d.rot += d.vr * dt;
   }
-  debris = debris.filter(d => d.y < LH + 200 && timeMs - d.born < 2500);
+  debris = prune(debris, d => d.y < LH + 200 && timeMs - d.born < 2500);
   if (deadKnife) {
     deadKnife.x += deadKnife.vx * dt;
     deadKnife.y += deadKnife.vy * dt;
@@ -2230,10 +2269,10 @@ function update(dt) {
     if (deadKnife.y > LH + 200) deadKnife = null;
   }
 
-  floatTexts = floatTexts.filter(f => timeMs - f.born < (f.life || 800));
-  rings = rings.filter(r => timeMs - r.born < 450);
-  sparks = sparks.filter(s => timeMs - s.born < 500);
-  chips = chips.filter(c => timeMs - c.born < c.life);
+  floatTexts = prune(floatTexts, f => timeMs - f.born < (f.life || 800));
+  rings = prune(rings, r => timeMs - r.born < 450);
+  sparks = prune(sparks, s => timeMs - s.born < 500);
+  chips = prune(chips, c => timeMs - c.born < c.life);
 }
 
 /* ================================================================

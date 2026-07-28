@@ -111,7 +111,10 @@ body {
   background: var(--glass);
   border: 1px solid var(--glass-border);
   border-radius: 14px;
-  backdrop-filter: blur(6px);
+  /* BỎ backdrop-filter: pill nằm ĐÈ LÊN canvas nền vẽ lại liên tục → trình duyệt
+     phải blur lại vùng nền dưới nó MỖI KHUNG, suốt cả ván. Nền dưới pill vốn đã
+     gần phẳng (lá chỉ opacity .07–.23) và --glass đã là trắng 42%, nên bỏ blur
+     gần như không đổi hình mà cắt hẳn một việc nặng mỗi khung. */
   box-shadow: inset 0 2px 6px rgba(255,255,255,.35), 0 3px 8px rgba(23,74,52,.18);
   -webkit-user-select: none; user-select: none;
 }
@@ -173,9 +176,11 @@ body {
   transition: width .25s linear, background .4s;
 }
 #time-bar-fill.warn   { background: linear-gradient(90deg, #ffb02e, #ffd23f); }
-#time-bar-fill.danger { background: linear-gradient(90deg, #ff4d4d, #ff8a3d); }
 @keyframes timeDanger { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
-#time-bar-fill.danger { animation: timeDanger .6s ease-in-out infinite; }
+#time-bar-fill.danger {           /* gộp từ 2 khối cùng selector */
+  background: linear-gradient(90deg, #ff4d4d, #ff8a3d);
+  animation: timeDanger .6s ease-in-out infinite;
+}
 
 /* Số giây bên phải thanh timer (khớp dọc header) */
 #hud-secs {
@@ -474,7 +479,10 @@ body {
   font-family: var(--ui-font);
   font-size: var(--surface-font-size);
   letter-spacing: .5px;
-  backdrop-filter: blur(8px);
+  /* BỎ backdrop-filter (lý do như .hud-pill): nút Back/Volume nằm đè lên canvas
+     nền suốt ván. --surface-color đã là trắng 50% nên bỏ blur gần như không đổi
+     hình. Lớp phủ pause/kết quả VẪN giữ blur — nó chỉ hiện lúc dừng, và lúc đó
+     mainLoop cũng đã ngừng vẽ nền. */
   transition: transform .09s ease-out, background .1s;
 }
 
@@ -491,14 +499,10 @@ body {
 
 #topbar-right { display: flex; gap: 8px; }
 
-/* ── Responsive — thu nút icon khi màn thấp ────────────────────── */
-@media (max-height: 640px) {
-  #topbar .btn3d.btn-icon { --surface-height: 36px; --surface-width: 36px; }
-  #tut-banner { padding: 9px 12px; }
-}
-@media (max-width: 360px) {
-  .btn3d.btn-icon { --surface-height: 38px; --surface-width: 38px; }
-}
+/* (Khối @media responsive đã chuyển xuống CUỐI file — xem cuối <style>.
+   Lý do: `#tut-banner { padding }` trong @media nằm TRƯỚC rule gốc cùng độ
+   ưu tiên, nên rule gốc ghi đè ngược lại → override cho màn thấp KHÔNG BAO GIỜ
+   có tác dụng. Đây là lỗi thật, không phải hiệu năng.) */
 
 /* ── Ngôi sao bay từ đường nối lên SCORE (đặc trưng game) ───────── */
 .fly-star {
@@ -568,6 +572,15 @@ body {
   font-size: 20px;
   letter-spacing: 1px;
   text-shadow: 0 2px 8px rgba(0,0,0,.4);
+}
+
+/* ── Responsive — PHẢI đứng CUỐI để override được các rule gốc ở trên ── */
+@media (max-height: 640px) {
+  #topbar .btn3d.btn-icon { --surface-height: 36px; --surface-width: 36px; }
+  #tut-banner { padding: 9px 12px; }
+}
+@media (max-width: 360px) {
+  .btn3d.btn-icon { --surface-height: 38px; --surface-width: 38px; }
 }
 </style>
 </head>
@@ -2225,36 +2238,70 @@ function initBgItems() {
   }));
 }
 
-function drawLeaf(ctx, s) {
-  ctx.beginPath();
-  ctx.moveTo(0, -s);
-  ctx.quadraticCurveTo(s * .9, -s * .2, 0, s);
-  ctx.quadraticCurveTo(-s * .9, -s * .2, 0, -s);
-  ctx.fill();
+/* LÁ & DẤU CHÂN vẽ SẴN thành sprite.
+   Cũ mỗi vật thể tô lại bằng path mỗi frame: lá = beginPath+moveTo+2×quadratic
+   +fill (5 lệnh), dấu chân = 4×(beginPath+arc/ellipse+fill) (12 lệnh), cộng
+   save+translate+rotate+restore. ĐO ĐƯỢC 139 lệnh canvas/frame = 8340 lệnh/giây
+   — chỉ để vẽ 26 hình y hệt khung trước, trôi 0.05–0.21px mỗi frame.
+   Sprite vẽ ở cỡ LỚN NHẤT rồi thu nhỏ khi blit nên không vỡ nét. */
+const BG_SPRITE_S = 20;      // > max it.s (8..18)
+let leafSprite = null, pawSprite = null;
+
+function makeBgSprites() {
+  const mk = (draw) => {
+    const cv = document.createElement('canvas');
+    const pad = 4, size = (BG_SPRITE_S + pad) * 2;
+    cv.width = cv.height = size;
+    const c = cv.getContext('2d');
+    c.translate(size / 2, size / 2);
+    c.fillStyle = '#2e6b4f';
+    draw(c, BG_SPRITE_S);
+    return cv;
+  };
+  leafSprite = mk((c, s) => {
+    c.beginPath();
+    c.moveTo(0, -s);
+    c.quadraticCurveTo(s * .9, -s * .2, 0, s);
+    c.quadraticCurveTo(-s * .9, -s * .2, 0, -s);
+    c.fill();
+  });
+  pawSprite = mk((c, s) => {
+    c.beginPath(); c.ellipse(0, s * .25, s * .55, s * .45, 0, 0, Math.PI * 2); c.fill();
+    for (const [dx, dy] of [[-.55, -.35], [0, -.55], [.55, -.35]]) {
+      c.beginPath(); c.arc(dx * s, dy * s, s * .22, 0, Math.PI * 2); c.fill();
+    }
+  });
 }
 
-function drawPaw(ctx, s) {
-  ctx.beginPath(); ctx.ellipse(0, s * .25, s * .55, s * .45, 0, 0, Math.PI * 2); ctx.fill();
-  for (const [dx, dy] of [[-.55, -.35], [0, -.55], [.55, -.35]]) {
-    ctx.beginPath(); ctx.arc(dx * s, dy * s, s * .22, 0, Math.PI * 2); ctx.fill();
-  }
-}
+/* Nền KHÔNG cần 60fps: lá trôi 0.05–0.21px mỗi frame 60Hz, xoay 0.002 rad.
+   Vẽ lại mỗi ~33ms mắt không phân biệt được mà cắt nửa chi phí. Frame bỏ qua
+   thì giữ nguyên canvas (không clear) → không nháy. */
+const BG_STEP_MS = 33;
+let bgAcc = 0;
 
 function animateBg(dt) {
+  bgAcc += dt * 1000;
+  if (bgAcc < BG_STEP_MS) return;
   // Chuẩn hoá theo 60fps: 60Hz hay 144Hz lá đều trôi cùng tốc độ thật
-  const k = Math.min(dt, 0.1) * 60;
+  const k = Math.min(bgAcc / 1000, 0.1) * 60;
+  bgAcc = 0;
+  if (!leafSprite) makeBgSprites();
+
   bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
-  bgCtx.fillStyle = '#2e6b4f';
   for (const it of bgItems) {
     it.y -= it.vy * k; it.x += it.vx * k; it.rot += it.vr * k;
     if (it.y < -30) { it.y = bgCanvas.height + 30; it.x = Math.random() * bgCanvas.width; }
-    bgCtx.save();
+    /* setTransform gộp luôn translate+rotate+scale → thay cả cụm
+       save/translate/rotate/…/restore (4 lệnh) bằng ĐÚNG 1 lệnh. */
+    const sc = it.s / BG_SPRITE_S;
+    const cos = Math.cos(it.rot) * sc, sin = Math.sin(it.rot) * sc;
+    bgCtx.setTransform(cos, sin, -sin, cos, it.x, it.y);
     bgCtx.globalAlpha = it.opacity;
-    bgCtx.translate(it.x, it.y);
-    bgCtx.rotate(it.rot);
-    if (it.kind === 'leaf') drawLeaf(bgCtx, it.s); else drawPaw(bgCtx, it.s);
-    bgCtx.restore();
+    const sp = it.kind === 'leaf' ? leafSprite : pawSprite;
+    bgCtx.drawImage(sp, -sp.width / 2, -sp.height / 2);
   }
+  bgCtx.setTransform(1, 0, 0, 1, 0, 0);
+  bgCtx.globalAlpha = 1;
 }
 
 /* ── Main loop: nền + đồng hồ chung 1 rAF, dt clamp chống stall ── */
@@ -2265,7 +2312,9 @@ function mainLoop(ts) {
   // Frame khựng (GC/janky) hay clock lùi → clamp dt (độc lập refresh rate)
   if (dt < 0 || dt > 0.25) dt = 0.25;
 
-  animateBg(dt);
+  /* Pause có lớp phủ KÍN MÀN che hết nền → vẫn vẽ nền 60fps là vẽ cho không ai
+     xem, mà lớp phủ lại có backdrop-filter nên còn bắt trình duyệt blur lại. */
+  if (!paused) animateBg(dt);
   tickTimer(dt);
 
   // Auto-hint: 5s không thao tác khi đang chơi thường → tự nháy 1 cặp nối được

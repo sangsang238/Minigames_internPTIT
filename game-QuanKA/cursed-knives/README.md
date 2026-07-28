@@ -95,6 +95,37 @@ Best **persist ngay khi vượt** (không chờ hết ván) qua `save_data` + lo
 
 ---
 
+## Tối ưu hiệu năng (2026-07-28) — theo bộ tiêu chí mentor dùng cho hamster-jump
+
+Đo bằng **đếm lệnh canvas / mảng cấp phát**, không đoán từ đọc code
+(`performance.now()` đứng yên dưới `--virtual-time-budget` nên mọi phép đo ms
+đều ra `0.0000`).
+
+| | Trước | Sau |
+|---|---|---|
+| Lệnh canvas NỀN / frame | **133** (2 400 `beginPath`+`arc`+`fill` mỗi giây) | **26.5** |
+| `Array.filter()` / frame | **6.0** (360 mảng/giây) | **0** |
+| → trong đó là **mảng rác** | **100%** | — |
+| Lệnh canvas GAME / frame | 68 | 68 *(giữ nguyên — đây là vẽ gameplay thật)* |
+
+**1. Bụi tàn nền — 4 sprite pha sẵn màu.** Mỗi hạt trước đây tốn trọn bộ
+`beginPath`+`arc`+`fill` + 1 lần đổi `fillStyle`, chỉ để vẽ một chấm 1–2px trôi
+**≤0.17px mỗi frame**. Nay mỗi hạt còn **đúng 1 `drawImage`**, không đổi
+`fillStyle` lần nào. Thêm `BG_STEP_MS = 33` → nền chạy ~30fps (hạt 33ms mới
+nhích 0.33px, mắt không phân biệt được); frame bỏ qua **giữ nguyên canvas**, và
+`dt` được gộp nên **tốc độ trôi thực không đổi**.
+
+**2. 360 mảng rác mỗi giây → 0.** `arr.filter()` **luôn** trả mảng MỚI kể cả khi
+không loại phần tử nào. 6 mảng hiệu ứng (`shards`/`debris`/`floatTexts`/`rings`/
+`sparks`/`chips`) lọc lại mỗi frame và **100% số lần không bỏ đi gì** — thuần
+rác cho GC dọn đúng lúc đang chơi. Thay bằng `prune()`: quét trước, **chỉ cấp
+phát khi thật sự có phần tử hết hạn**, còn lại trả về chính mảng cũ.
+
+**Kiểm chứng:** `prune()` bỏ đúng phần tử hết hạn và trả về **chính mảng cũ** khi
+không có gì hết hạn; chơi thật 5 000 frame với 412 lần ném — mọi mảng hiệu ứng
+đỉnh nhỏ rồi **về 0**, không rò rỉ; nền trích ra PNG vẫn đủ bụi tàn hổ phách +
+hồn lửa như cũ. **0 lỗi JS.**
+
 ## Kỹ thuật
 
 - **1 vòng rAF, dt clamp [0,100]ms**, mọi anim/timer key theo `timeMs` (đóng băng khi pause — không lệch đồng hồ)
