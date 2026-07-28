@@ -135,6 +135,50 @@ special**, **B3 phá Hắc Ấn 1 → 0**. Kết thúc: `ended=false` (không th
 
 ---
 
+## Tối ưu hiệu năng (2026-07-28) — soi theo đúng bộ tiêu chí mentor dùng cho hamster-jump
+
+Đo bằng **đếm lệnh**, không đoán từ đọc code. (`performance.now()` vô dụng dưới
+`--virtual-time-budget` — nó đứng yên trong mỗi frame nên mọi phép đo ms ra
+`0.0000`; đơn vị đo đúng ở đây là **số lệnh canvas** và **số lần ép layout**.)
+
+| | Trước | Sau |
+|---|---|---|
+| Lệnh canvas của nền, mỗi frame | **135** (40 `beginPath` + 40 `arc` + 40 `fill` + 14 `drawImage` + 1 `clearRect`) | **27.5** |
+| → quy ra mỗi giây | ~8 100 | **~1 650** |
+| Ép layout đồng bộ, mỗi nước đi | **7.8** | **0.6** |
+
+**1. Nền — vẽ lại thứ gần như không đổi, 60 lần/giây.** Mỗi ngôi sao tốn trọn bộ
+`beginPath`+`arc`+`fill` + 1 lần đổi `fillStyle`, chỉ để vẽ một chấm 1–2px trôi
+**≤0.17px mỗi frame**. Sửa 2 lớp:
+- **4 sprite sao pha sẵn màu** → mỗi sao còn **đúng 1 `drawImage`**, không còn
+  đổi `fillStyle` lần nào (trước là 40 lần/frame).
+- **Nền chạy ~30fps thay vì 60** (`BG_STEP_MS = 33`): sao trôi ≤10px/s nên 33ms
+  mới nhích 0.33px — mắt không phân biệt được. Frame bỏ qua thì **giữ nguyên
+  canvas, không `clearRect`** → không nháy. `dt` được gộp lại nên tốc độ trôi
+  thực **không đổi**.
+
+**2. Bắt trình duyệt layout đúng lúc cần mượt nhất.** Rect của board là hằng số
+giữa 2 lần layout, nhưng **mỗi** hiệu ứng (score-fly, nhãn special, vòng nổ,
+tia…) lại gọi `getBoundingClientRect` → **ép layout đồng bộ cả trang, đúng lúc
+cascade đang chạy**. Nay đo 1 lần rồi dùng lại (`boardRect()`), huỷ cache khi
+layout đổi. Lúc màn đang **rung** thì vẫn đo thật nhưng **không lưu**, tránh
+cache dính vĩnh viễn giá trị lệch theo `transform`.
+
+**3. Lớp phủ `.hidden` vẫn được composite.** `opacity: 0` **không** gỡ lớp phủ
+khỏi cây composite — `.overlay` và `#pause-veil` phủ **kín màn hình** vẫn được
+ghép lại mỗi frame suốt lúc chơi. Thêm `visibility: hidden` trễ đúng bằng thời
+gian fade → tắt hẳn sau khi mờ xong, mà vẫn giữ hiệu ứng fade.
+
+**4. CSS trùng lặp & rule chết.** Gộp `.tile.selected .tile-inner` (khai báo 2
+khối liền nhau); xoá 6 rule chỉ còn trong CSS, không nơi nào dùng — sót từ v2 khi
+còn menu/how-to/bộ đếm lượt: `.btn3d.mini`, `.restart-ico`, `.home-ico`,
+`.help-ico`, `.ico-diamond`, `.moves-danger` + `@keyframes dangerPulse`.
+
+**Kiểm chứng không làm hỏng gì:** cache rect lệch **0.00px** so với số đo thật và
+đo lại đúng sau `invalidate`; `overlay.hidden` cho `visibility: hidden`; nền trích
+ra PNG vẫn đủ sao tím + tàn lửa cam như cũ; tutorial 3 bước vẫn chạy trọn (B2 rèn
+1 special, B3 phá Hắc Ấn 1→0); combo badge + Hắc Ấn nguyên vẹn. **0 lỗi JS.**
+
 ## Kỹ thuật
 
 - **1 vòng rAF + tween engine dt-based**: animation & sleep gameplay đều là tween pause-aware → mượt mọi Hz

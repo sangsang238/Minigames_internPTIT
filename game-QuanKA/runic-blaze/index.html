@@ -41,6 +41,7 @@
   /* Panels */
   --glass: rgba(255,255,255,0.06);
   --glass-border: rgba(255,255,255,0.13);
+  --chip-bg: rgba(18,32,36,.84);   /* nền chung mọi chip/thông báo nổi (giảm nhẹ opacity) */
   /* Text */
   --text: #eaf1f1;
   --text-soft: rgba(230,240,240,0.55);
@@ -290,8 +291,8 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 .tile.selected .tile-inner {
   transform: scale(1.1);
   border-width: 2px !important;
+  box-shadow: 0 0 0 3px #ffffff;   /* gộp từ khối trùng selector ngay bên dưới */
 }
-.tile.selected .tile-inner { box-shadow: 0 0 0 3px #ffffff; }
 
 /* Hint pulse — gợi ý nước đi */
 @keyframes hintPulse {
@@ -331,7 +332,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   font-weight: 800;
   white-space: nowrap;
   color: #fff;
-  background: rgba(18,32,36,.94);
+  background: var(--chip-bg);
   border: 2px solid rgba(255,255,255,.22);
   border-radius: 12px;
   padding: 4px 11px;
@@ -381,7 +382,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   pointer-events: none;
   z-index: 100;
   opacity: 0;
-  background: rgba(18,32,36,.94);
+  background: var(--chip-bg);
   border: 3px solid #ffd23f;      /* màu bậc combo — JS ghi đè */
   border-radius: 18px;
   padding: 11px 26px;
@@ -418,7 +419,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   transform: translateX(-50%);
   z-index: 210;
   width: min(94vw, 460px);
-  background: rgba(18,32,36,.94);
+  background: var(--chip-bg);
   border: 2px solid rgba(255,255,255,.22);
   border-radius: 16px;
   padding: 10px 16px;
@@ -436,7 +437,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   right: 14px;
   padding: 7px 14px;
   border-radius: 12px;
-  background: rgba(18,32,36,.94);
+  background: var(--chip-bg);
   border: 2px solid rgba(255,255,255,.22);
   color: var(--text);
   font-size: 13px;
@@ -468,7 +469,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   top: 24%;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(18,32,36,.94);
+  background: var(--chip-bg);
   border: 1px solid rgba(255,255,255,.2);
   color: #fff;
   border-radius: 14px;
@@ -485,7 +486,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 }
 #toast.show { opacity: 1; }
 
-/* Banner kết quả (Game Over flash) */
+/* Banner kết quả (Blaze Storm / Game Over) — CÓ nền chip → không bị chữ khác đè */
 #result-banner {
   position: fixed;
   top: 40%;
@@ -502,27 +503,30 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   text-align: center;
   color: #fff;
   max-width: 86vw;
-  text-shadow: 0 2px 10px rgba(0,0,0,.7);   /* đọc rõ trên nền tối */
+  background: var(--chip-bg);
+  border: 2px solid rgba(255,255,255,.2);
+  border-radius: 14px;
+  padding: 9px 20px;
 }
-#result-banner.lose { color: #df5b4c; }
+#result-banner.lose { color: #df5b4c; border-color: rgba(223,91,76,.5); }
+#result-banner.small { font-size: 19px; letter-spacing: .5px; padding: 6px 14px; }
 
-/* Bóng tối lan ra nuốt board khi hắc ấn phát nổ ("darkness takes over") */
+/* Bóng tối khi hắc ấn nổ — HÌNH TRÒN to dần từ chỗ ô nguyền (clip-path, không tràn layout) */
 #doom-veil {
   position: fixed;
   inset: 0;
-  z-index: 210;                 /* dưới banner (220), trên board */
+  z-index: 210;                       /* dưới banner (220), trên board */
   pointer-events: none;
   opacity: 0;
-  --dx: 50%; --dy: 45%;
+  --dx: 50%; --dy: 45%;               /* JS ghi đè bằng px = tâm ô nguyền */
   background: radial-gradient(circle at var(--dx) var(--dy),
-              rgba(95,42,47,.0) 0%, rgba(20,7,18,.55) 18%, rgba(4,2,8,.94) 46%);
-  transform: scale(.15);
-  transform-origin: var(--dx) var(--dy);
+              rgba(10,4,12,.7) 0%, rgba(6,3,10,.95) 72%);
+  clip-path: circle(0px at var(--dx) var(--dy));
 }
 #doom-veil.spread {
   opacity: 1;
-  transform: scale(1);
-  transition: transform 1s cubic-bezier(.4,0,.2,1), opacity .5s ease;
+  clip-path: circle(150vmax at var(--dx) var(--dy));
+  transition: clip-path 1s cubic-bezier(.4,0,.2,1), opacity .45s ease;
 }
 @keyframes resultPop {
   0%   { opacity: 0; transform: translate(-50%,-50%) scale(.5); }
@@ -530,7 +534,12 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   38%  { transform: translate(-50%,-50%) scale(1); }
   100% { opacity: 1; transform: translate(-50%,-50%) scale(1); }
 }
+@keyframes bannerFade {     /* fade-in NGAY, không pop/scale (dùng cho game over gần ô nguyền) */
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
 #result-banner.show { animation: resultPop .9s ease-out forwards; }
+#result-banner.immediate.show { animation: bannerFade .16s ease-out forwards; }
 
 /* ── btn3d (game-common §1.4 / popup-common §6 — bản kính phẳng) ── */
 .btn3d {
@@ -586,29 +595,14 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 }
 
 /* nút mini (Skip trong tutorial) */
-.btn3d.mini {
-  --surface-height: 30px;
-  --surface-padding-x: 12px;
-  --surface-font-size: 13px;
-  --radius: 9px;
-}
-
+/* Rule CHẾT đã xoá (chỉ còn trong CSS, không nơi nào dùng — sót lại từ v2 khi
+   còn menu / how-to / bộ đếm lượt): .btn3d.mini · .restart-ico · .home-ico ·
+   .help-ico · .ico-diamond · .moves-danger + @keyframes dangerPulse. */
 .back-ico    { width: 52%; height: 52%; fill: currentColor; display: block; }
-.restart-ico { width: 62%; height: 62%; fill: currentColor; display: block; }
-.home-ico    { width: 58%; height: 58%; fill: currentColor; display: block; }
-.help-ico    { width: 58%; height: 58%; fill: currentColor; display: block; }
 .sound-ico   { width: 58%; height: 58%; fill: currentColor; display: block; }
-.ico-diamond { width: 58%; height: 58%; display: block; color: currentColor; }
 #sound-btn .ico-off { display: none; }
 #sound-btn.muted .ico-on  { display: none; }
 #sound-btn.muted .ico-off { display: block; }
-
-/* ── Moves danger flash ────────────────────────────────────────── */
-@keyframes dangerPulse {
-  0%, 100% { color: #ff3d5a; }
-  50%       { color: #ff8080; }
-}
-.moves-danger { animation: dangerPulse .6s ease-in-out infinite; }
 
 /* ── Game Over popup (game điểm-cao tự vẽ — popup-common §1.1) ─── */
 .overlay {
@@ -621,9 +615,17 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   padding: 24px;
   background: rgba(6,16,18,.72);
   opacity: 1;
-  transition: opacity .25s;
+  transition: opacity .25s, visibility 0s;
 }
-.overlay.hidden { opacity: 0; pointer-events: none; }
+/* `opacity: 0` KHÔNG gỡ lớp phủ khỏi cây composite: nó vẫn là 1 lớp phủ KÍN
+   MÀN HÌNH được ghép lại mỗi frame suốt lúc chơi. Thêm `visibility: hidden`
+   (trễ đúng bằng thời gian fade) để tắt hẳn sau khi mờ xong. */
+.overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .25s, visibility 0s .25s;
+}
 .ov-card {
   width: min(84%, 340px);
   padding: 26px 24px 22px;
@@ -670,9 +672,15 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   justify-content: center;
   background: rgba(8,18,20,.74);
   opacity: 1;
-  transition: opacity .2s;
+  transition: opacity .2s, visibility 0s;
 }
-#pause-veil.hidden { opacity: 0; pointer-events: none; }
+/* như .overlay.hidden — tắt hẳn lớp phủ kín màn sau khi mờ xong */
+#pause-veil.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .2s, visibility 0s .2s;
+}
 .pv-txt {
   font-size: 19px;
   color: #fff;
@@ -808,9 +816,9 @@ const DEFAULT_LANG = 'en';
 const I18N = {
   en: { score:'SCORE', best:'BEST', combo:'COMBO', back:'Back', sound:'Sound', play:'Play', next:'Next',
     skip:'Skip', tapToResume:'Tap to resume', noMoves:'No moves left — shuffling!',
-    shuffled:'Shuffle!', gameOver:'Game Over', overBanner:'And the darkness take over…', newBest:'New Record!', playAgain:'Play Again',
+    shuffled:'Shuffle!', gameOver:'Game Over', overBanner:'And the dark emerges', newBest:'New Record!', playAgain:'Play Again',
     surge:'Arcane Surge!', blazeStorm:'Blaze Storm!',
-    nmBlaze:'Blaze!', nmNova:'Nova!', nmPrism:'Prism!',
+    nmBlaze:'Blaze!', nmNova:'Nova!', nmPrism:'Prism!', nmCursed:'Cursed!',
     praise:['Nice!','Great!','Awesome!','Blazing!','Legendary!'], ob1T:'Match Runes',
     ob1D:'Swap two adjacent runes to line up 3 or more of the same kind. They burst — and cascading matches multiply your score!',
     ob2T:'Forge Specials',
@@ -1683,7 +1691,24 @@ function clearAnim(tile, dur) {
     } });
 }
 
+/* RECT CỦA BOARD — đo 1 lần rồi dùng lại.
+   Rect này chỉ đổi khi LAYOUT đổi, nhưng mỗi hiệu ứng (score-fly, nhãn special,
+   vòng nổ, tia…) lại gọi getBoundingClientRect → ép trình duyệt LAYOUT ĐỒNG BỘ.
+   Đo được 7.8 lần mỗi nước đi, rơi đúng lúc cascade đang chạy — chính là kiểu
+   "bắt trình duyệt làm việc nặng đúng lúc cần mượt nhất".
+   Lúc màn hình đang RUNG thì transform làm rect lệch → vẫn đo thật nhưng KHÔNG
+   lưu, tránh cache dính vĩnh viễn giá trị lệch. */
+let boardRectCache = null;
+function boardRect() {
+  if (boardRectCache) return boardRectCache;
+  const r = boardEl.getBoundingClientRect();
+  if (!shakeAmp) boardRectCache = r;
+  return r;
+}
+function invalidateBoardRect() { boardRectCache = null; }
+
 function layoutAllStatic() {
+  invalidateBoardRect();
   if (board.length !== ROWS) return;   // board chưa dựng (đang ở menu/boot)
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
     const tile = board[r][c];
@@ -1756,6 +1781,7 @@ function resize() {
         gridBgEl.appendChild(s);
       }
     }
+    invalidateBoardRect();            // board vừa đổi kích thước/vị trí
     if (busy) pendingRelayout = true;
     else layoutAllStatic();
   });
@@ -2131,6 +2157,7 @@ async function ensureMovable(ep) {
  * ================================================================ */
 let bgStars = [], bgEmbers = [];
 let emberSprite = null;   // sprite vẽ sẵn — không shadowBlur per-frame (đắt trên WebView)
+let starSprites = null;   // 4 sprite sao pha sẵn màu (xem BG_STEP_MS bên dưới)
 
 function makeEmberSprite() {
   emberSprite = document.createElement('canvas');
@@ -2140,8 +2167,25 @@ function makeEmberSprite() {
   c.beginPath(); c.arc(16, 16, 7, 0, Math.PI * 2); c.fill();
 }
 
+/* SAO: vẽ sẵn 4 sprite theo 4 tông tím-lam.
+   Cũ mỗi sao 1 bộ beginPath+arc+fill + 1 lần đổi fillStyle → ĐO ĐƯỢC 40 sao =
+   120 lệnh path/frame = 2400 lệnh/giây, chỉ để vẽ mấy chấm 1–2px gần như đứng
+   yên. Nay mỗi sao còn ĐÚNG 1 drawImage, và không còn đổi fillStyle lần nào. */
+function makeStarSprites() {
+  starSprites = [];
+  for (let i = 0; i < 4; i++) {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = 12;
+    const c = cv.getContext('2d');
+    c.fillStyle = `hsl(${250 + i * 20},90%,80%)`;
+    c.beginPath(); c.arc(6, 6, 5, 0, Math.PI * 2); c.fill();
+    starSprites.push(cv);
+  }
+}
+
 function initBgItems() {
   if (!emberSprite) makeEmberSprite();
+  if (!starSprites) makeStarSprites();
   const W = window.innerWidth, H = window.innerHeight;
   const nStars = Math.min(90, Math.floor(W * H / 9000));
   bgStars = Array.from({ length: nStars }, () => ({
@@ -2150,7 +2194,7 @@ function initBgItems() {
     vy: Math.random() * 8 + 2,             // px/s trôi lên
     op: Math.random() * 0.45 + 0.1,
     ph: Math.random() * Math.PI * 2,
-    col: `hsl(${Math.round(250 + Math.random() * 60)},90%,80%)`,   // string tính sẵn
+    sp: (Math.random() * 4) | 0,           // sprite pha sẵn — thay cho string hsl()
   }));
   bgEmbers = Array.from({ length: 14 }, () => ({
     x: Math.random() * W, y: Math.random() * H,
@@ -2160,19 +2204,27 @@ function initBgItems() {
   }));
 }
 
+/* Nền KHÔNG cần 60fps: sao trôi ≤10px/s (≈0.17px mỗi frame 60Hz) và nhấp nháy
+   rất chậm. Vẽ lại mỗi ~33ms là mắt không phân biệt được, mà cắt nửa chi phí.
+   Frame bị bỏ qua thì GIỮ NGUYÊN canvas (không clear) → không nháy. */
+const BG_STEP_MS = 33;
+let bgAcc = 0;
+
 function stepBg(dt) {
+  bgAcc += dt;
+  if (bgAcc < BG_STEP_MS) return;
+  const s = bgAcc / 1000;      // dt gộp — sao vẫn trôi đúng tốc độ thực
+  bgAcc = 0;
+
   const W = window.innerWidth, H = window.innerHeight;
-  const s = dt / 1000;
   bgCtx.clearRect(0, 0, W, H);
   const tw = timeMs * 0.001;
   for (const p of bgStars) {
     p.y -= p.vy * s;
     if (p.y < -4) { p.y = H + 4; p.x = Math.random() * W; }
     bgCtx.globalAlpha = p.op * (0.65 + 0.35 * Math.sin(tw * 2 + p.ph));
-    bgCtx.fillStyle = p.col;
-    bgCtx.beginPath();
-    bgCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-    bgCtx.fill();
+    const d = p.r * 2.2;
+    bgCtx.drawImage(starSprites[p.sp], p.x - d / 2, p.y - d / 2, d, d);
   }
   for (const e of bgEmbers) {
     e.y -= e.vy * s;
@@ -2194,7 +2246,7 @@ let particles = [];
 const MAX_PARTICLES = 420;
 
 function boardCellCenter(r, c) {
-  const rect = boardEl.getBoundingClientRect();
+  const rect = boardRect();
   return { x: rect.left + c * cellPx + cellPx / 2, y: rect.top + r * cellPx + cellPx / 2 };
 }
 
@@ -2215,7 +2267,7 @@ function spawnBurst(x, y, hex, n, power) {
 
 function spawnBeam(r, c, horiz, hex) {
   if (particles.length >= MAX_PARTICLES) return;
-  const rect = boardEl.getBoundingClientRect();
+  const rect = boardRect();
   particles.push({
     type: 'beam', horiz, col: hex, life: 0, max: 430,
     x: rect.left, y: rect.top,
@@ -2726,7 +2778,7 @@ async function doSwap(r1, c1, r2, c2) {
 let ptr = null;
 
 function hitCell(x, y) {
-  const rect = boardEl.getBoundingClientRect();
+  const rect = boardRect();
   const lx = x - rect.left, ly = y - rect.top;
   const c = Math.floor(lx / cellPx), r = Math.floor(ly / cellPx);
   return inb(r, c) ? { r, c } : null;
@@ -2911,6 +2963,7 @@ function maybeSpawnCursed() {
      hơn + ô tự nhấp nháy 1 nhịp, chỗ mắt người chơi đang nhìn. */
   const ctr = boardCellCenter(tg.r, tg.c);
   spawnRing(ctr.x, ctr.y, CURSE_HEX, cellPx * 1.6);
+  spawnTileLabel(tg.r, tg.c, t('nmCursed'), CURSE_HEX);   // thông báo NGAY tại ô nguyền
   tl.el.classList.add('curse-arrive');
   setTimeout(() => tl.el && tl.el.classList.remove('curse-arrive'), 900);
 }
@@ -2944,14 +2997,14 @@ function arcaneSurge() {
   spawnRing(ctr.x, ctr.y, '#ffd23f', cellPx * 1.4);
   spawnFlash(ctr.x, ctr.y, cellPx * 2);
   sForge();
-  showToast('✦ ' + t('surge'));
+  spawnTileLabel(pick.r, pick.c, '✦ ' + t('surge'), '#ffd23f');   // gần đúng ô Prism vừa tặng
 }
 
 /** Blaze Storm — biến vài ô thành Blaze rồi kích nổ dây chuyền (bữa tiệc nổ). */
 async function blazeStorm(ep) {
   const picks = randomNormals(4);
   if (picks.length < 3) return;
-  showResultBanner(t('blazeStorm'), false, 1400);
+  showResultBanner(t('blazeStorm'), { holdMs: 1400 });
   sStripe();
   const initial = [];
   for (const p of picks) {
@@ -3021,7 +3074,7 @@ function clearPops() {
 }
 
 function spawnScoreFly(boardR, boardC, pts, mult) {
-  const rect = boardEl.getBoundingClientRect();
+  const rect = boardRect();
   const x = rect.left + boardC * cellPx + cellPx * 0.5;
   let y = rect.top + boardR * cellPx + cellPx * 0.5;
   y = dodgeOverlap(x, y);
@@ -3034,12 +3087,11 @@ function spawnScoreFly(boardR, boardC, pts, mult) {
   trackPop(el, x, y, 1300);
 }
 
-/** Nhãn special vừa rèn (Blaze!/Nova!/Prism!) neo theo tile.
- *  Theo yêu cầu: mặc định TRÊN tile; nếu tile nằm DƯỚI câu khen (badge ~42% màn)
- *  thì để DƯỚI tile → luôn né khỏi câu khen ở giữa. Viền màu theo loại rune. */
-function spawnSpecialLabel(r, c, kind, color) {
-  const key = kind === K_PRISM ? 'nmPrism' : (kind === K_NOVA ? 'nmNova' : 'nmBlaze');
-  const rect = boardEl.getBoundingClientRect();
+/** Nhãn chip neo theo 1 tile (special / hắc ấn / arcane surge).
+ *  Mặc định TRÊN tile; nếu tile nằm DƯỚI câu khen (badge ~42% màn) thì để DƯỚI
+ *  tile → luôn né khỏi câu khen ở giữa; và đẩy hẳn ra khỏi badge nếu trùng dải. */
+function spawnTileLabel(r, c, text, borderColor) {
+  const rect = boardRect();
   const cx = rect.left + c * cellPx + cellPx * 0.5;
   const tileTop = rect.top + r * cellPx;
   const tileBot = tileTop + cellPx;
@@ -3047,7 +3099,6 @@ function spawnSpecialLabel(r, c, kind, color) {
   const below = (tileTop + tileBot) / 2 >= badgeY;          // tile dưới câu khen → nhãn xuống dưới tile
   let y = below ? tileBot + 22 : tileTop - 22;
   y = dodgeOverlap(cx, y);                                  // né các chip nổi khác
-  // né HẲN câu khen: nếu badge đang hiện & cùng dải ngang → đẩy nhãn ra khỏi badge
   const badge = $('combo-badge');
   if (badge && badge.classList.contains('cascade-anim')) {
     const b = badge.getBoundingClientRect();
@@ -3059,12 +3110,20 @@ function spawnSpecialLabel(r, c, kind, color) {
   y = Math.max(52, Math.min(window.innerHeight - 34, y));   // kẹp trong màn
   const el = document.createElement('div');
   el.className = 'pop-chip special-label pop';
-  el.textContent = t(key);
-  el.style.left = cx + 'px';
+  el.textContent = text;
   el.style.top = y + 'px';
-  el.style.borderColor = kind === K_PRISM ? '#dfe6ee' : RUNE_HEX[color];
+  el.style.borderColor = borderColor;
   document.body.appendChild(el);
-  trackPop(el, cx, y, 1550);
+  // kẹp ngang: chip dài (vd "✦ Arcane Surge!") ở cột rìa không được tràn khỏi màn
+  const half = el.offsetWidth / 2 + 8;
+  const cxc = Math.max(half, Math.min(window.innerWidth - half, cx));
+  el.style.left = cxc + 'px';
+  trackPop(el, cxc, y, 1550);
+}
+/** Nhãn special vừa rèn (Blaze!/Nova!/Prism!) — viền màu theo loại rune. */
+function spawnSpecialLabel(r, c, kind, color) {
+  const key = kind === K_PRISM ? 'nmPrism' : (kind === K_NOVA ? 'nmNova' : 'nmBlaze');
+  spawnTileLabel(r, c, t(key), kind === K_PRISM ? '#dfe6ee' : RUNE_HEX[color]);
 }
 
 function showComboBadge(chain) {
@@ -3095,23 +3154,32 @@ function showToast(msg) {
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 let bannerTimer = null;
-function showResultBanner(text, lose, holdMs) {
+/* opts: { lose, holdMs, x, y, small, immediate }
+ *   - x,y (px)  → neo banner tại 1 điểm (vd gần ô nguyền); bỏ trống → giữa màn
+ *   - small     → cỡ chữ nhỏ, dễ đọc
+ *   - immediate → fade-in NGAY (không pop/scale)
+ *   - holdMs    → tự ẩn sau ms (event); bỏ trống → giữ tới Play Again (game over) */
+function showResultBanner(text, opts) {
+  opts = opts || {};
   $('combo-badge').classList.remove('cascade-anim');   // tránh đè lên banner
   const el = $('result-banner');
   clearTimeout(bannerTimer); bannerTimer = null;
   el.textContent = text;
-  el.classList.toggle('lose', !!lose);
+  el.classList.toggle('lose', !!opts.lose);
+  el.classList.toggle('small', !!opts.small);
+  el.classList.toggle('immediate', !!opts.immediate);
+  if (opts.x != null && opts.y != null) { el.style.left = opts.x + 'px'; el.style.top = opts.y + 'px'; }
+  else { el.style.left = '50%'; el.style.top = '40%'; }
   el.classList.remove('show');
   void el.offsetWidth;
   el.classList.add('show');
-  // event flash → tự ẩn sau holdMs; Game Over gọi không có holdMs → giữ tới Play Again
-  if (holdMs) bannerTimer = setTimeout(hideResultBanner, holdMs);
+  if (opts.holdMs) bannerTimer = setTimeout(hideResultBanner, opts.holdMs);
 }
 function hideResultBanner() {
   const el = $('result-banner');
   clearTimeout(bannerTimer); bannerTimer = null;
-  el.classList.remove('show');
-  el.classList.remove('lose');
+  el.classList.remove('show', 'lose', 'small', 'immediate');
+  el.style.left = '50%'; el.style.top = '40%';
   const veil = $('doom-veil');   // dọn màn đêm khi vào ván mới
   if (veil) { veil.classList.remove('spread'); veil.classList.add('hidden'); }
 }
@@ -3134,18 +3202,17 @@ function checkEnd(ep) {
 async function gameOver(ep, boom) {
   deselect(); clearHint();
   persistBest();
-  if (boom) {                          // thua vì hắc ấn nổ → cho THẤY RÕ chuyện gì xảy ra
+  if (boom) {                          // thua vì hắc ấn nổ → cảnh nổ tự lo tiếng + chữ gần ô
     await cursedDetonate(ep, boom);
     if (ep !== levelEpoch) return;
   } else {
-    sLose();                           // nổ đã tự phát tiếng thua bên trong cursedDetonate
+    sLose();
+    showResultBanner(t('overBanner'), { lose: true });   // hết nước đi → banner giữa màn
+    screenShake(10);
+    spawnFlash(window.innerWidth * 0.5, window.innerHeight * 0.42, 160);
+    await sleep(950);
+    if (ep !== levelEpoch) return;
   }
-  showResultBanner(t('overBanner'), true);
-  screenShake(10);
-  const W = window.innerWidth, H = window.innerHeight;
-  spawnFlash(W * 0.5, H * 0.42, 160);
-  await sleep(boom ? 600 : 950);       // detonate đã kéo dài rồi → banner hiện ngắn hơn
-  if (ep !== levelEpoch) return;
   maybeAds();
   showGameOverPopup();
   // endless (§1.1): result=null, showModal=false — game tự lo Play Again
@@ -3153,7 +3220,7 @@ async function gameOver(ep, boom) {
 }
 
 /* Hắc ấn về 0 → phát nổ: dựng cảnh ~1.5s để người chơi THẤY RÕ chính ô nguyền
-   phát nổ và bóng tối lan ra nuốt cả board, TRƯỚC khi popup Game Over hiện. */
+   phát nổ và bóng tối (hình TRÒN) lan ra nuốt board, TRƯỚC khi popup Game Over. */
 async function cursedDetonate(ep, boom) {
   const ctr = boardCellCenter(boom.r, boom.c);
   const tl = board[boom.r] && board[boom.r][boom.c];
@@ -3172,7 +3239,7 @@ async function cursedDetonate(ep, boom) {
   spawnBurst(ctr.x, ctr.y, '#1a0712', 16, 340);
   screenShake(22);
   sLose();                             // tiếng thua vang ngay lúc nổ
-  // 3) Bóng tối lan từ ô nguyền ra kín màn hình (transition 1s)
+  // 3) Bóng tối HÌNH TRÒN lan từ đúng ô nguyền ra kín màn hình (transition 1s)
   const veil = $('doom-veil');
   if (veil) {
     veil.style.setProperty('--dx', ctr.x + 'px');
@@ -3181,10 +3248,16 @@ async function cursedDetonate(ep, boom) {
     void veil.offsetWidth;             // reflow để transition chạy
     veil.classList.add('spread');
   }
+  // 4) Chữ "And the dark emerges" HIỆN NGAY gần ô nguyền — fade-in tức thì, cỡ nhỏ
+  const rect = boardRect();
+  const tileTop = rect.top + boom.r * cellPx, tileBot = tileTop + cellPx;
+  let by = tileTop - 30; if (by < 84) by = tileBot + 30;
+  const bx = clamp(ctr.x, window.innerWidth * 0.32, window.innerWidth * 0.68);
+  showResultBanner(t('overBanner'), { lose: true, small: true, immediate: true, x: bx, y: by });
   await sleep(300);
   if (ep !== levelEpoch) return;
   spawnRing(ctr.x, ctr.y, CURSE_HEX, cellPx * 7);
-  await sleep(900);                    // tổng ~1.36s trước khi banner + popup
+  await sleep(900);                    // tổng ~1.36s trước khi popup
 }
 
 function showGameOverPopup() {
