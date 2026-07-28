@@ -26,6 +26,7 @@
 :root {
   --ui-font: 'Google Sans Flex', system-ui, sans-serif;
   --sbh: 0px;                /* statusBarHeight (dp) — JS set lúc boot */
+  --sat: env(safe-area-inset-top, 0px);   /* safeTop() đọc biến này — trước đây không ai khai báo */
   --text: #5a4326;
   --glass-border: rgba(255, 255, 255, .6);
 }
@@ -121,23 +122,6 @@ html, body {
 #mute-btn.muted .ico-on { display: none; }
 #mute-btn.muted .ico-off { display: block; }
 
-/* phụ: độ cao tháp + xu (top do layoutHud đặt, dưới hàng điểm) */
-#substat {
-  position: absolute;
-  top: calc(max(var(--sbh), env(safe-area-inset-top, 0px)) + 62px);
-  left: 0; right: 0;
-  display: flex; justify-content: center; gap: 16px;
-  pointer-events: none; z-index: 5;
-}
-#substat > div {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: 16px; font-weight: 800; color: #7a5a2e;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, .6);
-}
-.stack-ico { width: 19px; height: 19px; display: block; }
-.coin-ico2 { width: 18px; height: 18px; display: block; }
-#coin-ind span { color: #c98a12; }
-
 /* chỉ báo chuỗi Perfect */
 #streak {
   position: absolute;
@@ -149,7 +133,8 @@ html, body {
   opacity: 1; transition: opacity .25s;
 }
 #streak.hidden { opacity: 0; }
-#streak.pop { animation: streakPop .3s ease-out; }
+/* 2 class luân phiên → chạy lại animation mà KHÔNG cần ép reflow (void offsetWidth) */
+#streak.pop, #streak.pop-b { animation: streakPop .3s ease-out; }
 @keyframes streakPop {
   0%   { transform: scale(1.45); }
   100% { transform: scale(1); }
@@ -193,7 +178,9 @@ html, body {
   font-family: var(--ui-font);
   font-size: var(--surface-font-size);
   letter-spacing: .5px;
-  backdrop-filter: blur(8px);
+  /* KHÔNG backdrop-filter: mọi nút đều nằm trên canvas vẽ lại 60fps → blur nền
+     phải tính lại mỗi khung, cực đắt trên WebView. (Tất cả biến thể nút vốn đã
+     override về none, nên bỏ hẳn không đổi giao diện.) */
   transition: transform .09s ease-out, background .1s;
 }
 .btn3d:active { transform: scale(.94); }
@@ -206,110 +193,38 @@ html, body {
 }
 .back-ico { width: 52%; height: 52%; fill: currentColor; display: block; }
 
-/* ── Menu chờ (không phải popup kết quả) ──────────────────────── */
-
-
-
-/* phụ: độ cao tháp + xu (top do layoutHud đặt, dưới hàng điểm) */
-#substat {
-  position: absolute;
-  top: calc(max(var(--sbh), env(safe-area-inset-top, 0px)) + 62px);
-  left: 0; right: 0;
-  display: flex; justify-content: center; gap: 16px;
-  pointer-events: none; z-index: 5;
+/* ── Màn loading (che lúc dò độ phân giải) ────────────────────── */
+#loading {
+  position: absolute; inset: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: center;
+  /* ĐỤC hoàn toàn: dưới nó canvas bị cấp phát lại 2-3 lần, hở ra là chớp đen */
+  background: linear-gradient(180deg, #fdf6e4 0%, #f6e7c6 55%, #efdcb2 100%);
+  opacity: 1; transition: opacity .3s;
 }
-#substat > div {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: 16px; font-weight: 800; color: #7a5a2e;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, .6);
+#loading.hidden { opacity: 0; pointer-events: none; visibility: hidden; transition: opacity .3s, visibility 0s .3s; }
+.load-box { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.load-cheese {
+  width: 84px; height: 63px; display: block;
+  animation: loadBob 1.1s ease-in-out infinite;
 }
-.stack-ico { width: 19px; height: 19px; display: block; }
-.coin-ico2 { width: 18px; height: 18px; display: block; }
-#coin-ind span { color: #c98a12; }
-
-/* chỉ báo chuỗi Perfect */
-#streak {
-  position: absolute;
-  top: calc(max(var(--sbh), env(safe-area-inset-top, 0px)) + 88px);
-  left: 0; right: 0;
-  text-align: center; font-size: 16px; font-weight: 800;
-  color: #e8842c; text-shadow: 0 1px 0 rgba(255, 255, 255, .85);
-  pointer-events: none; z-index: 5;
-  opacity: 1; transition: opacity .25s;
+@keyframes loadBob {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50%      { transform: translateY(-9px) rotate(3deg); }
 }
-#streak.hidden { opacity: 0; }
-#streak.pop { animation: streakPop .3s ease-out; }
-@keyframes streakPop {
-  0%   { transform: scale(1.45); }
-  100% { transform: scale(1); }
-}
-
-/* ── btn3d (game-common §1.4 / popup-common §6) ───────────────── */
-.btn3d {
-  --radius: 12px;
-  --surface-color: rgba(255, 255, 255, .5);
-  --surface-text: var(--text);
-  --surface-height: 42px;
-  --surface-width: auto;
-  --surface-padding-x: 16px;
-  --surface-font-size: 18px;
-  position: relative;
-  display: inline-block;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
-  -webkit-user-select: none;
-  user-select: none;
-}
-.btn3d-shadow { display: none; }
-.btn3d-surface {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: var(--surface-height);
-  width: var(--surface-width);
-  padding: 0 var(--surface-padding-x);
-  border-radius: var(--radius);
-  background: var(--surface-color);
-  border: 1px solid var(--glass-border);
-  color: var(--surface-text);
+.load-title {
   font-family: var(--ui-font);
-  font-size: var(--surface-font-size);
-  letter-spacing: .5px;
-  backdrop-filter: blur(8px);
-  transition: transform .09s ease-out, background .1s;
+  font-size: 17px; font-weight: 800; letter-spacing: .5px;
+  color: #8a6329; text-shadow: 0 1px 0 rgba(255, 255, 255, .7);
 }
-.btn3d:active { transform: scale(.94); }
-.btn3d:active .btn3d-surface { background: rgba(255, 255, 255, .75); }
-
-.btn3d.btn-icon {
-  --surface-height: 42px;
-  --surface-width: 42px;
-  --surface-padding-x: 0;
+.load-bar {
+  width: 148px; height: 7px; border-radius: 4px; overflow: hidden;
+  background: rgba(150, 105, 45, .18);
 }
-.back-ico { width: 52%; height: 52%; fill: currentColor; display: block; }
-
-/* ── Menu chờ (không phải popup kết quả) ──────────────────────── */
-/* ── Nút Back / Volume trên header: nền kem phẳng, đồng bộ pill ─ */
-.btn3d.hud-back, .btn3d.hud-mute { --surface-height: 44px; --surface-width: 44px; }
-.btn3d.hud-back .btn3d-surface, .btn3d.hud-mute .btn3d-surface {
-  background: rgba(255, 250, 236, .92);
-  border: 2px solid rgba(150, 105, 45, .3);
-  color: #7a4f1e;
-  backdrop-filter: none;
-  box-shadow: 0 3px 0 rgba(150, 100, 40, .22), inset 0 1px 0 rgba(255, 255, 255, .7);
+.load-bar > i {
+  display: block; height: 100%; width: 0%;
+  border-radius: 4px; background: #e8a33c;
+  transition: width .2s ease-out;
 }
-.btn3d.hud-back:active .btn3d-surface, .btn3d.hud-mute:active .btn3d-surface { background: rgba(244, 232, 210, .95); }
-.snd-ico { width: 58%; height: 58%; display: block; }
-#mute-btn .ico-off { display: none; }
-#mute-btn.muted .ico-on { display: none; }
-#mute-btn.muted .ico-off { display: block; }
 
 /* ── Tutorial: gợi ý + nhắc bấm ───────────────────────────────── */
 #tut-hint {
@@ -321,17 +236,20 @@ html, body {
   font-size: 19px;
   color: #5a4326;
   text-shadow: 0 1px 0 rgba(255, 255, 255, .8);
-  background: rgba(255, 255, 255, .6);
+  /* nền đục thay cho backdrop-filter: blur() — blur nền đè lên canvas động
+     buộc trình duyệt blur lại TOÀN khung mỗi frame (thủ phạm giật nặng nhất) */
+  background: rgba(255, 252, 244, .88);
   border: 1px solid var(--glass-border);
   border-radius: 14px;
   padding: 10px 14px;
-  backdrop-filter: blur(6px);
   z-index: 4;
   pointer-events: none;
   opacity: 1;
-  transition: opacity .25s;
+  transition: opacity .25s, visibility 0s;
 }
-#tut-hint.hidden { opacity: 0; }
+/* visibility: hidden → thoát hẳn khỏi cây vẽ; opacity:0 vẫn bị composite mỗi frame.
+   Hoãn visibility tới khi mờ xong để vẫn còn hiệu ứng fade-out. */
+#tut-hint.hidden { opacity: 0; visibility: hidden; transition: opacity .25s, visibility 0s .25s; }
 #tut-tap {
   position: absolute;
   left: 0; right: 0;
@@ -361,9 +279,13 @@ html, body {
   justify-content: center;
   background: rgba(3, 9, 24, .7);
   opacity: 1;
-  transition: opacity .25s;
+  transition: opacity .25s, visibility 0s;
 }
-.overlay.hidden { opacity: 0; pointer-events: none; }
+.overlay.hidden {
+  opacity: 0; pointer-events: none;
+  visibility: hidden;                 /* không composite lớp phủ full-screen khi đang chơi */
+  transition: opacity .25s, visibility 0s .25s;
+}
 
 .card {
   width: min(82%, 360px);
@@ -464,6 +386,22 @@ body.lang-ar .btn3d-surface { letter-spacing: 0; }
 
   <canvas id="game-canvas"></canvas>
 
+  <!-- Màn loading: che lúc dò độ phân giới (calibrate). Phải ĐỤC để 2-3 lần
+       cấp phát lại canvas không lộ ra thành chớp đen như bản trước. -->
+  <div id="loading">
+    <div class="load-box">
+      <svg class="load-cheese" viewBox="0 0 64 48" aria-hidden="true">
+        <path d="M4 20 L58 20 L58 40 Q58 44 54 44 L8 44 Q4 44 4 40 Z" fill="#f3e17f" stroke="rgba(160,125,55,.45)" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M4 20 L14 8 L58 8 L58 20 Z" fill="#f9efad" stroke="rgba(160,125,55,.45)" stroke-width="2" stroke-linejoin="round"/>
+        <circle cx="20" cy="30" r="4.5" fill="#d9bf5c"/>
+        <circle cx="38" cy="35" r="3" fill="#d9bf5c"/>
+        <circle cx="47" cy="27" r="3.6" fill="#d9bf5c"/>
+      </svg>
+      <div class="load-title" id="load-title">Loading…</div>
+      <div class="load-bar"><i id="load-fill"></i></div>
+    </div>
+  </div>
+
   <!-- Header chuẩn (bố cục copy từ index(exampleforheader).html) -->
   <div class="hud">
     <div class="btn3d btn-icon hud-back" id="back-btn" role="button" aria-label="Back" tabindex="0">
@@ -553,7 +491,7 @@ const DEFAULT_LANG = 'en';
    mọi text UI khác (Score/Best/nhãn HUD/popup…) dùng tiếng Anh — t() fallback 'en'. */
 const I18N = {
   en: { score:'SCORE', best:'BEST', perfect:'Perfect!', playAgain:'Play Again', gameOver:'Game Over',
-    newBest:'New Best!', tapToResume:'Tap to resume', back:'Back', sound:'Sound', tutTap:'TAP!',
+    newBest:'New Best!', tapToResume:'Tap to resume', back:'Back', sound:'Sound', loading:'Loading…', tutTap:'TAP!',
     tutJump:'Tap to jump when the cheese gets close!', tutGood:'Nice!', tutHaveFun:'Have fun!' },
   vi: { tutTap:'NHẢY!', tutJump:'Chạm để nhảy khi phô mai tới gần!', tutGood:'Giỏi lắm!',
     tutHaveFun:'Chúc chơi vui vẻ!' },
@@ -1219,37 +1157,172 @@ let elScore, elBest, elOverlay, elOvTitle, elOvScore, elOvBest;
 /* ================================================================
  * §4. Canvas & camera
  * ================================================================ */
+let pxk = 1;                 // px thiết bị trên 1 đơn vị logic (= dpr * scale)
+
+/* ── Dò trần DPR trong MÀN LOADING (§4a) ───────────────────────────
+   Chi phí một khung tỉ lệ thẳng với số pixel canvas, nên trần DPR là đòn bẩy
+   mạnh nhất: 2 → 1.75 cắt 23% số pixel, 2 → 1.5 cắt 44%.
+   SÀN 1.5 — dưới nữa thì chữ và viền phô mai mờ thấy rõ, thà chịu rớt khung.
+
+   BẢN CŨ DÒ NGAY TRONG VÁN và đó là một sai lầm: mỗi lần hạ trần phải gán lại
+   canvas.width, tức cấp phát lại backing store + XOÁ TRẮNG canvas. Việc đó lại
+   xảy ra ở CUỐI loop(), tức sau render() — nên khung đó được compose đúng lúc
+   canvas vừa bị xoá → người chơi thấy CHỚP ĐEN giữa ván (~10 điểm, rồi 11 điểm
+   thêm cái nữa ứng với 2 nấc hạ).
+   Nay dồn hết vào màn loading: đo xong mới dựng thế giới thật và chạy vòng lặp.
+   Trong ván KHÔNG BAO GIỜ đổi độ phân giải nữa. */
+const DPR_STEPS = [2, 1.75, 1.5];
+let dprStep = 0, dprCap = DPR_STEPS[0];
+
+const CAL_WARM = 6;        // khung bỏ đi sau mỗi lần đổi độ phân giải (cấp phát lại + khung đầu)
+const CAL_SAMPLE = 22;     // khung đo thật mỗi nấc
+const CAL_BUDGET = 18;     // ms: trung vị dưới mức này coi như giữ được 60fps
+
+/* Đo bằng khoảng cách giữa các rAF chứ không phải performance.now() quanh
+   render(): lệnh canvas 2D được XẾP HÀNG, đo quanh render() chỉ ra thời gian
+   nạp lệnh chứ không ra thời gian tô thật. Nhịp rAF mới là cái người chơi thấy. */
+function calibrate(done) {
+  const fill = $('load-fill');
+  let deltas = [], warm = CAL_WARM, last = 0;
+
+  apply(0);
+  requestAnimationFrame(tick);
+
+  function apply(i) {
+    dprStep = i;
+    dprCap = DPR_STEPS[i];
+    resize();
+    deltas = []; warm = CAL_WARM; last = 0;
+    if (fill) fill.style.width = Math.round((i / DPR_STEPS.length) * 100) + '%';
+  }
+
+  function tick(ts) {
+    render();                              // cảnh mẫu — màn loading che nên không ai thấy
+    if (last) {
+      if (warm > 0) warm--;
+      else deltas.push(ts - last);
+    }
+    last = ts;
+
+    if (deltas.length < CAL_SAMPLE) { requestAnimationFrame(tick); return; }
+
+    /* trung vị, không phải trung bình: một khung GC lẻ loi không được quyền
+       đẩy cả máy xuống một nấc mờ hơn */
+    deltas.sort(function (a, b) { return a - b; });
+    const med = deltas[deltas.length >> 1];
+
+    if (med <= CAL_BUDGET || dprStep >= DPR_STEPS.length - 1) {
+      if (fill) fill.style.width = '100%';
+      done();
+      return;
+    }
+    apply(dprStep + 1);                    // chưa đạt → hạ một nấc rồi đo lại
+    requestAnimationFrame(tick);
+  }
+}
+
 function resize() {
-  /* cap DPR 2: máy DPR 3 phải tô ×2.25 lần pixel mỗi khung → rớt khung "giật giật"
-     trên WebView; 2x vẫn nét trên điện thoại */
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  /* Trần DPR động (§4a): máy DPR 3 phải tô ×2.25 lần pixel mỗi khung → rớt khung
+     "giật giật" trên WebView; 2x vẫn nét trên điện thoại, yếu hơn thì tự hạ tiếp */
+  const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
   const app = $('app');
-  cssW = app.clientWidth;
-  cssH = app.clientHeight;
+  const w = app.clientWidth, h = app.clientHeight;
+  /* Android WebView bắn 'resize' liên tục khi thanh URL trượt / bàn phím mở.
+     Gán canvas.width tức là cấp phát lại backing store + xoá màn → khựng thấy rõ.
+     Kích thước không đổi thì bỏ qua hoàn toàn. */
+  if (w === cssW && h === cssH && pxk === dpr * (w / LW)) return;
+  cssW = w;
+  cssH = h;
   canvas.width = Math.round(cssW * dpr);
   canvas.height = Math.round(cssH * dpr);
   canvas.style.width = cssW + 'px';
   canvas.style.height = cssH + 'px';
   scale = cssW / LW;
   LH = cssH / scale;
-  ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
-  buildBgGradients();          // gradient nền phụ thuộc LW/LH — dựng 1 lần mỗi resize
+  pxk = dpr * scale;
+  ctx.setTransform(pxk, 0, 0, pxk, 0, 0);
+  /* bgStatic phụ thuộc LW/LH/pxk — invalidateSprites() xoá, dựng lại lúc vẽ đầu
+     tiên (phải hoãn: wallPattern chỉ có sau khi boot chạy xong) */
+  invalidateSprites();         // mọi bitmap cache vẽ theo pxk → dựng lại
   layoutHud();
+  /* Vẽ lại NGAY trong cùng lượt: gán canvas.width vừa XOÁ TRẮNG backing store.
+     Đợi tới rAF kế tiếp thì khung hiện tại bị compose lúc canvas còn trắng →
+     chớp đen. Đây chính là cái người chơi thấy khi xoay máy / thanh URL trượt. */
+  if (ctx && tower.length) render();
 }
 
-/* Gradient nền + vignette cache theo kích thước — không tạo lại mỗi khung */
-let bgGrad = null, bgVignette = null;
-function buildBgGradients() {
-  bgGrad = ctx.createLinearGradient(0, 0, 0, LH);
-  bgGrad.addColorStop(0, C.bgTop);
-  bgGrad.addColorStop(0.55, C.bgMid);
-  bgGrad.addColorStop(1, C.bgBot);
-  bgVignette = ctx.createLinearGradient(0, 0, LW, 0);
-  bgVignette.addColorStop(0, 'rgba(28,52,82,.15)');
-  bgVignette.addColorStop(0.18, 'rgba(28,52,82,0)');
-  bgVignette.addColorStop(0.82, 'rgba(28,52,82,0)');
-  bgVignette.addColorStop(1, 'rgba(28,52,82,.15)');
+/* ── Sprite cache (§4b) ────────────────────────────────────────────
+   Nguyên tắc: hình nào KHÔNG đổi theo thời gian thì rasterize MỘT LẦN ra
+   canvas phụ rồi drawImage, thay vì tô lại vài chục path vector mỗi khung.
+   Mọi cache đều dựng theo pxk nên phải xoá khi resize. */
+function mkSprite(wL, hL) {
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.ceil(wL * pxk));
+  c.height = Math.max(1, Math.ceil(hL * pxk));
+  const g = c.getContext('2d');
+  g.setTransform(pxk, 0, 0, pxk, 0, 0);
+  /* dw/dh = kích thước LOGIC thật của bitmap (đã làm tròn lên) — dùng làm đích
+     drawImage để không bị co/giãn lệch nửa pixel */
+  return { c, g, wL, hL, dw: c.width / pxk, dh: c.height / pxk };
 }
+/* Vẽ bằng ctx thật nhưng xuất ra sprite: tạm hoán đổi ctx toàn cục để tái dùng
+   nguyên các hàm vẽ sẵn có (rr/frontFacePath/drawDecor…) không phải viết lại. */
+function intoSprite(sp, ox, oy, fn) {
+  const prev = ctx;
+  ctx = sp.g;
+  ctx.save();
+  ctx.translate(ox, oy);
+  fn();
+  ctx.restore();
+  ctx = prev;
+}
+const blockSprites = new Map();   // "kind|seed|w" → sprite tĩnh của 1 miếng phô mai
+let decorSprites = null;          // [tranh, kệ, cửa sổ] — 3 loại đồ treo tĩnh
+let tableSprite = null;           // thảm + đĩa + bóng (hoàn toàn tĩnh)
+let bgStatic = null;              // gradient + vignette tô sẵn — 1 blit ĐỤC thay 3 lượt tô
+function invalidateSprites() {
+  blockSprites.clear();
+  decorSprites = null;
+  tableSprite = null;
+  bgStatic = null;
+}
+
+/* ĐO ĐƯỢC (đếm diện tích tô mỗi khung): nền ngốn 2,40 màn/khung trong tổng 2,69
+   — tức 90% công tô pixel, còn CẢ tháp phô mai + hamster chỉ 0,12 màn. Chi tiết:
+   gradient 1,00 màn + giấy dán tường 1,00 màn + vignette 0,38 màn.
+   Gradient và vignette đều ĐỨNG YÊN theo màn hình (không parallax) nên nướng
+   sẵn được thành một bitmap ĐỤC: 1 lần blit đục thay cho 1 lượt shader gradient
+   + 2 dải alpha blend. Trên WebView không tăng tốc GPU, blit đục rẻ hơn hẳn tô
+   gradient/alpha trên mỗi pixel — mà đây lại đúng loại máy đang giật. */
+function buildBgStatic() {
+  bgStatic = mkSprite(LW, LH);
+  const g = bgStatic.g;
+  const grad = g.createLinearGradient(0, 0, 0, LH);
+  grad.addColorStop(0, C.bgTop);
+  grad.addColorStop(0.55, C.bgMid);
+  grad.addColorStop(1, C.bgBot);
+  g.fillStyle = grad;
+  g.fillRect(0, 0, LW, LH);
+  /* Giấy dán tường nướng luôn vào đây: nền tụt còn ĐÚNG 1 blit đục (2,40 → 1,00
+     màn/khung, cắt 51% công tô pixel toàn khung). Đổi lại hoa văn tường thôi
+     trôi theo camera — nhưng đồ treo (tranh/kệ/cửa sổ/đèn/cây) vẫn parallax
+     0.4 nên chiều sâu vẫn đọc ra, và hoa văn lặp đều thì đứng hay trôi rất khó
+     phân biệt. Đây là đường tô-bằng-shader CUỐI CÙNG còn kín màn. */
+  if (wallPattern) {
+    g.fillStyle = wallPattern;
+    g.fillRect(0, 0, LW, LH);
+  }
+  const vg = g.createLinearGradient(0, 0, LW, 0);
+  vg.addColorStop(0, 'rgba(28,52,82,.15)');
+  vg.addColorStop(0.18, 'rgba(28,52,82,0)');
+  vg.addColorStop(0.82, 'rgba(28,52,82,0)');
+  vg.addColorStop(1, 'rgba(28,52,82,.15)');
+  g.fillStyle = vg;
+  const vw = LW * 0.19;                 // 64% giữa trong suốt → chỉ tô 2 dải mép
+  g.fillRect(0, 0, vw, LH);
+  g.fillRect(LW - vw, 0, vw, LH);
+}
+
 
 function safeTop() {
   const v = getComputedStyle(document.documentElement).getPropertyValue('--sat');
@@ -1312,8 +1385,11 @@ function camTargetOff() { return LH * 0.62 - camFocusY(); }
 function camTargetX() { return (ham ? ham.x : topCx()) - LW / 2; }
 function sx(wx) { return wx - camX; }                      // world → screen X
 function sy(wy) { return wy + camOff; }                    // world → screen Y
-/* biên cull nới theo zoom (zoom < 1 nhìn thấy nhiều thế giới hơn) */
-function cullPad() { return LH / Math.max(viewZoom, 0.05); }
+/* Nửa chiều cao khung nhìn (toạ độ TRƯỚC zoom) + lề an toàn.
+   CŨ trả về nguyên LH/zoom = gấp ĐÔI mức cần thiết: mọi phép cull dùng
+   `LH/2 ± cullPad()` nên vùng vẽ rộng 3 màn hình → tô thừa ~2× số miếng
+   phô mai, mỗi miếng vài chục path. Đúng ra chỉ cần nửa khung. */
+function cullPad() { return LH * 0.5 / Math.max(viewZoom, 0.05) + 48; }
 
 /* ================================================================
  * §5. Helpers vẽ
@@ -1501,21 +1577,34 @@ function drawDecorPlant(x, y, seed) {
   ctx.stroke();
 }
 
-function drawBackground() {
-  /* nền tường — tối hơn một tông để phô mai & hamster nổi khối (gradient cache) */
-  ctx.fillStyle = bgGrad;
-  ctx.fillRect(0, 0, LW, LH);
+/* 3 loại đồ treo TĨNH (tranh / kệ / cửa sổ) rasterize 1 lần. Đèn dây & chậu cây
+   có animation (nhấp nháy, lá đung đưa) nên vẫn vẽ vector trực tiếp. */
+const DECOR_BOX = [
+  { w: 100, h: 100, ox: 2, oy: 20 },     // tranh: dây treo nhô lên 16px
+  { w: 156, h: 80, ox: 2, oy: 44 },      // kệ: lọ/phô mai cao hơn mặt kệ
+  { w: 190, h: 200, ox: 30, oy: 2 },     // cửa sổ: quầng nắng loe rộng xuống dưới
+];
+function buildDecorSprites() {
+  decorSprites = DECOR_BOX.map(function (b, k) {
+    const sp = mkSprite(b.w, b.h);
+    intoSprite(sp, b.ox, b.oy, function () {
+      if (k === 0) drawDecorFrame(0, 0);
+      else if (k === 1) drawDecorShelf(0, 0);
+      else drawDecorWindow(0, 0);
+    });
+    return sp;
+  });
+}
 
-  /* giấy dán tường lặp đều — cuộn theo camera (parallax) */
-  if (wallPattern) {
-    const ox = -(camX * 0.3) % 120;
-    const oy = (camOff * 0.3) % 120;
-    ctx.save();
-    ctx.translate(ox, oy);
-    ctx.fillStyle = wallPattern;
-    ctx.fillRect(-ox - 120, -oy - 120, LW + 240, LH + 240);
-    ctx.restore();
-  }
+function drawBackground() {
+  if (!decorSprites) buildDecorSprites();
+  if (!bgStatic) buildBgStatic();
+
+  /* nền tường + vignette: 1 blit ĐỤC (xem buildBgStatic) thay cho 1 lượt tô
+     gradient kín màn + 2 dải alpha. Đục nên rasterizer khỏi trộn alpha. */
+  ctx.drawImage(bgStatic.c, 0, 0, bgStatic.dw, bgStatic.dh);
+
+  /* giấy dán tường đã nướng sẵn trong bgStatic — không còn lượt pattern fill nào */
 
   /* đồ treo tường theo dải (parallax 0.4): tranh / kệ / cửa sổ / đèn dây / cây */
   const par = 0.4, bandH = 330;
@@ -1524,13 +1613,15 @@ function drawBackground() {
   const last = Math.ceil((yTop + LH / par) / bandH);
   for (let i = first; i <= last; i++) {
     const by = i * bandH * par + camOff * par;
+    if (by > LH + 220 || by < -260) continue;      // dải ngoài khung → bỏ hẳn
     /* xoay vòng 5 loại + jitter nhẹ — không bao giờ lặp 3 lần cùng loại */
     const kind = (((i % 5) + 5) + Math.floor(seededRand(i * 137 + 11) * 2)) % 5;
     const bx = 40 + seededRand(i * 71 + 3) * (LW - 240) - camX * 0.15;
-    if (kind === 0) drawDecorFrame(bx, by + 60);
-    else if (kind === 1) drawDecorShelf(bx, by + 116);
-    else if (kind === 2) drawDecorWindow(bx, by + 40);
-    else if (kind === 3) drawDecorLights(by + 50, i);
+    if (kind < 3) {
+      const b = DECOR_BOX[kind], sp = decorSprites[kind];
+      const dy = kind === 0 ? 60 : (kind === 1 ? 116 : 40);
+      ctx.drawImage(sp.c, bx - b.ox, by + dy - b.oy, sp.dw, sp.dh);
+    } else if (kind === 3) drawDecorLights(by + 50, i);
     else drawDecorPlant(bx + 60, by + 30, i);
   }
 
@@ -1546,10 +1637,7 @@ function drawBackground() {
     ctx.fill();
   }
   ctx.globalAlpha = 1;
-
-  /* vignette 2 mép — dồn tương phản vào giữa màn (gradient cache) */
-  ctx.fillStyle = bgVignette;
-  ctx.fillRect(0, 0, LW, LH);
+  /* vignette đã nướng sẵn trong bgStatic — không còn tô lại mỗi khung */
 }
 
 /* Nĩa hoạt hình — 4 răng, vòm, cán bo tròn có vệt sáng */
@@ -1640,53 +1728,66 @@ function drawKnifeAt(px2, py2, rot, s) {
 /* Bàn ăn + tấm lót (rug) + đĩa + dao nĩa. World y = 0 là ĐÁY miếng phô mai
    gốc: tâm đĩa đặt py-2 (đáy phô mai thấp hơn tâm đĩa 2px) + bóng tiếp xúc
    → miếng phô mai ĐẶT hẳn trên đĩa, không lơ lửng */
+/* Thảm + đĩa + bóng: hình HOÀN TOÀN TĨNH (không phụ thuộc timeMs) nhưng cũ vẫn
+   tô lại mỗi khung — gồm 2 rounded-rect, 1 nét đứt setLineDash (đường rất chậm)
+   và tới 32 hình tròn chấm bi. Rasterize 1 lần rồi drawImage. */
+const RUG_BOX = { w: 480, h: 240, ox: 240, oy: 100 };   // gốc = tâm đĩa (mx, py)
+function buildTableSprite() {
+  tableSprite = mkSprite(RUG_BOX.w, RUG_BOX.h);
+  intoSprite(tableSprite, RUG_BOX.ox, RUG_BOX.oy, function () {
+    ctx.fillStyle = C.mat;
+    rr(-235, -97, 470, 190, 26);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.75)';    // đường chỉ may
+    ctx.lineWidth = 4;
+    ctx.setLineDash([12, 8]);
+    rr(-220, -82, 440, 160, 18);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = C.matDot;
+    for (let row = 0; row < 4; row++) {           // lưới chấm so le đều đặn
+      const yD = -68 + row * 44;
+      const off = (row % 2) * 27;
+      for (let col = 0; col < 8; col++) {
+        const xD = -189 + off + col * 54;
+        if (Math.abs(xD) < 150 && yD > -50 && yD < 45) continue; // chừa chỗ đĩa
+        ctx.beginPath();
+        ctx.arc(xD, yD, 7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    /* đĩa — tâm giữa rug, vành sau ló ra sau miếng phô mai */
+    ctx.fillStyle = C.plate;
+    ctx.beginPath();
+    ctx.ellipse(0, -2, 165, 36, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = C.plateShade;
+    ctx.beginPath();
+    ctx.ellipse(0, 2, 128, 22, 0, 0, Math.PI * 2);
+    ctx.fill();
+    /* bóng tiếp xúc dưới đáy tháp phô mai */
+    ctx.fillStyle = 'rgba(120,90,40,.18)';
+    ctx.beginPath();
+    ctx.ellipse(0, 1, BLOCK_W * 0.56, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
 function drawTable() {
   const py = sy(0);
-  if (py - 120 > LH / 2 + cullPad()) return;
+  const bottom = LH / 2 + cullPad();
+  if (py - 120 > bottom) return;
   const mx = sx(LW / 2);
-  /* mặt bàn — mép sau cao hơn để chứa trọn rug */
+  /* mặt bàn — mép sau cao hơn để chứa trọn rug. Chỉ tô phần LỌT KHUNG:
+     cũ tô rect rộng LW*3 = thừa 2/3 diện tích (chỉ cần nới theo zoom pan-out). */
+  const halfW = LW * 0.5 / Math.max(viewZoom, 0.05);
   ctx.fillStyle = C.table;
-  ctx.fillRect(-LW, py - 110, LW * 3, Math.max(0, LH / 2 + cullPad() - (py - 110)));
+  ctx.fillRect(LW / 2 - halfW, py - 110, halfW * 2, Math.max(0, bottom - (py - 110)));
   ctx.fillStyle = C.tableEdge;
-  ctx.fillRect(-LW, py - 110, LW * 3, 9);
+  ctx.fillRect(LW / 2 - halfW, py - 110, halfW * 2, 9);
 
-  /* rug: nền hồng + viền chỉ may + chấm bi xếp lưới so le (tâm = tâm đĩa) */
-  ctx.fillStyle = C.mat;
-  rr(mx - 235, py - 97, 470, 190, 26);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,.75)';    // đường chỉ may
-  ctx.lineWidth = 4;
-  ctx.setLineDash([12, 8]);
-  rr(mx - 220, py - 82, 440, 160, 18);
-  ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle = C.matDot;
-  for (let row = 0; row < 4; row++) {           // lưới chấm so le đều đặn
-    const yD = py - 68 + row * 44;
-    const off = (row % 2) * 27;
-    for (let col = 0; col < 8; col++) {
-      const xD = mx - 189 + off + col * 54;
-      if (Math.abs(xD - mx) < 150 && yD > py - 50 && yD < py + 45) continue; // chừa chỗ đĩa
-      ctx.beginPath();
-      ctx.arc(xD, yD, 7, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-
-  /* đĩa — tâm giữa rug, vành sau ló ra sau miếng phô mai */
-  ctx.fillStyle = C.plate;
-  ctx.beginPath();
-  ctx.ellipse(mx, py - 2, 165, 36, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = C.plateShade;
-  ctx.beginPath();
-  ctx.ellipse(mx, py + 2, 128, 22, 0, 0, Math.PI * 2);
-  ctx.fill();
-  /* bóng tiếp xúc dưới đáy tháp phô mai */
-  ctx.fillStyle = 'rgba(120,90,40,.18)';
-  ctx.beginPath();
-  ctx.ellipse(mx, py + 1, BLOCK_W * 0.56, 10, 0, 0, Math.PI * 2);
-  ctx.fill();
+  if (!tableSprite) buildTableSprite();
+  ctx.drawImage(tableSprite.c, mx - RUG_BOX.ox, py - RUG_BOX.oy, tableSprite.dw, tableSprite.dh);
 }
 
 /* Miếng phô mai (hoặc hộp quà) — vẽ theo world coords */
@@ -1762,110 +1863,182 @@ function drawSpringSandwich(x, y, w, seed, sq, SK, inset) {
   ctx.stroke();
 }
 
+/* Toàn bộ nét vẽ TĨNH của một miếng phô mai (mọi thứ trừ khói mốc bay lượn).
+   Gốc (x, y) = góc trên-trái của MẶT TRƯỚC. Dùng chung cho 2 đường: vẽ vector
+   trực tiếp và rasterize ra sprite. */
+function paintBlockStatic(x, y, kind, seed, w) {
+  const SK = BLOCK_SKINS[kind] || BLOCK_SKINS.normal;
+  const inset = Math.round(w * 0.1);
+  const kw = w / BLOCK_W;               // tỉ lệ co (mini)
+  /* MẶT TRÊN — hình thang lùi về sau; góc trước TRÙNG góc trên mặt trước */
+  ctx.fillStyle = SK.top;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + w, y);
+  ctx.lineTo(x + w - inset, y - 22);
+  ctx.lineTo(x + inset, y - 22);
+  ctx.closePath();
+  ctx.fill();
+  /* lỗ trên mặt trên (dẹt theo phối cảnh) */
+  ctx.fillStyle = SK.holeTop;
+  ctx.beginPath();
+  ctx.ellipse(x + w * 0.38, y - 10, 7 * kw, 3.2 * kw, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(x + w * 0.68, y - 14, 5 * kw, 2.4 * kw, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  /* MẶT TRƯỚC — góc trên sắc, góc dưới bo */
+  ctx.fillStyle = SK.body;
+  frontFacePath(x, y, w, BLOCK_H, 8);
+  ctx.fill();
+  /* lỗ phô mai — 3 lỗ từ 5 slot cố định (không chồng nhau), jitter nhẹ */
+  ctx.fillStyle = SK.hole;
+  const slot0 = Math.floor(seededRand(seed * 7 + 1) * 5);
+  for (let k = 0; k < 3; k++) {
+    const s2 = HOLE_SLOTS[(slot0 + k * 2) % 5];
+    const hx = x + (s2[0] + (seededRand(seed * 53 + k * 17) - 0.5) * 0.07) * w;
+    const hy = y + 16 + (s2[1] + (seededRand(seed * 29 + k * 41) - 0.5) * 0.09) * (BLOCK_H - 26);
+    const hr = (5.5 + seededRand(seed * 11 + k * 7) * 3.5) * kw;
+    ctx.beginPath(); ctx.ellipse(hx, hy, hr, hr * 0.85, 0, 0, Math.PI * 2); ctx.fill();
+  }
+
+  /* trang trí riêng từng loại */
+  if (kind === 'gold') {
+    /* ánh kim lấp lánh */
+    ctx.fillStyle = 'rgba(255,255,255,.9)';
+    const g1x = x + w * 0.24, g1y = y + 24, g2x = x + w * 0.74, g2y = y + 60;
+    rr(g1x - 7, g1y - 1.5, 14, 3, 1.5); ctx.fill();
+    rr(g1x - 1.5, g1y - 7, 3, 14, 1.5); ctx.fill();
+    rr(g2x - 5, g2y - 1.2, 10, 2.4, 1.2); ctx.fill();
+    rr(g2x - 1.2, g2y - 5, 2.4, 10, 1.2); ctx.fill();
+  } else if (kind === 'ice') {
+    /* vệt băng bóng loáng */
+    ctx.strokeStyle = 'rgba(255,255,255,.7)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x + 10, y + 30); ctx.lineTo(x + 30, y + 10);
+    ctx.moveTo(x + 20, y + 40); ctx.lineTo(x + 46, y + 14);
+    ctx.stroke();
+  } else if (kind === 'mold') {
+    /* đốm mốc + khói hôi bay lên */
+    ctx.fillStyle = 'rgba(98,124,54,.55)';
+    for (let k = 0; k < 3; k++) {
+      const mx2 = x + (0.2 + seededRand(seed * 19 + k * 23) * 0.6) * w;
+      const my2 = y + 24 + seededRand(seed * 37 + k * 13) * (BLOCK_H - 40);
+      ctx.beginPath(); ctx.arc(mx2, my2, 5 + seededRand(seed * 5 + k) * 3.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(mx2 + 8, my2 + 4, 2.5, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  /* cạnh gấp giữa 2 mặt (B) — MỘT nét mảnh màu nhạt, nối đúng 2 góc */
+  ctx.strokeStyle = SK.fold;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(x + 1, y);
+  ctx.lineTo(x + w - 1, y);
+  ctx.stroke();
+
+  /* viền ngoài TOÀN KHỐI một nét liền (A–E–sau–F–C–đáy) */
+  ctx.strokeStyle = SK.line;
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + inset, y - 22);
+  ctx.lineTo(x + w - inset, y - 22);
+  ctx.lineTo(x + w, y);
+  ctx.lineTo(x + w, y + BLOCK_H - 8);
+  ctx.arcTo(x + w, y + BLOCK_H, x + w - 8, y + BLOCK_H, 8);
+  ctx.lineTo(x + 8, y + BLOCK_H);
+  ctx.arcTo(x, y + BLOCK_H, x, y + BLOCK_H - 8, 8);
+  ctx.closePath();
+  ctx.stroke();
+}
+
+/* Khói hôi của miếng mốc — phần DUY NHẤT của miếng phô mai có animation,
+   nên tách riêng, không nướng vào sprite. */
+function paintMoldSmoke(x, y, w) {
+  ctx.strokeStyle = 'rgba(130,150,80,.6)';
+  ctx.lineWidth = 2.5;
+  for (const fx of [x + w * 0.35, x + w * 0.65]) {
+    const sway = Math.sin(timeMs * 0.004 + fx) * 3;
+    ctx.beginPath();
+    ctx.moveTo(fx, y - 24);
+    ctx.quadraticCurveTo(fx - 5 + sway, y - 34, fx + sway, y - 42);
+    ctx.stroke();
+  }
+}
+
+/* Sprite của miếng phô mai: hình chỉ phụ thuộc (kind, seed, w) — cả 3 đều BẤT
+   BIẾN suốt đời miếng đó. Cũ mỗi khung mỗi miếng phải chạy lại ~25 lệnh path
+   + 10 lần seededRand chỉ để ra đúng một hình y hệt khung trước; với ~20 miếng
+   trong khung là ~500 lệnh path + 200 lần random mỗi frame, vứt đi hoàn toàn. */
+const BLK_OX = 2, BLK_OY = 24;
+function getBlockSprite(kind, seed, w) {
+  const key = kind + '|' + seed + '|' + w;
+  let sp = blockSprites.get(key);
+  if (sp) return sp;
+  /* FIFO: Map giữ thứ tự chèn, mà tầng chèn sớm = tầng thấp = đã trôi khỏi
+     khung từ lâu → xoá lô cũ nhất là đúng cái không còn dùng. */
+  if (blockSprites.size >= 64) {
+    const it = blockSprites.keys();
+    for (let i = 0; i < 16; i++) {
+      const k = it.next();
+      if (k.done) break;
+      blockSprites.delete(k.value);
+    }
+  }
+  sp = mkSprite(w + 4, BLOCK_H + 26);
+  intoSprite(sp, BLK_OX, BLK_OY, function () { paintBlockStatic(0, 0, kind, seed, w); });
+  blockSprites.set(key, sp);
+  return sp;
+}
+
+/* Miếng phô mai RÚT GỌN: 2 mảng màu + 1 viền (3 lệnh) thay cho ~25.
+   Dùng khi miếng đã quá nhỏ trên màn để nhìn ra chi tiết. */
+function paintBlockSimple(x, y, kind, w) {
+  const SK = BLOCK_SKINS[kind] || BLOCK_SKINS.normal;
+  const inset = Math.round(w * 0.1);
+  ctx.fillStyle = SK.top;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + w, y);
+  ctx.lineTo(x + w - inset, y - 22);
+  ctx.lineTo(x + inset, y - 22);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = SK.body;
+  frontFacePath(x, y, w, BLOCK_H, 8);      // path còn nguyên → fill rồi stroke luôn
+  ctx.fill();
+  ctx.strokeStyle = SK.line;
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+}
+
+/* Ngưỡng chi tiết: chiều cao miếng THẬT trên màn (đã nhân zoom). Dưới mức này
+   thì lỗ phô mai chỉ còn 2px, vệt băng/đốm mốc đều dưới ngưỡng nhìn ra. */
+const SIMPLE_PX = 34;
+
 function drawBlock(cxW, topW, kind, seed, w, sq) {
   w = w || BLOCK_W;
   const x = sx(cxW - w / 2), y = sy(topW);
   if (y > LH / 2 + cullPad() || y < LH / 2 - cullPad() - BLOCK_H) return;
-  const SK = BLOCK_SKINS[kind] || BLOCK_SKINS.normal;
-  const inset = Math.round(w * 0.1);
-  const kw = w / BLOCK_W;               // tỉ lệ co (mini)
-    if (kind === 'spring') {
-      drawSpringSandwich(x, y, w, seed, sq || 0, SK, inset);
-      return;
-    }
-    /* MẶT TRÊN — hình thang lùi về sau; góc trước TRÙNG góc trên mặt trước */
-    ctx.fillStyle = SK.top;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + w, y);
-    ctx.lineTo(x + w - inset, y - 22);
-    ctx.lineTo(x + inset, y - 22);
-    ctx.closePath();
-    ctx.fill();
-    /* lỗ trên mặt trên (dẹt theo phối cảnh) */
-    ctx.fillStyle = SK.holeTop;
-    ctx.beginPath();
-    ctx.ellipse(x + w * 0.38, y - 10, 7 * kw, 3.2 * kw, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(x + w * 0.68, y - 14, 5 * kw, 2.4 * kw, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    /* MẶT TRƯỚC — góc trên sắc, góc dưới bo */
-    ctx.fillStyle = SK.body;
-    frontFacePath(x, y, w, BLOCK_H, 8);
-    ctx.fill();
-    /* lỗ phô mai — 3 lỗ từ 5 slot cố định (không chồng nhau), jitter nhẹ */
-    ctx.fillStyle = SK.hole;
-    const slot0 = Math.floor(seededRand(seed * 7 + 1) * 5);
-    for (let k = 0; k < 3; k++) {
-      const s2 = HOLE_SLOTS[(slot0 + k * 2) % 5];
-      const hx = x + (s2[0] + (seededRand(seed * 53 + k * 17) - 0.5) * 0.07) * w;
-      const hy = y + 16 + (s2[1] + (seededRand(seed * 29 + k * 41) - 0.5) * 0.09) * (BLOCK_H - 26);
-      const hr = (5.5 + seededRand(seed * 11 + k * 7) * 3.5) * kw;
-      ctx.beginPath(); ctx.ellipse(hx, hy, hr, hr * 0.85, 0, 0, Math.PI * 2); ctx.fill();
-    }
-
-    /* trang trí riêng từng loại */
-    if (kind === 'gold') {
-      /* ánh kim lấp lánh */
-      ctx.fillStyle = 'rgba(255,255,255,.9)';
-      const g1x = x + w * 0.24, g1y = y + 24, g2x = x + w * 0.74, g2y = y + 60;
-      rr(g1x - 7, g1y - 1.5, 14, 3, 1.5); ctx.fill();
-      rr(g1x - 1.5, g1y - 7, 3, 14, 1.5); ctx.fill();
-      rr(g2x - 5, g2y - 1.2, 10, 2.4, 1.2); ctx.fill();
-      rr(g2x - 1.2, g2y - 5, 2.4, 10, 1.2); ctx.fill();
-    } else if (kind === 'ice') {
-      /* vệt băng bóng loáng */
-      ctx.strokeStyle = 'rgba(255,255,255,.7)';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(x + 10, y + 30); ctx.lineTo(x + 30, y + 10);
-      ctx.moveTo(x + 20, y + 40); ctx.lineTo(x + 46, y + 14);
-      ctx.stroke();
-    } else if (kind === 'mold') {
-      /* đốm mốc + khói hôi bay lên */
-      ctx.fillStyle = 'rgba(98,124,54,.55)';
-      for (let k = 0; k < 3; k++) {
-        const mx2 = x + (0.2 + seededRand(seed * 19 + k * 23) * 0.6) * w;
-        const my2 = y + 24 + seededRand(seed * 37 + k * 13) * (BLOCK_H - 40);
-        ctx.beginPath(); ctx.arc(mx2, my2, 5 + seededRand(seed * 5 + k) * 3.5, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(mx2 + 8, my2 + 4, 2.5, 0, Math.PI * 2); ctx.fill();
-      }
-      ctx.strokeStyle = 'rgba(130,150,80,.6)';
-      ctx.lineWidth = 2.5;
-      for (const fx of [x + w * 0.35, x + w * 0.65]) {
-        const sway = Math.sin(timeMs * 0.004 + fx) * 3;
-        ctx.beginPath();
-        ctx.moveTo(fx, y - 24);
-        ctx.quadraticCurveTo(fx - 5 + sway, y - 34, fx + sway, y - 42);
-        ctx.stroke();
-      }
-    }
-
-    /* cạnh gấp giữa 2 mặt (B) — MỘT nét mảnh màu nhạt, nối đúng 2 góc */
-    ctx.strokeStyle = SK.fold;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(x + 1, y);
-    ctx.lineTo(x + w - 1, y);
-    ctx.stroke();
-
-    /* viền ngoài TOÀN KHỐI một nét liền (A–E–sau–F–C–đáy) */
-    ctx.strokeStyle = SK.line;
-    ctx.lineWidth = 2;
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + inset, y - 22);
-    ctx.lineTo(x + w - inset, y - 22);
-    ctx.lineTo(x + w, y);
-    ctx.lineTo(x + w, y + BLOCK_H - 8);
-    ctx.arcTo(x + w, y + BLOCK_H, x + w - 8, y + BLOCK_H, 8);
-    ctx.lineTo(x + 8, y + BLOCK_H);
-    ctx.arcTo(x, y + BLOCK_H, x, y + BLOCK_H - 8, 8);
-    ctx.closePath();
-    ctx.stroke();
+  /* Pan-out cuối ván kéo CẢ tháp vào khung — và màn thua GIỮ NGUYÊN cảnh đó cho
+     tới khi bấm chơi lại, không phải "1 lần mỗi ván" như ghi chú cũ tưởng. Tháp
+     100 tầng vẽ vector đầy đủ là ~2500 lệnh path + ~1000 lần seededRand MỖI KHUNG,
+     chạy mãi. Đó là khung hình đắt nhất cả ván, mà lại đúng lúc người chơi đang
+     nhìn điểm số. Nhỏ quá thì rút gọn — vừa nhanh vừa không mất gì để nhìn. */
+  if (BLOCK_H * viewZoom < SIMPLE_PX) { paintBlockSimple(x, y, kind, w); return; }
+  if (kind === 'spring') {                 // lò xo nén/nhả liên tục → vẽ vector
+    drawSpringSandwich(x, y, w, seed, sq || 0, BLOCK_SKINS.spring, Math.round(w * 0.1));
+    return;
+  }
+  /* Zoom vừa (tháp ngắn) vẫn dùng sprite: thu nhỏ tối đa 2.7× nên còn nét, mà
+     số miếng lọt khung lúc đó ≤ 27 → cache 64 không bao giờ thrash. */
+  const sp = getBlockSprite(kind, seed, w);
+  ctx.drawImage(sp.c, x - BLK_OX, y - BLK_OY, sp.dw, sp.dh);
+  if (kind === 'mold') paintMoldSmoke(x, y, w);
 }
 
 /* Ván gỗ đưa phô mai vào — thò ra / rút về mượt (world-anchored) */
@@ -2022,7 +2195,15 @@ function drawHam(cxW, feetW, opts) {
   }
 }
 
+let lastFont = '';
+/* Gán ctx.font là thao tác PHẢI parse chuỗi CSS font + tra font — đắt bất ngờ.
+   Chỉ gán lại khi thật sự đổi. */
+function setFont(f) {
+  if (f !== lastFont) { ctx.font = f; lastFont = f; }
+}
+
 function drawFx() {
+  if (!rings.length && !sparkles.length && !floatTexts.length) return;
   const now = timeMs;
   /* vòng sáng Perfect */
   for (const r of rings) {
@@ -2055,7 +2236,7 @@ function drawFx() {
     const p = (now - f.born) / (f.life || FLOAT_MS);
     if (p >= 1) continue;
     ctx.globalAlpha = 1 - p;
-    ctx.font = '800 ' + (f.size || 34) + 'px ' + CANVAS_FONT_STACK;
+    setFont('800 ' + (f.size || 34) + 'px ' + CANVAS_FONT_STACK);
     ctx.fillStyle = f.color || '#fff';
     ctx.strokeStyle = 'rgba(120,80,30,.8)';
     ctx.lineWidth = 5;
@@ -2076,6 +2257,7 @@ function drawFx() {
 }
 
 function render() {
+  lastFont = '';        // ctx.font bị save/restore trả về mặc định → cache theo khung
   drawBackground();
 
   /* lớp thế giới — zoom trình diễn quanh tâm màn (pan-out cuối ván) */
@@ -2101,8 +2283,15 @@ function render() {
   if (bpS >= 0 && bpS < 1) bSqS = Math.abs(Math.sin(bpS * Math.PI * 2)) * (1 - bpS * 0.55);
   const topIsSpring = (tower[tower.length - 1].kind === 'spring');
 
-  /* tháp phô mai (chỉ vẽ phần trong khung nhìn) */
-  for (let i = 0; i < tower.length; i++) {
+  /* Tháp phô mai — chỉ DUYỆT phần trong khung nhìn.
+     Cũ lặp qua CẢ tháp rồi để drawBlock tự cull: tháp 150 tầng là 150 lần gọi
+     hàm + 150 lần sx()/sy() mỗi khung chỉ để 15 cái vẽ thật. Tầng i luôn nằm ở
+     worldY = -(i+1)*BLOCK_H nên khoảng chỉ số lọt khung tính thẳng ra được. */
+  const pad = cullPad();
+  const i0 = Math.max(0, Math.floor((camOff - LH / 2 - pad) / BLOCK_H) - 1);
+  const i1 = Math.min(tower.length - 1,
+                      Math.ceil((camOff - LH / 2 + pad) / BLOCK_H) + 1);
+  for (let i = i0; i <= i1; i++) {
     const isTop = i === tower.length - 1;
     const kd = tower[i].kind || 'normal';
     const seed = tower[i].seed != null ? tower[i].seed : i;
@@ -2282,8 +2471,8 @@ function spawnOne(dir, kind, extraDelay) {
 /* Nhá chữ cảnh báo ngay TẠI mép mà miếng sắp trôi vào, TRƯỚC khi thấy miếng.
    Miếng sinh NGOÀI khung (cách tâm LW/2 + 99 = 459px > nửa khung 360px) rồi còn
    chờ slideAt nữa → đặt chữ đúng cx sinh là nằm ngoài màn hình, không ai thấy;
-   phải GHIM vào trong mép. Miếng lọt vào khung sau ~410–520ms, cue sống 820ms
-   → chữ hiện TRƯỚC, còn nán lại ~300ms sau khi thấy miếng rồi mới mờ hẳn.
+   phải GHIM vào trong mép. Miếng lọt vào khung sau ~410–520ms, cue sống 1000ms
+   → chữ hiện TRƯỚC, còn nán lại ~500ms sau khi thấy miếng rồi mới mờ hẳn.
    dyW = lệch dọc so với MẶT THÁP (world; âm = cao hơn mặt tháp). */
 function spawnCue(dir, text, color, dyW) {
   /* Đo bề rộng THẬT rồi nới inset nếu cần: "Watch out!" dài gần gấp đôi
@@ -2340,29 +2529,51 @@ function updateScoreHud() { elScore.textContent = String(score); }
 function updateBestHud() { elBest.textContent = String(best); }
 
 /* Chỉ báo "Perfect ×n" dưới điểm — hiện từ chuỗi 2, pop khi tăng */
+let streakPopB = false;
 function updateStreakHud() {
   const el = $('streak');
   if (combo >= 2) {
     el.textContent = t('perfect') + ' ×' + combo;
     el.classList.remove('hidden');
-    el.classList.remove('pop');
-    void el.offsetWidth;               // reset animation để pop lại
-    el.classList.add('pop');
+    /* Luân phiên 2 class cùng animation để chạy lại. Cũ dùng `void el.offsetWidth`
+       — đọc offsetWidth ép trình duyệt LAYOUT ĐỒNG BỘ ngay giữa khung đáp
+       (recalc style + layout cả trang), đúng khoảnh khắc cần mượt nhất. */
+    streakPopB = !streakPopB;
+    el.classList.toggle('pop', streakPopB);
+    el.classList.toggle('pop-b', !streakPopB);
   } else {
     el.classList.add('hidden');
   }
 }
 
-let persistLocalTimer = 0;
+let persistLocalTimer = 0, lastLightJson = '', lastSnapAt = -1e9;
 function persistSaved() {
-  const light = { best, tut: tutSeen ? 1 : 0, mute: muted ? 1 : 0 };
-  saveData(light);   // data nhẹ → native (ngay — game-common §1.2)
-  /* snapshot localStorage: DỜI ra ngoài khung đáp (stringify + ghi sync ngay giữa
-     nhịp chơi gây khựng) — gộp các lần gọi sát nhau */
-  clearTimeout(persistLocalTimer);
-  persistLocalTimer = setTimeout(persistLocalNow, 120);
+  const light = JSON.stringify({ best, tut: tutSeen ? 1 : 0, mute: muted ? 1 : 0 });
+  /* Chỉ bắn qua cầu native khi dữ liệu THẬT SỰ đổi. Cũ gọi mỗi lần đáp
+     (pinSlider luôn gọi) → stringify + postMessage qua bridge mỗi tầng, kể cả
+     khi best/tut/mute y nguyên. */
+  if (light !== lastLightJson) {
+    lastLightJson = light;
+    saveData(light);   // data nhẹ → native (ngay — game-common §1.2)
+  }
+  scheduleSnapshot();
+}
+/* Snapshot localStorage là chỗ ĐẮT NHẤT của cả nhóm: map toàn bộ tháp thành
+   object mới + JSON.stringify + localStorage.setItem (ghi ĐỒNG BỘ, chặn luồng
+   chính). Tháp 100 tầng mà chạy mỗi 120ms sau mỗi lần đáp thì khựng là chắc.
+   Nay: gộp và giới hạn tối đa 1 lần / 1.2s, ưu tiên chạy lúc rảnh. */
+const SNAP_MIN_GAP = 1200;
+function scheduleSnapshot() {
+  if (persistLocalTimer) return;                     // đã có hẹn giờ → gộp chung
+  const wait = Math.max(300, SNAP_MIN_GAP - (timeMs - lastSnapAt));
+  persistLocalTimer = setTimeout(function () {
+    persistLocalTimer = 0;
+    persistLocalNow();
+  }, wait);
 }
 function persistLocalNow() {
+  if (persistLocalTimer) { clearTimeout(persistLocalTimer); persistLocalTimer = 0; }
+  lastSnapAt = timeMs;
   const light = { best, tut: tutSeen ? 1 : 0, mute: muted ? 1 : 0 };
   // game snapshot: chỉ lưu khi đang chơi và táp có ít nhất 2 tầng (khác miếng gốc)
   const snap = (state === 'playing' && tower.length > 1)
@@ -2516,17 +2727,18 @@ function failRun(s, dir, fromY) {
   endRun();
 }
 
-/* CHỒNG HỤT → sập BAD_STACK_DROP tầng (KHÔNG thua). Dùng chung bộ máy sập của
-   missPenalty; tách hàm riêng để số tầng & lời thoại khác nhau.
-   `Math.min(drop, tower.length - 1)` luôn chừa tầng gốc ⇒ tháp thấp hơn 3 thì
-   tự về đúng tầng 1, không cần xử lý riêng. */
+/* SẬP n TẦNG trên cùng (KHÔNG thua) — dùng chung cho "nhảy vọt" và "chồng hụt".
+   `Math.min(n, tower.length - 1)` luôn chừa tầng gốc ⇒ tháp thấp hơn n thì tự
+   về đúng tầng 1, không cần xử lý riêng. */
 function collapseTower(n, dir, label) {
   sCrash();
+  /* vị trí chân hiện tại (đang bay thì giữa trời) làm điểm bắt đầu rơi */
   let fromY = surfaceY();
   if (ham.state === 'jump') {
     const p = Math.min(1, (timeMs - ham.t0) / (ham.jumpDur || JUMP_DUR));
     fromY = surfaceY() - (ham.jumpH || JUMP_H) * Math.sin(p * Math.PI);
   }
+
   const drop = Math.min(n, tower.length - 1);
   for (let i = 0; i < drop; i++) {
     const b = tower.pop();
@@ -2540,6 +2752,7 @@ function collapseTower(n, dir, label) {
       kind: b.kind || 'normal', w: b.w || BLOCK_W, seed: b.seed || 0,
     });
   }
+
   syncScore();                         // tháp vừa mất tầng → điểm giảm theo
   combo = 0;
   updateStreakHud();
@@ -2547,6 +2760,8 @@ function collapseTower(n, dir, label) {
     x: topCx(), y: surfaceY() - BLOCK_H * 2, born: timeMs,
     text: label || ('-' + drop), color: '#ff6b6b',
   });
+
+  /* hamster rơi tự do, vừa rơi vừa trôi về chỗ đứng được trên tầng mới */
   ham.state = 'drop';
   ham.drop = { y: fromY, vy: 0 };
   ham.slideVx = 0;
@@ -2759,6 +2974,18 @@ function fitScores() {
 /* ================================================================
  * §9. Vòng lặp update
  * ================================================================ */
+/* Lọc TẠI CHỖ. Array.filter() cấp phát mảng mới mỗi lần gọi; 5 lời gọi mỗi khung
+   × 60fps = 300 mảng rác/giây chỉ để (gần như luôn) ra đúng nội dung cũ → GC
+   nhảy vào giữa lúc chơi, đúng kiểu khựng vài khung không rõ nguyên nhân.
+   Ở đây gần như mọi khung đều "không có gì hết hạn" → không đụng bộ nhớ. */
+function prune(arr, keep) {
+  let n = 0;
+  for (let i = 0; i < arr.length; i++) {
+    if (keep(arr[i])) { if (n !== i) arr[n] = arr[i]; n++; }
+  }
+  if (n !== arr.length) arr.length = n;
+}
+
 function update(dt) {
   if (paused) return;                  // pause đóng băng toàn bộ thế giới
   const dtf = dt / 16.667;
@@ -2939,10 +3166,11 @@ function update(dt) {
     fb.cx += fb.vx * dtf;
     fb.rot += fb.vr * dtf;
   }
-  fallBlocks = fallBlocks.filter(fb => sy(fb.yTop) < LH / 2 + cullPad() + 220);
+  const fbLimit = LH / 2 + cullPad() + 220;
+  prune(fallBlocks, fb => sy(fb.yTop) < fbLimit);
 
   /* dọn ván gỗ đã rút xong */
-  boards = boards.filter(b => !b.retractT0 || timeMs - b.retractT0 < BOARD_MS + 40);
+  prune(boards, b => !b.retractT0 || timeMs - b.retractT0 < BOARD_MS + 40);
 
   /* hamster bị xô ngã → bay ra rồi bung dù */
   if (ham && ham.state === 'knock') {
@@ -2981,19 +3209,47 @@ function update(dt) {
   }
 
   /* dọn FX hết hạn */
-  floatTexts = floatTexts.filter(f => timeMs - f.born < (f.life || FLOAT_MS));
-  rings = rings.filter(r => timeMs - r.born < 450);
-  sparkles = sparkles.filter(s => timeMs - s.born < 500);
+  prune(floatTexts, f => timeMs - f.born < (f.life || FLOAT_MS));
+  prune(rings, r => timeMs - r.born < 450);
+  prune(sparkles, s => timeMs - s.born < 500);
+}
+
+/* ?perf=1 — bảng đo trên MÁY THẬT. Không có số đo thì mọi tối ưu tiếp theo chỉ
+   là đoán mò: cùng một cảnh giật có thể do fill-rate, do path, hay do GC. */
+const PERF_ON = new URLSearchParams(window.location.search).get('perf') === '1';
+let perfBox = null, perfAcc = 0, perfCnt = 0, perfMax = 0;
+function perfHud(rawDt) {
+  if (!perfBox) {
+    perfBox = document.createElement('div');
+    perfBox.style.cssText = 'position:absolute;left:6px;bottom:6px;z-index:99;' +
+      'font:700 12px/1.35 monospace;color:#7cff7c;background:rgba(0,0,0,.62);' +
+      'padding:5px 7px;border-radius:6px;white-space:pre;pointer-events:none';
+    $('app').appendChild(perfBox);
+  }
+  perfAcc += rawDt; perfCnt++;
+  if (rawDt > perfMax) perfMax = rawDt;
+  if (perfCnt < 30) return;                    // đổi chữ ~2 lần/giây, không mỗi khung
+  const avg = perfAcc / perfCnt;
+  perfBox.textContent =
+    'fps ' + (1000 / avg).toFixed(1) + '   avg ' + avg.toFixed(1) + 'ms\n' +
+    'worst ' + perfMax.toFixed(0) + 'ms  dpr ' + dprCap + '\n' +
+    'canvas ' + canvas.width + '×' + canvas.height + '\n' +
+    'thap ' + tower.length + '  sprite ' + blockSprites.size + '\n' +
+    'zoom ' + viewZoom.toFixed(2) + '  fx ' +
+    (rings.length + sparkles.length + floatTexts.length);
+  perfAcc = 0; perfCnt = 0; perfMax = 0;
 }
 
 function loop(ts) {
   if (!lastTs) lastTs = ts;
-  let dt = ts - lastTs;
+  const rawDt = ts - lastTs;           // chưa kẹp — HUD ?perf=1 cần nhịp THẬT
   lastTs = ts;
+  let dt = rawDt;
   if (dt > 100) dt = 100;              // tab ngủ / khựng dài → kẹp lại
   if (!paused) timeMs += dt;
   update(dt);
   render();
+  if (PERF_ON) perfHud(rawDt);
   requestAnimationFrame(loop);
 }
 
@@ -3056,6 +3312,7 @@ function localizeDom() {
   $('ov-lbl-best').textContent = t('best');
   $('ov-btn-text').textContent = t('playAgain');
   $('back-btn').setAttribute('aria-label', t('back'));
+  $('load-title').textContent = t('loading');
 }
 
 /** Khôi phục tháp từ localStorage snapshot — chơi tiếp ở đúng chiều cao đã đạt. */
@@ -3124,15 +3381,30 @@ function boot() {
   localizeDom();
   resize();
   window.addEventListener('resize', resize);
-  /* Không còn menu: restore ván dở nếu có, không thì bắt đầu mới.
-     Lần đầu chưa xem tutorial → tutorial, xong trướt thẳng vào ván thật. */
+
+  /* Cảnh MẪU để đo: tháp ~12 tầng, xấp xỉ lúc chơi thật (mặt bàn đã trôi khỏi
+     khung, nền chiếm gần hết công tô). Dựng tạm, đo xong vứt — màn loading che
+     nên không bao giờ lộ ra. */
+  resetWorld();
+  for (let i = 1; i < 12; i++) {
+    tower.push({ cx: LW / 2 + Math.sin(i * 1.7) * 26,
+                 kind: i % 4 === 3 ? 'gold' : 'normal', w: BLOCK_W, seed: i });
+  }
+  camOff = camTargetOff();
+  camX = camTargetX();
+
   const savedGame = saved.game;
-  if (savedGame && savedGame.tower && savedGame.tower.length > 1 && tutSeen) {
-    tryRestoreTower(savedGame);
-  } else {
-    resetWorld();
-    if (!tutSeen) startTutorial();
-    else { state = 'playing'; scheduleCycle(); }
+  function startWorld() {
+    /* Không còn menu: restore ván dở nếu có, không thì bắt đầu mới.
+       Lần đầu chưa xem tutorial → tutorial, xong trướt thẳng vào ván thật. */
+    if (savedGame && savedGame.tower && savedGame.tower.length > 1 && tutSeen) {
+      tryRestoreTower(savedGame);
+    } else {
+      resetWorld();
+      if (!tutSeen) startTutorial();
+      else { state = 'playing'; scheduleCycle(); }
+    }
+    $('loading').classList.add('hidden');
   }
 
   /* input */
@@ -3178,7 +3450,13 @@ function boot() {
     else if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(function () {});
   });
 
-  requestAnimationFrame(loop);
+  /* Dò độ phân giải xong mới dựng thế giới thật rồi mới chạy vòng lặp —
+     mọi lần cấp phát lại canvas đều nằm gọn sau màn loading đục. */
+  calibrate(function () {
+    startWorld();
+    lastTs = 0;                        // rAF của calibrate không tính vào dt khung đầu
+    requestAnimationFrame(loop);
+  });
 }
 
 (function waitForNativeInjection() {

@@ -128,14 +128,21 @@ tầng 30** (`goldMul()`), trần cao nhất còn **11.34**.
 **5. Cue `Double cheese!`** đặt **chính giữa** (`spawnCue(0, …)`) vì 2 miếng vào
 từ **cả hai phía**, không có "một bên" để chỉ vào. Cả 3 cue nay hiện **1000ms**.
 
-**Verify.** Bot chơi với độ lệch nhịp ±0/±3/±6/±9 frame: **0 lỗi JS**, bước dọc
-lúc đáp **≤7.2px/frame** ở mọi mức (hết teleport), `Close one!` bắn 3× ở ±3f,
-`Double cheese!` bắn 3×, **0 miếng vàng/mini nào ra ngay sau lò xo**, vàng ở
-tầng ≥15 đo được tb 9.9–11.1 / max 11.2 (trần cũ 13.1). Nhánh chồng hụt bot
-không tự chạm tới (đáp quá gần tâm) nên **test tay 3 ca**: lệch 40px → không
-phạt (tháp 10→11); lệch 100px → sập đúng 3 (10→8, `Slipped! -3`, 3 miếng rơi,
-**state vẫn `playing`** — không phải thua); tháp 2 tầng chồng hụt → **về đúng
-tầng 1**.
+**Verify** (đo lại trên **bản mentor đã tối ưu hiệu năng**, sau khi áp lại 5 mục
+trên): bot chơi 9000 frame ở ±0 và ±3 frame lệch nhịp — **0 lỗi JS**, xếp
+119–125 tầng, **0 ván thua**; bước dọc lúc đáp **≤7.2px/frame** (hết teleport);
+`Close one!` bắn 1–4×, `Double cheese!` bắn 6–11×, `Quick!`/`Watch out!` đều bắn;
+**0 miếng vàng/mini nào ra ngay sau lò xo**; vàng ở tầng ≥15 đo được **max đúng
+11.34** = `MAX_SPEED × 1.08`, tức taper đang có hiệu lực (trần cũ 13.1).
+
+Nhánh chồng hụt bot **không tự chạm tới** (`ham.x` gần như đứng yên nên bot luôn
+đáp quanh tâm) → **test tay 3 ca**: lệch 40px → không phạt (tháp 10→11); lệch
+100px → sập đúng 3 (10→8, `Slipped! -3`, 3 miếng rơi, **state vẫn `playing`** —
+không phải thua); tháp 2 tầng chồng hụt → **về đúng tầng 1**.
+
+> ℹ️ Thực tế chồng hụt hầu như chỉ xảy ra **sau miếng băng** (chỉ khi đó `ham.x`
+> mới dịch đủ xa). Nếu QA thấy nó gần như không bao giờ kích hoạt thì nới
+> `MIN_STACK_FRAC` lên cao hơn 0.34.
 
 #### Độc lập TẦN SỐ QUÉT — đo lại sau khi đổi camera (2026-07-28)
 

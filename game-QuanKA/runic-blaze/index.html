@@ -248,6 +248,16 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   0%, 100% { border-color: rgba(0,0,0,.22); background:#5f2a2f; }
   50%      { border-color: #ff7a6a; background:#7a3238; }
 }
+/* Hắc ấn về 0 → nổ: ô rung mạnh rồi phình đỏ (cho thấy CHÍNH nó gây thua) */
+@keyframes curseBoom {
+  0%   { transform: scale(1)    rotate(0deg);  background:#7a3238; }
+  15%  { transform: scale(1.06) rotate(-4deg); }
+  30%  { transform: scale(1.02) rotate(4deg);  background:#b23b32; }
+  45%  { transform: scale(1.1)  rotate(-3deg); }
+  60%  { transform: scale(1.04) rotate(3deg);  background:#e05a4d; }
+  100% { transform: scale(1.55) rotate(0deg);  background:#e05a4d; opacity:0; }
+}
+.tile.curse-boom .tile-inner { animation: curseBoom .65s ease-in forwards; }
 
 /* Special: nhịp mờ phẳng (opacity, KHÔNG glow) */
 @keyframes specialBreath {
@@ -462,14 +472,35 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
   pointer-events: none;
   opacity: 0;
   transition: opacity .3s ease;
-  font-size: 30px;
+  font-size: 27px;
   font-weight: 800;
-  letter-spacing: 1.5px;
+  letter-spacing: 1px;
+  line-height: 1.3;
   text-align: center;
   color: #fff;
-  white-space: nowrap;
+  max-width: 86vw;
+  text-shadow: 0 2px 10px rgba(0,0,0,.7);   /* đọc rõ trên nền tối */
 }
 #result-banner.lose { color: #df5b4c; }
+
+/* Bóng tối lan ra nuốt board khi hắc ấn phát nổ ("darkness takes over") */
+#doom-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 210;                 /* dưới banner (220), trên board */
+  pointer-events: none;
+  opacity: 0;
+  --dx: 50%; --dy: 45%;
+  background: radial-gradient(circle at var(--dx) var(--dy),
+              rgba(95,42,47,.0) 0%, rgba(20,7,18,.55) 18%, rgba(4,2,8,.94) 46%);
+  transform: scale(.15);
+  transform-origin: var(--dx) var(--dy);
+}
+#doom-veil.spread {
+  opacity: 1;
+  transform: scale(1);
+  transition: transform 1s cubic-bezier(.4,0,.2,1), opacity .5s ease;
+}
 @keyframes resultPop {
   0%   { opacity: 0; transform: translate(-50%,-50%) scale(.5); }
   20%  { opacity: 1; transform: translate(-50%,-50%) scale(1.15); }
@@ -728,6 +759,7 @@ body.landscape #board-outer { padding: 4px; }
 <div id="tut-skip" role="button" tabindex="0">Skip</div>
 
 <!-- Overlays -->
+<div id="doom-veil" class="hidden"></div>
 <div id="result-banner"></div>
 <div id="combo-badge" aria-live="polite"><span id="combo-praise"></span><span id="combo-mult"></span></div>
 <div id="toast" role="status"></div>
@@ -753,7 +785,7 @@ const DEFAULT_LANG = 'en';
 const I18N = {
   en: { score:'SCORE', best:'BEST', combo:'COMBO', back:'Back', sound:'Sound', play:'Play', next:'Next',
     skip:'Skip', tapToResume:'Tap to resume', noMoves:'No moves left — shuffling!',
-    shuffled:'Shuffle!', gameOver:'Game Over', newBest:'New Record!', playAgain:'Play Again',
+    shuffled:'Shuffle!', gameOver:'Game Over', overBanner:'And the darkness take over…', newBest:'New Record!', playAgain:'Play Again',
     surge:'Arcane Surge!', blazeStorm:'Blaze Storm!',
     praise:['Nice!','Great!','Awesome!','Blazing!','Legendary!'], ob1T:'Match Runes',
     ob1D:'Swap two adjacent runes to line up 3 or more of the same kind. They burst — and cascading matches multiply your score!',
@@ -2646,13 +2678,7 @@ async function doSwap(r1, c1, r2, c2) {
     const boom = tickCursed();         // đếm ngược hắc ấn còn lại
     if (boom) {                        // 1 hắc ấn về 0 → detonate → thua
       ended = true;
-      const ctr = boardCellCenter(boom.r, boom.c);
-      spawnFlash(ctr.x, ctr.y, cellPx * 3.2);
-      spawnBurst(ctr.x, ctr.y, '#df5b4c', 30, 380);
-      screenShake(18);
-      await sleep(220);
-      if (ep !== levelEpoch) return;
-      gameOver(ep);
+      await gameOver(ep, boom);        // gameOver tự chạy cảnh nổ (~1.5s) rồi popup
       return;
     }
     maybeSpawnCursed();                // sinh hắc ấn mới nếu tới nhịp
@@ -3006,6 +3032,8 @@ function hideResultBanner() {
   clearTimeout(bannerTimer); bannerTimer = null;
   el.classList.remove('show');
   el.classList.remove('lose');
+  const veil = $('doom-veil');   // dọn màn đêm khi vào ván mới
+  if (veil) { veil.classList.remove('spread'); veil.classList.add('hidden'); }
 }
 
 function maybeAds() {
@@ -3023,20 +3051,60 @@ function checkEnd(ep) {
 }
 
 /* Game Over — game điểm-cao tự vẽ popup (popup-common §1.1) */
-async function gameOver(ep) {
+async function gameOver(ep, boom) {
   deselect(); clearHint();
   persistBest();
-  sLose();
-  showResultBanner(t('gameOver'), true);
+  if (boom) {                          // thua vì hắc ấn nổ → cho THẤY RÕ chuyện gì xảy ra
+    await cursedDetonate(ep, boom);
+    if (ep !== levelEpoch) return;
+  } else {
+    sLose();                           // nổ đã tự phát tiếng thua bên trong cursedDetonate
+  }
+  showResultBanner(t('overBanner'), true);
   screenShake(10);
   const W = window.innerWidth, H = window.innerHeight;
   spawnFlash(W * 0.5, H * 0.42, 160);
-  await sleep(950);
+  await sleep(boom ? 600 : 950);       // detonate đã kéo dài rồi → banner hiện ngắn hơn
   if (ep !== levelEpoch) return;
   maybeAds();
   showGameOverPopup();
   // endless (§1.1): result=null, showModal=false — game tự lo Play Again
   sendMessage('game_result');
+}
+
+/* Hắc ấn về 0 → phát nổ: dựng cảnh ~1.5s để người chơi THẤY RÕ chính ô nguyền
+   phát nổ và bóng tối lan ra nuốt cả board, TRƯỚC khi popup Game Over hiện. */
+async function cursedDetonate(ep, boom) {
+  const ctr = boardCellCenter(boom.r, boom.c);
+  const tl = board[boom.r] && board[boom.r][boom.c];
+  // 1) Ô nguyền rung & nứt tại chỗ (0.15s) — chỉ mặt nó, chưa nổ hẳn
+  if (tl && tl.el) tl.el.classList.add('curse-boom');
+  spawnFlash(ctr.x, ctr.y, cellPx * 2.2);
+  spawnBurst(ctr.x, ctr.y, CURSE_HEX, 12, 280);
+  screenShake(9);
+  await sleep(160);
+  if (ep !== levelEpoch) return;
+  // 2) NỔ: shockwave đỏ + sóng đen + mưa hạt, rung mạnh
+  spawnFlash(ctr.x, ctr.y, cellPx * 4.5);
+  spawnRing(ctr.x, ctr.y, CURSE_HEX, cellPx * 4);
+  spawnRing(ctr.x, ctr.y, '#3a0d16', cellPx * 6.5);
+  spawnBurst(ctr.x, ctr.y, CURSE_HEX, 26, 440);
+  spawnBurst(ctr.x, ctr.y, '#1a0712', 16, 340);
+  screenShake(22);
+  sLose();                             // tiếng thua vang ngay lúc nổ
+  // 3) Bóng tối lan từ ô nguyền ra kín màn hình (transition 1s)
+  const veil = $('doom-veil');
+  if (veil) {
+    veil.style.setProperty('--dx', ctr.x + 'px');
+    veil.style.setProperty('--dy', ctr.y + 'px');
+    veil.classList.remove('hidden');
+    void veil.offsetWidth;             // reflow để transition chạy
+    veil.classList.add('spread');
+  }
+  await sleep(300);
+  if (ep !== levelEpoch) return;
+  spawnRing(ctr.x, ctr.y, CURSE_HEX, cellPx * 7);
+  await sleep(900);                    // tổng ~1.36s trước khi banner + popup
 }
 
 function showGameOverPopup() {
