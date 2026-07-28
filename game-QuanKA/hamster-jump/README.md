@@ -18,9 +18,10 @@
   thật (giữ nguyên tháp, bắt đầu chơi — KHÔNG reset). Tutorial không thể thua.
 - **Header chuẩn**: Back (trái) · pill **SCORE** (★) + **BEST** (👑) ở giữa ·
   nút **Volume** bật/tắt âm thanh (phải).
-- **Điểm = SỐ PHÔ MAI trong tháp**, tính cả **miếng gốc** dưới đáy (vào ván đã là
-  1). Không còn cơ chế xu, không còn đồng hồ đếm độ cao riêng — chỉ **một con số**
-  đếm số phô mai xếp được cho tới lúc **Game Over** (ground cheese cũng được tính).
+- **Điểm tích luỹ**: mỗi phô mai +1 (tính cả **miếng gốc** — vào ván đã là 1),
+  **Perfect +5 và cộng dồn theo chuỗi**, vàng +3, né mốc +3, sập tháp trừ đúng số
+  tầng mất. Không còn cơ chế xu, không có đồng hồ đếm độ cao riêng — chỉ **một
+  con số** cho tới lúc **Game Over**. Chi tiết ở mục **Điểm**.
 - Miếng phô mai **trượt vào trên ván gỗ** ở đúng tầm mặt tháp (hướng ngẫu nhiên;
   nhanh dần theo độ cao, nền 6.9 → trần 10.5px/frame). **Khởi đầu dịu**: 3 tầng
   đầu chạy ×0.75, tăng dần lên tốc chuẩn (×1.0) ở tầng 20.
@@ -201,8 +202,8 @@ vẫn **`onScreen=false`** — cue hiện trước thật. 0 lỗi JS.
   **dừng ngay chỗ hamster đáp lên** → thành tầng mới (**+1 điểm**; miếng **nhún &
   nghiêng** về phía đáp cho đã tay). Đáp lệch thì tháp xiêu vẹo (không cắt miếng,
   không đổ); đáp sát mép (<30px) → loạng choạng 1s.
-- Lệch ≤ ~7px → **Perfect** (vòng sáng + chuỗi "Perfect ×n" dưới điểm) — chỉ là
-  hiệu ứng/độ khéo, **không cộng thêm điểm** (điểm chỉ đếm số phô mai).
+- Lệch ≤ ~7px → **Perfect** (vòng sáng + chữ nổi kèm số điểm) → **+5, chuỗi liên
+  tiếp cộng dồn +5/+10/+15/+20…** (xem mục Điểm).
 - **Nhảy vọt qua** (không ai đáp) → KHÔNG thua: miếng văng đi kéo **sập 5 tầng**
   (điểm tụt theo số tầng mất, đứt chuỗi), hamster rơi xuống đáp tầng thứ 6.
 - **Thua** khi bị phô mai **xô ngã** (nhảy quá trễ / rơi lại quá sớm — kể cả đang
@@ -220,12 +221,35 @@ vẫn **`onScreen=false`** — cue hiện trước thật. 0 lỗi JS.
 | 🦠 Mốc | 15 | Bay ở **làn cao** — đứng yên cho nó qua (an toàn), nhảy trúng = thua. **Báo trước:** nhá **"Watch out!"** (xanh mốc, nghiêng trái 15°, 1000ms) **BÊN DƯỚI** làn nó sắp bay vào |
 | 👯 Double | 25 | ~9% round: 2 miếng từ 2 phía so le — đáp 1, miếng kia tự rơi. **Báo trước:** **"Double cheese!"** đặt **chính giữa** (vào từ cả 2 phía), 1000ms |
 
-## Điểm
+## Điểm (đổi theo QA 2026-07-28)
 
-Điểm **= số phô mai đang có trong tháp** (kể cả miếng gốc). Mỗi lần đáp thêm một
-miếng → **+1**; nhảy hụt làm sập tầng → điểm **giảm đúng số tầng mất**. `best`
-(kỷ lục) là điểm cao nhất từng đạt, persist ngay khi vượt. `?reset=1` xoá kỷ lục
-khi chơi thử.
+| Việc | Điểm |
+|---|---|
+| Xếp được 1 phô mai | **+1** |
+| **Perfect** | **+5**, chuỗi liên tiếp **CỘNG DỒN**: +5 → +10 → +15 → +20 … (Perfect thứ *n* = **+5×n**) |
+| Đáp trúng miếng **vàng** | **+3** |
+| **Né được** miếng mốc | **+3** |
+| Sập tháp (nhảy vọt −5 tầng / chồng hụt −3 tầng) | **−đúng số tầng mất**, không xuống dưới 0 |
+
+Chuỗi Perfect đứt (một lần đáp không Perfect) thì lần Perfect kế **về lại +5**.
+
+⚠️ **Đây là đổi CẤU TRÚC, không phải chỉnh số.** Trước đây `score = tower.length`
+— một **giá trị dẫn xuất**, nên về nguyên tắc không cộng thưởng được. Nay `score`
+là **bộ tích luỹ** (`addScore()` / `setScore()`), kéo theo:
+
+- **Snapshot ván dở phải lưu `score`** — không còn suy lại được từ số tầng.
+  Snapshot cũ (chưa có trường này) tự lùi về luật cũ nên **không mất ván dở**.
+- Điểm **to hơn hẳn**: bot chơi 122 tầng ra **707 điểm** (luật cũ là 122) ≈ **×5.8**
+  → mọi `best` cũ sẽ bị phá ngay ván đầu. Đó là hệ quả tất nhiên của việc đổi luật.
+
+`best` là điểm cao nhất từng đạt, persist ngay khi vượt. `?reset=1` xoá kỷ lục.
+
+**Verify** (dựng thế cờ tay vì bot không ép được chuỗi Perfect dài theo ý):
+chuỗi 4 Perfect cộng đúng **6, 11, 16, 21** (= 1+5, 1+10, 1+15, 1+20); đứt chuỗi
+→ lần lệch chỉ +1, Perfect kế **về đúng +6**; vàng Perfect **+9** (1+5+3), vàng
+không Perfect **+4** (1+3); sập 5 tầng từ 100 → **95**, từ 2 → **0** (không âm);
+snapshot lưu đúng `score=137`. Chơi thật 122 tầng: 0 lỗi JS, chữ nổi hiện đúng
+`Perfect! +5` → `×2 +10` → … → `×5 +25`, `✓ +3` (né mốc), `+3` (vàng).
 
 ## Âm thanh
 

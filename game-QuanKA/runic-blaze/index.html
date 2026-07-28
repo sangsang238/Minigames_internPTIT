@@ -319,25 +319,48 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 }
 .tile.spin .tile-inner { animation: tileSpin .5s ease-in-out; }
 
-/* ── Score fly-up text ─────────────────────────────────────────── */
-.score-fly {
+/* ── Popup chip dùng chung (score-fly + nhãn special) ───────────────
+   Mọi text nổi đều BỌC CHIP nền đặc + viền (cùng kiểu #toast / combo-badge)
+   → format nhất quán, đọc rõ trên board sáng, không còn chữ trần đè lẫn nhau. */
+.pop-chip {
   position: fixed;
   pointer-events: none;
+  z-index: 200;
+  transform: translate(-50%, -50%);
   font-family: var(--ui-font);
   font-weight: 800;
-  font-size: 15px;
-  color: #fff;
-  -webkit-text-stroke: .7px rgba(0,0,0,.5);
-  z-index: 200;
   white-space: nowrap;
-  animation: scoreFlyUp .9s ease-out forwards;
+  color: #fff;
+  background: rgba(18,32,36,.94);
+  border: 2px solid rgba(255,255,255,.22);
+  border-radius: 12px;
+  padding: 4px 11px;
 }
-
+/* Score fly-up: chip trôi lên & mờ */
+.score-fly {
+  font-size: 15px;
+  letter-spacing: .5px;
+  animation: scoreFlyUp 1s ease-out forwards;
+}
 @keyframes scoreFlyUp {
   0%   { opacity: 1; transform: translate(-50%,-50%) scale(1); }
-  20%  { opacity: 1; transform: translate(-50%,-80%) scale(1.2); }
-  100% { opacity: 0; transform: translate(-50%,-150%) scale(.9); }
+  18%  { opacity: 1; transform: translate(-50%,-92%) scale(1.12); }
+  100% { opacity: 0; transform: translate(-50%,-168%) scale(.92); }
 }
+/* Nhãn special (Blaze!/Nova!/Prism!) neo theo tile — bung, giữ, mờ */
+.special-label {
+  font-size: 17px;
+  letter-spacing: .5px;
+  border-width: 3px;   /* viền màu theo loại — JS ghi đè borderColor */
+}
+@keyframes labelPop {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(.6); }
+  15%  { opacity: 1; transform: translate(-50%,-50%) scale(1.12); }
+  26%  { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+  72%  { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%,-64%) scale(.95); }
+}
+.special-label.pop { animation: labelPop 1.15s ease-out forwards; }
 
 /* ── Combo badge + chữ khen ────────────────────────────────────────
    QA 2026-07-27: "combo cho nổi lên, hiện chữ trắng và mờ nên user ko để ý"
@@ -787,6 +810,7 @@ const I18N = {
     skip:'Skip', tapToResume:'Tap to resume', noMoves:'No moves left — shuffling!',
     shuffled:'Shuffle!', gameOver:'Game Over', overBanner:'And the darkness take over…', newBest:'New Record!', playAgain:'Play Again',
     surge:'Arcane Surge!', blazeStorm:'Blaze Storm!',
+    nmBlaze:'Blaze!', nmNova:'Nova!', nmPrism:'Prism!',
     praise:['Nice!','Great!','Awesome!','Blazing!','Legendary!'], ob1T:'Match Runes',
     ob1D:'Swap two adjacent runes to line up 3 or more of the same kind. They burst — and cascading matches multiply your score!',
     ob2T:'Forge Specials',
@@ -2444,6 +2468,7 @@ async function executeWave(ep, chain, initialCells, clusters) {
     sForge();
     const ctr = boardCellCenter(cl.spawnAt.r, cl.spawnAt.c);
     spawnRing(ctr.x, ctr.y, RUNE_HEX[cl.spawnKind === K_PRISM ? 6 : cl.color], cellPx * 1.2);
+    spawnSpecialLabel(cl.spawnAt.r, cl.spawnAt.c, cl.spawnKind, cl.color);   // nhãn "Blaze!/Nova!/Prism!" trên tile
     const inner = tile.el.firstChild;
     tweenInner(tile, 0.35, 1, 280, easeOutBack).then(() => { inner.style.transform = ''; inner.style.opacity = ''; });
   }
@@ -2973,18 +2998,73 @@ function updateLabels() {
   $('sound-btn').setAttribute('aria-label', t('sound'));
 }
 
+let activePops = [];   // vị trí các chip nổi đang sống → chống đè
+/** Nhích chip mới lên khi trùng chỗ chip đang sống (score-fly / special). */
+function dodgeOverlap(x, y) {
+  let guard = 0;
+  while (guard < 6 && activePops.some(p => Math.abs(p.x - x) < cellPx * 1.25 && Math.abs(p.y - y) < 30)) {
+    y -= 30; guard++;
+  }
+  return y;
+}
+function trackPop(el, x, y, ms) {
+  const rec = { x, y };
+  activePops.push(rec);
+  const kill = () => { if (el.parentNode) el.remove(); activePops = activePops.filter(p => p !== rec); };
+  el.addEventListener('animationend', kill, { once: true });
+  setTimeout(kill, ms);
+}
+/** Dọn sạch mọi chip nổi còn sót khi vào ván mới. */
+function clearPops() {
+  document.querySelectorAll('.pop-chip').forEach(el => el.remove());
+  activePops = [];
+}
+
 function spawnScoreFly(boardR, boardC, pts, mult) {
   const rect = boardEl.getBoundingClientRect();
   const x = rect.left + boardC * cellPx + cellPx * 0.5;
-  const y = rect.top + boardR * cellPx + cellPx * 0.5;
+  let y = rect.top + boardR * cellPx + cellPx * 0.5;
+  y = dodgeOverlap(x, y);
   const el = document.createElement('div');
-  el.className = 'score-fly';
+  el.className = 'pop-chip score-fly';
   el.textContent = (mult > 1 ? `×${mult} ` : '') + `+${pts}`;
   el.style.left = x + 'px';
   el.style.top = y + 'px';
   document.body.appendChild(el);
-  el.addEventListener('animationend', () => el.remove(), { once: true });
-  setTimeout(() => { if (el.parentNode) el.remove(); }, 1200);
+  trackPop(el, x, y, 1300);
+}
+
+/** Nhãn special vừa rèn (Blaze!/Nova!/Prism!) neo theo tile.
+ *  Theo yêu cầu: mặc định TRÊN tile; nếu tile nằm DƯỚI câu khen (badge ~42% màn)
+ *  thì để DƯỚI tile → luôn né khỏi câu khen ở giữa. Viền màu theo loại rune. */
+function spawnSpecialLabel(r, c, kind, color) {
+  const key = kind === K_PRISM ? 'nmPrism' : (kind === K_NOVA ? 'nmNova' : 'nmBlaze');
+  const rect = boardEl.getBoundingClientRect();
+  const cx = rect.left + c * cellPx + cellPx * 0.5;
+  const tileTop = rect.top + r * cellPx;
+  const tileBot = tileTop + cellPx;
+  const badgeY = window.innerHeight * 0.42;                 // vị trí câu khen (#combo-badge)
+  const below = (tileTop + tileBot) / 2 >= badgeY;          // tile dưới câu khen → nhãn xuống dưới tile
+  let y = below ? tileBot + 22 : tileTop - 22;
+  y = dodgeOverlap(cx, y);                                  // né các chip nổi khác
+  // né HẲN câu khen: nếu badge đang hiện & cùng dải ngang → đẩy nhãn ra khỏi badge
+  const badge = $('combo-badge');
+  if (badge && badge.classList.contains('cascade-anim')) {
+    const b = badge.getBoundingClientRect();
+    if (b.width && Math.abs(cx - (b.left + b.width / 2)) < b.width / 2 + 50) {
+      if (below) y = Math.max(y, b.bottom + 24);
+      else       y = Math.min(y, b.top - 24);
+    }
+  }
+  y = Math.max(52, Math.min(window.innerHeight - 34, y));   // kẹp trong màn
+  const el = document.createElement('div');
+  el.className = 'pop-chip special-label pop';
+  el.textContent = t(key);
+  el.style.left = cx + 'px';
+  el.style.top = y + 'px';
+  el.style.borderColor = kind === K_PRISM ? '#dfe6ee' : RUNE_HEX[color];
+  document.body.appendChild(el);
+  trackPop(el, cx, y, 1550);
 }
 
 function showComboBadge(chain) {
@@ -3182,6 +3262,7 @@ function newRun() {
   selected = null; lastSwapCells = null;
   clearHint();
   particles = [];
+  clearPops();
   shakeAmp = 0; wrapEl.style.transform = '';
   hideResultBanner();
   $('score-val').textContent = '0';
@@ -3226,7 +3307,7 @@ function tryRestoreRunState(g) {
     runRecord = best; recordHit = false;
     busy = true; ended = false;
     selected = null; lastSwapCells = null;
-    clearHint(); particles = []; shakeAmp = 0; wrapEl.style.transform = '';
+    clearHint(); particles = []; clearPops(); shakeAmp = 0; wrapEl.style.transform = '';
     hideResultBanner();
     $('score-val').textContent = String(score);
     renderBest(); updateLabels();

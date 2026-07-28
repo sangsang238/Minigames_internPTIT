@@ -1034,6 +1034,11 @@ const LAND_SNAP_MAX = 22;   // chân tụt quá 22px dưới mặt miếng thì 
 /* Chồng tháp phải ĂN NHAU đủ nhiều, không thì mép-chồng-mép trông rất vô lý */
 const MIN_STACK_FRAC = 0.34;  // × bề rộng miếng HẸP hơn trong 2 tầng
 const BAD_STACK_DROP = 3;     // chồng hụt → sập 3 tầng (điểm giảm đúng 3)
+/* Thưởng điểm (QA 2026-07-28) */
+const CHEESE_PTS = 1;       // mỗi phô mai xếp được
+const PERFECT_PTS = 5;      // Perfect thứ n LIÊN TIẾP → +5×n (+5, +10, +15…)
+const GOLD_PTS = 3;         // đáp trúng miếng vàng
+const DODGE_PTS = 3;        // né được miếng mốc
 const STUMBLE_MS = 1000;    // thời gian loạng choạng (nghiêng người 1s)
 const MAX_OVERSHOOT = 0.45; // giới hạn kẹp vị trí miếng khi xô ngã hamster
 const BOUNCE_MS = 240;      // nhún của miếng phô mai khi hamster đáp xuống
@@ -1136,7 +1141,7 @@ let ham = null;             // {x, state:'idle'|'jump'|'stumble'|'knock'|'chute'
 let score = 0;
 let best = 0;               // kỷ lục (persist ngay khi đổi — game-common §1.2)
 let bestStart = 0;          // kỷ lục lúc bắt đầu ván (HUD + so popup)
-let combo = 0;              // chuỗi Perfect liên tiếp (chỉ để hiệu ứng, KHÔNG cộng điểm)
+let combo = 0;              // chuỗi Perfect liên tiếp — Perfect thứ n thưởng +5×n
 let runsEnded = 0;
 let overTimer = 0;          // timer hiện popup — phải clear khi vào ván mới
 
@@ -2576,21 +2581,35 @@ function persistLocalNow() {
   lastSnapAt = timeMs;
   const light = { best, tut: tutSeen ? 1 : 0, mute: muted ? 1 : 0 };
   // game snapshot: chỉ lưu khi đang chơi và táp có ít nhất 2 tầng (khác miếng gốc)
+  /* PHẢI lưu cả `score`: từ 2026-07-28 điểm là bộ tích luỹ (có thưởng Perfect/
+     vàng/né mốc) nên KHÔNG suy lại được từ tower.length như trước. */
   const snap = (state === 'playing' && tower.length > 1)
-    ? { tower: tower.map(({ cx, kind, w, seed }) => ({ cx, kind, w, seed })), combo }
+    ? { tower: tower.map(({ cx, kind, w, seed }) => ({ cx, kind, w, seed })), combo, score }
     : null;
   saveLocal({ ...light, game: snap });
 }
 
-/* Điểm = SỐ PHÔ MAI trong tháp (kể cả miếng gốc). Gọi sau mỗi lần tháp
-   thay đổi (đáp thêm / sập tầng). */
-function syncScore() {
-  score = tower.length;
+/* ĐIỂM = BỘ TÍCH LUỸ (QA 2026-07-28 — trước đây `score = tower.length`, tức là
+   giá trị DẪN XUẤT nên về nguyên tắc không cộng thưởng được):
+     • mỗi phô mai xếp được   +1
+     • Perfect                +5, chuỗi liên tiếp CỘNG DỒN: +5 / +10 / +15 / …
+     • đáp trúng miếng VÀNG   +3
+     • né được miếng MỐC      +3
+     • sập tháp               −đúng số tầng mất (không âm)
+   Vì không còn suy ra được từ tháp nên điểm PHẢI được lưu trong snapshot ván dở. */
+function addScore(n) {
+  score = Math.max(0, score + n);
   updateScoreHud();
   if (score > best) {                 // best đổi → persist NGAY (game-common §1.2)
     best = score;
     persistSaved();
   }
+}
+/* Đặt thẳng điểm (vào ván mới / khôi phục ván dở / xong tutorial) */
+function setScore(n) {
+  score = Math.max(0, Math.floor(+n) || 0);
+  updateScoreHud();
+  if (score > best) { best = score; persistSaved(); }
 }
 
 /* Miếng phô mai dừng lại & thành tầng mới (hamster đáp lên nó) */
@@ -2629,8 +2648,18 @@ function pinSlider(s) {
     tutorial.landed += 1;
   } else {
     if (perfect) combo += 1; else combo = 0;
-    syncScore();                        // điểm = số phô mai (tháp vừa cao thêm 1)
+    /* +1 mỗi phô mai · Perfect thứ n LIÊN TIẾP thưởng +5×n · vàng thêm +3 */
+    let gain = CHEESE_PTS;
+    if (perfect) gain += PERFECT_PTS * combo;
+    if (s.kind === 'gold') gain += GOLD_PTS;
+    addScore(gain);
     updateStreakHud();
+    if (s.kind === 'gold') {
+      floatTexts.push({
+        x: s.cx, y: surfaceY() - 68, born: timeMs, life: 760, rise: 34,
+        text: '+' + GOLD_PTS, color: BLOCK_SKINS.gold.body, size: 24,
+      });
+    }
     if (s.kind === 'spring') {
       springArmed = true;              // cú nhảy KẾ TIẾP cao & lâu hơn
       sArm();
@@ -2651,9 +2680,13 @@ function pinSlider(s) {
   if (perfect) {
     sPerfect(Math.max(1, combo));      // tutorial: combo = 0 → nốt đầu thang
     rings.push({ x: s.cx, y: surfaceY(), born: timeMs });
+    /* hiện luôn SỐ ĐIỂM vừa được để người chơi thấy chuỗi đang cộng dồn
+       ("Perfect! +5" → "Perfect! ×2 +10" → …). Tutorial combo = 0 → không hiện. */
+    const pts = tutorial ? 0 : PERFECT_PTS * combo;
     floatTexts.push({
       x: s.cx, y: surfaceY() - 46, born: timeMs,
-      text: combo >= 2 ? t('perfect') + ' ×' + combo : t('perfect'), color: '#fff',
+      text: t('perfect') + (combo >= 2 ? ' ×' + combo : '') + (pts ? ' +' + pts : ''),
+      color: '#fff',
     });
     ham.state = 'idle';
   } else {
@@ -2753,7 +2786,7 @@ function collapseTower(n, dir, label) {
     });
   }
 
-  syncScore();                         // tháp vừa mất tầng → điểm giảm theo
+  addScore(-drop);                     // tháp vừa mất tầng → trừ đúng số tầng mất
   combo = 0;
   updateStreakHud();
   floatTexts.push({
@@ -2792,7 +2825,7 @@ function endRun() {
   runsEnded += 1;
   persistSaved();                      // chốt best cuối ván
 
-  const isNew = score > bestStart;     // best đã persist live trong syncScore
+  const isNew = score > bestStart;     // best đã persist live trong addScore/setScore
   elOvTitle.textContent = isNew ? t('newBest') : t('gameOver');
   elOvScore.textContent = String(score);
   elOvBest.textContent = String(best);
@@ -2845,7 +2878,7 @@ function resetWorld() {
   springArmed = false;
   camOff = camTargetOff();
   camX = camTargetX();
-  syncScore();                         // điểm = số phô mai hiện có (miếng gốc = 1)
+  setScore(tower.length);              // ván mới: chỉ có miếng gốc = 1 điểm
   updateBestHud();
   updateStreakHud();
 }
@@ -2916,7 +2949,7 @@ function tutorialFinish() {
   tutorial = null;
   setTutHint(null);
   combo = 0; updateStreakHud();
-  syncScore();                          // điểm = số phô mai đang có (giữ nguyên tháp)
+  setScore(tower.length);               // tutorial không tính thưởng — điểm = số phô mai đang có
   scheduleCycle();
 }
 
@@ -3023,11 +3056,13 @@ function update(dt) {
       if (s.board && !s.board.retractT0) s.board.retractT0 = timeMs;
       if (s.dead) continue;            // miếng thừa của double trouble — vô hại
       if (s.kind === 'mold') {
-        /* NÉ ĐƯỢC phô mai mốc → an toàn, chơi tiếp (không cộng điểm: điểm
-           chỉ đếm số phô mai xếp được) */
+        /* NÉ ĐƯỢC phô mai mốc → an toàn, chơi tiếp và ĐƯỢC THƯỞNG +3
+           (QA 2026-07-28: đứng yên cho nó qua cũng là một kỹ năng) */
         sDodge();
+        if (!tutorial) addScore(DODGE_PTS);
         floatTexts.push({
-          x: topCx(), y: surfaceY() - 40, born: timeMs, text: '✓', color: '#bede76', size: 26,
+          x: topCx(), y: surfaceY() - 40, born: timeMs,
+          text: tutorial ? '✓' : '✓ +' + DODGE_PTS, color: '#bede76', size: 26,
         });
         if (!sliders.some(x => !x.dead)) scheduleCycle();
       } else if (!sliders.some(x => !x.dead)) {
@@ -3330,7 +3365,9 @@ function tryRestoreTower(g) {
     combo = Number.isFinite(+g.combo) ? Math.floor(+g.combo) : 0;
     ham.x = topCx();
     ham.state = 'idle';
-    syncScore();         // score = tower.length
+    /* điểm lấy từ snapshot; snapshot cũ (trước khi có thưởng) không có `score`
+       → lùi về số phô mai như luật cũ, không mất ván dở của người chơi */
+    setScore(Number.isFinite(+g.score) ? +g.score : tower.length);
     updateStreakHud();
     state = 'playing';
     scheduleCycle();
