@@ -97,6 +97,46 @@ Sau khi sửa, **mọi** bước ngang còn lại đều quy được về cơ c
 lúc bật nhảy là **lực bật của cú nhảy, cố ý giữ** (đứng yên → bật lên phải dứt
 khoát); đó cũng là lý do nó không đọc thành lỗi.
 
+#### Siết 2 cơ chế "dễ dãi" + luật sinh miếng (QA 2026-07-28 đợt 2)
+
+**1. Vùng đáp — hết cảnh "teleport lên mép".** Cũ chỉ cần `h ≤ BLOCK_H` là ghim,
+mà `h` chạy từ 92 xuống 0 → chân có thể đã tụt sâu **cạnh bên** miếng (h=30 ⇒
+thấp hơn mặt miếng 62px) rồi mới ghim, ghim xong hamster bị đặt lên **mặt**
+miếng ⇒ **nhảy vọt 62px trong 1 frame**. Thêm 2 chốt:
+
+- `LAND_SNAP_MAX = 22` — chân tụt quá 22px dưới mặt miếng thì không còn tính là
+  "đáp lên". (1 frame @30Hz tụt tối đa ~18px nên vẫn đủ chỗ ở mọi tần số quét.)
+- `LAND_EDGE_INSET = 12` — tâm hamster phải vào **trong** mép miếng ≥12px, không
+  được đứng đúng cạnh (cũ `< w/2` cho phép tâm nằm ngay mép).
+
+Đáp sát mép (còn trong vùng hợp lệ) → nhá chữ nhỏ **"Close one!"** cạnh hamster.
+
+**2. Chồng tháp — hết cảnh mép-chồng-mép.** Hai tầng phải **ăn nhau ≥ 34% bề
+rộng miếng hẹp hơn**; hụt thì **sập 3 tầng** (điểm giảm đúng 3) kèm chữ
+`Slipped! -3`. `Math.min(3, tower.length - 1)` luôn chừa tầng gốc nên **tháp thấp
+hơn 3 tự về đúng tầng 1**, không cần xử lý riêng. `missPenalty` (sập 5) nay dùng
+chung hàm `collapseTower()` — trước là 2 bản logic sao chép, dễ lệch nhau.
+
+**3. Sau LÒ XO cấm VÀNG và MINI.** Cú nhảy kế đã cao & lâu hơn 35%; chồng thêm
+miếng chạy nhanh hoặc miếng hẹp là bắt canh 2 biến số lạ cùng lúc.
+
+**4. Miếng VÀNG hạ tốc ở tầng cao.** Tốc nền đã tự tăng theo tầng, nhân thêm
+`×1.25` cố định thì tầng cao thành gắt: trần cũ `MAX_SPEED×1.25 = 13.1px/frame`,
+vượt xa trần miếng thường 10.5. Nay hệ số **giảm dần 1.25 → 1.08 từ tầng 15 đến
+tầng 30** (`goldMul()`), trần cao nhất còn **11.34**.
+
+**5. Cue `Double cheese!`** đặt **chính giữa** (`spawnCue(0, …)`) vì 2 miếng vào
+từ **cả hai phía**, không có "một bên" để chỉ vào. Cả 3 cue nay hiện **1000ms**.
+
+**Verify.** Bot chơi với độ lệch nhịp ±0/±3/±6/±9 frame: **0 lỗi JS**, bước dọc
+lúc đáp **≤7.2px/frame** ở mọi mức (hết teleport), `Close one!` bắn 3× ở ±3f,
+`Double cheese!` bắn 3×, **0 miếng vàng/mini nào ra ngay sau lò xo**, vàng ở
+tầng ≥15 đo được tb 9.9–11.1 / max 11.2 (trần cũ 13.1). Nhánh chồng hụt bot
+không tự chạm tới (đáp quá gần tâm) nên **test tay 3 ca**: lệch 40px → không
+phạt (tháp 10→11); lệch 100px → sập đúng 3 (10→8, `Slipped! -3`, 3 miếng rơi,
+**state vẫn `playing`** — không phải thua); tháp 2 tầng chồng hụt → **về đúng
+tầng 1**.
+
 #### Độc lập TẦN SỐ QUÉT — đo lại sau khi đổi camera (2026-07-28)
 
 Chạy bot với đồng hồ tổng hợp bước `1000/hz` ms mỗi frame, cùng 25 tầng:
@@ -166,12 +206,12 @@ vẫn **`onScreen=false`** — cue hiện trước thật. 0 lỗi JS.
 
 | Loại | Mở từ tầng | Hiệu ứng |
 |---|---|---|
-| ✨ Vàng | 5 | Chạy **nhanh ×1.25** — thử phản xạ (không thưởng riêng). **Báo trước:** nhá chữ **"Quick!"** (vàng, nghiêng trái 15°, 820ms) ngay tại mép mà nó sắp trôi vào, **trước khi thấy miếng** |
+| ✨ Vàng | 5 | Chạy nhanh hơn — hệ số **×1.25 ở tầng thấp, giảm dần về ×1.08 từ tầng 15→30** (tầng cao tốc nền đã nhanh sẵn). **Báo trước:** nhá chữ **"Quick!"** (vàng, nghiêng trái 15°, 1000ms) ngay tại mép nó sắp trôi vào. **Không ra ngay sau lò xo** |
 | 🪀 Lò xo | 6 | Cú nhảy **kế tiếp** cao & lâu hơn 35% (báo bằng ▲) |
-| 🐭 Mini | 8 | Miếng **hẹp ~60%** — khó canh đáp hơn |
+| 🐭 Mini | 8 | Miếng **hẹp ~60%** — khó canh đáp hơn. **Không ra ngay sau lò xo** |
 | 🧊 Băng | 12 | Đáp xong **trượt mạnh theo đà** (ma sát nhỏ) — dễ tuột tới mép, loạng choạng |
-| 🦠 Mốc | 15 | Bay ở **làn cao** — đứng yên cho nó qua (an toàn), nhảy trúng = thua. **Báo trước:** nhá **"Watch out!"** (xanh mốc, nghiêng trái 15°, 820ms) **BÊN DƯỚI** làn nó sắp bay vào |
-| 👯 Double | 25 | ~9% round: 2 miếng từ 2 phía so le — đáp 1, miếng kia tự rơi |
+| 🦠 Mốc | 15 | Bay ở **làn cao** — đứng yên cho nó qua (an toàn), nhảy trúng = thua. **Báo trước:** nhá **"Watch out!"** (xanh mốc, nghiêng trái 15°, 1000ms) **BÊN DƯỚI** làn nó sắp bay vào |
+| 👯 Double | 25 | ~9% round: 2 miếng từ 2 phía so le — đáp 1, miếng kia tự rơi. **Báo trước:** **"Double cheese!"** đặt **chính giữa** (vào từ cả 2 phía), 1000ms |
 
 ## Điểm
 

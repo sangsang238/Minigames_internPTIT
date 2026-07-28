@@ -1089,7 +1089,13 @@ const MAX_SPEED = 10.5;     // trần tốc độ — khó nhưng không thành 
 const SPEED_JITTER = 0.16;
 const SPEED_JIT_MIN = 0.92; // hệ số nhỏ nhất của jitter (min + rand×JITTER)
 const PERFECT_EPS = 7;      // lệch ≤ 7px → Perfect (nới theo tốc độ lúc xét)
-const STUMBLE_EDGE = 30;    // đáp cách mép miếng < 30px → loạng choạng
+const STUMBLE_EDGE = 30;    // đáp cách mép miếng < 30px → loạng choạng + "Close one!"
+/* Siết ĐỘ RỘNG VÙNG ĐÁP (QA 2026-07-28) — xem chi tiết ở chỗ ghim trong update() */
+const LAND_EDGE_INSET = 12; // tâm hamster phải vào trong mép miếng ≥ 12px mới ăn
+const LAND_SNAP_MAX = 22;   // chân tụt quá 22px dưới mặt miếng thì KHÔNG còn là "đáp lên"
+/* Chồng tháp phải ĂN NHAU đủ nhiều, không thì mép-chồng-mép trông rất vô lý */
+const MIN_STACK_FRAC = 0.34;  // × bề rộng miếng HẸP hơn trong 2 tầng
+const BAD_STACK_DROP = 3;     // chồng hụt → sập 3 tầng (điểm giảm đúng 3)
 const STUMBLE_MS = 1000;    // thời gian loạng choạng (nghiêng người 1s)
 const MAX_OVERSHOOT = 0.45; // giới hạn kẹp vị trí miếng khi xô ngã hamster
 const BOUNCE_MS = 240;      // nhún của miếng phô mai khi hamster đáp xuống
@@ -1110,10 +1116,23 @@ const FLOAT_MS = 800;       // đời mặc định của chữ nổi (mỗi ch�
 
 /* Miếng phô mai đặc biệt */
 const MINI_W = 80;          // mini: bề rộng ~60% — miếng hẹp, khó canh đáp hơn
-const GOLD_SPEED = 1.25;    // vàng: chạy nhanh hơn (không quá gắt) — thử phản xạ
+/* Miếng VÀNG chạy nhanh hơn — nhưng hệ số phải HẠ DẦN theo độ cao (QA
+   2026-07-28: "tầng cao vàng nhanh quá"). Lý do: tốc NỀN đã tự tăng theo tầng
+   (SPEED_INC), nhân thêm 1.25 cố định thì ở tầng cao thành gắt gấp đôi —
+   trần cũ là MAX_SPEED×1.25 = 13.1px/frame, vượt xa trần miếng thường 10.5. */
+const GOLD_SPEED = 1.25;      // ×1.25 ở tầng thấp — vẫn thử phản xạ
+const GOLD_SPEED_HI = 1.08;   // ×1.08 từ tầng 30 — nhanh hơn chút, không gắt
+const GOLD_TAPER_FROM = 15;   // bắt đầu hạ đúng quãng QA thấy nhanh quá
+const GOLD_TAPER_TO = 30;
+function goldMul(level) {
+  if (level <= GOLD_TAPER_FROM) return GOLD_SPEED;
+  if (level >= GOLD_TAPER_TO) return GOLD_SPEED_HI;
+  const q = (level - GOLD_TAPER_FROM) / (GOLD_TAPER_TO - GOLD_TAPER_FROM);
+  return GOLD_SPEED + (GOLD_SPEED_HI - GOLD_SPEED) * q;
+}
 /* Nhá cảnh báo TRƯỚC khi miếng "khó" (vàng chạy nhanh / mốc không được nhảy)
    lọt vào khung — người chơi kịp đổi nhịp thay vì bị úp sọt. */
-const CUE_MS = 820;         // hiện xuyên qua lúc miếng vào khung rồi mới tắt
+const CUE_MS = 1000;        // hiện xuyên qua lúc miếng vào khung rồi mới tắt
 const CUE_TILT = -15 * Math.PI / 180;   // nghiêng TRÁI 15° (canvas: âm = ngược kim đồng hồ)
 const CUE_INSET = 80;       // ghim tối thiểu vào trong mép, bên miếng sắp trôi ra
 const CUE_SIZE = 30;
@@ -2195,9 +2214,14 @@ function render() {
 function pickKind() {
   const n = tower.length;
   const pool = [['normal', 62]];
-  if (n >= 5) pool.push(['gold', 7]);
+  /* NGAY SAU LÒ XO thì cấm VÀNG và MINI (QA 2026-07-28): cú nhảy kế đã cao &
+     lâu hơn 35%, chồng thêm miếng chạy nhanh (vàng) hay miếng hẹp (mini) là bắt
+     canh 2 biến số lạ cùng lúc — hụt gần như chắc chắn, không phải do dở.
+     `springArmed` bật đúng 1 lượt (tiêu ngay ở cú nhảy kế) nên chỉ chặn 1 miếng. */
+  const afterSpring = springArmed;
+  if (n >= 5 && !afterSpring) pool.push(['gold', 7]);
   if (n >= 6) pool.push(['spring', 7]);
-  if (n >= 8) pool.push(['mini', 8]);
+  if (n >= 8 && !afterSpring) pool.push(['mini', 8]);
   if (n >= 12) pool.push(['ice', 8]);
   if (n >= 15) pool.push(['mold', 8]);
   let total = 0;
@@ -2230,7 +2254,7 @@ function spawnOne(dir, kind, extraDelay) {
     extendT0: timeMs,
     retractT0: 0,
   });
-  const spdMul = kind === 'gold' ? GOLD_SPEED : 1;
+  const spdMul = kind === 'gold' ? goldMul(tower.length) : 1;
   const board = boards[boards.length - 1];   // ván của chính miếng này
   sliders.push({
     board,
@@ -2269,8 +2293,11 @@ function spawnCue(dir, text, color, dyW) {
   const halfW = ctx.measureText(text).width / 2;
   ctx.restore();
   const inset = Math.max(CUE_INSET, halfW + 14);
+  /* dir = 0 → đặt CHÍNH GIỮA: dùng cho double cheese (vào từ CẢ HAI phía nên
+     không có "một bên" để chỉ vào). */
+  const x = dir === 0 ? topCx() : topCx() - dir * (LW * 0.5 - inset);
   floatTexts.push({
-    x: topCx() - dir * (LW * 0.5 - inset),   // -dir = phía miếng đi vào
+    x: x,                                    // -dir = phía miếng đi vào
     y: surfaceY() + dyW,
     born: timeMs,
     life: CUE_MS,
@@ -2293,6 +2320,8 @@ function scheduleCycle() {
   const springDelay = springArmed ? 320 : 0;
   /* double trouble: 2 miếng thường vào từ 2 phía so le, chỉ đáp được 1 */
   if (kind === 'normal' && tower.length >= DOUBLE_FROM && rand01() < 0.09) {
+    /* 2 miếng vào từ 2 phía → cue đặt CHÍNH GIỮA (dir 0), không nghiêng về bên nào */
+    spawnCue(0, 'Double cheese!', BLOCK_SKINS.normal.body, -BLOCK_H - 26);
     spawnOne(dir, 'normal', springDelay);
     spawnOne(-dir, 'normal', springDelay + 380 + rand01() * 240);
   } else {
@@ -2361,6 +2390,12 @@ function pinSlider(s) {
   if (tutorial) s.cx = topCx();        // tutorial: canh đúng tâm → LUÔN Perfect
   const prevTop = topCx();
   const offset = s.cx - prevTop;
+  /* CHỒNG HỤT (QA 2026-07-28): trước đây miếng mới chỉ cần chạm mép miếng dưới
+     là đứng được → cảnh mép-trái-chồng-mép-phải, nhìn rất vô lý. Nay bắt buộc
+     2 tầng phải ĂN NHAU ≥ MIN_STACK_FRAC bề rộng miếng hẹp hơn. */
+  const prevW = (tower[tower.length - 1].w) || BLOCK_W;
+  const overlap = (s.w + prevW) / 2 - Math.abs(offset);
+  const badStack = !tutorial && overlap < MIN_STACK_FRAC * Math.min(s.w, prevW);
   tower.push({ cx: s.cx, kind: s.kind, w: s.w, seed: s.seed, vFrom: visFrom, vT0: timeMs });
   /* miếng còn lại của round (double trouble) → "chết": trượt nốt rồi rơi, vô hại */
   for (const o of sliders) {
@@ -2419,10 +2454,17 @@ function pinSlider(s) {
       ham.t0 = timeMs;
       ham.stumbleDir = hamRel > 0 ? -1 : 1;
       sStumble();
+      /* đáp sát mép → khen "hú vía" ngay cạnh hamster (chữ nhỏ, không che tháp) */
+      floatTexts.push({
+        x: ham.x + (hamRel > 0 ? 40 : -40), y: surfaceY() - 34,
+        born: timeMs, life: 760, rise: 30,
+        text: 'Close one!', color: '#ffd24d', size: 20,
+      });
     } else {
       ham.state = 'idle';
     }
   }
+  if (badStack) { badStackPenalty(); return; }   // chồng hụt → sập tháp, KHÔNG đi tiếp
   scheduleCycle();
   if (!tutorial) persistSaved();   // lưu táp sau mỗi miếng đáp thành công
 }
@@ -2474,21 +2516,18 @@ function failRun(s, dir, fromY) {
   endRun();
 }
 
-/* Nhảy vọt qua miếng phô mai (không đáp được) → KHÔNG thua: miếng văng đi
-   kéo SẬP 5 tầng trên cùng của tháp (trừ 5 điểm), hamster rơi tự do xuống
-   đáp lên tầng thứ 6 (luôn chừa tầng gốc trên đĩa) */
-function missPenalty(dir) {
-  if (tutorial) { tutorialRetry(null); return; }   // tutorial: không phạt, thử lại
+/* CHỒNG HỤT → sập BAD_STACK_DROP tầng (KHÔNG thua). Dùng chung bộ máy sập của
+   missPenalty; tách hàm riêng để số tầng & lời thoại khác nhau.
+   `Math.min(drop, tower.length - 1)` luôn chừa tầng gốc ⇒ tháp thấp hơn 3 thì
+   tự về đúng tầng 1, không cần xử lý riêng. */
+function collapseTower(n, dir, label) {
   sCrash();
-  /* vị trí chân hiện tại (đang bay thì giữa trời) làm điểm bắt đầu rơi */
   let fromY = surfaceY();
   if (ham.state === 'jump') {
     const p = Math.min(1, (timeMs - ham.t0) / (ham.jumpDur || JUMP_DUR));
     fromY = surfaceY() - (ham.jumpH || JUMP_H) * Math.sin(p * Math.PI);
   }
-
-  /* 5 tầng trên cùng đổ nhào theo miếng văng đi */
-  const drop = Math.min(5, tower.length - 1);
+  const drop = Math.min(n, tower.length - 1);
   for (let i = 0; i < drop; i++) {
     const b = tower.pop();
     fallBlocks.push({
@@ -2501,19 +2540,34 @@ function missPenalty(dir) {
       kind: b.kind || 'normal', w: b.w || BLOCK_W, seed: b.seed || 0,
     });
   }
-
   syncScore();                         // tháp vừa mất tầng → điểm giảm theo
   combo = 0;
   updateStreakHud();
   floatTexts.push({
-    x: topCx(), y: surfaceY() - BLOCK_H * 2, born: timeMs, text: '-' + drop, color: '#ff6b6b',
+    x: topCx(), y: surfaceY() - BLOCK_H * 2, born: timeMs,
+    text: label || ('-' + drop), color: '#ff6b6b',
   });
-
-  /* hamster rơi tự do, vừa rơi vừa trôi về chỗ đứng được trên tầng mới */
   ham.state = 'drop';
   ham.drop = { y: fromY, vy: 0 };
   ham.slideVx = 0;
   scheduleCycle();
+}
+
+/* Miếng mới chồng hụt lên tầng dưới (ăn nhau quá ít) → sập 3 tầng */
+function badStackPenalty() {
+  const top = tower[tower.length - 1];
+  const below = tower[tower.length - 2];
+  /* đổ về phía miếng bị thò ra ngoài */
+  const dir = below && top.cx < below.cx ? -1 : 1;
+  collapseTower(BAD_STACK_DROP, dir, 'Slipped! -' + BAD_STACK_DROP);
+}
+
+/* Nhảy vọt qua miếng phô mai (không đáp được) → KHÔNG thua: miếng văng đi
+   kéo SẬP 5 tầng trên cùng của tháp (trừ 5 điểm), hamster rơi tự do xuống
+   đáp lên tầng thứ 6 (luôn chừa tầng gốc trên đĩa) */
+function missPenalty(dir) {
+  if (tutorial) { tutorialRetry(null); return; }   // tutorial: không phạt, thử lại
+  collapseTower(5, dir);                           // dùng chung bộ máy sập
 }
 
 function endRun() {
@@ -2793,16 +2847,26 @@ function update(dt) {
         for (const s of sliders) {
           if (s.dead || s.kind === 'mold' || timeMs < s.slideAt) continue;
           if (h > BLOCK_H) continue;
+          /* CHẶN "TELEPORT" (QA 2026-07-28): cũ chỉ cần h ≤ BLOCK_H là ghim, mà
+             h chạy từ BLOCK_H xuống 0 → chân có thể đã tụt SÂU cạnh bên miếng
+             (h=30 ⇒ thấp hơn mặt miếng 62px) rồi mới ghim, và ghim xong hamster
+             bị đặt lên MẶT miếng ⇒ nhảy vọt 62px trong 1 frame.
+             Nay chỉ nhận khi chân còn SÁT mặt miếng. Lấy mẫu 1 frame @30Hz tụt
+             tối đa ~18px nên 22px vẫn đủ chỗ cho mọi tần số quét. */
+          if (BLOCK_H - h > LAND_SNAP_MAX) continue;
+          /* THU HẸP VÙNG ĐÁP: phải đáp HẲN vào trong mặt miếng, không được đứng
+             đúng mép (cũ `< w/2` cho phép tâm hamster nằm ngay cạnh bên). */
+          const halfIn = s.w / 2 - LAND_EDGE_INSET;
           const cxAt = s.speed > 0
             ? s.cx - s.dir * s.speed * (overMs / 16.667)
             : s.cx;
-          if (Math.abs(ham.x - cxAt) < s.w / 2) {
+          if (Math.abs(ham.x - cxAt) <= halfIn) {
             s.visCx = s.cx;            // vị trí ĐANG VẼ — để settle mượt, không snap lùi
             s.cx = cxAt;
             pinSlider(s);              // đáp lên miếng mới → thành tầng
             break;
           }
-          if (Math.abs(ham.x - s.cx) < s.w / 2) {
+          if (Math.abs(ham.x - s.cx) <= halfIn) {
             pinSlider(s);              // dự phòng: chồng lấn ở khung hiện tại
             break;
           }
