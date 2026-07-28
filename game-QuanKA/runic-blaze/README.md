@@ -96,9 +96,33 @@ Combo 2 special (Prism+Prism xoá board, Prism+Blaze/Nova biến-cả-màu, Blaz
 - **Best (kỷ lục) chạy LIVE** ở header, persist ngay khi vượt; ván sau vẫn nhớ
 - **Game Over popup game tự vẽ** (popup-common §1.1): "Game Over" / "New Record!", SCORE · BEST (vàng), **Play Again**
 
-### Onboarding (Tutorial chuẩn — 1 scene, KHÔNG chuyển cảnh)
-- **KHÔNG có menu chính.** Lần chơi đầu: **carousel 3 thẻ demo** (Ghép Rune → Rèn Đặc Biệt → Hắc Ấn) **phủ lên chính board thật** (board đã dựng sẵn phía sau, không đổi cảnh); Skip / Next / dots
-- Các lần sau → vào thẳng ván. Idle 5s → gợi ý; hết nước đi → tự xáo rune thường (special/Hắc Ấn giữ chỗ)
+### Tutorial — HƯỚNG DẪN TRỰC TIẾP TRONG MÀN (1 scene, KHÔNG chuyển cảnh)
+
+> 🔧 Đổi theo QA 2026-07-28: *"tutorial thay text bằng hướng dẫn trực tiếp trong
+> màn chơi thì hay hơn"*. Cũ là **carousel 3 thẻ text phủ lên board** — người
+> chơi chỉ bấm Next, đọc xong vẫn không biết phải làm gì.
+
+- **KHÔNG có menu chính.** Lần chơi đầu, game **dựng sẵn thế cờ trên CHÍNH bàn
+  thật** rồi bắt người chơi **tự đi** nước được dạy — học bằng tay, không bằng chữ:
+  1. **Match Runes** — thế X X ? , dưới ? là X → đổi 2 ô để thành **3 hàng ngang**.
+  2. **Forge Specials** — thế X X ? X → đổi 2 ô để thành **4 hàng ngang → rèn Blaze**.
+  3. **Cursed Runes** — thêm 1 **Hắc Ấn ngay KỀ** hàng sắp nổ → nổ là **phá được nó**.
+- **2 ô cần chạm** viền vàng dày + nhịp thở; **các ô sẽ ghép cùng** (và Hắc Ấn ở
+  bước 3) giữ **sáng nguyên** để thấy rõ *vì sao* nước đó ăn; **mọi ô còn lại mờ
+  40%**. Chạm/đổi sai chỗ → **không ăn thua gì**, chỉ lắc 2 ô đúng để nhắc.
+- **Không thể thua khi đang học**: bỏ qua đếm ngược Hắc Ấn / sinh thêm / event.
+- Thanh hướng dẫn nằm **giữa header và bàn** (không che bàn — cả bài học nằm trên
+  bàn); hụt chỗ thì rơi xuống sát đáy. Có **Skip**.
+- **Chữ dùng nguyên bộ khoá `ob1T…ob3D` đã dịch đủ 23 locale** — chỉ đổi CHỖ hiện,
+  **không phát sinh dịch mới**, vẫn đúng quy ước "chỉ tutorial được localize".
+- Các lần sau → vào thẳng ván. Idle 5s → gợi ý; hết nước đi → tự xáo rune thường
+  (special/Hắc Ấn giữ chỗ)
+
+**Đã verify bằng bot headless** (chạy trọn 3 bước): mỗi bước tô đúng **2 ô**, có
+làm mờ nền; **đi sai → bàn KHÔNG đổi** (chặn OK) ở cả 3 bước; đi đúng → sang bước
+kế. Đối chiếu đúng bài học: **B1 (match-3) rèn 0 special**, **B2 (match-4) rèn 2
+special**, **B3 phá Hắc Ấn 1 → 0**. Kết thúc: `ended=false` (không thể thua),
+`tutorialSeen=true`, thanh ẩn, hết ô tô sáng, ván thường vẫn còn nước đi. 0 lỗi JS.
 
 ### UI trong trận (khung header chuẩn — mô phỏng skydom)
 - **Header:** `Back` (trái) · `SCORE` · `BEST` (vàng) · `Volume` (phải). Chỉ header + board, **không sub-strip** (số đếm ngược nằm ngay trên ô Hắc Ấn)
@@ -127,7 +151,7 @@ Combo 2 special (Prism+Prism xoá board, Prism+Blaze/Nova biến-cả-màu, Blaz
 - ✅ **game-common.md** — **game điểm-cao (§1.1):** `game_result` `result:null, showModal:false`, game **tự vẽ popup**; **Play Again → `retry_level`**; `ads` mỗi 3 lần thua; `level` luôn `null`; Back = `quit`; `statusBarHeight`; `onAppPause` (lưu best + pause) / `onRetryLevel` (ván mới) / `onNextLevel` (no-op). **Không dùng `victory`/`next_level`**
 - ✅ **popup-common.md** — game không-level tự vẽ popup kết quả (SCORE/BEST/Play Again), auto-fit cỡ số nhiều chữ số
 - ✅ **zip-common.md** — single-file, `game.json` đủ field, 3 ảnh cover đúng tên/kích thước
-- ✅ **i18n** — inline `I18N`, **chỉ ONBOARDING/tutorial dịch đủ 23 ngôn ngữ** (khoá `ob1T…ob3D`, `next`, `skip`, `play` — đã dịch nốt 21 locale còn thiếu); mọi text UI khác (SCORE/BEST/popup/toast events…) dùng tiếng Anh qua fallback `en` — theo QA 2026-07-22 "localize thừa", deviation chủ đích so với game-common §5
+- ✅ **i18n** — inline `I18N`, **chỉ tutorial dịch đủ 23 ngôn ngữ** (khoá `ob1T…ob3D`, `skip`); mọi text UI khác (SCORE/BEST/popup/toast events…) dùng tiếng Anh qua fallback `en` — theo QA 2026-07-22 "localize thừa", deviation chủ đích so với game-common §5. Tutorial mới (2026-07-28) **tái dùng nguyên bộ khoá cũ**, không phát sinh bản dịch mới
 
 ---
 

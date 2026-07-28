@@ -9,7 +9,7 @@
   EVENTS: Arcane Surge (mốc 5k → tặng 1 Prism) · Blaze Storm (mốc 12k → biến vài ô thành Blaze rồi nổ dây chuyền).
   Specials: Match-4 → Blaze (nổ hàng/cột) · L/T → Nova (3×3, nổ 2 lần) · Match-5 → Prism (đốt 1 màu) · swap 2 special → combo.
   Khung header + vòng điểm-cao (self-popup, best live, Play Again→retry_level) mô phỏng skydom (HaND);
-  thẩm mỹ + cơ chế Hắc Ấn/Events là của riêng runic-blaze. Onboarding carousel phủ lên board (1 scene, không chuyển cảnh).
+  thẩm mỹ + cơ chế Hắc Ấn/Events là của riêng runic-blaze. Tutorial dạy TRỰC TIẾP trên board thật (dựng sẵn thế cờ + chỉ nhận đúng nước được dạy), không còn carousel thẻ text.
   Engine: single rAF loop + tween engine dt-based (mượt 60/90/120/144Hz)
   Tuân thủ .claude/game-common.md (bridge §1.1 điểm-cao, i18n 23 ngôn ngữ), popup-common.md, zip-common.md.
 -->
@@ -376,6 +376,59 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 }
 #combo-badge.cascade-anim { animation: cascadePop 1.5s ease-out forwards; }
 
+/* ── Tutorial TRỰC TIẾP TRONG MÀN (QA 2026-07-28) ─────────────────
+   Thay 3 thẻ text phủ kín bàn bằng: 1 thanh hướng dẫn mỏng NGOÀI bàn + tô
+   sáng đúng 2 ô phải chạm trên CHÍNH bàn thật. Người chơi HỌC BẰNG TAY. */
+#tut-bar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 210;
+  width: min(94vw, 460px);
+  background: rgba(18,32,36,.94);
+  border: 2px solid rgba(255,255,255,.22);
+  border-radius: 16px;
+  padding: 10px 16px;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .25s;
+}
+#tut-bar.show { opacity: 1; }
+#tut-title { font-size: 16px; font-weight: 800; color: #ffd23f; }
+#tut-desc  { font-size: 13px; font-weight: 600; color: var(--text); margin-top: 3px; line-height: 1.35; }
+#tut-skip {
+  position: fixed;
+  z-index: 211;
+  right: 14px;
+  padding: 7px 14px;
+  border-radius: 12px;
+  background: rgba(18,32,36,.94);
+  border: 2px solid rgba(255,255,255,.22);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s;
+}
+#tut-skip.show { opacity: 1; pointer-events: auto; }
+/* 2 ô phải chạm — viền vàng dày + nhịp thở, KHÔNG thể nhầm với ô khác */
+@keyframes tutTargetPulse {
+  0%, 100% { transform: scale(1);    border-color: #ffd23f; }
+  50%      { transform: scale(1.07); border-color: #fff2b8; }
+}
+.tile.tut-target .tile-inner {
+  animation: tutTargetPulse .8s ease-in-out infinite;
+  border-color: #ffd23f !important;
+  border-width: 4px !important;
+}
+/* Làm mờ mọi ô không liên quan → mắt chỉ còn chỗ cần nhìn.
+   NHƯNG phải chừa cả những ô SẼ GHÉP CÙNG (.tut-show): nếu mờ luôn cả chúng thì
+   người chơi thấy 2 ô sáng mà không hiểu VÌ SAO đổi 2 ô đó lại ăn. */
+.board-tut .tile:not(.tut-target):not(.tut-show) .tile-inner { opacity: .4; }
+
 /* ── Toast (shuffle / thông báo) ───────────────────────────────── */
 #toast {
   position: fixed;
@@ -551,60 +604,7 @@ body.lang-ar, body.lang-ar * { letter-spacing: 0 !important; }
 .btn3d.ov-play .btn3d-surface { border: none; }
 .btn3d.ov-play:active .btn3d-surface { background: var(--surface-color); }
 
-/* ── Onboarding carousel (phủ lên board — 1 scene, không chuyển cảnh) ── */
-#onboard {
-  position: fixed;
-  inset: 0;
-  z-index: 250;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: rgba(6,16,18,.78);
-  opacity: 1;
-  transition: opacity .25s;
-}
-#onboard.hidden { opacity: 0; pointer-events: none; }
-.ob-card {
-  width: min(90%, 360px);
-  padding: 20px 22px 18px;
-  text-align: center;
-  border-radius: 22px;
-  background: #2f4a50;
-  border: 1.5px solid rgba(255,255,255,.16);
-  transform: scale(1);
-  transition: transform .25s;
-}
-#onboard.hidden .ob-card { transform: scale(.92); }
-.ob-illo {
-  height: 96px;
-  margin-bottom: 12px;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(255,255,255,.03);
-  border: 1px solid rgba(255,255,255,.07);
-  border-radius: 14px;
-}
-.ob-illo svg { width: 100%; height: 100%; display: block; }
-.ob-title {
-  font-size: 21px; font-weight: 800; letter-spacing: .5px;
-  color: #ffcf6b;
-  margin-bottom: 6px;
-}
-.ob-desc {
-  font-family: system-ui, sans-serif;
-  font-size: 13px; font-weight: 500; line-height: 1.5;
-  color: rgba(237,222,255,.82);
-  min-height: 58px;
-  margin-bottom: 10px;
-}
-.ob-dots { display: flex; justify-content: center; gap: 7px; margin-bottom: 14px; }
-.ob-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.22); transition: background .2s, transform .2s; }
-.ob-dot.on { background: #ffb02e; transform: scale(1.25); }
-.ob-nav { display: flex; gap: 12px; justify-content: center; }
-.btn3d.ob-skip-btn {
-  --surface-height: 46px; --surface-padding-x: 22px; --surface-font-size: 15px;
-  --surface-color: #33474d;
-}
+/* (CSS carousel onboarding đã xoá — tutorial nay dạy thẳng trên bàn, xem #tut-bar) */
 
 /* ── Pause veil ────────────────────────────────────────────────── */
 #pause-veil {
@@ -722,23 +722,10 @@ body.landscape #board-outer { padding: 4px; }
   </div>
 </div>
 
-<!-- Onboarding carousel (phủ lên board lần chơi đầu — 1 scene, không chuyển cảnh) -->
-<div id="onboard" class="hidden">
-  <div class="ob-card">
-    <div class="ob-illo" id="ob-illo"></div>
-    <div class="ob-title" id="ob-title"></div>
-    <div class="ob-desc" id="ob-desc"></div>
-    <div class="ob-dots" id="ob-dots"></div>
-    <div class="ob-nav">
-      <button class="btn3d ob-skip-btn" id="ob-skip" type="button">
-        <span class="btn3d-shadow"></span><span class="btn3d-surface" id="ob-skip-label">Skip</span>
-      </button>
-      <button class="btn3d ov-play" id="ob-next" type="button">
-        <span class="btn3d-shadow"></span><span class="btn3d-surface" id="ob-next-label">Next</span>
-      </button>
-    </div>
-  </div>
-</div>
+<!-- Tutorial trong màn: thanh hướng dẫn + nút Skip (QA 2026-07-28 — bỏ carousel
+     3 thẻ text; nay dạy bằng cách bắt người chơi TỰ ĐI nước được tô sáng) -->
+<div id="tut-bar"><div id="tut-title"></div><div id="tut-desc"></div></div>
+<div id="tut-skip" role="button" tabindex="0">Skip</div>
 
 <!-- Overlays -->
 <div id="result-banner"></div>
@@ -2603,7 +2590,10 @@ async function runCombo(ep, type, a, b) {
 }
 
 async function doSwap(r1, c1, r2, c2) {
-  if (busy || ended || paused || onboarding) return;
+  if (busy || ended || paused) return;
+  /* Tutorial: KHÔNG chặn input nữa (trước đây `onboarding` chặn sạch để carousel
+     phủ lên) — nay chỉ nhận ĐÚNG cặp đang được dạy; đi chỗ khác thì lắc 2 ô đúng. */
+  if (onboarding && !tutIsWanted(r1, c1, r2, c2)) { tutNudge(); return; }
   if (!inb(r1, c1) || !inb(r2, c2)) return;
   const a = board[r1][c1], b = board[r2][c2];
   if (!a || !b) return;
@@ -2650,6 +2640,9 @@ async function doSwap(r1, c1, r2, c2) {
     if (pendingRelayout) { pendingRelayout = false; layoutAllStatic(); }
 
     nColors = colorsFor(score);        // thêm màu thứ 6 khi điểm cao
+    /* Tutorial: bỏ qua đếm ngược / sinh thêm / event — KHÔNG THỂ THUA khi đang
+       học. (Hắc Ấn bước 3 vẫn bị phá thật vì nó nổ do match kề, không do tick.) */
+    if (onboarding) { await tutAdvance(ep); return; }
     const boom = tickCursed();         // đếm ngược hắc ấn còn lại
     if (boom) {                        // 1 hắc ấn về 0 → detonate → thua
       ended = true;
@@ -2692,7 +2685,7 @@ boardEl.addEventListener('pointerdown', e => {
   if (paused) return;
   idleMs = 0;
   clearHint();
-  if (busy || ended || onboarding || menuOpen || confirmOpen || howtoOpen) return;
+  if (busy || ended || menuOpen || confirmOpen || howtoOpen) return;
   const cell = hitCell(e.clientX, e.clientY);
   if (!cell) return;
   ptr = { x: e.clientX, y: e.clientY, r: cell.r, c: cell.c, live: true };
@@ -2716,13 +2709,18 @@ boardEl.addEventListener('pointerup', e => {
   const { r, c } = ptr;
   ptr = null;
   if (!wasLive) return;
-  if (busy || ended || onboarding || menuOpen || confirmOpen || howtoOpen || paused) return;
+  if (busy || ended || menuOpen || confirmOpen || howtoOpen || paused) return;
   handleTap(r, c);
 }, { passive: true });
 
 boardEl.addEventListener('pointercancel', () => { ptr = null; });
 
 function handleTap(r, c) {
+  /* Tutorial: chỉ 2 ô đang tô sáng mới chọn được — chạm chỗ khác chỉ nhắc lại */
+  if (onboarding && tutWant) {
+    const a = tutWant.a, b = tutWant.b;
+    if (!((a.r === r && a.c === c) || (b.r === r && b.c === c))) { tutNudge(); return; }
+  }
   if (!board[r][c]) { deselect(); return; }
   if (!selected) { select(r, c); return; }
   const { r: sr, c: sc } = selected;
@@ -2943,7 +2941,7 @@ function updateLabels() {
   $('ov-score-k').textContent = t('score');
   $('ov-best-k').textContent = t('best');
   $('ov-btn-label').textContent = t('playAgain');
-  $('ob-skip-label').textContent = t('skip');
+  $('tut-skip').textContent = t('skip');
   $('pause-txt').textContent = t('tapToResume');
   $('back-btn').setAttribute('aria-label', t('back'));
   $('sound-btn').setAttribute('aria-label', t('sound'));
@@ -3134,7 +3132,7 @@ function newRun() {
     await ensureMovable(ep);
     if (ep !== levelEpoch) return;
     busy = false;
-    if (!tutorialSeen) showOnboard();   // lần đầu: onboarding phủ lên board (1 scene, không chuyển)
+    if (!tutorialSeen) startTutorial();   // lần đầu: dạy ngay TRÊN bàn vừa dựng
   })();
 }
 
@@ -3192,69 +3190,184 @@ function tryRestoreRunState(g) {
 }
 
 /* ================================================================
- * §22. Onboarding — carousel demo phủ lên board (1 scene, KHÔNG chuyển cảnh)
+ * §22. Tutorial TRỰC TIẾP TRONG MÀN (thay carousel 3 thẻ text)
+ *
+ * QA 2026-07-28: "tutorial thay text bằng hướng dẫn trực tiếp trong màn chơi
+ * thì hay hơn". Cũ: 3 thẻ mô tả phủ kín bàn, người chơi chỉ bấm Next → đọc
+ * xong vẫn không biết phải làm gì. Nay: game DỰNG SẴN thế cờ trên CHÍNH bàn
+ * thật, tô sáng đúng 2 ô cần đổi, làm mờ phần còn lại, và CHỈ nhận đúng nước
+ * đó — học bằng tay, không bằng chữ.
+ *
+ * Chữ vẫn dùng nguyên bộ khoá ob1T…ob3D đã dịch đủ 23 locale — chỉ đổi CHỖ
+ * hiện (thanh mỏng ngoài bàn thay vì thẻ phủ kín) → KHÔNG phát sinh dịch mới,
+ * giữ đúng quy ước "chỉ tutorial được localize".
  * ================================================================ */
-let onboarding = false;
+let onboarding = false;      // giữ nguyên tên: nhiều guard input đang đọc cờ này
 const OB_STEPS = ['match', 'special', 'cursed'];
 let obStep = 0;
+let tutWant = null;          // {a:{r,c}, b:{r,c}} — cặp ô DUY NHẤT được phép đổi
 
-/* mini-tile: ô bo góc + glyph rune bên trong (glyph viewBox 100×100) */
-function obTile(x, y, inner, s) {
-  s = s || 54;
-  return `<g transform="translate(${x},${y})">`
-    + `<rect width="${s}" height="${s}" rx="10" fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.16)" stroke-width="1.5"/>`
-    + `<g transform="translate(${(s * 0.13).toFixed(1)},${(s * 0.13).toFixed(1)}) scale(${(s * 0.74 / 100).toFixed(3)})">${inner}</g>`
-    + `</g>`;
-}
-function obCheck(cx, cy) {
-  return `<circle cx="${cx}" cy="${cy}" r="12" fill="#35c26e" stroke="#fff" stroke-width="2.2"/>`
-    + `<polyline points="${cx - 6},${cy} ${cx - 2},${cy + 4} ${cx + 5},${cy - 5}" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
-}
-function obIllo(kind) {
-  if (kind === 'match') {
-    return `<svg viewBox="0 0 300 96" aria-hidden="true">`
-      + obTile(18, 20, runeGlyph(0)) + obTile(80, 20, runeGlyph(0)) + obTile(142, 20, runeGlyph(1))
-      + obTile(210, 20, runeGlyph(0))
-      + `<path d="M186 10 Q210 -4 234 10" fill="none" stroke="#ffb830" stroke-width="4" stroke-linecap="round"/>`
-      + `<path d="M228 2 L236 11 L225 13 Z" fill="#ffb830"/>` + obCheck(280, 47) + `</svg>`;
-  }
-  if (kind === 'special') {
-    return `<svg viewBox="0 0 300 96" aria-hidden="true">`
-      + obTile(30, 20, specialIcon(K_SH))
-      + obTile(123, 20, specialIcon(K_NOVA))
-      + obTile(216, 20, prismArt()) + `</svg>`;
-  }
-  // cursed: hắc ấn + 2 rune cùng màu kề nó → phá
-  return `<svg viewBox="0 0 300 96" aria-hidden="true">`
-    + obTile(74, 20, cursedArt(3)) + obTile(140, 20, runeGlyph(2)) + obTile(202, 20, runeGlyph(2))
-    + obCheck(168, 10) + `</svg>`;
+/* ── dựng thế cờ ─────────────────────────────────────── */
+function tutSet(r, c, color) {
+  const tl = board[r] && board[r][c];
+  if (tl) morphTile(tl, color, K_NORMAL);
 }
 
-function renderOb() {
-  const kind = OB_STEPS[obStep];
-  $('ob-illo').innerHTML = obIllo(kind);
-  $('ob-title').textContent = t('ob' + (obStep + 1) + 'T');
-  $('ob-desc').textContent = t('ob' + (obStep + 1) + 'D');
-  $('ob-dots').innerHTML = OB_STEPS.map((_, i) => `<span class="ob-dot${i === obStep ? ' on' : ''}"></span>`).join('');
-  const last = obStep === OB_STEPS.length - 1;
-  $('ob-next-label').textContent = last ? t('play') : t('next');
-  $('ob-skip').style.visibility = last ? 'hidden' : 'visible';
+/* Dựng thế xong phải VÁ xung quanh: ô NÀO NGOÀI thế cờ mà đang lỡ nằm trong
+   run ≥3 thì đổi màu — không thì bàn tự nổ trước khi người chơi kịp chạm. */
+function tutClearStrayRuns(locked) {
+  for (let pass = 0; pass < 80; pass++) {
+    let bad = null;
+    for (let r = 0; r < ROWS && !bad; r++) {
+      for (let c = 0; c < COLS && !bad; c++) {
+        if (locked.has(r + ',' + c)) continue;
+        const tl = board[r][c];
+        if (tl && tl.kind === K_NORMAL && liveRunAt(r, c)) bad = { r, c };
+      }
+    }
+    if (!bad) return true;
+    const tl = board[bad.r][bad.c];
+    for (let k = 1; k <= nColors; k++) {
+      morphTile(tl, (tl.color + k) % nColors, K_NORMAL);
+      if (!liveRunAt(bad.r, bad.c)) break;
+    }
+  }
+  return false;
 }
-function showOnboard() {
+
+/* Thế: hàng r = X X Y (len 4 thì X X Y X), ngay DƯỚI ô Y là X.
+   Đổi 2 ô cột c+2 → hàng r thành X X X (hoặc X X X X → rèn Blaze).
+   Trước khi đổi KHÔNG có match nào, nên bàn đứng yên chờ người chơi. */
+function tutPlantRow(r, c, len) {
+  const X = 0, Y = 2;                     // 2 màu tương phản rõ (đỏ / lục)
+  const locked = new Set();
+  const lock = (rr, cc) => locked.add(rr + ',' + cc);
+  tutSet(r, c, X);         lock(r, c);
+  tutSet(r, c + 1, X);     lock(r, c + 1);
+  tutSet(r, c + 2, Y);     lock(r, c + 2);
+  if (len >= 4) { tutSet(r, c + 3, X); lock(r, c + 3); }
+  tutSet(r + 1, c + 2, X); lock(r + 1, c + 2);
+  tutClearStrayRuns(locked);
+  /* show = các ô SẼ GHÉP CÙNG sau khi đổi — giữ sáng để thấy rõ nước ăn */
+  const show = [{ r, c }, { r, c: c + 1 }];
+  if (len >= 4) show.push({ r, c: c + 3 });
+  return { a: { r, c: c + 2 }, b: { r: r + 1, c: c + 2 }, show };
+}
+
+/* Bước 3: thêm 1 Hắc Ấn NẰM KỀ ô đầu của hàng sắp nổ → nổ xong là phá được,
+   đúng bài học "cho nổ CẠNH nó". Ngòi 5 để tutorial không thể thua. */
+function tutPlantCursed(r, c) {
+  const want = tutPlantRow(r, c, 3);
+  const tl = board[r + 1] && board[r + 1][c];
+  if (tl) {
+    tl.curse = 5;
+    morphTile(tl, tl.color, K_CURSED);
+    renderCursed(tl);
+    want.show.push({ r: r + 1, c });   // Hắc Ấn phải SÁNG — nó là nhân vật chính bước này
+  }
+  return want;
+}
+
+/* ── hiển thị ──────────────────────────────────────── */
+/* Thanh hướng dẫn nằm giữa header và bàn — KHÔNG che bàn (cả bài học nằm
+   trên bàn nên che là hỏng ý đồ). Hụt chỗ thì rơi xuống sát đáy màn hình. */
+function layoutTutBar() {
+  const bar = $('tut-bar'), skip = $('tut-skip');
+  const hd = $('topbar');
+  const headB = hd ? hd.getBoundingClientRect().bottom : 60;
+  const boardT = wrapEl.getBoundingClientRect().top;
+  const barH = bar.getBoundingClientRect().height || 56;
+  let top = headB + (boardT - headB - barH) / 2;
+  if (!(top > headB + 2) || top + barH > boardT - 2) {
+    top = Math.max(headB + 6, window.innerHeight - barH - 16);
+  }
+  bar.style.top = top + 'px';
+  skip.style.top = (headB + 6) + 'px';
+}
+
+function tutHighlight(want) {
+  clearTutHighlight();
+  tutWant = want;
+  boardEl.classList.add('board-tut');
+  [want.a, want.b].forEach(p => {
+    const tl = board[p.r] && board[p.r][p.c];
+    if (tl) tl.el.classList.add('tut-target');
+  });
+  (want.show || []).forEach(p => {
+    const tl = board[p.r] && board[p.r][p.c];
+    if (tl) tl.el.classList.add('tut-show');
+  });
+}
+
+function clearTutHighlight() {
+  boardEl.classList.remove('board-tut');
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const tl = board[r] && board[r][c];
+      if (tl) tl.el.classList.remove('tut-target', 'tut-show');
+    }
+  }
+  tutWant = null;
+}
+
+/* Chạm nhầm ô khác → không làm gì, chỉ lắc 2 ô đúng cho dễ thấy */
+function tutNudge() {
+  if (!tutWant) return;
+  [tutWant.a, tutWant.b].forEach(p => {
+    const tl = board[p.r] && board[p.r][p.c];
+    if (!tl) return;
+    tl.el.classList.add('shake');
+    setTimeout(() => tl.el.classList.remove('shake'), 280);
+  });
+}
+
+function tutIsWanted(r1, c1, r2, c2) {
+  if (!tutWant) return true;
+  const a = tutWant.a, b = tutWant.b;
+  return (a.r === r1 && a.c === c1 && b.r === r2 && b.c === c2)
+      || (a.r === r2 && a.c === c2 && b.r === r1 && b.c === c1);
+}
+
+function tutRunStep(step) {
+  obStep = step;
+  const kind = OB_STEPS[step];
+  const want = kind === 'match'   ? tutPlantRow(3, 1, 3)
+             : kind === 'special' ? tutPlantRow(3, 1, 4)
+             :                      tutPlantCursed(3, 1);
+  const n = step + 1;
+  $('tut-title').textContent = t('ob' + n + 'T');
+  $('tut-desc').textContent  = t('ob' + n + 'D');
+  $('tut-bar').classList.add('show');
+  $('tut-skip').classList.add('show');
+  $('tut-skip').textContent = t('skip');
+  layoutTutBar();
+  tutHighlight(want);
+}
+
+function startTutorial() {
   onboarding = true;
-  obStep = 0;
-  renderOb();
-  $('onboard').classList.remove('hidden');
+  tutorialMode = true;
+  tutRunStep(0);
 }
-function obNext() {
-  if (obStep < OB_STEPS.length - 1) { obStep++; renderOb(); }
-  else finishOnboard();
+
+/* Gọi sau khi người chơi đi ĐÚNG nước được dạy và bàn đã lắng. */
+async function tutAdvance(ep) {
+  if (!onboarding) return;
+  clearTutHighlight();
+  if (obStep >= OB_STEPS.length - 1) { finishTutorial(); return; }
+  await sleep(420);
+  if (ep !== levelEpoch || !onboarding) return;
+  tutRunStep(obStep + 1);
 }
-function finishOnboard() {
+
+function finishTutorial() {
+  clearTutHighlight();
   onboarding = false;
+  tutorialMode = false;
   tutorialSeen = true;
   persistBest();
-  $('onboard').classList.add('hidden');
+  $('tut-bar').classList.remove('show');
+  $('tut-skip').classList.remove('show');
 }
 
 /* ================================================================
@@ -3285,8 +3398,7 @@ function onTap(id, fn) {
 onTap('back-btn', () => { sButton(); persistBest(); sendMessage('quit'); });
 onTap('sound-btn', () => { audioUnlock(); setMuted(!muted); sButton(); });
 onTap('ov-btn', () => { sButton(); sendMessage('retry_level'); newRun(); });   // Play Again (§1.1)
-onTap('ob-next', () => { sButton(); obNext(); });
-onTap('ob-skip', () => { sButton(); finishOnboard(); });
+onTap('tut-skip', () => { sButton(); finishTutorial(); });
 
 $('pause-veil').addEventListener('pointerdown', () => { resumeGame(); }, { passive: true });
 
