@@ -1,0 +1,2288 @@
+<!--
+  Fruit Drop — QuanKA
+  Onet / Pikachu connect puzzle WITH GRAVITY: tap 2 identical fruit tiles, they
+  clear if a path with <= 2 turns (<= 3 straight segments) links them through
+  empty cells (the path may run through the border ring outside the board).
+  DIFFERENCE vs animal-connect: after every clear, tiles FALL to fill the space
+  below them, so the board re-settles after every move.
+
+  Art: Fluent Emoji "Flat" (Microsoft) — stock vector icons, MIT licensed.
+    Copyright (c) Microsoft Corporation. Licensed under the MIT License.
+    https://github.com/microsoft/fluentui-emoji
+  Style: neo-brutalist print — cream paper, 3px ink outlines, hard zero-blur
+    offset shadows, flat colour blocks. No gradient / blur / filter anywhere.
+
+  Level-based, endless (levelConfig(idx) generates forever) => `victory` never
+  fires; documented deviation from game-common §1.5, same as animal-connect.
+  Tuân thủ .claude/game-common.md (bridge, level, i18n), popup-common.md (game
+  theo level => KHÔNG tự vẽ popup kết quả, showModal:true), zip-common.md.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Fruit Drop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap" rel="stylesheet" />
+<style>
+/* ── Reset + mobile tap fixes (game-common §UI) ───────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+:root {
+  --ui-font: 'Google Sans Flex', system-ui, sans-serif;
+  /* Neo-brutalist print palette — cream stock + black ink + flat accents */
+  --paper:   #F4EFE4;
+  --paper-2: #EDE6D7;
+  --ink:     #141210;
+  --card:    #FFFFFF;
+  --dot:     rgba(20,18,16,.09);
+  --tomato:  #E8462F;
+  --sun:     #F5B92B;
+  --leaf:    #3BA35A;
+  --sky:     #2F6FE0;
+  --grape:   #7A4FC9;
+  --text:      var(--ink);
+  --text-soft: rgba(20,18,16,.58);
+  /* Ink outline + hard shadow are the two structural constants of the style */
+  --bw: 3px;
+  --sh: 4px;
+  --sat: env(safe-area-inset-top, 0px);
+}
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: var(--ui-font);
+  font-weight: 800;
+  color: var(--text);
+  background-color: var(--paper);
+  /* Halftone dots — painted ONCE by the compositor, never redrawn. */
+  background-image: radial-gradient(var(--dot) 1.1px, transparent 1.2px);
+  background-size: 9px 9px;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+/* ── Background shapes ────────────────────────────────────────────
+   Flat ink-outlined blocks drifting on the compositor. Deliberately NOT a
+   canvas: animal-connect had to optimise its background loop down to 14 canvas
+   commands/frame; a handful of transform-only CSS animations costs ZERO main
+   thread work per frame and no canvas at all. Paused via #bg.paused. */
+#bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+#bg i {
+  position: absolute;
+  display: block;
+  border: var(--bw) solid var(--ink);
+  opacity: .1;
+  will-change: transform;
+}
+#bg.paused i { animation-play-state: paused !important; }
+.bgs1 { left: -6%;  top: 12%; width: 130px; height: 130px; border-radius: 50%;
+        background: var(--tomato); animation: drift1 34s linear infinite; }
+.bgs2 { right: -8%; top: 30%; width: 168px; height: 168px; border-radius: 8px;
+        background: var(--sun);   animation: drift2 46s linear infinite; }
+.bgs3 { left: 14%;  bottom: 6%; width: 108px; height: 108px; border-radius: 50%;
+        background: var(--leaf);  animation: drift3 39s linear infinite; }
+.bgs4 { right: 10%; bottom: 16%; width: 88px; height: 88px; border-radius: 8px;
+        background: var(--sky);   animation: drift1 52s linear infinite reverse; }
+.bgs5 { left: 44%;  top: 4%;  width: 76px; height: 76px; border-radius: 50%;
+        background: var(--grape); animation: drift2 44s linear infinite reverse; }
+@keyframes drift1 { 0%,100% { transform: translate(0,0) rotate(0deg); }
+                    50% { transform: translate(26px,-34px) rotate(180deg); } }
+@keyframes drift2 { 0%,100% { transform: translate(0,0) rotate(0deg); }
+                    50% { transform: translate(-32px,28px) rotate(-180deg); } }
+@keyframes drift3 { 0%,100% { transform: translate(0,0) rotate(0deg); }
+                    50% { transform: translate(24px,22px) rotate(160deg); } }
+
+/* ── App wrapper ──────────────────────────────────────────────── */
+#app {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ── Header (same FORM as the other QuanKA games, neo-brutalist skin) ──
+   left:0;right:0;margin:0 auto — NOT translateX(-50%), which overflows the
+   layout box to 150vw and causes horizontal scroll. */
+#topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 520px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 max(10px, env(safe-area-inset-right)) 0 max(10px, env(safe-area-inset-left));
+  pointer-events: none;
+}
+#topbar .btn3d, .hud-scores { pointer-events: auto; }
+
+#hud-bar { display: flex; align-items: center; gap: 8px; }
+
+.hud-scores { flex: 1; min-width: 0; display: flex; gap: 8px; }
+.hud-pill {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 4px 8px 5px 5px;
+  background: var(--card);
+  border: var(--bw) solid var(--ink);
+  border-radius: 6px;
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  -webkit-user-select: none; user-select: none;
+}
+.pill-text { display: flex; flex-direction: column; align-items: center; min-width: 0; flex: 1 0 auto; }
+.pill-ico { flex: 0 0 auto; width: clamp(15px, 4.4vw, 20px); height: clamp(15px, 4.4vw, 20px); display: block; }
+.hud-pill .label {
+  font-size: clamp(8px, 2.7vw, 10px);
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  color: var(--text-soft);
+  line-height: 1.05;
+  white-space: nowrap;
+}
+.hud-pill .value {
+  font-size: clamp(15px, 4.6vw, 22px);
+  line-height: 1.1;
+  color: var(--ink);
+  white-space: nowrap;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+#hud-best { color: #C98A0A; }   /* BEST accent (gold) — shared QuanKA convention */
+
+/* Sub-row: LEVEL x | time bar | seconds — spans the header width */
+#hud-sub { display: flex; align-items: center; gap: 9px; padding: 0 2px; }
+.sub-level {
+  flex: 0 0 auto;
+  font-size: 11px;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+.sub-level #hud-level { color: var(--ink); font-weight: 900; }
+
+#time-bar-bg {
+  flex: 1; min-width: 0; height: 12px;
+  background: var(--card);
+  border: 2.5px solid var(--ink);
+  border-radius: 4px;
+  overflow: hidden;
+}
+#time-bar-fill {
+  height: 100%; width: 100%;
+  background: var(--leaf);
+  transition: width .25s linear, background .3s;
+}
+#time-bar-fill.warn { background: var(--sun); }
+@keyframes timeDanger { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+#time-bar-fill.danger { background: var(--tomato); animation: timeDanger .6s steps(2,end) infinite; }
+
+#hud-secs {
+  flex: 0 0 auto; min-width: 26px; text-align: right;
+  font-size: 14px; font-weight: 900; color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+#hud-secs.danger { color: var(--tomato); }
+
+/* ── Board ────────────────────────────────────────────────────── */
+#board-outer {
+  flex: 1;
+  display: flex;
+  width: 100%;
+  padding: 8px;
+  min-height: 0;
+  /* Never scroll: the link overlay is intentionally 1 cell larger than the
+     board on every side (Onet border-ring paths) and would otherwise make this
+     container scrollable on BOTH axes. Ring room is reserved in the cell-size
+     maths instead — see resize(). */
+  overflow: hidden;
+}
+#board-wrap {
+  margin: auto;
+  position: relative;
+  border-radius: 8px;
+  background: var(--paper-2);
+  border: var(--bw) solid var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  padding: 6px;
+}
+#board { position: relative; z-index: 1; }
+
+#link-svg { position: absolute; z-index: 3; pointer-events: none; overflow: visible; }
+/* Stroke widths scale with the cell (set in resize()): a fixed 9px under-stroke
+   is a quarter of a 35px cell and blots out whatever tile the route crosses. */
+.link-under { fill: none; stroke: var(--ink); stroke-width: var(--lw-under, 8px); stroke-linecap: square; stroke-linejoin: miter; }
+.link-path  { fill: none; stroke: var(--tomato); stroke-width: var(--lw-core, 4px); stroke-linecap: square; stroke-linejoin: miter; }
+@keyframes linkFade { 0%,72% { opacity: 1; } 100% { opacity: 0; } }
+.link-anim { animation: linkFade .34s steps(4,end) forwards; }
+
+/* Blocked-pair demo route (> 2 turns) shown in the tutorial */
+.bend-under { fill: none; stroke: var(--ink); stroke-width: var(--lw-under, 8px); stroke-linecap: square; stroke-linejoin: miter; }
+.bend-path {
+  fill: none; stroke: var(--tomato); stroke-width: var(--lw-core, 4px);
+  stroke-linecap: square; stroke-linejoin: miter;
+  stroke-dasharray: 7 7;
+  animation: bendDash 1s linear infinite;
+}
+@keyframes bendDash { to { stroke-dashoffset: -28; } }
+.bend-dot { fill: var(--tomato); stroke: var(--ink); stroke-width: 2.5; }
+
+/* ── Tiles ────────────────────────────────────────────────────── */
+.tile {
+  position: absolute;
+  cursor: pointer;
+  will-change: transform;
+  -webkit-user-select: none;
+  user-select: none;
+  /* transform carries the grid position; a fall just changes it and lets the
+     compositor run the transition — zero per-frame JS while tiles are falling */
+  transition: transform 0s;
+}
+.tile.falling {
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(.5,.05,.72,.28);  /* accelerating = gravity */
+}
+.tile.hidden { display: none; }
+
+.tile-face {
+  width: 100%;
+  height: 100%;
+  border-radius: 5px;
+  background: var(--card);
+  border: var(--bw) solid var(--ink);
+  /* NO drop shadow on board tiles: on a packed 10x12 grid every tile's hard
+     shadow would fall across its neighbour and the board would read as mush.
+     The ink border carries the style here; hard shadows are reserved for the
+     things that sit ON the paper — HUD pills, buttons, the board frame. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  /* NOTE: every state animation lives on .tile-face, never on .tile — a
+     keyframe with transform on .tile would override the inline grid translate
+     and snap the tile to (0,0). */
+  transition: transform .1s steps(2,end), box-shadow .1s steps(2,end);
+}
+.tile-face svg { width: 86%; height: 86%; flex-shrink: 0; display: block; pointer-events: none; }
+
+/* Spawn pop-in. Declared BEFORE .selected/.hint on purpose: it sets
+   `transform` and `animation` at the same specificity as those state rules,
+   so if it came later it would silently outrank them and a tile selected or
+   hinted during the first 200ms of a level would show neither state. */
+@keyframes tilePopin { 0% { opacity: 0; transform: translate(0,-8px); } 100% { opacity: 1; transform: translate(0,0); } }
+.tile.popin .tile-face { animation: tilePopin .2s steps(3,end) backwards; }
+
+/* Selected: grows and gains a much fatter INK outline.
+   Deliberately colour-free — the tiles are 14 different coloured fruits, so any
+   accent ring collides with something (a tomato ring on the apple tile merged
+   into one solid red block). Black already reads against every icon, and the
+   size jump carries the state on its own. */
+.tile.selected { z-index: 3; }
+.tile.selected .tile-face {
+  transform: scale(1.1);
+  box-shadow: 0 0 0 3px var(--ink);
+}
+
+/* Hint / tutorial target: sky-blue outer ring, blinking in hard steps.
+   No fruit in the set is blue, so this one accent is always distinguishable.
+   The ring is declared on the element as well as in the keyframes so it still
+   shows if the animation never runs (reduced-motion, or a paused compositor). */
+.tile.hint { z-index: 2; }
+.tile.hint .tile-face {
+  box-shadow: 0 0 0 4px var(--sky);
+  animation: hintBlink .76s steps(1,end) infinite;
+}
+@keyframes hintBlink { 0%,49%   { box-shadow: 0 0 0 4px var(--sky); }
+                       50%,100% { box-shadow: 0 0 0 0 var(--sky); } }
+
+@keyframes tilePop { 0% { transform: scale(1); opacity: 1; }
+                     45% { transform: scale(1.18); opacity: 1; }
+                     100% { transform: scale(.2); opacity: 0; } }
+.tile.pop { pointer-events: none; z-index: 4; }
+.tile.pop .tile-face { animation: tilePop .26s steps(5,end) forwards; }
+
+/* Landing squash — sells the gravity without any JS per frame */
+@keyframes tileLand { 0% { transform: scaleY(1); } 40% { transform: scaleY(.86) translateY(6%); } 100% { transform: scaleY(1); } }
+.tile.landed .tile-face { animation: tileLand .16s steps(3,end); }
+
+/* Invalid pair shake — margin-left, not transform: transform is holding the
+   grid position, and the standalone `translate` property needs Chromium 104+ */
+@keyframes tileShake { 0%,100% { margin-left: 0; } 20% { margin-left: -3px; } 40% { margin-left: 3px; }
+                       60% { margin-left: -2px; } 80% { margin-left: 2px; } }
+.tile.shake { animation: tileShake .22s steps(2,end); }
+
+/* ── btn3d (game-common §1.4 / popup-common §6), neo-brutalist skin ── */
+.btn3d {
+  --radius: 6px;
+  --surface-color: var(--card);
+  --surface-text: var(--ink);
+  --surface-height: 42px;
+  --surface-width: auto;
+  --surface-padding-x: 16px;
+  --surface-font-size: 16px;
+  position: relative;
+  display: inline-block;
+  padding: 0; border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit; color: inherit;
+  -webkit-user-select: none; user-select: none;
+}
+.btn3d-shadow { display: none; }
+.btn3d-surface {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: var(--surface-height);
+  width: var(--surface-width);
+  padding: 0 var(--surface-padding-x);
+  border-radius: var(--radius);
+  background: var(--surface-color);
+  border: var(--bw) solid var(--ink);
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  color: var(--surface-text);
+  font-family: var(--ui-font);
+  font-size: var(--surface-font-size);
+  font-weight: 800;
+  letter-spacing: .6px;
+  /* No backdrop-filter anywhere in this game — it is banned for perf on
+     WebView, and the flat style has no use for it. */
+  transition: transform .08s steps(2,end), box-shadow .08s steps(2,end);
+}
+.btn3d:active .btn3d-surface { transform: translate(var(--sh), var(--sh)); box-shadow: 0 0 0 var(--ink); }
+.btn3d.btn-icon { --surface-height: 42px; --surface-width: 42px; --surface-padding-x: 0; }
+.back-ico    { width: 52%; height: 52%; fill: currentColor; display: block; }
+.restart-ico { width: 62%; height: 62%; fill: currentColor; display: block; }
+.snd-ico     { width: 58%; height: 58%; display: block; }
+.snd-slash   { display: none; }
+#sound-btn.muted .snd-waves { display: none; }
+#sound-btn.muted .snd-slash { display: block; }
+
+.btn3d.mini { --surface-height: 32px; --surface-font-size: 13px; --surface-padding-x: 12px;
+              --surface-color: var(--sun); }
+
+/* ── Floating text — OUTLINE only, never a background chip (QA 2026-07-28/29) ── */
+.pop-txt {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  opacity: 0;
+  white-space: nowrap;
+  font-weight: 900;
+  color: var(--card);
+  -webkit-text-stroke: 4px var(--ink);
+  paint-order: stroke fill;
+  letter-spacing: .5px;
+}
+@supports not (paint-order: stroke) {
+  .pop-txt {
+    -webkit-text-stroke: 0;
+    text-shadow: 2px 0 var(--ink), -2px 0 var(--ink), 0 2px var(--ink), 0 -2px var(--ink),
+                 2px 2px var(--ink), -2px -2px var(--ink), 2px -2px var(--ink), -2px 2px var(--ink);
+  }
+}
+#combo-badge { top: 40%; font-size: 30px; z-index: 100; }
+#praise      { top: 30%; font-size: 21px; z-index: 101; }
+#toast       { top: 22%; font-size: 17px; z-index: 150; transition: opacity .25s steps(3,end); }
+#toast.show  { opacity: 1; }
+
+@keyframes comboPop { 0% { opacity: 0; transform: translateX(-50%) scale(.5); }
+                      28% { opacity: 1; transform: translateX(-50%) scale(1.2); }
+                      66% { opacity: 1; transform: translateX(-50%) scale(1); }
+                      100% { opacity: 0; transform: translateX(-50%) translateY(-16px) scale(.9); } }
+.combo-anim { animation: comboPop .66s steps(6,end) forwards; }
+@keyframes praisePop { 0% { opacity: 0; transform: translateX(-50%) scale(.6); }
+                       25% { opacity: 1; transform: translateX(-50%) scale(1.1); }
+                       70% { opacity: 1; transform: translateX(-50%) translateY(-10px) scale(1); }
+                       100% { opacity: 0; transform: translateX(-50%) translateY(-34px) scale(.9); } }
+.praise-anim { animation: praisePop 1s steps(8,end) forwards; }
+
+/* Score flyer — a small inked chip that travels from the link to the SCORE pill */
+.fly {
+  position: fixed;
+  z-index: 40;
+  width: 22px; height: 22px;
+  margin: -11px 0 0 -11px;
+  border-radius: 4px;
+  background: var(--sun);
+  border: 2.5px solid var(--ink);
+  pointer-events: none;
+  will-change: transform, opacity;
+  transition: transform .62s cubic-bezier(.45,0,.3,1), opacity .62s steps(4,end);
+}
+@keyframes scorePulse { 0%,100% { transform: translate(0,0); } 45% { transform: translate(2px,2px); } }
+.hud-pill.score-hit { animation: scorePulse .26s steps(2,end); }
+
+/* ── Tutorial ─────────────────────────────────────────────────── */
+#tut-banner {
+  position: fixed;
+  left: 50%;
+  top: 80px;
+  transform: translateX(-50%);
+  z-index: 240;
+  width: min(88%, 380px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card);
+  border: var(--bw) solid var(--ink);
+  border-radius: 8px;
+  box-shadow: var(--sh) var(--sh) 0 var(--ink);
+  padding: 12px 13px;
+  transition: opacity .2s steps(3,end);
+}
+#tut-banner.hidden { opacity: 0; pointer-events: none; }
+#tut-text { flex: 1; color: var(--ink); font-size: 14px; line-height: 1.4; font-weight: 800; }
+
+#tut-arrow {
+  position: fixed; z-index: 245; width: 26px; height: 54px; pointer-events: none;
+  animation: arrowBob .9s steps(3,end) infinite;
+}
+#tut-arrow.hidden { display: none; }
+@keyframes arrowBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+#tut-check { position: fixed; z-index: 45; pointer-events: none; width: 46px; height: 46px;
+             margin: -23px 0 0 -23px; opacity: 0; }
+#tut-check svg { width: 100%; height: 100%; display: block; }
+.tut-check-anim { animation: tutCheckPop .7s steps(6,end) forwards; }
+@keyframes tutCheckPop { 0% { opacity: 0; transform: scale(.3); }
+                         35% { opacity: 1; transform: scale(1.15); }
+                         70% { opacity: 1; transform: scale(1); }
+                         100% { opacity: 0; transform: scale(1.05) translateY(-8px); } }
+
+/* ── Pause veil (not a result popup — game-common §1.3 onAppPause) ── */
+#pause-veil {
+  position: fixed; inset: 0; z-index: 300;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(20,18,16,.62);
+  opacity: 1;
+  transition: opacity .2s steps(3,end);
+}
+#pause-veil.hidden { opacity: 0; pointer-events: none; }
+#pause-veil .pv-txt {
+  color: var(--card); font-size: 20px; letter-spacing: 1.5px; font-weight: 900;
+  -webkit-text-stroke: 4px var(--ink); paint-order: stroke fill;
+}
+
+/* ── Responsive — MUST stay last so it can override the rules above.
+   (animal-connect had a @media block sitting BEFORE the base rules with equal
+   specificity, so its small-screen overrides never once applied.) ── */
+@media (max-height: 640px) {
+  #topbar .btn3d.btn-icon { --surface-height: 36px; --surface-width: 36px; }
+  #tut-banner { padding: 9px 12px; }
+  #tut-text { font-size: 13px; }
+}
+@media (max-width: 360px) {
+  .btn3d.btn-icon { --surface-height: 38px; --surface-width: 38px; }
+  :root { --bw: 2.5px; --sh: 3px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Drifting flat shapes (compositor-only, no canvas, no per-frame JS) -->
+<div id="bg" aria-hidden="true"><i class="bgs1"></i><i class="bgs2"></i><i class="bgs3"></i><i class="bgs4"></i><i class="bgs5"></i></div>
+
+<!-- Fluent Emoji "Flat" icon sprite (MIT, (c) Microsoft). One <symbol> per
+     fruit; each tile is a <use> reference, so building 120 tiles costs 120
+     tiny nodes instead of 120 full SVG parses. -->
+<svg id="icon-sheet" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"><defs><symbol id="f0" viewBox="0 0 32 32"><path d="M10.25 2H4.22C4.22 5.27 6.87 7.92 10.14 7.92H16.17C16.18 4.66 13.52 2 10.25 2Z" fill="#00D26A"/><path d="M18.09 7.38C16.75 7.95 15.23 7.95 13.89 7.38C9.69 5.61 4.85 7.64 3.17 11.89C1.61 15.84 1.61 20.23 3.17 24.18C4.91 28.57 9.68 30.94 14.23 29.67C15.38 29.35 16.6 29.35 17.75 29.67C22.3 30.95 27.08 28.58 28.81 24.18C30.37 20.23 30.37 15.84 28.81 11.89C27.14 7.64 22.3 5.61 18.09 7.38Z" fill="#F8312F"/></symbol><symbol id="f1" viewBox="0 0 32 32"><path d="M2 26.43C2 25.7 2.59 25.11 3.32 25.11H4.31C5.04 25.11 5.63 25.7 5.63 26.43C5.63 27.16 5.04 27.75 4.31 27.75H3.32C2.59 27.75 2 27.16 2 26.43Z" fill="#F3AD61"/><path d="M19.78 18H29.22C29.91 18 30.26 17.12 29.77 16.61L27.59 14.34C25.88 12.55 23.12 12.55 21.41 14.34L19.23 16.61C18.74 17.12 19.09 18 19.78 18Z" fill="#F9C23C"/><path d="M4.78 18H14.22C14.91 18 15.26 17.12 14.77 16.61L12.59 14.34C10.88 12.55 8.12 12.55 6.41 14.34L4.23 16.61C3.74 17.12 4.09 18 4.78 18Z" fill="#F9C23C"/><path d="M16.7 2.03C21.62 1.32 24.66 13.93 22.44 19.02C20.23 24.11 15.45 25.23 10.37 27.22C9.81 27.44 9.24 27.55 8.67 27.55C6.75 27.55 5.7 29.13 4.97 27.17C4.03 24.64 5.26 21.8 7.73 20.83C10.41 19.78 11.84 17.75 12.92 15.01C14.01 12.22 14.08 11.07 14.08 8.02C14.08 5.59 13.92 2.43 16.7 2.03Z" fill="#FEEFC2"/><path d="M22.44 19.02L12.99 14.68C11.9 17.17 9.93 19.09 7.44 20.07C4.56 21.2 2.64 24.3 4.22 27.45C7.37 33.76 22.44 27.39 22.44 19.02Z" fill="#FCD53F"/><path fill-rule="evenodd" clip-rule="evenodd" d="M18.24 16.48C18.63 16.61 18.85 17.03 18.73 17.42C16.75 23.63 10.97 26.49 5.81 26.75C5.39 26.77 5.04 26.46 5.02 26.04C5 25.63 5.32 25.28 5.73 25.26C10.47 25.01 15.56 22.4 17.3 16.97C17.42 16.57 17.85 16.36 18.24 16.48Z" fill="#F9C23C"/><path d="M23.24 26.47L13.04 14.69H22.05C24.17 14.79 25.84 16.6 25.84 18.78V26.34C25.84 27.67 24.64 28.07 23.24 26.47Z" fill="#FFF478"/></symbol><symbol id="f2" viewBox="0 0 32 32"><path d="M3.14 10.07L8.62 8.06C11.65 6.95 15 8.5 16.11 11.52L10.63 13.53C7.61 14.64 4.25 13.09 3.14 10.07Z" fill="#608842"/><path d="M17.5 2.18C18.01 2.39 18.25 2.98 18.04 3.49C17.37 5.12 16.55 9.53 18.87 13.58C19.15 14.06 18.98 14.67 18.5 14.95C18.02 15.22 17.41 15.06 17.14 14.58C14.42 9.83 15.36 4.74 16.19 2.73C16.4 2.21 16.98 1.97 17.5 2.18Z" fill="#96C34A"/><path d="M27.06 25.83C27.06 28.09 25.22 29.93 22.96 29.93C20.69 29.93 18.86 28.09 18.86 25.83C18.86 23.56 20.69 21.73 22.96 21.73C25.22 21.73 27.06 23.56 27.06 25.83Z" fill="#321B41"/><path d="M28.2 19.5C28.2 21.77 26.36 23.6 24.1 23.6C21.84 23.6 20 21.77 20 19.5C20 17.24 21.84 15.4 24.1 15.4C26.36 15.4 28.2 17.24 28.2 19.5Z" fill="#533566"/><path d="M24.1 17.29C26.36 17.29 28.2 15.45 28.2 13.19C28.2 10.92 26.36 9.09 24.1 9.09C21.84 9.09 20 10.92 20 13.19C20 15.45 21.84 17.29 24.1 17.29Z" fill="#433B6B"/><path d="M17.93 26.59C20.2 26.59 22.03 24.75 22.03 22.49C22.03 20.23 20.2 18.39 17.93 18.39C15.67 18.39 13.84 20.23 13.84 22.49C13.84 24.75 15.67 26.59 17.93 26.59Z" fill="#433B6B"/><path d="M16.85 18.37C16.85 20.64 15.01 22.47 12.75 22.47C10.48 22.47 8.65 20.64 8.65 18.37C8.65 16.11 10.48 14.27 12.75 14.27C15.01 14.27 16.85 16.11 16.85 18.37Z" fill="#533566"/><path d="M22.44 15.4C22.44 17.67 20.6 19.5 18.34 19.5C16.08 19.5 14.24 17.67 14.24 15.4C14.24 13.14 16.08 11.31 18.34 11.31C20.6 11.31 22.44 13.14 22.44 15.4Z" fill="#6B438B"/></symbol><symbol id="f3" viewBox="0 0 32 32"><path d="M29.41 21.61L28.83 21.03C23.15 26.71 10.89 21.03 10.89 21.03C10.89 21.03 5.21 8.77 10.89 3.09L10.31 2.51C9.63 1.83 8.53 1.83 7.85 2.51L6.47 3.89C0.51 9.85 0.51 19.51 6.47 25.46C12.43 31.42 22.09 31.42 28.04 25.46L29.42 24.08C30.09 23.39 30.09 22.29 29.41 21.61Z" fill="#008463"/><path d="M8.14 23.79C13.09 28.74 21.23 28.73 26.18 23.78L28.83 21.11V21.03L27.64 19.84C22.58 24.9 13 19.84 13 19.84C13 19.84 7 9.32 12.06 4.26L10.89 3.09H10.8L8.13 5.75C3.18 10.7 3.19 18.84 8.14 23.79Z" fill="#FFF3D7"/><path d="M9.16 22.74C13.46 27.04 20.53 27.06 24.83 22.76L27.64 19.93V19.84L12.06 4.26L11.94 4.29L9.14 7.08C4.84 11.38 4.86 18.44 9.16 22.74Z" fill="#F8312F"/><path d="M13.95 10.76C13.95 11.36 13.46 11.85 12.86 11.85C12.26 11.85 11.77 11.36 11.77 10.76C11.77 10.16 12.26 9.67 12.86 9.67C13.46 9.67 13.95 10.16 13.95 10.76Z" fill="#1C1C1C"/><path d="M11.52 17.4C12.12 17.4 12.61 16.91 12.61 16.31C12.61 15.71 12.12 15.22 11.52 15.22C10.92 15.22 10.43 15.71 10.43 16.31C10.43 16.91 10.92 17.4 11.52 17.4Z" fill="#1C1C1C"/><path d="M15.6 21.48C16.2 21.48 16.69 20.99 16.69 20.39C16.69 19.79 16.2 19.3 15.6 19.3C15 19.3 14.51 19.79 14.51 20.39C14.51 20.99 15 21.48 15.6 21.48Z" fill="#1C1C1C"/><path d="M16.95 15.94C17.55 15.94 18.04 15.45 18.04 14.85C18.04 14.25 17.55 13.76 16.95 13.76C16.35 13.76 15.86 14.25 15.86 14.85C15.86 15.45 16.35 15.94 16.95 15.94Z" fill="#1C1C1C"/><path d="M22.23 19.05C22.23 19.65 21.74 20.14 21.14 20.14C20.54 20.14 20.05 19.65 20.05 19.05C20.05 18.45 20.54 17.96 21.14 17.96C21.74 17.96 22.23 18.45 22.23 19.05Z" fill="#1C1C1C"/></symbol><symbol id="f4" viewBox="0 0 32 32"><path d="M7 2.5L2 5C2.82 7.32 5.62 8.81 8.12 7.81L14.12 5.31C13.3 2.98 9.8 1.27 7 2.5Z" fill="#86D72F"/><path d="M14.92 4.6C9.52 6.51 6.69 12.45 8.59 17.87L9.84 21.43C11.25 25.42 14.83 28.01 18.77 28.34C19.52 28.39 20.21 28.72 20.77 29.22C21.57 29.94 22.72 30.21 23.79 29.82C24.87 29.44 25.6 28.51 25.78 27.45C25.89 26.71 26.23 26.03 26.77 25.51C29.64 22.77 30.81 18.5 29.41 14.51L28.15 10.95C26.25 5.52 20.33 2.68 14.92 4.6Z" fill="#FCD53F"/></symbol><symbol id="f5" viewBox="0 0 32 32"><path d="M26.33 8.62L23.38 5.67L5.67 23.38L8.62 26.33C13.51 31.22 21.44 31.22 26.33 26.33C31.22 21.44 31.22 13.51 26.33 8.62Z" fill="#6D4534"/><path d="M14.53 27.06C21.45 27.06 27.06 21.45 27.06 14.53C27.06 7.61 21.45 2 14.53 2C7.61 2 2 7.61 2 14.53C2 21.45 7.61 27.06 14.53 27.06Z" fill="#00D26A"/><path d="M14.53 20.15C17.64 20.15 20.15 17.63 20.15 14.53C20.15 11.43 17.64 8.91 14.53 8.91C11.43 8.91 8.91 11.43 8.91 14.53C8.91 17.63 11.43 20.15 14.53 20.15Z" fill="#E2FF92"/><path d="M15.94 7.12C16.48 7.12 16.92 6.68 16.92 6.14C16.92 5.6 16.48 5.16 15.94 5.16C15.4 5.16 14.96 5.6 14.96 6.14C14.96 6.68 15.4 7.12 15.94 7.12Z" fill="#1C1C1C"/><path d="M21.44 8.49C21.44 9.03 21 9.47 20.46 9.47C19.92 9.47 19.48 9.03 19.48 8.49C19.48 7.95 19.92 7.51 20.46 7.51C21 7.51 21.44 7.95 21.44 8.49Z" fill="#1C1C1C"/><path d="M9.47 20.46C9.47 21 9.03 21.44 8.49 21.44C7.95 21.44 7.51 21 7.51 20.46C7.51 19.92 7.95 19.48 8.49 19.48C9.03 19.48 9.47 19.92 9.47 20.46Z" fill="#1C1C1C"/><path d="M13.98 22.81C13.98 23.35 13.54 23.79 13 23.79C12.46 23.79 12.02 23.35 12.02 22.81C12.02 22.27 12.46 21.83 13 21.83C13.54 21.83 13.98 22.27 13.98 22.81Z" fill="#1C1C1C"/><path d="M10.9 7.79C11.44 7.79 11.88 7.35 11.88 6.81C11.88 6.27 11.44 5.83 10.9 5.83C10.36 5.83 9.92 6.27 9.92 6.81C9.92 7.35 10.36 7.79 10.9 7.79Z" fill="#1C1C1C"/><path d="M19.03 22.14C19.03 22.68 18.59 23.12 18.05 23.12C17.51 23.12 17.07 22.68 17.07 22.14C17.07 21.6 17.51 21.16 18.05 21.16C18.59 21.16 19.03 21.6 19.03 22.14Z" fill="#1C1C1C"/><path d="M7.15 11.22C7.69 11.22 8.13 10.78 8.13 10.24C8.13 9.7 7.69 9.26 7.15 9.26C6.61 9.26 6.17 9.7 6.17 10.24C6.17 10.78 6.61 11.22 7.15 11.22Z" fill="#1C1C1C"/><path d="M22.78 18.7C22.78 19.24 22.34 19.68 21.8 19.68C21.26 19.68 20.82 19.24 20.82 18.7C20.82 18.16 21.26 17.72 21.8 17.72C22.34 17.72 22.78 18.16 22.78 18.7Z" fill="#1C1C1C"/><path d="M6.05 16.19C6.59 16.19 7.03 15.75 7.03 15.21C7.03 14.67 6.59 14.23 6.05 14.23C5.51 14.23 5.07 14.67 5.07 15.21C5.07 15.75 5.51 16.19 6.05 16.19Z" fill="#1C1C1C"/><path d="M23.88 13.74C23.88 14.28 23.44 14.72 22.9 14.72C22.36 14.72 21.92 14.28 21.92 13.74C21.92 13.2 22.36 12.76 22.9 12.76C23.44 12.76 23.88 13.2 23.88 13.74Z" fill="#1C1C1C"/></symbol><symbol id="f6" viewBox="0 0 32 32"><path d="M28.9 8.36L28.89 8.37C30.1 9.83 30.02 12 28.65 13.38C27.2 14.84 24.84 14.84 23.38 13.38C22.75 12.74 22.39 11.94 22.3 11.1L20.5 12.91L19.09 11.49L20.83 9.75C20.05 9.64 19.29 9.29 18.69 8.69C17.23 7.24 17.23 4.88 18.69 3.42C20.03 2.08 22.15 1.97 23.61 3.11L23.63 3.09C25.08 1.63 27.44 1.64 28.9 3.09C30.36 4.54 30.36 6.9 28.9 8.36Z" fill="#00D26A"/><path d="M4.64 29.89L20.39 24.79C24.9 23.33 26.27 17.62 22.92 14.27L17.72 9.07C14.37 5.72 8.66 7.1 7.2 11.6L2.1 27.35C1.59 28.92 3.07 30.4 4.64 29.89Z" fill="#FF822D"/><path d="M12.37 19.41C12.86 18.92 12.86 18.13 12.37 17.63L6.99 12.25L6.12 14.93L10.59 19.4C11.08 19.9 11.88 19.9 12.37 19.41Z" fill="#FF6723"/><path d="M8.59 23.96C8.1 24.45 8.1 25.24 8.59 25.74L10.76 27.91L13.44 27.04L10.36 23.96C9.87 23.47 9.08 23.47 8.59 23.96Z" fill="#FF6723"/><path d="M16.25 18.98C15.76 18.48 15.76 17.69 16.25 17.2C16.74 16.71 17.53 16.71 18.03 17.21L23.46 22.64C22.96 23.3 22.32 23.86 21.56 24.29L16.25 18.98Z" fill="#FF6723"/></symbol><symbol id="f7" viewBox="0 0 32 32"><path d="M25.58 20.33C25.74 18.44 25.25 16.61 26.59 15.27L27.42 14.44C29.78 12.08 29.78 8.24 27.42 5.88L25.56 4.02L24.22 5.36C22.73 5.4 21.25 5.99 20.11 7.13L19.9 7.33C18.56 8.67 16.79 9.49 14.91 9.65C12.41 9.86 10.07 10.95 8.29 12.73C5.32 15.7 4.51 20.01 5.87 23.71L5.19 24.39L7.74 26.94C11.82 31.02 18.43 31.02 22.51 26.94C24.28 25.17 25.37 22.83 25.58 20.33Z" fill="#44911B"/><path d="M20.66 2C18.82 2 17.08 2.72 15.78 4.02L15.6 4.21C14.65 5.16 13.38 5.75 12.03 5.87C9.44 6.09 7.01 7.22 5.18 9.05C3.13 11.1 2 13.83 2 16.72C2 19.62 3.13 22.34 5.18 24.39C7.23 26.44 9.95 27.57 12.85 27.57C15.75 27.57 18.47 26.44 20.52 24.39C22.35 22.56 23.49 20.12 23.71 17.54C23.82 16.19 24.41 14.93 25.37 13.97L25.56 13.78C26.86 12.48 27.58 10.74 27.58 8.9C27.58 7.06 26.86 5.32 25.56 4.02C24.24 2.72 22.51 2 20.66 2Z" fill="#008463"/><path d="M24.32 12.93L24.51 12.74C26.63 10.62 26.63 7.18 24.51 5.06C22.39 2.94 18.95 2.94 16.83 5.06L16.64 5.25C15.44 6.45 13.85 7.19 12.16 7.33C9.91 7.52 7.81 8.5 6.22 10.09C2.56 13.75 2.56 19.68 6.22 23.34C9.88 27 15.81 27 19.47 23.34C21.06 21.75 22.04 19.65 22.23 17.4C22.38 15.72 23.12 14.13 24.32 12.93Z" fill="#C3EF3C"/><path d="M13.29 20.69C15.7 20.69 17.65 18.74 17.65 16.33C17.65 13.92 15.7 11.97 13.29 11.97C10.88 11.97 8.93 13.92 8.93 16.33C8.93 18.74 10.88 20.69 13.29 20.69Z" fill="#6D4534"/></symbol><symbol id="f8" viewBox="0 0 32 32"><path d="M18.76 21.17C18.47 20.72 17.87 20.6 17.42 20.89L12.46 24.14L14.59 19.91C14.83 19.43 14.66 18.84 14.19 18.59C13.71 18.34 13.12 18.53 12.87 19.01L10.72 23.27L10.38 17.35C10.35 16.82 9.89 16.41 9.36 16.44C8.83 16.47 8.42 16.93 8.45 17.46L8.64 20.8C8.72 22.2 8.43 23.61 7.8 24.86L6.83 26.79C6.51 27.43 6.76 28.22 7.41 28.55L10.19 29.95C10.83 30.27 11.62 30.02 11.95 29.37L12.92 27.44C13.55 26.18 14.5 25.12 15.68 24.35L18.48 22.51C18.93 22.22 19.06 21.62 18.76 21.17Z" fill="#00D26A"/><path d="M26.36 12.38C27.29 8.67 25.57 4.69 22.01 2.89C18.45 1.1 14.23 2.09 11.8 5.04C9.01 4.38 6.02 5.68 4.68 8.36C3.1 11.49 4.36 15.3 7.49 16.88C8.59 17.43 9.77 17.63 10.91 17.53C11.03 18.84 11.8 20.05 13.06 20.69C14.32 21.32 15.75 21.22 16.87 20.54C17.46 21.52 18.33 22.35 19.43 22.9C22.56 24.48 26.37 23.22 27.95 20.09C29.28 17.41 28.55 14.23 26.36 12.38Z" fill="#008463"/></symbol><symbol id="f9" viewBox="0 0 32 32"><path d="M19.5 30C4.48 30 2.5 18.5 2.5 9H12.5C13.5 12 14.76 16.62 21.5 15.5C27.5 14.5 30 19.23 30 22C30 24 29.5 30 19.5 30Z" fill="#8C42B3"/><path d="M7.5 2C6.67 2 6 2.67 6 3.5V4.27C3.68 5.01 2 7.18 2 9.75V10C2 10.55 2.5 11.02 2.92 10.66C3.14 10.48 3.32 10.24 3.5 10C3.88 9.5 4.25 9 5 9C5.75 9 6.12 9.5 6.5 10C6.88 10.5 7.25 11 8 11C8.75 11 9.12 10.5 9.5 10C9.88 9.5 10.25 9 11 9C11.74 9 12.09 9.48 12.45 9.98C12.5 10.05 12.55 10.12 12.61 10.19C12.95 10.65 13.5 10.33 13.5 9.75C13.5 7 11.57 4.71 9 4.14V3.5C9 2.67 8.33 2 7.5 2Z" fill="#00D26A"/><path d="M27 19C27 20.1 26.1 21 25 21C23.9 21 23 20.1 23 19C23 17.9 23.9 17 25 17C26.1 17 27 17.9 27 19Z" fill="#BCA4EB"/></symbol><symbol id="f10" viewBox="0 0 32 32"><path d="M11.45 5.46C10.79 3.92 9.55 2.64 7.9 2.01C7.38 3.6 7.54 5.28 8.23 6.72C6.87 6.29 5.37 6.35 4 7C5.41 9.96 8.83 11.31 11.73 10.09L11.74 10.09C11.77 10.07 11.81 10.06 11.84 10.04C11.88 10.02 11.92 10 11.95 9.99L11.95 9.98C14.74 8.51 15.86 5.01 14.46 2.04C12.98 2.74 11.94 4 11.45 5.46Z" fill="#86D72F"/><path d="M15.68 8.96V8.88C18.22 9.03 20.6 10.52 21.77 12.99L22.91 15.38L22.77 15.61L24.72 19.54H24.85C25.28 20.67 25.41 21.86 25.26 23L25.2 23.05L24.36 25.59V25.7C23.65 26.94 22.57 27.97 21.19 28.63L20.11 29.14C18.71 29.8 17.21 29.98 15.79 29.73L15.75 29.66L13.17 28.66C13.17 28.66 13.12 28.68 13.12 28.69C12.17 28.09 11.35 27.25 10.76 26.22L10.79 26.19L8.82 22.05L8.77 22.08L7.63 19.69C6.46 17.22 6.81 14.42 8.32 12.35L8.35 12.41L10.22 10.63V10.54C10.49 10.37 10.77 10.21 11.07 10.07L12.14 9.56C12.44 9.42 12.74 9.3 13.05 9.2L13.1 9.28L15.68 8.96Z" fill="#F3AD61"/><path d="M13.03 10.55L15.16 11.88C15.32 11.98 15.52 11.88 15.55 11.7L15.86 9.17C15.87 9.07 15.83 8.97 15.75 8.92L15.68 8.87C14.8 8.82 13.91 8.93 13.05 9.2L12.91 10.29C12.9 10.39 12.95 10.49 13.03 10.55Z" fill="#E19747"/><path d="M8.32 12.35C8.82 11.65 9.46 11.04 10.22 10.54L11.14 11.14C11.22 11.19 11.27 11.29 11.26 11.39L10.94 13.88C10.91 14.07 10.71 14.16 10.55 14.07L8.42 12.73C8.34 12.68 8.29 12.57 8.3 12.48L8.32 12.35Z" fill="#E19747"/><path d="M10.76 26.22C10.66 26.06 10.57 25.88 10.48 25.7L8.77 22.08C8.83 21.95 9 21.86 9.13 21.95L11.27 23.29C11.35 23.34 11.39 23.44 11.38 23.53L11.07 26.03C11.05 26.17 10.9 26.25 10.76 26.22Z" fill="#E19747"/><path d="M15.79 29.73C14.84 29.57 13.93 29.21 13.12 28.69C13.12 28.68 13.11 28.66 13.11 28.65L13.43 26.13C13.45 25.94 13.65 25.85 13.82 25.95L15.95 27.28C16.04 27.33 16.09 27.42 16.06 27.53L15.79 29.73Z" fill="#E19747"/><path d="M25.26 23C25.14 23.95 24.83 24.87 24.36 25.7L22.44 24.51C22.35 24.45 22.31 24.36 22.32 24.26L22.63 21.76C22.66 21.58 22.86 21.48 23.02 21.58L25.18 22.93C25.22 22.95 25.24 22.98 25.26 23Z" fill="#E19747"/><path d="M22.91 15.38L24.62 19C24.71 19.18 24.78 19.35 24.85 19.54C24.79 19.66 24.62 19.75 24.49 19.67L22.35 18.33C22.27 18.28 22.23 18.18 22.24 18.08L22.55 15.59C22.57 15.42 22.76 15.33 22.91 15.38Z" fill="#E19747"/><path d="M11.22 17.32L9.09 15.98C8.93 15.88 8.73 15.98 8.7 16.16L8.39 18.66C8.37 18.76 8.42 18.85 8.5 18.91L10.63 20.24C10.8 20.34 11 20.24 11.02 20.06L11.34 17.56C11.36 17.46 11.31 17.36 11.22 17.32Z" fill="#E19747"/><path d="M15.24 18.06C15.41 18.15 15.6 18.06 15.63 17.87L15.95 15.38C15.96 15.28 15.91 15.18 15.83 15.13L13.7 13.79C13.54 13.7 13.34 13.79 13.31 13.98L12.99 16.47C12.98 16.57 13.03 16.67 13.11 16.72L15.24 18.06Z" fill="#E19747"/><path d="M19.84 15.88C20 15.97 20.2 15.88 20.23 15.69L20.55 13.2C20.56 13.1 20.51 13 20.43 12.95L18.3 11.61C18.13 11.52 17.94 11.61 17.91 11.8L17.59 14.29C17.58 14.39 17.63 14.49 17.71 14.54L19.84 15.88Z" fill="#E19747"/><path d="M15.87 21.1L13.74 19.77C13.58 19.67 13.38 19.76 13.35 19.95L13.04 22.45C13.03 22.54 13.07 22.64 13.16 22.69L15.29 24.03C15.45 24.13 15.65 24.03 15.68 23.84L15.99 21.35C16 21.25 15.96 21.16 15.87 21.1Z" fill="#E19747"/><path d="M20.47 18.92L18.34 17.59C18.18 17.49 17.98 17.58 17.95 17.77L17.64 20.27C17.63 20.36 17.67 20.46 17.75 20.51L19.89 21.85C20.05 21.94 20.25 21.85 20.28 21.66L20.59 19.17C20.6 19.07 20.56 18.97 20.47 18.92Z" fill="#E19747"/><path d="M18.42 23.76C18.26 23.66 18.06 23.76 18.04 23.94L17.72 26.44C17.71 26.54 17.75 26.63 17.84 26.69L19.97 28.02C20.13 28.12 20.33 28.02 20.36 27.84L20.67 25.34C20.68 25.24 20.64 25.15 20.56 25.1L18.42 23.76Z" fill="#E19747"/></symbol><symbol id="f11" viewBox="0 0 32 32"><path d="M19.7 3.26C9.85 5.12 7.51 13.87 7.59 17.16L9.46 17.11C9.63 13.92 10.83 11.35 12.43 9.44L12.44 9.44C12.93 8.85 13.27 8.45 13.77 9.21L19.69 18.31L21.36 17.41L15.31 8.1C14.82 7.33 14.98 7.13 15.59 6.74C16.4 6.24 17.22 5.86 18 5.6C18.7 5.38 18.87 5.73 18.94 5.9C20.7 10.13 22.77 11.78 23.94 12.26C25.77 12.95 27.14 13.19 29.57 12.36C29.8 12.28 29.88 12.02 29.7 11.71C29.7 11.71 28.06 9.15 26.46 6.29C26.46 6.29 24.64 2.49 19.7 3.26Z" fill="#9AD02B"/><path fill-rule="evenodd" clip-rule="evenodd" d="M15 23.5C15 27.09 12.09 30 8.5 30C4.91 30 2 27.09 2 23.5C2 19.91 4.91 17 8.5 17C12.09 17 15 19.91 15 23.5ZM30.03 23.5C30.03 27.09 27.12 30 23.53 30C19.94 30 17.03 27.09 17.03 23.5C17.03 19.91 19.94 17 23.53 17C27.12 17 30.03 19.91 30.03 23.5Z" fill="#F8312F"/></symbol><symbol id="f12" viewBox="0 0 32 32"><path d="M23.33 5.48C24.29 5.48 25.07 4.7 25.07 3.74C25.07 2.78 24.29 2 23.33 2C22.37 2 21.59 2.78 21.59 3.74C21.59 4.7 22.37 5.48 23.33 5.48Z" fill="#FCD53F"/><path d="M9.77 22.6L9.43 22.4C8.61 21.93 8.18 21 8.35 20.07C8.44 19.57 8.7 19.12 9.08 18.79C9.6 18.33 10.3 18.16 10.96 18.29L10.42 17.98C9.41 17.41 8.88 16.25 9.08 15.12C9.2 14.5 9.51 13.95 9.98 13.54C10.72 12.9 11.74 12.71 12.66 13.02C11.88 12.41 11.48 11.41 11.66 10.42C11.77 9.82 12.08 9.27 12.54 8.87C13.4 8.12 14.65 8 15.64 8.56L15.99 8.76C15.2 8.22 14.79 7.27 14.97 6.32C15.07 5.78 15.35 5.29 15.76 4.93C16.54 4.26 17.65 4.14 18.55 4.65L20.18 5.58C19.65 5.24 19.37 4.61 19.49 3.99C19.55 3.64 19.73 3.33 20 3.1C20.5 2.67 21.22 2.6 21.79 2.92L24.92 4.67C25.49 5 25.8 5.65 25.68 6.3C25.62 6.64 25.44 6.96 25.17 7.19C24.67 7.63 23.95 7.7 23.38 7.37L22.92 7.11L22.92 7.11L25.08 8.34C25.97 8.85 26.44 9.87 26.26 10.88C26.17 11.42 25.89 11.91 25.47 12.27C24.73 12.92 23.68 13.05 22.81 12.62L23.32 12.91C24.32 13.47 24.85 14.61 24.64 15.73C24.53 16.33 24.22 16.88 23.76 17.28C23.01 17.94 21.96 18.12 21.05 17.77C21.75 18.4 22.1 19.35 21.92 20.31C21.81 20.93 21.5 21.48 21.03 21.89C20.15 22.65 18.89 22.77 17.88 22.2L17.34 21.89C17.79 22.39 18 23.08 17.87 23.77C17.78 24.27 17.52 24.72 17.14 25.05C16.43 25.67 15.41 25.77 14.59 25.3L14.19 25.07L13.5 26.48L9.01 23.78L9.77 22.6Z" fill="#F9C23C"/><path d="M23.56 3.93L23.04 3.63C22.45 3.29 21.71 3.36 21.19 3.81C20.91 4.05 20.73 4.38 20.67 4.73C20.58 5.19 20.71 5.66 20.99 6.01L20.71 5.85C19.81 5.34 18.69 5.45 17.91 6.13C17.49 6.49 17.21 6.99 17.11 7.53C16.94 8.42 17.28 9.3 17.97 9.85C17 9.36 15.81 9.51 14.99 10.23C14.53 10.63 14.22 11.18 14.11 11.78C13.92 12.76 14.31 13.76 15.08 14.37C14.17 14.06 13.14 14.25 12.39 14.9C11.92 15.3 11.6 15.87 11.5 16.48C11.29 17.6 11.81 18.74 12.78 19.32C12.12 19.18 11.41 19.36 10.88 19.82C10.5 20.15 10.24 20.6 10.15 21.1C9.98 22.03 10.42 22.96 11.23 23.43L12.7 24.27C13.52 24.74 14.54 24.64 15.25 24.02C15.63 23.69 15.89 23.24 15.98 22.74C16.11 22.03 15.89 21.33 15.43 20.83C16.43 21.37 17.67 21.23 18.54 20.48C19.01 20.08 19.34 19.51 19.44 18.9C19.62 17.93 19.27 16.97 18.54 16.34C19.46 16.69 20.51 16.51 21.27 15.85C21.73 15.45 22.04 14.9 22.15 14.3C22.35 13.19 21.83 12.06 20.85 11.49C21.66 11.78 22.58 11.61 23.25 11.03C23.67 10.67 23.95 10.17 24.05 9.63C24.24 8.61 23.76 7.59 22.86 7.08L22.56 6.91C23 6.97 23.47 6.84 23.82 6.52C24.1 6.29 24.29 5.96 24.35 5.61C24.47 4.94 24.16 4.27 23.56 3.93Z" fill="#FCD53F"/><path d="M9.09 29.61C7.89 28.93 7.47 27.4 8.16 26.2L9.4 24.03L13.75 26.51L12.51 28.68C11.81 29.88 10.29 30.29 9.09 29.61Z" fill="#008463"/><path d="M6.7 15.67L8.26 11.9C11.24 14.47 12.23 18.67 10.72 22.31L10.58 22.64L15.03 19.26C18.73 16.44 24.02 17.16 26.84 20.86L19.67 26.31C16.48 28.74 12.11 28.54 9.16 26.07L9.16 26.08C9.05 25.99 8.95 25.9 8.85 25.8C8.5 25.47 8.16 25.11 7.86 24.71L7.87 24.7C5.92 22.15 5.43 18.72 6.7 15.67Z" fill="#44911B"/></symbol><symbol id="f13" viewBox="0 0 32 32"><path d="M10.99 25.31L13.5 18.5H18L20.83 25.22C21.39 26.54 20.42 28 18.99 28H12.87C11.48 28 10.51 26.61 10.99 25.31Z" fill="#FFCE7C"/><path d="M4 16C4 13.73 4.63 11.61 5.73 9.8L9.5 8L12.76 4.44C13.79 4.15 14.88 4 16 4C17.63 4 19.18 4.32 20.59 4.91L23.5 10.5L27.96 14.96C27.98 15.3 28 15.65 28 16V18C28 19.1 27.1 20 26 20H6C4.9 20 4 19.1 4 18V16Z" fill="#F8312F"/><path d="M12.79 4.43C12.84 4.72 12.87 5.02 12.87 5.33C12.87 8.07 10.64 10.29 7.9 10.3C7.12 10.3 6.38 10.12 5.73 9.79C7.29 7.21 9.81 5.26 12.79 4.43Z" fill="#FBB8AB"/><path d="M20.57 4.9C19.85 5.96 19.43 7.24 19.43 8.63C19.43 12.29 22.4 15.26 26.06 15.26C26.72 15.26 27.36 15.16 27.96 14.98C27.57 10.42 24.63 6.58 20.57 4.9Z" fill="#FBB8AB"/><path d="M14.94 17.04C16.45 17.04 17.68 15.81 17.68 14.3C17.68 12.79 16.45 11.56 14.94 11.56C13.43 11.56 12.2 12.79 12.2 14.3C12.2 15.81 13.43 17.04 14.94 17.04Z" fill="#FBB8AB"/></symbol></defs></svg>
+
+<!-- Header: Back | SCORE ★ | BEST ♛ | Volume, with LEVEL + timer beneath -->
+<div id="topbar">
+  <div id="hud-bar">
+    <div class="btn3d btn-icon" id="back-btn" role="button" aria-label="Back" tabindex="0">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="back-ico" viewBox="0 0 447.243 447.243" aria-hidden="true">
+          <path fill="currentColor" d="M420.361 192.229a31.967 31.967 0 0 0-5.535-.41H99.305l6.88-3.2a63.998 63.998 0 0 0 18.08-12.8l88.48-88.48c11.653-11.124 13.611-29.019 4.64-42.4-10.441-14.259-30.464-17.355-44.724-6.914a32.018 32.018 0 0 0-3.276 2.754l-160 160c-12.504 12.49-12.515 32.751-.025 45.255l.025.025 160 160c12.514 12.479 32.775 12.451 45.255-.063a32.084 32.084 0 0 0 2.745-3.137c8.971-13.381 7.013-31.276-4.64-42.4l-88.32-88.64a64.002 64.002 0 0 0-16-11.68l-9.6-4.32h314.24c16.347.607 30.689-10.812 33.76-26.88 2.829-17.445-9.019-33.88-26.464-36.71z"/>
+        </svg>
+      </span>
+    </div>
+    <div class="hud-scores">
+      <div class="hud-pill" id="pill-score">
+        <svg class="pill-ico" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2 L14.9 8.6 L22 9.3 L16.7 14 L18.3 21 L12 17.3 L5.7 21 L7.3 14 L2 9.3 L9.1 8.6 Z"
+                fill="#F5B92B" stroke="#141210" stroke-width="1.6" stroke-linejoin="round"/>
+        </svg>
+        <div class="pill-text">
+          <div class="label" id="lbl-score">SCORE</div>
+          <div class="value" id="hud-score">0</div>
+        </div>
+      </div>
+      <div class="hud-pill">
+        <svg class="pill-ico" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 18 L4.2 8 L9 12.5 L12 5.5 L15 12.5 L19.8 8 L21 18 Z" fill="#F5B92B" stroke="#141210" stroke-width="1.6" stroke-linejoin="round"/>
+          <rect x="3.4" y="16.4" width="17.2" height="3.2" rx="1" fill="#F5B92B" stroke="#141210" stroke-width="1.4"/>
+        </svg>
+        <div class="pill-text">
+          <div class="label" id="lbl-best">BEST</div>
+          <div class="value" id="hud-best">0</div>
+        </div>
+      </div>
+    </div>
+    <div class="btn3d btn-icon" id="sound-btn" role="button" aria-label="Sound" tabindex="0">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="snd-ico" viewBox="0 0 100 100" aria-hidden="true">
+          <path fill="currentColor" d="M14 38 v24 h16 l21 18 V20 L30 38 Z"/>
+          <path class="snd-waves" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" d="M62 36 q9 14 0 28 M73 27 q15 23 0 46"/>
+          <path class="snd-slash" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" d="M63 35 L86 65 M86 35 L63 65"/>
+        </svg>
+      </span>
+    </div>
+  </div>
+  <div id="hud-sub">
+    <span class="sub-level"><span id="lbl-level">LEVEL</span> <span id="hud-level">1</span></span>
+    <div id="time-bar-bg"><div id="time-bar-fill"></div></div>
+    <span id="hud-secs">0</span>
+  </div>
+</div>
+
+<div id="app">
+  <div id="board-outer">
+    <div id="board-wrap">
+      <div id="board"></div>
+      <svg id="link-svg" aria-hidden="true"></svg>
+    </div>
+  </div>
+</div>
+
+<!-- Tutorial banner -->
+<div id="tut-banner" class="hidden">
+  <span id="tut-text"></span>
+  <button class="btn3d mini" id="tut-skip" type="button">
+    <span class="btn3d-shadow"></span>
+    <span class="btn3d-surface" id="tut-skip-label">Skip</span>
+  </button>
+</div>
+
+<svg id="tut-arrow" class="hidden" viewBox="0 0 26 54" aria-hidden="true">
+  <path d="M13 52 L13 14 M4 24 L13 6 L22 24" fill="none" stroke="#141210"
+        stroke-width="6" stroke-linecap="square" stroke-linejoin="miter"/>
+  <path d="M13 52 L13 14 M4 24 L13 6 L22 24" fill="none" stroke="#E8462F"
+        stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter"/>
+</svg>
+
+<!-- Overlays -->
+<div id="combo-badge" class="pop-txt" aria-live="polite"></div>
+<div id="praise" class="pop-txt" aria-live="polite"></div>
+<div id="toast" class="pop-txt" role="status"></div>
+<div id="tut-check" aria-hidden="true">
+  <svg viewBox="0 0 48 48">
+    <rect x="4" y="4" width="40" height="40" rx="6" fill="#3BA35A" stroke="#141210" stroke-width="3.5"/>
+    <path d="M14 24.5 L21 31.5 L34 17.5" fill="none" stroke="#FFFFFF" stroke-width="5.5" stroke-linecap="square" stroke-linejoin="miter"/>
+  </svg>
+</div>
+<div id="pause-veil" class="hidden"><div class="pv-txt" id="pause-txt">Tap to resume</div></div>
+
+<script>
+'use strict';
+
+/* ================================================================
+ * §0. i18n — inline, no external file (game-common §5)
+ * Following the animal-connect precedent (QA 2026-07-22 "thừa localize"):
+ * the TUTORIAL is translated into all 23 app languages, while HUD labels and
+ * in-match toasts stay English through the `en` fallback. Documented in
+ * README.md as a deliberate deviation from game-common §5.
+ * ============================================================= */
+const SUPPORTED_LANGS = [
+  'en','vi','zh-Hans','zh-Hant','ja','ko','es','es-MX','es-AR','pt-BR','pt',
+  'fr','de','it','nl','pl','ru','tr','ar','hi','th','id','fil',
+];
+/* Google Sans Flex covers every Latin script (incl. Vietnamese diacritics).
+   Anything else must fall back to system-ui or ONE line renders in TWO fonts. */
+const LATIN_LANGS = new Set([
+  'en','vi','es','es-MX','es-AR','pt-BR','pt','fr','de','it','nl','pl','tr','id','fil',
+]);
+const DEFAULT_LANG = 'en';
+
+const I18N = {
+  en: {
+    score: 'SCORE', best: 'BEST', level: 'LEVEL', skip: 'Skip',
+    tutLink:  'Tap the two glowing fruits to link them.',
+    tutBend:  'Not linkable — that route needs 3 turns. A link allows only 2.',
+    tutDrop:  'Fruit FALLS when the space below empties. Clear the new pair!',
+    tutClear: 'Now clear the whole board before the timer runs out.',
+    tutPick:  'Tap the highlighted pair.',
+    shuffled: 'No moves left — shuffled!',
+    fast: 'Fast!', wow: 'Lightning!', dropCombo: 'DROP',
+    resume: 'Tap to resume',
+  },
+};
+/* Tutorial-only translations. Any key missing here falls back to `en`. */
+const TUT_I18N = {
+  vi: { skip:'Bỏ qua', tutLink:'Chạm hai quả đang sáng để nối chúng.', tutBend:'Không nối được — đường này cần 3 lần rẽ. Nối chỉ cho phép 2.', tutDrop:'Quả sẽ RƠI khi ô bên dưới trống. Dọn cặp mới đi!', tutClear:'Giờ dọn sạch cả bàn trước khi hết giờ.', tutPick:'Chạm đúng cặp đang sáng.' },
+  'zh-Hans': { skip:'跳过', tutLink:'点击两个发光的水果将它们连接。', tutBend:'无法连接 — 这条路径需要转 3 次。连线最多只能转 2 次。', tutDrop:'下方空出时水果会掉落。清除新出现的一对！', tutClear:'现在在时间结束前清空整个棋盘。', tutPick:'请点击高亮的那一对。' },
+  'zh-Hant': { skip:'跳過', tutLink:'點擊兩個發光的水果將它們連接。', tutBend:'無法連接 — 這條路徑需要轉 3 次。連線最多只能轉 2 次。', tutDrop:'下方空出時水果會掉落。清除新出現的一對！', tutClear:'現在在時間結束前清空整個棋盤。', tutPick:'請點擊高亮的那一對。' },
+  ja: { skip:'スキップ', tutLink:'光っている2つのフルーツをタップしてつなげよう。', tutBend:'つながりません — この経路は3回曲がります。線は2回までです。', tutDrop:'下が空くとフルーツが落ちます。新しいペアを消そう！', tutClear:'時間切れになる前に盤面をすべて消そう。', tutPick:'光っているペアをタップしてね。' },
+  ko: { skip:'건너뛰기', tutLink:'빛나는 과일 두 개를 탭해 연결하세요.', tutBend:'연결 불가 — 이 경로는 3번 꺾입니다. 연결은 2번까지만 됩니다.', tutDrop:'아래가 비면 과일이 떨어집니다. 새로 생긴 짝을 없애세요!', tutClear:'시간이 끝나기 전에 판을 모두 비우세요.', tutPick:'강조된 짝을 탭하세요.' },
+  es: { skip:'Saltar', tutLink:'Toca las dos frutas iluminadas para unirlas.', tutBend:'No se puede unir: esa ruta necesita 3 giros. Solo se permiten 2.', tutDrop:'La fruta CAE cuando se vacía el hueco de abajo. ¡Elimina el nuevo par!', tutClear:'Ahora limpia todo el tablero antes de que se acabe el tiempo.', tutPick:'Toca el par resaltado.' },
+  'es-MX': { skip:'Saltar', tutLink:'Toca las dos frutas iluminadas para unirlas.', tutBend:'No se puede unir: esa ruta necesita 3 giros. Solo se permiten 2.', tutDrop:'La fruta CAE cuando se vacía el hueco de abajo. ¡Elimina el nuevo par!', tutClear:'Ahora limpia todo el tablero antes de que se acabe el tiempo.', tutPick:'Toca el par resaltado.' },
+  'es-AR': { skip:'Saltar', tutLink:'Tocá las dos frutas iluminadas para unirlas.', tutBend:'No se puede unir: esa ruta necesita 3 giros. Solo se permiten 2.', tutDrop:'La fruta CAE cuando se vacía el hueco de abajo. ¡Eliminá el nuevo par!', tutClear:'Ahora limpiá todo el tablero antes de que se acabe el tiempo.', tutPick:'Tocá el par resaltado.' },
+  'pt-BR': { skip:'Pular', tutLink:'Toque nas duas frutas destacadas para ligá-las.', tutBend:'Não dá para ligar — essa rota precisa de 3 curvas. A ligação permite só 2.', tutDrop:'A fruta CAI quando o espaço abaixo esvazia. Elimine o novo par!', tutClear:'Agora limpe o tabuleiro todo antes do tempo acabar.', tutPick:'Toque no par destacado.' },
+  pt: { skip:'Saltar', tutLink:'Toca nas duas frutas destacadas para as ligares.', tutBend:'Não é possível ligar — essa rota precisa de 3 curvas. A ligação permite só 2.', tutDrop:'A fruta CAI quando o espaço abaixo fica vazio. Limpa o novo par!', tutClear:'Agora limpa o tabuleiro todo antes do tempo acabar.', tutPick:'Toca no par destacado.' },
+  fr: { skip:'Passer', tutLink:'Touche les deux fruits en surbrillance pour les relier.', tutBend:'Liaison impossible — ce trajet demande 3 virages. Seuls 2 sont permis.', tutDrop:'Les fruits TOMBENT quand la place en dessous se libère. Élimine la nouvelle paire !', tutClear:'Vide maintenant tout le plateau avant la fin du temps.', tutPick:'Touche la paire en surbrillance.' },
+  de: { skip:'Überspringen', tutLink:'Tippe die zwei leuchtenden Früchte an, um sie zu verbinden.', tutBend:'Nicht verbindbar — dieser Weg braucht 3 Kurven. Erlaubt sind nur 2.', tutDrop:'Früchte FALLEN, wenn der Platz darunter frei wird. Räume das neue Paar ab!', tutClear:'Räume jetzt das ganze Feld ab, bevor die Zeit abläuft.', tutPick:'Tippe das hervorgehobene Paar an.' },
+  it: { skip:'Salta', tutLink:'Tocca i due frutti evidenziati per collegarli.', tutBend:'Non collegabile — quel percorso richiede 3 curve. Il collegamento ne permette 2.', tutDrop:'La frutta CADE quando lo spazio sotto si svuota. Elimina la nuova coppia!', tutClear:'Ora libera tutto il tabellone prima che scada il tempo.', tutPick:'Tocca la coppia evidenziata.' },
+  nl: { skip:'Overslaan', tutLink:'Tik op de twee oplichtende vruchten om ze te verbinden.', tutBend:'Niet te verbinden — die route heeft 3 bochten nodig. Er zijn er maar 2 toegestaan.', tutDrop:'Fruit VALT als de plek eronder leegkomt. Ruim het nieuwe paar op!', tutClear:'Maak nu het hele bord leeg voordat de tijd om is.', tutPick:'Tik op het gemarkeerde paar.' },
+  pl: { skip:'Pomiń', tutLink:'Dotknij dwóch podświetlonych owoców, aby je połączyć.', tutBend:'Nie da się połączyć — ta trasa wymaga 3 zakrętów. Połączenie dopuszcza tylko 2.', tutDrop:'Owoce SPADAJĄ, gdy zwolni się miejsce poniżej. Usuń nową parę!', tutClear:'Teraz wyczyść całą planszę, zanim skończy się czas.', tutPick:'Dotknij podświetlonej pary.' },
+  ru: { skip:'Пропустить', tutLink:'Коснитесь двух подсвеченных фруктов, чтобы соединить их.', tutBend:'Соединить нельзя — этому пути нужно 3 поворота. Допускается только 2.', tutDrop:'Фрукты ПАДАЮТ, когда место снизу освобождается. Уберите новую пару!', tutClear:'Теперь очистите всё поле, пока не вышло время.', tutPick:'Коснитесь выделенной пары.' },
+  tr: { skip:'Atla', tutLink:'Bağlamak için parlayan iki meyveye dokun.', tutBend:'Bağlanamaz — bu yol 3 dönüş gerektiriyor. Bağlantı yalnızca 2 dönüşe izin verir.', tutDrop:'Altındaki yer boşalınca meyveler DÜŞER. Yeni çifti temizle!', tutClear:'Şimdi süre bitmeden tüm tahtayı temizle.', tutPick:'Vurgulanan çifte dokun.' },
+  ar: { skip:'تخطٍّ', tutLink:'المس الفاكهتين المضيئتين لربطهما.', tutBend:'لا يمكن الربط — هذا المسار يحتاج 3 انعطافات. الربط يسمح باثنتين فقط.', tutDrop:'تسقط الفاكهة عندما يفرغ المكان أسفلها. أزل الزوج الجديد!', tutClear:'الآن نظّف اللوح بالكامل قبل انتهاء الوقت.', tutPick:'المس الزوج المميّز.' },
+  hi: { skip:'छोड़ें', tutLink:'दोनों चमकते फलों को जोड़ने के लिए टैप करें।', tutBend:'नहीं जुड़ सकता — इस रास्ते में 3 मोड़ चाहिए। जोड़ में सिर्फ़ 2 चलते हैं।', tutDrop:'नीचे जगह खाली होने पर फल गिरते हैं। नई जोड़ी हटाइए!', tutClear:'अब समय ख़त्म होने से पहले पूरा बोर्ड साफ़ करें।', tutPick:'हाइलाइट की गई जोड़ी पर टैप करें।' },
+  th: { skip:'ข้าม', tutLink:'แตะผลไม้ที่เรืองแสงสองชิ้นเพื่อเชื่อมกัน', tutBend:'เชื่อมไม่ได้ — เส้นทางนี้ต้องหักมุม 3 ครั้ง การเชื่อมทำได้แค่ 2 ครั้ง', tutDrop:'ผลไม้จะร่วงเมื่อช่องด้านล่างว่าง เก็บคู่ใหม่ให้หมด!', tutClear:'ตอนนี้เก็บกระดานให้หมดก่อนหมดเวลา', tutPick:'แตะที่คู่ซึ่งไฮไลต์ไว้' },
+  id: { skip:'Lewati', tutLink:'Ketuk dua buah yang menyala untuk menghubungkannya.', tutBend:'Tidak bisa dihubungkan — jalur itu butuh 3 belokan. Sambungan hanya boleh 2.', tutDrop:'Buah JATUH saat ruang di bawahnya kosong. Bersihkan pasangan baru!', tutClear:'Sekarang bersihkan seluruh papan sebelum waktu habis.', tutPick:'Ketuk pasangan yang disorot.' },
+  fil: { skip:'Laktawan', tutLink:'I-tap ang dalawang nagniningning na prutas para pagdugtungin.', tutBend:'Hindi maidudugtong — kailangan ng 3 liko ang rutang iyon. Dalawa lang ang pwede.', tutDrop:'Nahuhulog ang prutas kapag nabakante ang ilalim. Linisin ang bagong pares!', tutClear:'Ngayon, linisin ang buong board bago maubos ang oras.', tutPick:'I-tap ang naka-highlight na pares.' },
+};
+
+let LANG = DEFAULT_LANG;
+/** key -> current language, then `en`, then the key itself. */
+function t(key) {
+  const tut = TUT_I18N[LANG];
+  if (tut && tut[key] != null) return tut[key];
+  return (I18N[LANG] && I18N[LANG][key]) || I18N.en[key] || key;
+}
+function getLanguage() {
+  const fromWin = typeof window.language === 'string' ? window.language : null;
+  const fromUrl = new URLSearchParams(window.location.search).get('language');
+  const raw = fromWin != null ? fromWin : fromUrl;
+  return SUPPORTED_LANGS.indexOf(raw) !== -1 ? raw : DEFAULT_LANG;
+}
+function applyUiFont(lang) {
+  if (!LATIN_LANGS.has(lang)) {
+    document.documentElement.style.setProperty('--ui-font', 'system-ui, sans-serif');
+  }
+}
+
+/* ================================================================
+ * §1. Native bridge (game-common §1) — game WITH levels
+ * ============================================================= */
+function post(msg) {
+  try {
+    if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+      window.ReactNativeWebView.postMessage(JSON.stringify(msg));
+    } else {
+      console.log('[fruit-drop → native]', msg);
+      devSimulateNative(msg);
+    }
+  } catch (e) { /* ignore */ }
+}
+function sendMessage(type, opts) {
+  opts = opts || {};
+  post({
+    type: type,
+    level: currentLevelIdx + 1,
+    result: opts.result != null ? opts.result : null,
+    data: opts.data != null ? opts.data : null,
+    showModal: opts.showModal === true,
+  });
+}
+/** Dev-only: in a plain browser there is no app popup, so fake the buttons the
+ *  app would show. Never runs inside the real WebView. */
+function devSimulateNative(msg) {
+  if (msg.type !== 'game_result') return;
+  setTimeout(function () {
+    if (msg.result === 'win' && typeof window.onNextLevel === 'function') window.onNextLevel();
+    else if (typeof window.onRetryLevel === 'function') window.onRetryLevel();
+  }, 1400);
+}
+function saveData(payload) {
+  const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
+  sendMessage('save_data', { data: data });
+}
+
+/* Throttled variant for the mid-run record.
+   Score accumulates across a whole run, so once the player passes their old
+   best EVERY subsequent clear sets a new one — sending save_data each time put
+   ~260 bridge messages through a single session. The record still must survive
+   the app being killed, so: localStorage is written immediately (it is in-
+   WebView and free) while native gets at most one message every SAVE_MIN_MS,
+   with a trailing send so the final value is never dropped. Level end and run
+   end always force an immediate, unthrottled send. */
+const SAVE_MIN_MS = 4000;
+let lastSaveAt = -1e9, saveTrailing = 0;
+function saveDataThrottled(payload) {
+  const now = (window.performance && performance.now) ? performance.now() : Date.now();
+  if (now - lastSaveAt >= SAVE_MIN_MS) {
+    lastSaveAt = now;
+    clearTimeout(saveTrailing); saveTrailing = 0;
+    saveData(payload);
+    return;
+  }
+  if (saveTrailing) return;
+  saveTrailing = setTimeout(function () {
+    saveTrailing = 0;
+    lastSaveAt = (window.performance && performance.now) ? performance.now() : Date.now();
+    saveData(lightData());
+  }, SAVE_MIN_MS - (now - lastSaveAt));
+}
+function saveDataNow(payload) {
+  clearTimeout(saveTrailing); saveTrailing = 0;
+  lastSaveAt = (window.performance && performance.now) ? performance.now() : Date.now();
+  saveData(payload);
+}
+
+const LS_KEY = 'fruit_drop_v1';
+function saveLocal(payload) {
+  try {
+    const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
+    localStorage.setItem(LS_KEY, data);
+  } catch (e) { /* private mode / quota */ }
+}
+function readLocal() { try { return localStorage.getItem(LS_KEY) || ''; } catch (e) { return ''; } }
+function clearLocal() { try { localStorage.removeItem(LS_KEY); } catch (e) {} }
+
+function getStatusBarHeight() {
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = params.get('statusBarHeight');
+  const fromWin = typeof window.statusBarHeight !== 'undefined' ? window.statusBarHeight : null;
+  let h = Number(fromUrl != null ? fromUrl : fromWin);
+  if (!isFinite(h) || h < 0) h = 0;
+  return h;
+}
+function getInitialLevelIdx() {
+  const fromWin = typeof window.currentLevel === 'number' ? window.currentLevel : null;
+  const fromUrl = new URLSearchParams(window.location.search).get('currentLevel');
+  const raw = Number(fromWin != null ? fromWin : fromUrl);
+  if (!isFinite(raw) || raw < 1) return -1;          // -1 = "not supplied"
+  return Math.min(Math.floor(raw), MAX_LEVEL_IDX + 1) - 1;
+}
+function getInitialData() {
+  const fromWin = typeof window.data === 'string' ? window.data : null;
+  const fromUrl = new URLSearchParams(window.location.search).get('data');
+  return fromWin != null ? fromWin : (fromUrl || '');
+}
+function isResetRun() {
+  return new URLSearchParams(window.location.search).get('reset') === '1';
+}
+/** Light data (native, wins) merged over the heavy in-progress board (localStorage). */
+function parseInitialData() {
+  if (isResetRun()) { clearLocal(); return null; }    // repo convention for playtests
+  let nativeObj = null, localObj = null;
+  const raw = getInitialData();
+  if (raw) { try { nativeObj = JSON.parse(raw); } catch (e) {} }
+  const lraw = readLocal();
+  if (lraw) { try { localObj = JSON.parse(lraw); } catch (e) {} }
+  if (!nativeObj && !localObj) return null;
+  const merged = Object.assign({}, localObj || {}, nativeObj || {});
+  if (localObj && localObj.game) merged.game = localObj.game;
+  return merged;
+}
+/* ================================================================
+ * §2. Level configuration — endless, generated from the index
+ * ============================================================= */
+const ICON_COUNT = 14;
+const MAX_LEVEL_IDX = 9998;          // guard against absurd values from native
+
+/* [cols, rows, typesOnBoard]; every cols*rows is EVEN so the board tiles
+   perfectly into pairs. Both the shape and the type count were MEASURED with
+   the gravity-aware deadlock simulator, and both corrected an assumption:
+     - Gravity makes dead ends far MORE likely than in static Onet, not less.
+       Clearing a pair in static Onet leaves a hole in the middle of the board,
+       and those holes are the routing corridors later pairs need. Gravity
+       migrates every hole to the top instead, leaving a dense slab whose only
+       linkable tiles are the ones on its surface.
+     - So the two levers that matter are SHAPE and TYPE COUNT, not the
+       adjacency fraction. Wide beats tall by a mile (12x10 dead-ends 7.5% of
+       games, 10x12 with identical cells and types dead-ends 20%), and every
+       extra fruit type hurts sharply (on one board: 6 types 5%, 14 types 38%).
+   Hence: boards stay wide, and the number of DIFFERENT fruits on the board is
+   held so that roughly 3+ pairs of each are present. Measured result for this
+   table is ~6-12% of games needing a single auto-shuffle. */
+const LEVEL_RAMP = [
+  [6, 6, 6], [8, 6, 8], [8, 8, 8], [10, 8, 10], [10, 10, 10], [12, 10, 12],
+];
+
+/* Only ~12 fruits are ever on one board, but the window ROTATES with the level
+   so all 14 icons are seen across a run — variety without the dead-end cost. */
+function typeIdsFor(idx, n) {
+  const ids = [], off = idx % ICON_COUNT;
+  for (let i = 0; i < n; i++) ids.push((off + i) % ICON_COUNT);
+  return ids;
+}
+
+function levelConfig(idx) {
+  const s = LEVEL_RAMP[Math.min(idx, LEVEL_RAMP.length - 1)];
+  const cols = s[0], rows = s[1];
+  const pairs = (cols * rows) / 2;
+  /* Board grows for the first 6 levels, then is CONSTANT while the clock
+     tightens every level — one variable held still, the other moving one way,
+     which is what makes a difficulty ramp legible (animal-connect lesson). */
+  const perPair = Math.max(2.0, 4.4 - idx * 0.16);
+  const time = Math.round(pairs * perPair / 5) * 5;
+  return { cols: cols, rows: rows, typeIds: typeIdsFor(idx, s[2]),
+           time: time, pairs: pairs };
+}
+
+/* Fraction of pairs planted as an ADJACENT domino. Measured as a weak lever on
+   the dead-end rate but a strong one on how "obviously paired" the board looks,
+   so it is kept LOW and the safety comes from the ramp above instead. */
+function adjFraction(idx) { return 0.15; }
+
+/* ================================================================
+ * §3. Board state
+ * ============================================================= */
+let currentLevelIdx = 0;
+let COLS = 6, ROWS = 6;
+let grid  = [];          // grid[r][c] = type index | -1 (empty).  r=0 is the TOP row.
+let tiles = [];          // tiles[r][c] = tile object | null (kept in step with grid)
+let pairsLeft   = 0;
+let score       = 0;     // cumulative for the whole run (level 1 -> endgame)
+let best        = 0;
+let timeTotal   = 80;
+let timeLeft    = 80;
+let busy        = false; // animating a match / fall / shuffle — input is locked
+let ended       = false;
+let paused      = false;
+let selected    = null;  // {r,c}
+let hintPair    = null;
+let cellPx      = 44;
+let gapPx       = 3;
+let dropCombo   = 0;     // consecutive clears that used a tile from the last fall
+let lastFindAt  = 0;     // hidden clock: how long the player took to spot a pair
+let endCounter  = 0;     // ended runs -> an `ads` request every 3rd
+let levelEpoch  = 0;     // bumped by loadLevel; invalidates in-flight async work
+let muted       = false;
+let droppedSet  = null;  // tiles that MOVED in the most recent settle
+let tutorialSeen = false;
+let tutorialMode = false;
+let booted      = false;
+
+const boardEl      = document.getElementById('board');
+const boardWrapEl  = document.getElementById('board-wrap');
+const boardOuterEl = document.getElementById('board-outer');
+const topbarEl     = document.getElementById('topbar');
+const linkSvg      = document.getElementById('link-svg');
+const hudSubEl     = document.getElementById('hud-sub');
+const elScore      = document.getElementById('hud-score');
+const elBest       = document.getElementById('hud-best');
+const elLevel      = document.getElementById('hud-level');
+const elSecs       = document.getElementById('hud-secs');
+const barFill      = document.getElementById('time-bar-fill');
+const pillScore    = document.getElementById('pill-score');
+const toastEl      = document.getElementById('toast');
+const praiseEl     = document.getElementById('praise');
+const comboEl      = document.getElementById('combo-badge');
+const tutBanner    = document.getElementById('tut-banner');
+const tutTextEl    = document.getElementById('tut-text');
+const tutArrow     = document.getElementById('tut-arrow');
+const tutCheck     = document.getElementById('tut-check');
+const pauseVeil    = document.getElementById('pause-veil');
+const soundBtn     = document.getElementById('sound-btn');
+
+function shuffleArr(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = (Math.random() * (i + 1)) | 0;
+    const t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+/* ================================================================
+ * §4. Tile pool + layout
+ * Tiles are allocated ONCE at the maximum board size and recycled forever.
+ * Nothing is created or destroyed during play, and a tile's grid position
+ * lives in its inline `transform` so a fall is a single style write that the
+ * compositor animates — no per-frame JavaScript while tiles are moving.
+ * ============================================================= */
+const MAX_CELLS = 10 * 12;
+const XLINK = 'http://www.w3.org/1999/xlink';
+const pool = [];
+let poolUsed = 0;
+
+function buildPool() {
+  for (let i = 0; i < MAX_CELLS; i++) {
+    const el = document.createElement('div');
+    el.className = 'tile hidden';
+    el.innerHTML = '<div class="tile-face"><svg viewBox="0 0 32 32" aria-hidden="true">' +
+                   '<use href="#f0"></use></svg></div>';
+    boardEl.appendChild(el);
+    pool.push({
+      el: el,
+      face: el.firstChild,
+      use: el.getElementsByTagName('use')[0],
+      type: -1, r: -1, c: -1,
+    });
+  }
+}
+/** `href` is SVG2 (Chromium 49+); the xlink form keeps very old WebViews happy. */
+function setTileType(t, type) {
+  if (t.type === type) return;
+  t.type = type;
+  t.use.setAttribute('href', '#f' + type);
+  t.use.setAttributeNS(XLINK, 'xlink:href', '#f' + type);
+}
+function takeTile(type, r, c) {
+  const t = pool[poolUsed++];
+  setTileType(t, type);
+  t.r = r; t.c = c;
+  t.el.className = 'tile';
+  applyTileSize(t);
+  applyTilePos(t);
+  return t;
+}
+function releaseAll() {
+  for (let i = 0; i < poolUsed; i++) pool[i].el.className = 'tile hidden';
+  poolUsed = 0;
+}
+function applyTileSize(t) {
+  const s = cellPx - gapPx;
+  t.el.style.width = s + 'px';
+  t.el.style.height = s + 'px';
+}
+function applyTilePos(t) {
+  const h = gapPx / 2;
+  t.el.style.transform = 'translate(' + (t.c * cellPx + h) + 'px,' + (t.r * cellPx + h) + 'px)';
+}
+
+function resize() {
+  const headH = Math.ceil(topbarEl.getBoundingClientRect().height);
+  boardOuterEl.style.paddingTop = headH + 'px';
+
+  const frame = 6 * 2 + 3 * 2;                       // #board-wrap padding + border
+  const availW = Math.max(60, boardOuterEl.clientWidth - 16 - frame);
+  let availH = Math.max(60, window.innerHeight - headH - 26 - frame);
+  if (tutorialMode && !tutBanner.classList.contains('hidden')) {
+    availH -= Math.ceil(tutBanner.getBoundingClientRect().height) + 28;
+  }
+  /* Divide by COLS+1 and ROWS+1, not COLS/ROWS: the link overlay deliberately
+     spills one cell outside the board on every side (Onet routes are allowed to
+     loop around the border ring) and #board-outer is overflow:hidden. Reserving
+     half a cell on each side is what stops a path that goes around the left or
+     right edge from being sliced off mid-draw. */
+  cellPx = Math.floor(Math.max(16, Math.min(availW / (COLS + 1), availH / (ROWS + 1), 58)));
+  gapPx  = Math.max(2, Math.round(cellPx * 0.09));
+
+  const w = COLS * cellPx, h = ROWS * cellPx;
+  boardEl.style.width = w + 'px';
+  boardEl.style.height = h + 'px';
+  linkSvg.style.left = -cellPx + 'px';
+  linkSvg.style.top  = -cellPx + 'px';
+  linkSvg.setAttribute('width',  (w + cellPx * 2) + '');
+  linkSvg.setAttribute('height', (h + cellPx * 2) + '');
+  linkSvg.setAttribute('viewBox', '0 0 ' + (w + cellPx * 2) + ' ' + (h + cellPx * 2));
+  linkSvg.style.setProperty('--lw-under', Math.max(5, Math.round(cellPx * 0.17)) + 'px');
+  linkSvg.style.setProperty('--lw-core',  Math.max(2, Math.round(cellPx * 0.085)) + 'px');
+  layoutAll();
+  if (tutorialMode) positionTutorialChrome();
+}
+function layoutAll() {
+  for (let i = 0; i < poolUsed; i++) {
+    const t = pool[i];
+    if (t.r < 0) continue;
+    applyTileSize(t);
+    applyTilePos(t);
+  }
+}
+
+/* ================================================================
+ * §5. Board generation
+ * The starting board is completely full, so — exactly as in classic Onet —
+ * the only immediately linkable pairs are orthogonally adjacent ones plus
+ * pairs that can route around the outer ring. `adjFraction` therefore plants a
+ * share of pairs as adjacent dominoes; the rest are scattered.
+ * ============================================================= */
+function genBoardGrid(typeIds, idx) {
+  const total = COLS * ROWS, nPairs = total >> 1;
+  const bag = [];
+  for (let i = 0; i < nPairs; i++) bag.push(typeIds[i % typeIds.length]);
+  shuffleArr(bag);
+
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) grid[r][c] = -1;
+
+  const isFree = new Uint8Array(total).fill(1);
+  const order = [];
+  for (let i = 0; i < total; i++) order.push(i);
+  shuffleArr(order);
+
+  const f = adjFraction(idx);
+  let cursor = 0;
+  for (let p = 0; p < nPairs; p++) {
+    while (cursor < total && !isFree[order[cursor]]) cursor++;
+    const a = order[cursor];
+    isFree[a] = 0;
+    const ar = (a / COLS) | 0, ac = a % COLS;
+
+    let b = -1;
+    if (Math.random() < f) {
+      const cand = [];
+      if (ar > 0        && isFree[a - COLS]) cand.push(a - COLS);
+      if (ar < ROWS - 1 && isFree[a + COLS]) cand.push(a + COLS);
+      if (ac > 0        && isFree[a - 1])    cand.push(a - 1);
+      if (ac < COLS - 1 && isFree[a + 1])    cand.push(a + 1);
+      if (cand.length) b = cand[(Math.random() * cand.length) | 0];
+    }
+    if (b < 0) {
+      const rest = [];
+      for (let i = cursor + 1; i < total; i++) if (isFree[order[i]]) rest.push(order[i]);
+      if (!rest.length) break;
+      b = rest[(Math.random() * rest.length) | 0];
+    }
+    isFree[b] = 0;
+    grid[ar][ac] = bag[p];
+    grid[(b / COLS) | 0][b % COLS] = bag[p];
+  }
+}
+
+/** Make at least one pair linkable WITHOUT breaking pair parity: find a tile,
+ *  find its partner, and swap the partner into a neighbouring cell. Counts per
+ *  type are untouched, so the board stays perfectly pairable. */
+function forceOneMove() {
+  for (let tries = 0; tries < 300; tries++) {
+    const r = (Math.random() * ROWS) | 0, c = (Math.random() * COLS) | 0;
+    const type = grid[r][c];
+    if (type < 0) continue;
+
+    let pr = -1, pc = -1;
+    for (let rr = 0; rr < ROWS && pr < 0; rr++) {
+      for (let cc = 0; cc < COLS; cc++) {
+        if ((rr !== r || cc !== c) && grid[rr][cc] === type) { pr = rr; pc = cc; break; }
+      }
+    }
+    if (pr < 0) continue;
+
+    const nb = [];
+    if (r > 0)        nb.push([r - 1, c]);
+    if (r < ROWS - 1) nb.push([r + 1, c]);
+    if (c > 0)        nb.push([r, c - 1]);
+    if (c < COLS - 1) nb.push([r, c + 1]);
+    shuffleArr(nb);
+    for (let i = 0; i < nb.length; i++) {
+      const nr = nb[i][0], nc = nb[i][1];
+      if (grid[nr][nc] < 0) continue;
+      if (nr === pr && nc === pc) return true;            // already adjacent
+      const tmp = grid[nr][nc]; grid[nr][nc] = grid[pr][pc]; grid[pr][pc] = tmp;
+      return true;
+    }
+  }
+  return false;
+}
+
+function fillBoard(typeIds, idx) {
+  for (let attempt = 0; attempt < 12; attempt++) {
+    genBoardGrid(typeIds, idx);
+    if (hasMoves()) return;
+  }
+  forceOneMove();
+}
+
+function buildTileDom() {
+  releaseAll();
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const v = grid[r][c];
+      tiles[r][c] = (v < 0) ? null : takeTile(v, r, c);
+    }
+  }
+}
+
+/* ================================================================
+ * §6. Gravity — the mechanic this game is built around
+ * ============================================================= */
+const FALL_BASE = 120;   // ms for a one-cell drop
+const FALL_PER  = 46;    // extra ms per sqrt(cell) of distance
+
+/** Compact every column downward. Returns the tiles that actually moved,
+ *  each with the distance it fell (used to time its transition). */
+function settleGravity() {
+  const moves = [];
+  for (let c = 0; c < COLS; c++) {
+    let write = ROWS - 1;
+    for (let r = ROWS - 1; r >= 0; r--) {
+      if (grid[r][c] < 0) continue;
+      if (r !== write) {
+        grid[write][c] = grid[r][c]; grid[r][c] = -1;
+        const t = tiles[r][c];
+        tiles[write][c] = t; tiles[r][c] = null;
+        t.r = write;
+        moves.push({ tile: t, dist: write - r });
+      }
+      write--;
+    }
+  }
+  return moves;
+}
+
+function fallMs(dist) { return Math.round(FALL_BASE + Math.sqrt(dist) * FALL_PER); }
+
+/** Apply gravity and animate it. Everything after this point is driven by one
+ *  timeout, not a per-frame loop — the compositor owns the motion. */
+function applyGravity(ep) {
+  const moves = settleGravity();
+  droppedSet = new Set();
+  if (!moves.length) { onSettled(ep, moves); return; }
+
+  let longest = 0;
+  for (let i = 0; i < moves.length; i++) {
+    const m = moves[i];
+    droppedSet.add(m.tile);
+    const ms = fallMs(m.dist);
+    if (ms > longest) longest = ms;
+    m.tile.el.style.transitionDuration = ms + 'ms';
+    m.tile.el.classList.add('falling');
+    applyTilePos(m.tile);
+  }
+  sfxDrop(moves.length);
+  setTimeout(function () { if (ep === levelEpoch) onSettled(ep, moves); }, longest + 24);
+}
+
+function onSettled(ep, moves) {
+  for (let i = 0; i < moves.length; i++) {
+    const el = moves[i].tile.el;
+    el.classList.remove('falling');
+    el.style.transitionDuration = '';
+    el.classList.add('landed');
+  }
+  if (moves.length) {
+    setTimeout(function () {
+      for (let i = 0; i < moves.length; i++) moves[i].tile.el.classList.remove('landed');
+    }, 180);
+  }
+  busy = false;
+  afterBoardChange(ep);
+}
+
+/* ================================================================
+ * §7. Path finding
+ *
+ * Two routines with deliberately different jobs:
+ *
+ *  reachFrom(r,c)  — the HOT one. One turn-limited ray scan marks every tile
+ *                    linkable from a source, so a colour group of k tiles costs
+ *                    k scans instead of k*(k-1)/2 pairwise searches. Runs after
+ *                    every single clear (deadlock check) and on the idle hint.
+ *  findPath(a,b)   — the COLD one. Reconstructs the actual polyline for drawing,
+ *                    called at most once per match.
+ * ============================================================= */
+let PW = 0, PH = 0;                 // padded dimensions (board + 1-cell ring)
+let visBuf = null, hitBuf = null, layerA = null, layerB = null;
+let scanId = 0;
+const DR = [-1, 1, 0, 0], DC = [0, 0, -1, 1];
+const MAX_TURNS = 2;
+
+function allocPathBufs() {
+  PW = COLS + 2; PH = ROWS + 2;
+  const n = PW * PH;
+  /* Stamped with scanId rather than cleared, so a scan never pays for a fill. */
+  visBuf = new Int32Array(n * 4);
+  hitBuf = new Int32Array(n);
+  layerA = new Int32Array(n * 4);
+  layerB = new Int32Array(n * 4);
+  scanId = 0;
+}
+
+/** Padded coords: (pr,pc) = (r+1,c+1). The outer ring is always walkable — that
+ *  is what lets Onet paths loop around the outside of the board. */
+function isFreeP(pr, pc) {
+  if (pr <= 0 || pr >= PH - 1 || pc <= 0 || pc >= PW - 1) return true;
+  return grid[pr - 1][pc - 1] < 0;
+}
+
+/** Walk from (r,c) along direction d. Free cells become states we may turn from
+ *  later; the first occupied cell is stamped as a candidate partner and stops
+ *  the ray. Layers are processed in increasing turn order, so the first time a
+ *  (cell,direction) is seen it is via the fewest turns — hence the early break. */
+function ray(r, c, d, out, n) {
+  const dr = DR[d], dc = DC[d];
+  for (;;) {
+    r += dr; c += dc;
+    if (r < 0 || r >= PH || c < 0 || c >= PW) break;
+    const cell = r * PW + c;
+    if (!isFreeP(r, c)) { hitBuf[cell] = scanId; break; }
+    const key = (cell << 2) | d;
+    if (visBuf[key] === scanId) break;
+    visBuf[key] = scanId;
+    out[n++] = key;
+  }
+  return n;
+}
+
+/** Stamp every occupied cell linkable from (sr,sc) with <= MAX_TURNS turns. */
+function reachFrom(sr, sc) {
+  scanId++;
+  const r0 = sr + 1, c0 = sc + 1;
+  let cur = layerA, curN = 0;
+  for (let d = 0; d < 4; d++) curN = ray(r0, c0, d, cur, curN);
+  for (let turn = 1; turn <= MAX_TURNS && curN; turn++) {
+    const nxt = (cur === layerA) ? layerB : layerA;
+    let nxtN = 0;
+    for (let i = 0; i < curN; i++) {
+      const key = cur[i], cell = key >> 2, d = key & 3;
+      const rr = (cell / PW) | 0, cc = cell - rr * PW;
+      if (d < 2) { nxtN = ray(rr, cc, 2, nxt, nxtN); nxtN = ray(rr, cc, 3, nxt, nxtN); }
+      else       { nxtN = ray(rr, cc, 0, nxt, nxtN); nxtN = ray(rr, cc, 1, nxt, nxtN); }
+    }
+    cur = nxt; curN = nxtN;
+  }
+}
+function linkable(ar, ac, br, bc) {
+  reachFrom(ar, ac);
+  return hitBuf[(br + 1) * PW + (bc + 1)] === scanId;
+}
+
+/* -- exact polyline, for drawing only -------------------------------- */
+function clearH(pr, c1, c2) {
+  const a = Math.min(c1, c2), b = Math.max(c1, c2);
+  for (let c = a + 1; c < b; c++) if (!isFreeP(pr, c)) return false;
+  return true;
+}
+function clearV(pc, r1, r2) {
+  const a = Math.min(r1, r2), b = Math.max(r1, r2);
+  for (let r = a + 1; r < b; r++) if (!isFreeP(r, pc)) return false;
+  return true;
+}
+/** Returns padded points [[pr,pc],...] or null. Classic 0/1/2-turn enumeration. */
+function findPath(r1, c1, r2, c2) {
+  const a1 = r1 + 1, b1 = c1 + 1, a2 = r2 + 1, b2 = c2 + 1;
+  if (a1 === a2 && clearH(a1, b1, b2)) return [[a1, b1], [a2, b2]];
+  if (b1 === b2 && clearV(b1, a1, a2)) return [[a1, b1], [a2, b2]];
+
+  if (isFreeP(a1, b2) && clearH(a1, b1, b2) && clearV(b2, a1, a2))
+    return [[a1, b1], [a1, b2], [a2, b2]];
+  if (isFreeP(a2, b1) && clearV(b1, a1, a2) && clearH(a2, b1, b2))
+    return [[a1, b1], [a2, b1], [a2, b2]];
+
+  for (let c = 0; c < PW; c++) {                       // horizontal - vertical - horizontal
+    if (c === b1 || c === b2) continue;
+    if (!isFreeP(a1, c) || !isFreeP(a2, c)) continue;
+    if (clearH(a1, b1, c) && clearV(c, a1, a2) && clearH(a2, c, b2))
+      return [[a1, b1], [a1, c], [a2, c], [a2, b2]];
+  }
+  for (let r = 0; r < PH; r++) {                       // vertical - horizontal - vertical
+    if (r === a1 || r === a2) continue;
+    if (!isFreeP(r, b1) || !isFreeP(r, b2)) continue;
+    if (clearV(b1, a1, r) && clearH(r, b1, b2) && clearV(b2, r, a2))
+      return [[a1, b1], [r, b1], [r, b2], [a2, b2]];
+  }
+  return null;
+}
+
+/** Cheapest route ignoring the 2-turn cap, used by the tutorial to SHOW why a
+ *  blocked pair cannot link. 0-1 BFS over (cell, direction). */
+function findMinTurnPath(r1, c1, r2, c2) {
+  const n = PW * PH, INF = 0x3fffffff;
+  const dist = new Int32Array(n * 4).fill(INF);
+  const prev = new Int32Array(n * 4).fill(-1);
+  const src = (r1 + 1) * PW + (c1 + 1), dst = (r2 + 1) * PW + (c2 + 1);
+  let dq = [];
+  for (let d = 0; d < 4; d++) { dist[(src << 2) | d] = 0; dq.push((src << 2) | d); }
+  let head = 0;
+  while (head < dq.length) {
+    const key = dq[head++];
+    const cell = key >> 2, d = key & 3, dd = dist[key];
+    const r = (cell / PW) | 0, c = cell - r * PW;
+    for (let nd = 0; nd < 4; nd++) {
+      const nr = r + DR[nd], nc = c + DC[nd];
+      if (nr < 0 || nr >= PH || nc < 0 || nc >= PW) continue;
+      const ncell = nr * PW + nc;
+      if (ncell !== dst && !isFreeP(nr, nc)) continue;
+      const cost = dd + (nd === d ? 0 : 1);
+      const nkey = (ncell << 2) | nd;
+      if (cost < dist[nkey]) { dist[nkey] = cost; prev[nkey] = key; dq.push(nkey); }
+    }
+  }
+  let bk = -1, bd = INF;
+  for (let d = 0; d < 4; d++) { const k = (dst << 2) | d; if (dist[k] < bd) { bd = dist[k]; bk = k; } }
+  if (bk < 0 || bd >= INF) return null;
+  const cells = [];
+  for (let k = bk; k !== -1; k = prev[k]) {
+    const cell = k >> 2;
+    cells.push([(cell / PW) | 0, cell - ((cell / PW) | 0) * PW]);
+    if (cell === src) break;
+  }
+  cells.reverse();
+  const pts = [cells[0]];
+  for (let i = 1; i < cells.length - 1; i++) {
+    const p = cells[i - 1], q = cells[i], s = cells[i + 1];
+    if ((q[0] - p[0]) !== (s[0] - q[0]) || (q[1] - p[1]) !== (s[1] - q[1])) pts.push(q);
+  }
+  pts.push(cells[cells.length - 1]);
+  return { pts: pts, turns: bd };
+}
+
+/** First linkable pair on the board, or null. Early-exits on the first hit. */
+function findAnyPair(randomize) {
+  const buckets = [];
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const v = grid[r][c];
+      if (v < 0) continue;
+      (buckets[v] || (buckets[v] = [])).push(r * COLS + c);
+    }
+  }
+  const order = [];
+  for (let i = 0; i < buckets.length; i++) if (buckets[i] && buckets[i].length > 1) order.push(i);
+  if (randomize) shuffleArr(order);
+
+  for (let oi = 0; oi < order.length; oi++) {
+    const list = buckets[order[oi]];
+    if (randomize) shuffleArr(list);
+    for (let i = 0; i < list.length; i++) {
+      const a = list[i], ar = (a / COLS) | 0, ac = a % COLS;
+      reachFrom(ar, ac);
+      for (let j = 0; j < list.length; j++) {
+        if (j === i) continue;
+        const b = list[j], br = (b / COLS) | 0, bc = b % COLS;
+        if (hitBuf[(br + 1) * PW + (bc + 1)] === scanId)
+          return [{ r: ar, c: ac }, { r: br, c: bc }];
+      }
+    }
+  }
+  return null;
+}
+function hasMoves() { return findAnyPair(false) !== null; }
+/* ================================================================
+ * §8. Link drawing
+ * ============================================================= */
+let linkTimer = 0;
+/** Padded cell -> pixel centre inside #link-svg (which is offset by one cell). */
+function pxOf(pr, pc) { return [pc * cellPx + cellPx / 2, pr * cellPx + cellPx / 2]; }
+
+function drawLink(pts) {
+  if (!pts) return;
+  let d = '';
+  for (let i = 0; i < pts.length; i++) {
+    const p = pxOf(pts[i][0], pts[i][1]);
+    d += (i ? 'L' : 'M') + p[0] + ' ' + p[1] + ' ';
+  }
+  linkSvg.innerHTML = '<path class="link-under" d="' + d + '"/><path class="link-path" d="' + d + '"/>';
+  linkSvg.firstChild.classList.add('link-anim');
+  linkSvg.lastChild.classList.add('link-anim');
+  clearTimeout(linkTimer);
+  linkTimer = setTimeout(function () { linkSvg.innerHTML = ''; }, 360);
+}
+
+/** Tutorial: draw a route that needs MORE than 2 turns, with a dot on each
+ *  corner, so the player can see exactly why the pair will not link. */
+function drawBendPath(pts, holdMs) {
+  let d = '', dots = '';
+  for (let i = 0; i < pts.length; i++) {
+    const p = pxOf(pts[i][0], pts[i][1]);
+    d += (i ? 'L' : 'M') + p[0] + ' ' + p[1] + ' ';
+    if (i > 0 && i < pts.length - 1) dots += '<circle class="bend-dot" cx="' + p[0] + '" cy="' + p[1] + '" r="6"/>';
+  }
+  linkSvg.innerHTML = '<path class="bend-under" d="' + d + '"/><path class="bend-path" d="' + d + '"/>' + dots;
+  clearTimeout(linkTimer);
+  linkTimer = setTimeout(function () { linkSvg.innerHTML = ''; }, holdMs);
+}
+
+/* ================================================================
+ * §9. Scoring, praise and floating text
+ * ============================================================= */
+const BASE_POINTS  = 10;
+const MAX_MULT     = 4;
+const FLY_STAGGER  = 55;
+
+function updateScoreHud() { elScore.textContent = String(score); }
+function updateBestHud()  { elBest.textContent  = String(best); }
+function updateLevelHud() { elLevel.textContent = String(currentLevelIdx + 1); }
+
+function popText(el, text, cls) {
+  el.textContent = text;
+  el.classList.remove(cls);
+  void el.offsetWidth;            // restart the animation
+  el.classList.add(cls);
+}
+function showPraise(text) { popText(praiseEl, text, 'praise-anim'); }
+function showCombo(text)  { popText(comboEl, text, 'combo-anim'); }
+
+let toastTimer = 0;
+function showToast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 1700);
+}
+
+/** Inked chips travel from the link up to the SCORE pill. Cadence is uniform
+ *  regardless of path length, so a short link and a long one feel the same. */
+function spawnFlyers(pts, n) {
+  const rect = boardEl.getBoundingClientRect();
+  const target = pillScore.getBoundingClientRect();
+  const tx = target.left + target.width / 2, ty = target.top + target.height / 2;
+  const count = Math.max(1, Math.min(n, 6));
+  for (let i = 0; i < count; i++) {
+    const f = (count === 1) ? 0.5 : i / (count - 1);
+    const seg = f * (pts.length - 1);
+    const si = Math.min(pts.length - 2, Math.floor(seg)), st = seg - si;
+    const p0 = pxOf(pts[si][0], pts[si][1]), p1 = pxOf(pts[si + 1][0], pts[si + 1][1]);
+    const x = rect.left - cellPx + p0[0] + (p1[0] - p0[0]) * st;
+    const y = rect.top  - cellPx + p0[1] + (p1[1] - p0[1]) * st;
+    flyOne(x, y, tx, ty, i);
+  }
+}
+function flyOne(x, y, tx, ty, i) {
+  const el = document.createElement('div');
+  el.className = 'fly';
+  el.style.left = x + 'px';
+  el.style.top  = y + 'px';
+  document.body.appendChild(el);
+  setTimeout(function () {
+    el.style.transform = 'translate(' + (tx - x) + 'px,' + (ty - y) + 'px) scale(.45)';
+    el.style.opacity = '0';
+  }, 20 + i * FLY_STAGGER);
+  setTimeout(function () {
+    if (el.parentNode) el.parentNode.removeChild(el);
+    pillScore.classList.remove('score-hit');
+    void pillScore.offsetWidth;
+    pillScore.classList.add('score-hit');
+  }, 20 + i * FLY_STAGGER + 640);
+}
+
+/* ================================================================
+ * §10. Audio — synthesised, no external files (game-common: single file)
+ * Soft and rounded; impacts use filtered noise (modal) rather than a pitch
+ * slide, and everything lands in 250-3000Hz so it is audible on a phone.
+ * ============================================================= */
+let actx = null, sfxOut = null;
+function audioEnsure() {
+  if (actx || muted) return;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    actx = new AC();
+    sfxOut = actx.createGain(); sfxOut.gain.value = 0.85;
+    const lp = actx.createBiquadFilter(); lp.type = 'lowpass';  lp.frequency.value = 5000;
+    const hp = actx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 150;
+    const comp = actx.createDynamicsCompressor();
+    sfxOut.connect(lp); lp.connect(hp); hp.connect(comp); comp.connect(actx.destination);
+  } catch (e) { actx = null; }
+}
+function canPlay() { return !!actx && !muted && !paused && actx.state !== 'suspended'; }
+
+function tone(freq, dur, peak, type, slideTo) {
+  if (!canPlay()) return;
+  const t0 = actx.currentTime;
+  const o = actx.createOscillator(); o.type = type || 'sine';
+  const g = actx.createGain();
+  o.frequency.setValueAtTime(freq, t0);
+  if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(peak, t0 + 0.012);     // soft attack, no click
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g); g.connect(sfxOut);
+  o.start(t0); o.stop(t0 + dur + 0.02);
+}
+let noiseBuf = null;
+function noiseBurst(freq, q, dur, peak) {
+  if (!canPlay()) return;
+  if (!noiseBuf) {
+    noiseBuf = actx.createBuffer(1, actx.sampleRate * 0.4, actx.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  const t0 = actx.currentTime;
+  const s = actx.createBufferSource(); s.buffer = noiseBuf;
+  const bp = actx.createBiquadFilter(); bp.type = 'bandpass';
+  bp.frequency.value = freq; bp.Q.value = q;
+  const g = actx.createGain();
+  g.gain.setValueAtTime(peak, t0);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  s.connect(bp); bp.connect(g); g.connect(sfxOut);
+  s.start(t0); s.stop(t0 + dur + 0.02);
+}
+function sfxSelect() { tone(520, 0.07, 0.10, 'sine'); }
+function sfxLink(combo) {
+  const step = Math.min(combo, 7);
+  const f = 440 * Math.pow(2, step / 12);
+  tone(f, 0.16, 0.13, 'sine');
+  tone(f * 1.5, 0.13, 0.06, 'triangle');
+}
+function sfxBad()  { tone(190, 0.13, 0.09, 'triangle', 150); }
+/** ONE thunk per settle, not one per tile — otherwise a big cascade machine-guns. */
+function sfxDrop(n) {
+  const w = Math.min(1, 0.45 + n * 0.06);
+  noiseBurst(300, 2.4, 0.10, 0.30 * w);
+  noiseBurst(620, 3.0, 0.06, 0.16 * w);
+}
+function sfxShuffle() { noiseBurst(900, 1.6, 0.22, 0.14); }
+function sfxWin() { [523, 659, 784].forEach(function (f, i) { setTimeout(function () { tone(f, 0.22, 0.11, 'sine'); }, i * 110); }); }
+function sfxLose() { [392, 330, 262].forEach(function (f, i) { setTimeout(function () { tone(f, 0.28, 0.10, 'triangle'); }, i * 150); }); }
+function sfxTick() { tone(880, 0.05, 0.07, 'sine'); }
+
+/* ================================================================
+ * §11. Input and matching
+ * ============================================================= */
+function tileAt(p) { return tiles[p.r][p.c]; }
+
+function select(r, c) {
+  selected = { r: r, c: c };
+  tiles[r][c].el.classList.add('selected');
+  sfxSelect();
+}
+function deselect() {
+  if (!selected) return;
+  const t = tiles[selected.r][selected.c];
+  if (t) t.el.classList.remove('selected');
+  selected = null;
+}
+function shakeTile(r, c) {
+  const t = tiles[r][c];
+  if (!t) return;
+  t.el.classList.remove('shake');
+  void t.el.offsetWidth;
+  t.el.classList.add('shake');
+  setTimeout(function () { t.el.classList.remove('shake'); }, 240);
+}
+function clearHint() {
+  if (!hintPair) return;
+  for (let i = 0; i < hintPair.length; i++) {
+    const p = hintPair[i], t = tiles[p.r] && tiles[p.r][p.c];
+    if (t) t.el.classList.remove('hint');
+  }
+  hintPair = null;
+}
+function showHintPair(pair) {
+  clearHint();
+  if (!pair) return;
+  hintPair = pair;
+  for (let i = 0; i < pair.length; i++) {
+    const p = pair[i], t = tiles[p.r] && tiles[p.r][p.c];
+    if (t) t.el.classList.add('hint');
+  }
+}
+
+let idleAcc = 0;
+function handleTap(r, c) {
+  if (busy || ended || paused) return;
+  if (!tiles[r] || !tiles[r][c]) return;
+  idleAcc = 0;
+  audioEnsure();
+  /* The tutorial's demo clock stays frozen until the player actually acts, so
+     the lesson text can be read without the number ticking away underneath. */
+  if (tutorialMode && tutStep === 3) tutTimerRunning = true;
+
+  if (!selected) {
+    if (tutorialMode && !tutAllowsFirst(r, c)) { tutWrongChoice(r, c); return; }
+    select(r, c);
+    return;
+  }
+  if (selected.r === r && selected.c === c) { deselect(); return; }
+
+  const a = selected, b = { r: r, c: c };
+  if (grid[a.r][a.c] !== grid[b.r][b.c]) {          // different fruit -> reselect
+    deselect();
+    if (tutorialMode && !tutAllowsFirst(r, c)) { tutWrongChoice(r, c); return; }
+    select(r, c);
+    return;
+  }
+  if (tutorialMode && !tutAllowsPair(a, b)) { deselect(); tutWrongChoice(r, c); return; }
+
+  if (linkable(a.r, a.c, b.r, b.c)) {
+    deselect();
+    doMatch(a, b);
+  } else {
+    /* Phase 2 IS the "why won't this link?" lesson — the tap is meant to fail,
+       and failing is what advances it. (Phases: 0 link, 1 drop, 2 bend, 3 clear.) */
+    if (tutorialMode && tutStep === 2) { tutShowBend(a, b); return; }
+    shakeTile(a.r, a.c); shakeTile(b.r, b.c);
+    sfxBad();
+    deselect();
+  }
+}
+
+function doMatch(a, b) {
+  const ep = levelEpoch;
+  busy = true;
+  clearHint();
+
+  const pts = findPath(a.r, a.c, b.r, b.c);
+  drawLink(pts);
+
+  const ta = tiles[a.r][a.c], tb = tiles[b.r][b.c];
+  const usedDrop = !!droppedSet && (droppedSet.has(ta) || droppedSet.has(tb));
+
+  grid[a.r][a.c] = -1; grid[b.r][b.c] = -1;
+  tiles[a.r][a.c] = null; tiles[b.r][b.c] = null;
+  ta.el.classList.add('pop'); tb.el.classList.add('pop');
+  pairsLeft--;
+
+  /* DROP COMBO — the signature mechanic. A clear that consumes a tile which
+     just fell continues the chain; anything else breaks it. This is what makes
+     gravity the scoring engine instead of a decoration. */
+  if (usedDrop) dropCombo++; else dropCombo = 0;
+  const mult = Math.min(1 + 0.5 * dropCombo, MAX_MULT);
+
+  if (!tutorialMode) {
+    const now = nowMs();
+    const findMs = now - lastFindAt;
+    lastFindAt = now;
+    let bonus = 0, praise = '';
+    if (findMs < 1100)      { bonus = 20; praise = t('wow'); }
+    else if (findMs < 2200) { bonus = 10; praise = t('fast'); }
+
+    const gained = Math.round((BASE_POINTS + bonus) * mult);
+    score += gained;
+    updateScoreHud();
+    if (score > best) { best = score; saveDataThrottled(lightData()); }   // record survives a kill
+    if (pts) spawnFlyers(pts, Math.min(2 + Math.round(mult), 6));
+    if (dropCombo >= 1) showCombo(t('dropCombo') + ' x' + dropCombo.toFixed(0));
+    else if (praise) showPraise(praise);
+  }
+  sfxLink(dropCombo);
+
+  setTimeout(function () {
+    if (ep !== levelEpoch) return;
+    ta.el.className = 'tile hidden'; tb.el.className = 'tile hidden';
+    ta.r = -1; tb.r = -1;
+  }, 270);
+  setTimeout(function () { if (ep === levelEpoch) applyGravity(ep); }, 200);
+}
+
+/** Runs after every settle: win check, deadlock net, persistence. */
+function afterBoardChange(ep) {
+  if (ep !== levelEpoch || ended) return;
+  if (tutorialMode) { tutOnBoardChange(); return; }
+  if (pairsLeft <= 0) { winLevel(); return; }
+  if (!hasMoves()) { autoShuffle(ep); return; }
+  saveCurrentState();
+}
+
+/** Deadlock net. Types are only ever removed in pairs, so counts stay even and
+ *  a workable arrangement always exists — we just have to find one. */
+function autoShuffle(ep) {
+  busy = true;
+  const cells = [], vals = [];
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (grid[r][c] < 0) continue;
+      cells.push([r, c]); vals.push(grid[r][c]);
+    }
+  }
+  for (let attempt = 0; attempt < 40; attempt++) {
+    shuffleArr(vals);
+    for (let i = 0; i < cells.length; i++) grid[cells[i][0]][cells[i][1]] = vals[i];
+    if (hasMoves()) break;
+    if (attempt === 39) forceOneMove();
+  }
+  for (let i = 0; i < cells.length; i++) {
+    const r = cells[i][0], c = cells[i][1];
+    setTileType(tiles[r][c], grid[r][c]);
+  }
+  droppedSet = null;
+  dropCombo = 0;
+  sfxShuffle();
+  showToast(t('shuffled'));
+  busy = false;
+  if (ep === levelEpoch) saveCurrentState();
+}
+
+function showAutoHint() {
+  if (busy || ended || paused || tutorialMode) return;
+  const pair = findAnyPair(true);
+  if (pair) showHintPair(pair);
+}
+
+boardEl.addEventListener('click', function (e) {
+  const el = e.target.closest ? e.target.closest('.tile') : null;
+  if (!el) return;
+  for (let i = 0; i < poolUsed; i++) {
+    const t = pool[i];
+    if (t.el === el && t.r >= 0) { handleTap(t.r, t.c); return; }
+  }
+});
+
+/* ================================================================
+ * §12. Timer, win / lose, ads
+ * ============================================================= */
+function nowMs() { return (window.performance && performance.now) ? performance.now() : Date.now(); }
+
+function renderTimer() {
+  const frac = timeTotal > 0 ? Math.max(0, timeLeft / timeTotal) : 0;
+  barFill.style.width = (frac * 100).toFixed(1) + '%';
+  barFill.classList.toggle('warn',   frac <= 0.4 && frac > 0.18);
+  barFill.classList.toggle('danger', frac <= 0.18);
+  const secs = Math.max(0, Math.ceil(timeLeft));
+  elSecs.textContent = String(secs);
+  elSecs.classList.toggle('danger', frac <= 0.18);
+}
+
+function maybeRequestAds() {
+  endCounter++;
+  if (endCounter % 3 === 0) sendMessage('ads');
+}
+function lightData() {
+  return { levelIdx: currentLevelIdx, score: score, best: best,
+           tutorialSeen: tutorialSeen, muted: muted };
+}
+
+function winLevel() {
+  if (ended) return;
+  ended = true;
+  sfxWin();
+  const nextIdx = Math.min(currentLevelIdx + 1, MAX_LEVEL_IDX);
+  /* Endless by design: there is no final level, so `victory` never fires.
+     Documented deviation from game-common §1.5 (same as animal-connect). */
+  sendMessage('game_result', { result: 'win', showModal: true });
+  saveDataNow({ levelIdx: nextIdx, score: score, best: best,
+                tutorialSeen: tutorialSeen, muted: muted });
+  saveLocal({ levelIdx: nextIdx, score: score, best: best,
+              tutorialSeen: tutorialSeen, muted: muted, game: null });
+  maybeRequestAds();
+}
+function loseLevel() {
+  if (ended) return;
+  ended = true;
+  sfxLose();
+  if (score > best) best = score;
+  updateBestHud();
+  sendMessage('game_result', { result: 'lose', showModal: true });
+  /* Timing out ends the RUN: the next run restarts at level 1 with score 0. */
+  saveDataNow({ levelIdx: 0, score: 0, best: best, tutorialSeen: tutorialSeen, muted: muted });
+  saveLocal({ levelIdx: 0, score: 0, best: best, tutorialSeen: tutorialSeen, muted: muted, game: null });
+  maybeRequestAds();
+}
+
+/* ================================================================
+ * §13. Persistence
+ * ============================================================= */
+function gameSnapshot() {
+  if (ended || tutorialMode || pairsLeft <= 0) return null;
+  const flat = [];
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) flat.push(grid[r][c]);
+  return { i: currentLevelIdx, w: COLS, h: ROWS, t: Math.round(timeLeft), g: flat };
+}
+function saveCurrentState() {
+  const light = lightData();
+  saveLocal({ levelIdx: light.levelIdx, score: score, best: best,
+              tutorialSeen: tutorialSeen, muted: muted, game: gameSnapshot() });
+}
+function tryRestoreState(idx, snap) {
+  if (!snap || snap.i !== idx || !snap.g) return false;
+  if (snap.w !== COLS || snap.h !== ROWS) return false;
+  if (snap.g.length !== COLS * ROWS) return false;
+  let count = 0;
+  for (let i = 0; i < snap.g.length; i++) {
+    const v = snap.g[i];
+    if (!(v === -1 || (typeof v === 'number' && v >= 0 && v < ICON_COUNT))) return false;
+    if (v >= 0) count++;
+  }
+  if (count === 0 || (count & 1)) return false;
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++) grid[r][c] = snap.g[r * COLS + c];
+  pairsLeft = count >> 1;
+  if (typeof snap.t === 'number' && snap.t > 0) timeLeft = Math.min(snap.t, timeTotal);
+  return true;
+}
+/* ================================================================
+ * §14. Level lifecycle
+ * ============================================================= */
+function ensureGridArrays() {
+  grid = []; tiles = [];
+  for (let r = 0; r < ROWS; r++) {
+    const gr = [], tr = [];
+    for (let c = 0; c < COLS; c++) { gr.push(-1); tr.push(null); }
+    grid.push(gr); tiles.push(tr);
+  }
+}
+
+function loadLevel(idx, snap) {
+  levelEpoch++;                       // invalidates every in-flight continuation
+  clearTimeout(linkTimer);
+  linkSvg.innerHTML = '';
+  clearHint();
+  selected = null;
+
+  currentLevelIdx = Math.max(0, Math.min(idx, MAX_LEVEL_IDX));
+  const cfg = levelConfig(currentLevelIdx);
+  COLS = cfg.cols; ROWS = cfg.rows;
+  ensureGridArrays();
+  allocPathBufs();
+
+  timeTotal = cfg.time; timeLeft = cfg.time;
+  ended = false; busy = false; paused = false;
+  dropCombo = 0; droppedSet = null; idleAcc = 0; lastTickSec = -1;
+  tutorialMode = false; tutTimerRunning = false;
+  tutBanner.classList.add('hidden');
+  tutArrow.classList.add('hidden');
+  hudSubEl.style.display = '';
+  pauseVeil.classList.add('hidden');
+
+  if (!(snap && tryRestoreState(currentLevelIdx, snap))) {
+    fillBoard(cfg.typeIds, currentLevelIdx);
+    pairsLeft = (COLS * ROWS) >> 1;
+  }
+  buildTileDom();
+  popInAll();
+
+  updateLevelHud(); updateScoreHud(); updateBestHud();
+  resize();
+  renderTimer();
+  lastFindAt = nowMs();
+  startTicker();
+  saveCurrentState();
+}
+
+function popInAll() {
+  for (let i = 0; i < poolUsed; i++) pool[i].el.classList.add('popin');
+  setTimeout(function () {
+    for (let i = 0; i < poolUsed; i++) pool[i].el.classList.remove('popin');
+  }, 240);
+}
+
+/* ================================================================
+ * §15. Tutorial — ONE board, no scene change (mentor mandate)
+ *
+ * Every step's target is discovered on the LIVE board at runtime instead of
+ * being hard-coded, so a step can never ask for something the board cannot
+ * deliver — and the board itself is regenerated until it can teach all four
+ * lessons (see buildTutorialBoard).
+ * ============================================================= */
+const TUT_COLS = 6, TUT_ROWS = 4;
+const TUT_TYPE_IDS = [0, 1, 2, 3, 4, 5];
+let tutStep = 0;
+let tutTarget = null;         // the pair the player must clear right now
+let tutBendPair = null;
+let tutTimerRunning = false;
+
+function cloneGrid() { const g = []; for (let r = 0; r < ROWS; r++) g.push(grid[r].slice()); return g; }
+function restoreGrid(g) { for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) grid[r][c] = g[r][c]; }
+/** Gravity on the grid only (no DOM) — used to look ahead while designing the
+ *  tutorial board. Returns the destination cells that received a moved tile. */
+function settleGridOnly() {
+  const moved = [];
+  for (let c = 0; c < COLS; c++) {
+    let w = ROWS - 1;
+    for (let r = ROWS - 1; r >= 0; r--) {
+      if (grid[r][c] < 0) continue;
+      if (r !== w) { grid[w][c] = grid[r][c]; grid[r][c] = -1; moved.push(w * COLS + c); }
+      w--;
+    }
+  }
+  return moved;
+}
+
+/** A vertical adjacent same-type pair with at least two tiles stacked above it,
+ *  so clearing it produces a fall the player cannot miss. */
+function findVerticalLinkPair() {
+  for (let c = 0; c < COLS; c++) {
+    for (let r = ROWS - 1; r >= 1; r--) {
+      if (grid[r][c] < 0 || grid[r][c] !== grid[r - 1][c]) continue;
+      let above = 0;
+      for (let k = r - 2; k >= 0; k--) if (grid[k][c] >= 0) above++;
+      if (above >= 2) return [{ r: r, c: c }, { r: r - 1, c: c }];
+    }
+  }
+  return null;
+}
+/** A linkable pair with at least one endpoint among the cells that just fell. */
+function findDropCreatedPair(movedCells) {
+  const moved = {};
+  for (let i = 0; i < movedCells.length; i++) moved[movedCells[i]] = 1;
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const v = grid[r][c];
+      if (v < 0 || !moved[r * COLS + c]) continue;
+      reachFrom(r, c);
+      for (let r2 = 0; r2 < ROWS; r2++) {
+        for (let c2 = 0; c2 < COLS; c2++) {
+          if ((r2 === r && c2 === c) || grid[r2][c2] !== v) continue;
+          if (hitBuf[(r2 + 1) * PW + (c2 + 1)] === scanId)
+            return [{ r: r, c: c }, { r: r2, c: c2 }];
+        }
+      }
+    }
+  }
+  return null;
+}
+/** A same-type pair that CANNOT link and whose cheapest route needs exactly 3
+ *  turns — so the demo shows "one turn too many", not "hopelessly boxed in". */
+function findBendPair() {
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const v = grid[r][c];
+      if (v < 0) continue;
+      for (let r2 = 0; r2 < ROWS; r2++) {
+        for (let c2 = 0; c2 < COLS; c2++) {
+          if ((r2 === r && c2 === c) || grid[r2][c2] !== v) continue;
+          if (findPath(r, c, r2, c2)) continue;
+          const mp = findMinTurnPath(r, c, r2, c2);
+          if (mp && mp.turns === 3) return [{ r: r, c: c }, { r: r2, c: c2 }];
+        }
+      }
+    }
+  }
+  return null;
+}
+/** Greedy solver used to prove the tutorial board can actually be emptied. */
+function greedyLeftover() {
+  let guard = 0;
+  for (;;) {
+    if (++guard > 400) break;
+    const pair = findAnyPair(false);
+    if (!pair) break;
+    grid[pair[0].r][pair[0].c] = -1;
+    grid[pair[1].r][pair[1].c] = -1;
+    settleGridOnly();
+  }
+  let left = 0;
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (grid[r][c] >= 0) left++;
+  return left;
+}
+
+/** Regenerate until the board can teach LINK -> DROP -> BEND -> CLEAR. */
+function buildTutorialBoard() {
+  for (let attempt = 0; attempt < 400; attempt++) {
+    genBoardGrid(TUT_TYPE_IDS, 0);
+    const start = cloneGrid();
+
+    const link = findVerticalLinkPair();
+    if (!link || !linkable(link[0].r, link[0].c, link[1].r, link[1].c)) continue;
+
+    grid[link[0].r][link[0].c] = -1; grid[link[1].r][link[1].c] = -1;
+    const moved = settleGridOnly();
+    const drop = findDropCreatedPair(moved);
+    if (!drop) { restoreGrid(start); continue; }
+
+    grid[drop[0].r][drop[0].c] = -1; grid[drop[1].r][drop[1].c] = -1;
+    settleGridOnly();
+    if (!findBendPair()) { restoreGrid(start); continue; }
+    if (greedyLeftover() !== 0) { restoreGrid(start); continue; }
+
+    restoreGrid(start);
+    return link;
+  }
+  genBoardGrid(TUT_TYPE_IDS, 0);
+  if (!hasMoves()) forceOneMove();
+  return findVerticalLinkPair();
+}
+
+function startTutorial() {
+  levelEpoch++;
+  tutorialMode = true;
+  tutStep = 0;
+  tutTimerRunning = false;
+  ended = false; busy = false; paused = false;
+  selected = null; dropCombo = 0; droppedSet = null;
+  currentLevelIdx = 0;
+  COLS = TUT_COLS; ROWS = TUT_ROWS;
+  ensureGridArrays();
+  allocPathBufs();
+  timeTotal = 15; timeLeft = 15;
+
+  const link = buildTutorialBoard();
+  pairsLeft = (COLS * ROWS) >> 1;
+  buildTileDom();
+  popInAll();
+  hudSubEl.style.display = 'none';      // no LEVEL / timer row during the tutorial
+  updateScoreHud(); updateBestHud();
+  setTutPhase(0, link);
+  startTicker();
+}
+
+function setTutPhase(n, target) {
+  tutStep = n;
+  tutTarget = target || null;
+  clearHint();
+  const key = ['tutLink', 'tutDrop', 'tutBend', 'tutClear'][n] || 'tutClear';
+  tutTextEl.textContent = t(key);
+  tutBanner.classList.remove('hidden');
+  if (n === 3) {
+    hudSubEl.style.display = '';        // reveal the timer and point at it
+    renderTimer();
+    tutArrow.classList.remove('hidden');
+  } else {
+    tutArrow.classList.add('hidden');
+  }
+  if (tutTarget) showHintPair(tutTarget);
+  resize();
+}
+
+function positionTutorialChrome() {
+  const headH = Math.ceil(topbarEl.getBoundingClientRect().height);
+  const bh = Math.ceil(tutBanner.getBoundingClientRect().height);
+  const wrapTop = boardWrapEl.getBoundingClientRect().top;
+  tutBanner.style.top = Math.max(headH + 6, headH + (wrapTop - headH - bh) / 2) + 'px';
+  if (!tutArrow.classList.contains('hidden')) {
+    const bar = document.getElementById('time-bar-bg').getBoundingClientRect();
+    tutArrow.style.left = (bar.left + bar.width / 2 - 13) + 'px';
+    tutArrow.style.top  = (bar.bottom + 6) + 'px';
+  }
+}
+
+function samePair(p, a, b) {
+  if (!p) return false;
+  const k1 = p[0].r + ',' + p[0].c, k2 = p[1].r + ',' + p[1].c;
+  const j1 = a.r + ',' + a.c, j2 = b.r + ',' + b.c;
+  return (k1 === j1 && k2 === j2) || (k1 === j2 && k2 === j1);
+}
+function tutAllowsFirst(r, c) {
+  if (tutStep === 3 || !tutTarget) return true;
+  return (tutTarget[0].r === r && tutTarget[0].c === c) ||
+         (tutTarget[1].r === r && tutTarget[1].c === c);
+}
+function tutAllowsPair(a, b) {
+  if (tutStep === 3 || !tutTarget) return true;
+  return samePair(tutTarget, a, b);
+}
+function tutWrongChoice(r, c) {
+  shakeTile(r, c);
+  sfxBad();
+  showToast(t('tutPick'));
+  if (tutTarget) showHintPair(tutTarget);
+}
+function spawnCheck(r, c) {
+  const rect = boardEl.getBoundingClientRect();
+  tutCheck.style.left = (rect.left + c * cellPx + cellPx / 2) + 'px';
+  tutCheck.style.top  = (rect.top  + r * cellPx + cellPx / 2) + 'px';
+  tutCheck.classList.remove('tut-check-anim');
+  void tutCheck.offsetWidth;
+  tutCheck.classList.add('tut-check-anim');
+}
+function tutShowBend(a, b) {
+  const mp = findMinTurnPath(a.r, a.c, b.r, b.c);
+  busy = true;
+  if (mp) drawBendPath(mp.pts, 2400);
+  sfxBad();
+  deselect();
+  const ep = levelEpoch;
+  setTimeout(function () {
+    if (ep !== levelEpoch) return;
+    busy = false;
+    setTutPhase(3, null);
+  }, 2500);
+}
+
+/** Called after every settle while the tutorial is running. */
+function tutOnBoardChange() {
+  if (tutStep === 0) {
+    const moved = [];
+    if (droppedSet) {
+      for (let r = 0; r < ROWS; r++)
+        for (let c = 0; c < COLS; c++)
+          if (tiles[r][c] && droppedSet.has(tiles[r][c])) moved.push(r * COLS + c);
+    }
+    const drop = findDropCreatedPair(moved);
+    if (drop) { spawnCheck(drop[0].r, drop[0].c); setTutPhase(1, drop); return; }
+    setTutPhase(3, null); return;
+  }
+  if (tutStep === 1) {
+    tutBendPair = findBendPair();
+    if (tutBendPair) { setTutPhase(2, tutBendPair); return; }
+    setTutPhase(3, null); return;
+  }
+  if (tutStep === 3 && pairsLeft <= 0) { finishTutorial(); return; }
+}
+
+function finishTutorial() {
+  tutorialMode = false;
+  tutTarget = null;
+  tutBanner.classList.add('hidden');
+  tutArrow.classList.add('hidden');
+  hudSubEl.style.display = '';
+  tutorialSeen = true;
+  saveDataNow(lightData());
+  loadLevel(0, null);
+}
+document.getElementById('tut-skip').addEventListener('click', function (e) {
+  e.stopPropagation();
+  if (!tutorialMode) return;
+  finishTutorial();
+});
+
+/* ================================================================
+ * §16. Ticker
+ * There is deliberately NO requestAnimationFrame loop. The background is CSS,
+ * falls are compositor transitions and the link fades in CSS — nothing needs a
+ * 60Hz callback, so the only periodic work is the countdown at 5Hz.
+ * ============================================================= */
+const TICK_MS = 200;
+const IDLE_HINT_S = 5;
+let tickHandle = 0, lastTickAt = 0, lastTickSec = -1;
+
+function startTicker() {
+  if (tickHandle) return;
+  lastTickAt = nowMs();
+  tickHandle = setInterval(tick, TICK_MS);
+}
+function stopTicker() {
+  if (tickHandle) { clearInterval(tickHandle); tickHandle = 0; }
+}
+function tick() {
+  const now = nowMs();
+  let dt = (now - lastTickAt) / 1000;
+  lastTickAt = now;
+  /* If the WebView was backgrounded the gap can be huge; never swallow it as
+     elapsed play time. */
+  if (!(dt > 0) || dt > 1) dt = TICK_MS / 1000;
+  if (paused || ended) return;
+
+  if (!busy && !tutorialMode && !hintPair) {
+    idleAcc += dt;
+    if (idleAcc >= IDLE_HINT_S) { idleAcc = 0; showAutoHint(); }
+  }
+  if (tutorialMode) {
+    if (tutStep === 3 && tutTimerRunning) {
+      timeLeft = Math.max(0, timeLeft - dt);   // demo only — never triggers a loss
+      renderTimer();
+    }
+    return;
+  }
+  timeLeft -= dt;
+  if (timeLeft <= 0) { timeLeft = 0; renderTimer(); loseLevel(); return; }
+  renderTimer();
+  const s = Math.ceil(timeLeft);
+  if (s <= 10 && s !== lastTickSec) { lastTickSec = s; sfxTick(); }
+}
+
+/* ================================================================
+ * §17. Pause / native callbacks / chrome
+ * ============================================================= */
+function pauseGame() {
+  if (paused || ended) return;
+  paused = true;
+  stopTicker();
+  document.getElementById('bg').classList.add('paused');
+  pauseVeil.classList.remove('hidden');
+  try { if (actx && actx.state === 'running') actx.suspend(); } catch (e) {}
+}
+function resumeGame() {
+  if (!paused) return;
+  paused = false;
+  document.getElementById('bg').classList.remove('paused');
+  pauseVeil.classList.add('hidden');
+  try { if (actx && actx.state === 'suspended') actx.resume(); } catch (e) {}
+  lastFindAt = nowMs();
+  startTicker();
+}
+pauseVeil.addEventListener('click', function () { resumeGame(); });
+
+window.onAppPause = function () { pauseGame(); };
+window.onNextLevel = function () {
+  if (currentLevelIdx >= MAX_LEVEL_IDX) return;
+  loadLevel(currentLevelIdx + 1, null);      // score carries over across levels
+};
+window.onRetryLevel = function () {
+  score = 0;                                  // a loss ends the run: restart at level 1
+  updateScoreHud();
+  loadLevel(0, null);
+};
+
+document.getElementById('back-btn').addEventListener('click', function (e) {
+  e.stopPropagation();
+  if (!tutorialMode && !ended) saveCurrentState();
+  sendMessage('quit');
+});
+soundBtn.addEventListener('click', function (e) {
+  e.stopPropagation();
+  muted = !muted;
+  soundBtn.classList.toggle('muted', muted);
+  if (!muted) { audioEnsure(); try { if (actx && actx.state === 'suspended') actx.resume(); } catch (er) {} }
+  saveDataNow(lightData());
+  saveCurrentState();
+});
+
+function applyStaticLabels() {
+  document.getElementById('lbl-score').textContent = t('score');
+  document.getElementById('lbl-best').textContent  = t('best');
+  document.getElementById('lbl-level').textContent = t('level');
+  document.getElementById('tut-skip-label').textContent = t('skip');
+  document.getElementById('pause-txt').textContent = t('resume');
+  document.documentElement.lang = LANG;
+  if (LANG === 'ar') document.documentElement.dir = 'rtl';
+}
+function envSafeTop() {
+  const d = document.createElement('div');
+  d.style.cssText = 'position:fixed;top:0;left:0;width:0;height:env(safe-area-inset-top,0px);';
+  document.body.appendChild(d);
+  const h = d.getBoundingClientRect().height;
+  d.parentNode.removeChild(d);
+  return h || 0;
+}
+function applyTopInset() {
+  topbarEl.style.paddingTop = (Math.max(getStatusBarHeight(), envSafeTop()) + 8) + 'px';
+}
+
+let resizeTimer = 0;
+window.addEventListener('resize', function () {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(function () { applyTopInset(); resize(); }, 90);
+});
+
+/* ================================================================
+ * §18. Boot
+ * ============================================================= */
+function bootGame() {
+  if (booted) return;
+  booted = true;
+
+  LANG = getLanguage();
+  applyUiFont(LANG);
+  applyStaticLabels();
+  applyTopInset();
+  buildPool();
+
+  const obj = parseInitialData();
+  let startIdx = 0, snap = null;
+  if (obj) {
+    if (typeof obj.best === 'number' && isFinite(obj.best)) best = Math.max(0, obj.best | 0);
+    if (typeof obj.score === 'number' && isFinite(obj.score)) score = Math.max(0, obj.score | 0);
+    if (typeof obj.levelIdx === 'number' && isFinite(obj.levelIdx))
+      startIdx = Math.max(0, Math.min(obj.levelIdx | 0, MAX_LEVEL_IDX));
+    if (obj.tutorialSeen === true) tutorialSeen = true;
+    if (obj.muted === true) muted = true;
+    if (obj.game) snap = obj.game;
+  }
+  /* `currentLevel` from native wins when supplied (it is the app's resume
+     point); -1 means "not supplied", so fall back to the saved index. */
+  const fromNative = getInitialLevelIdx();
+  if (fromNative >= 0 && fromNative !== startIdx) { startIdx = fromNative; snap = null; }
+
+  soundBtn.classList.toggle('muted', muted);
+  updateScoreHud(); updateBestHud();
+
+  if (!tutorialSeen) startTutorial();      // no menu: first ever boot goes to the tutorial
+  else loadLevel(startIdx, snap);
+
+  /* Unlock audio on the first real gesture (autoplay policy). */
+  const unlock = function () {
+    audioEnsure();
+    try { if (actx && actx.state === 'suspended') actx.resume(); } catch (e) {}
+    document.removeEventListener('pointerdown', unlock);
+  };
+  document.addEventListener('pointerdown', unlock);
+}
+
+/* Android can run injectedJavaScriptBeforeContentLoaded AFTER this inline
+   script, so poll briefly for the injected globals, then boot anyway. */
+(function waitForNativeInjection() {
+  const start = Date.now();
+  (function check() {
+    const ready = typeof window.currentLevel === 'number' ||
+                  typeof window.data === 'string' ||
+                  typeof window.language === 'string';
+    if (ready || Date.now() - start > 200) bootGame();
+    else setTimeout(check, 10);
+  })();
+})();
+</script>
+</body>
+</html>

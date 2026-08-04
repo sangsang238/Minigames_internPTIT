@@ -1,2 +1,16 @@
 index(exampleforheader).html
 *.mp4
+
+# Publish artefacts + build/scratch files.
+# The fruit-drop tooling (icon downloads, sprite builder, test harnesses,
+# deadlock simulator, cover renderer) all lives in the session scratchpad
+# OUTSIDE this repo, so only the 5 shippable files per game are committed.
+# These rules are here so intermediates never leak in by accident.
+*.zip
+_work/
+scratch/
+*.tmp
+*.dom.html
+*.err.txt
+.DS_Store
+Thumbs.db

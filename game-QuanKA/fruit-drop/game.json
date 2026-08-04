@@ -1,0 +1,24 @@
+{
+  "title": "Fruit Drop",
+  "packageName": "com.falcon.fruitdrop",
+  "engine": "HTML5",
+  "version": "1.0.0",
+  "category": "PUZZLE",
+  "tags": ["onet", "connect", "fruit", "gravity", "puzzle"],
+  "description": "A connect puzzle with gravity: link two matching fruits with a path of at most two turns, then watch everything above the gap fall and re-stack the board. Clear each level before the timer runs out and chain your clears through the falling tiles for a rising score multiplier.",
+  "controls": "Tap two identical fruits that can be joined by a path with at most two turns",
+  "aiContext": "",
+  "aiBuildLink": "",
+  "demoUrl": "",
+  "storeLinks": {
+    "googlePlay": { "url": "", "downloads": 0 },
+    "iosAppStore": { "url": "", "downloads": 0 },
+    "steam": { "url": "", "downloads": 0 }
+  },
+  "entry": "index.html",
+  "coverImages": {
+    "landscape16x9": "cover-landscape-1920x1080.png",
+    "portrait2x3": "cover-portrait-800x1200.png",
+    "square1x1": "cover-square-800x800.png"
+  }
+}
