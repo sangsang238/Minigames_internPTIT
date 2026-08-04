@@ -51,9 +51,8 @@
   --grape:   #7A4FC9;
   --text:      var(--ink);
   --text-soft: rgba(20,18,16,.58);
-  /* Ink outline + hard shadow are the two structural constants of the style */
+  /* The ink outline is the structural constant of the style (no raised shadows) */
   --bw: 3px;
-  --sh: 4px;
   --sat: env(safe-area-inset-top, 0px);
 }
 
@@ -72,36 +71,9 @@ body {
   touch-action: manipulation;
 }
 
-/* ── Background shapes ────────────────────────────────────────────
-   Flat ink-outlined blocks drifting on the compositor. Deliberately NOT a
-   canvas: animal-connect had to optimise its background loop down to 14 canvas
-   commands/frame; a handful of transform-only CSS animations costs ZERO main
-   thread work per frame and no canvas at all. Paused via #bg.paused. */
-#bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-#bg i {
-  position: absolute;
-  display: block;
-  border: var(--bw) solid var(--ink);
-  opacity: .1;
-  will-change: transform;
-}
-#bg.paused i { animation-play-state: paused !important; }
-.bgs1 { left: -6%;  top: 12%; width: 130px; height: 130px; border-radius: 50%;
-        background: var(--tomato); animation: drift1 34s linear infinite; }
-.bgs2 { right: -8%; top: 30%; width: 168px; height: 168px; border-radius: 8px;
-        background: var(--sun);   animation: drift2 46s linear infinite; }
-.bgs3 { left: 14%;  bottom: 6%; width: 108px; height: 108px; border-radius: 50%;
-        background: var(--leaf);  animation: drift3 39s linear infinite; }
-.bgs4 { right: 10%; bottom: 16%; width: 88px; height: 88px; border-radius: 8px;
-        background: var(--sky);   animation: drift1 52s linear infinite reverse; }
-.bgs5 { left: 44%;  top: 4%;  width: 76px; height: 76px; border-radius: 50%;
-        background: var(--grape); animation: drift2 44s linear infinite reverse; }
-@keyframes drift1 { 0%,100% { transform: translate(0,0) rotate(0deg); }
-                    50% { transform: translate(26px,-34px) rotate(180deg); } }
-@keyframes drift2 { 0%,100% { transform: translate(0,0) rotate(0deg); }
-                    50% { transform: translate(-32px,28px) rotate(-180deg); } }
-@keyframes drift3 { 0%,100% { transform: translate(0,0) rotate(0deg); }
-                    50% { transform: translate(24px,22px) rotate(160deg); } }
+/* Background is the halftone paper ONLY — the drifting circles/squares were
+   removed on request. Nothing in the background animates now, so the page has
+   zero background work of any kind (no canvas, no compositor animation). */
 
 /* ── App wrapper ──────────────────────────────────────────────── */
 #app {
@@ -149,7 +121,6 @@ body {
   background: var(--card);
   border: var(--bw) solid var(--ink);
   border-radius: 6px;
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
   -webkit-user-select: none; user-select: none;
 }
 .pill-text { display: flex; flex-direction: column; align-items: center; min-width: 0; flex: 1 0 auto; }
@@ -226,7 +197,6 @@ body {
   border-radius: 8px;
   background: var(--paper-2);
   border: var(--bw) solid var(--ink);
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
   padding: 6px;
 }
 #board { position: relative; z-index: 1; }
@@ -365,7 +335,6 @@ body {
   border-radius: var(--radius);
   background: var(--surface-color);
   border: var(--bw) solid var(--ink);
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
   color: var(--surface-text);
   font-family: var(--ui-font);
   font-size: var(--surface-font-size);
@@ -375,7 +344,8 @@ body {
      WebView, and the flat style has no use for it. */
   transition: transform .08s steps(2,end), box-shadow .08s steps(2,end);
 }
-.btn3d:active .btn3d-surface { transform: translate(var(--sh), var(--sh)); box-shadow: 0 0 0 var(--ink); }
+/* Flat press: no raised surface to sink, so feedback is a small scale + fill. */
+.btn3d:active .btn3d-surface { transform: scale(.94); background: var(--paper-2); }
 .btn3d.btn-icon { --surface-height: 42px; --surface-width: 42px; --surface-padding-x: 0; }
 .back-ico    { width: 52%; height: 52%; fill: currentColor; display: block; }
 .restart-ico { width: 62%; height: 62%; fill: currentColor; display: block; }
@@ -425,19 +395,19 @@ body {
 .praise-anim { animation: praisePop 1s steps(8,end) forwards; }
 
 /* Score flyer — a small inked chip that travels from the link to the SCORE pill */
+/* Score flyer — the SAME star as the SCORE pill icon, so the thing that flies
+   up and the thing it lands in are visibly one idea. */
 .fly {
   position: fixed;
   z-index: 40;
-  width: 22px; height: 22px;
-  margin: -11px 0 0 -11px;
-  border-radius: 4px;
-  background: var(--sun);
-  border: 2.5px solid var(--ink);
+  width: 24px; height: 24px;
+  margin: -12px 0 0 -12px;
   pointer-events: none;
   will-change: transform, opacity;
   transition: transform .62s cubic-bezier(.45,0,.3,1), opacity .62s steps(4,end);
 }
-@keyframes scorePulse { 0%,100% { transform: translate(0,0); } 45% { transform: translate(2px,2px); } }
+.fly svg { width: 100%; height: 100%; display: block; }
+@keyframes scorePulse { 0%,100% { transform: scale(1); } 45% { transform: scale(1.07); } }
 .hud-pill.score-hit { animation: scorePulse .26s steps(2,end); }
 
 /* ── Tutorial ─────────────────────────────────────────────────── */
@@ -454,7 +424,6 @@ body {
   background: var(--card);
   border: var(--bw) solid var(--ink);
   border-radius: 8px;
-  box-shadow: var(--sh) var(--sh) 0 var(--ink);
   padding: 12px 13px;
   transition: opacity .2s steps(3,end);
 }
@@ -501,14 +470,11 @@ body {
 }
 @media (max-width: 360px) {
   .btn3d.btn-icon { --surface-height: 38px; --surface-width: 38px; }
-  :root { --bw: 2.5px; --sh: 3px; }
+  :root { --bw: 2.5px; }
 }
 </style>
 </head>
 <body>
-
-<!-- Drifting flat shapes (compositor-only, no canvas, no per-frame JS) -->
-<div id="bg" aria-hidden="true"><i class="bgs1"></i><i class="bgs2"></i><i class="bgs3"></i><i class="bgs4"></i><i class="bgs5"></i></div>
 
 <!-- Fluent Emoji "Flat" icon sprite (MIT, (c) Microsoft). One <symbol> per
      fruit; each tile is a <use> reference, so building 120 tiles costs 120
@@ -1397,6 +1363,10 @@ function drawBendPath(pts, holdMs) {
 /* ================================================================
  * §9. Scoring, praise and floating text
  * ============================================================= */
+/* Identical geometry/colours to the SCORE pill's .pill-ico star. */
+const STAR_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true">'
+  + '<path d="M12 2 L14.9 8.6 L22 9.3 L16.7 14 L18.3 21 L12 17.3 L5.7 21 L7.3 14 L2 9.3 L9.1 8.6 Z" fill="#F5B92B" stroke="#141210" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+
 const BASE_POINTS  = 10;
 const MAX_MULT     = 4;
 const FLY_STAGGER  = 55;
@@ -1442,6 +1412,7 @@ function spawnFlyers(pts, n) {
 function flyOne(x, y, tx, ty, i) {
   const el = document.createElement('div');
   el.className = 'fly';
+  el.innerHTML = STAR_SVG;
   el.style.left = x + 'px';
   el.style.top  = y + 'px';
   document.body.appendChild(el);
@@ -2160,14 +2131,12 @@ function pauseGame() {
   if (paused || ended) return;
   paused = true;
   stopTicker();
-  document.getElementById('bg').classList.add('paused');
   pauseVeil.classList.remove('hidden');
   try { if (actx && actx.state === 'running') actx.suspend(); } catch (e) {}
 }
 function resumeGame() {
   if (!paused) return;
   paused = false;
-  document.getElementById('bg').classList.remove('paused');
   pauseVeil.classList.add('hidden');
   try { if (actx && actx.state === 'suspended') actx.resume(); } catch (e) {}
   lastFindAt = nowMs();

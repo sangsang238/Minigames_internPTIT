@@ -22,6 +22,8 @@
   endgame** (run kết thúc, chơi lại từ màn 1, giữ BEST).
 - **Điểm CỘNG DỒN cả run** (lvl 1 → endgame). SCORE = điểm run hiện tại,
   BEST = điểm run cao nhất.
+- Điểm bay lên ô SCORE là **ngôi sao giống hệt icon trên chính ô SCORE** (dùng
+  chung path/màu), để thứ bay lên và chỗ nó đáp xuống đọc ra cùng một ý.
 - **Cơ chế điểm đặc trưng — DROP COMBO**: nếu lần nối kế tiếp dùng ít nhất một
   tile **vừa rơi** ở lần trước thì combo tăng một bậc (×1.5 → ×2 → ×2.5, trần
   ×4) và hiện tem `DROP ×N`. Trọng lực vì thế là **động cơ tính điểm**, không
@@ -110,8 +112,12 @@ auto-xáo khoảng **1 lần mỗi ~30 màn** — đúng nghĩa lưới an toàn
     quả mọng tím), sửa được lỗi này lại đẻ ra lỗi tương đương.
   - → chọn **`mushroom`**: silhouette mũ-vòm-cộng-thân là duy nhất trong bộ, và là
     món hai tông đỏ/kem duy nhất.
-- **Phong cách: neo-brutalist in ấn** — nền giấy kem + chấm halftone, viền mực đen
-  3px, bóng đổ **cứng, blur = 0**, khối màu phẳng, mọi animation dùng `steps()`.
+- **Phong cách: neo-brutalist in ấn PHẲNG HOÀN TOÀN** — nền giấy kem + chấm
+  halftone, viền mực đen 3px, khối màu phẳng, mọi animation dùng `steps()`.
+  **Không có bóng đổ nổi/3D ở bất kỳ đâu** (theo yêu cầu 2026-08-04: bỏ hết UI
+  kiểu nút 3D) — nút/pill/khung bàn/banner chỉ còn viền mực; nút bấm phản hồi
+  bằng thu nhỏ + đổi nền, không phải "lún vào bóng". Các `box-shadow` còn lại
+  đều là **vòng offset 0** (chọn / gợi ý), không phải bóng đổ.
   **Không blur, không `filter`, không `backdrop-filter`, không gradient màu** —
   `radial-gradient` duy nhất trong file là hoạ tiết **chấm halftone** (một
   pattern lặp, compositor vẽ một lần rồi thôi), không phải chuyển sắc.
@@ -125,7 +131,7 @@ auto-xáo khoảng **1 lần mỗi ~30 màn** — đúng nghĩa lưới an toàn
 | Hạng mục | Cách làm |
 |---|---|
 | **Không có vòng lặp rAF** | Nền là CSS, tile rơi là transition của compositor, link fade bằng CSS → **không có gì cần 60Hz**. Việc định kỳ duy nhất là đồng hồ ở **5Hz** (`setInterval` 200ms). |
-| **Không có canvas nền** | Nền = halftone CSS vẽ **một lần** + 5 khối phẳng trôi bằng keyframe transform. animal-connect phải tối ưu vòng vẽ nền xuống 14 lệnh canvas/frame; ở đây là **0**. |
+| **Nền không tốn gì** | Nền **chỉ còn chấm halftone** vẽ một lần (các khối tròn/vuông trôi đã bỏ theo yêu cầu 2026-08-04). Không canvas, không animation nền → animal-connect phải tối ưu vòng vẽ nền xuống 14 lệnh canvas/frame; ở đây là **0**, và giờ không còn cả element nào động. |
 | **Tile rơi** | Đổi `transform` + `transition` → compositor lo. **Không một dòng JS nào chạy mỗi frame trong lúc rơi.** |
 | **Tìm cặp** | BFS **theo nguồn**: một lần quét tia đánh dấu mọi tile nối được từ một nguồn → nhóm k tile cùng loại tốn **k** lần quét thay vì **k(k−1)/2** lần tìm đường. Thoát sớm + cache cặp tìm được cho auto-hint. |
 | **Cấp phát** | `Int32Array` cấp **một lần mỗi level**, **đóng dấu bằng `scanId`** thay vì `fill(0)` → một lần quét không tốn gì cho việc dọn buffer. |
@@ -183,6 +189,9 @@ auto-xáo khoảng **1 lần mỗi ~30 màn** — đúng nghĩa lưới an toàn
 
 ## 📋 Backlog
 
+- [ ] **3 cover PNG vẫn vẽ tile CÓ bóng đổ cứng** (sinh trước khi bỏ UI 3D) →
+      lệch với bản game phẳng hiện tại. Chưa sinh lại: cover là art cần anh
+      duyệt. Nói một tiếng là em render lại trong 1 lệnh.
 - [ ] Kiểm layout ở màn hẹp thật (320/360px) — xem cảnh báo ở trên.
 - [ ] Hướng trọng lực biến thể theo level (lên / trái / phải / vào giữa).
 - [ ] Dịch nốt HUD/toast cho 23 ngôn ngữ nếu mentor muốn (hiện chủ đích để `en`).
