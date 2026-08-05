@@ -22,8 +22,22 @@
   endgame** (run kết thúc, chơi lại từ màn 1, giữ BEST).
 - **Điểm CỘNG DỒN cả run** (lvl 1 → endgame). SCORE = điểm run hiện tại,
   BEST = điểm run cao nhất.
-- Điểm bay lên ô SCORE là **ngôi sao giống hệt icon trên chính ô SCORE** (dùng
-  chung path/màu), để thứ bay lên và chỗ nó đáp xuống đọc ra cùng một ý.
+- **Điểm chỉ tăng KHI NGÔI SAO CHẠM ô SCORE**, không phải lúc nối xong
+  (yêu cầu 2026-08-04). Sao dùng đúng path/màu của icon trên ô SCORE, nên thứ
+  bay lên và chỗ nó đáp xuống đọc ra cùng một ý; số nhảy đúng nhịp từng sao đáp
+  (nối được 30 điểm với 3 sao → HUD đi 0 → 20 → 30).
+  - Bên trong tách đôi: `score` là **sự thật**, cộng ngay lúc nối — save, BEST và
+    payload win/lose đều đọc nó, nên **bị kill giữa chừng không mất điểm**.
+    `scoreShown` mới là thứ HUD hiển thị. Bất biến `scoreShown + scorePending
+    === score` được kiểm sau **mỗi** nước trong bot test.
+  - Sao đáp là lúc `transitionend` của `transform` bắn — đúng frame chạm, không
+    phải hẹn giờ áng chừng. Có đường thứ hai bằng timer nhắm **đúng thời điểm
+    đáp danh nghĩa** (bay + 2 frame khởi động) phòng khi tab bị ẩn / WebView
+    ngừng composite khiến `transitionend` không bao giờ bắn; ai tới trước thì
+    tính, cái sau thành no-op. Thời lượng bay do JS giữ (`FLY_MS`) rồi đẩy sang
+    CSS qua `--fly-ms`, nên hai bên **không thể lệch nhau**.
+  - Thắng/thua gọi `updateScoreHud()` để chốt: sao còn đang bay **không bao giờ**
+    giữ lại điểm trên bảng kết quả.
 - **Cơ chế điểm đặc trưng — DROP COMBO**: nếu lần nối kế tiếp dùng ít nhất một
   tile **vừa rơi** ở lần trước thì combo tăng một bậc (×1.5 → ×2 → ×2.5, trần
   ×4) và hiện tem `DROP ×N`. Trọng lực vì thế là **động cơ tính điểm**, không
@@ -130,7 +144,14 @@ auto-xáo khoảng **1 lần mỗi ~30 màn** — đúng nghĩa lưới an toàn
 
 | Hạng mục | Cách làm |
 |---|---|
-| **Không có vòng lặp rAF** | Nền là CSS, tile rơi là transition của compositor, link fade bằng CSS → **không có gì cần 60Hz**. Việc định kỳ duy nhất là đồng hồ ở **5Hz** (`setInterval` 200ms). |
+| **Không có vòng lặp rAF** | Nền là CSS, tile rơi là transition của compositor, link fade bằng CSS → **không có gì cần 60Hz**. Việc định kỳ duy nhất là đồng hồ ở **5Hz** (`setInterval` 200ms). Đo bằng máy: lúc idle **0 lần gọi `requestAnimationFrame`**. |
+| **`will-change` chỉ đặt lúc THẬT SỰ động** | Trước đây nằm trên `.tile`, tức **cả 120 tile** của bàn 12×10 bị đẩy lên **layer compositor riêng suốt cả màn** — một hoá đơn GPU-memory thường trực để tăng tốc thứ gần như luôn đứng yên. Nay chỉ ở `.tile.falling`. Đo: **120 → 0** tile được promote lúc nghỉ, vẫn có `transform` khi rơi. |
+| **Thanh giờ chạy bằng `transform`** | Trước là transition `width` → **layout + paint mỗi frame**, và vì tick 200ms so với transition 250ms nên nó **không nghỉ một giây nào** trong cả màn. Đổi sang `scaleX()` + `transform-origin:left` → thuần compositor, mượt ở 120/144Hz. |
+| **Không ghi DOM thừa** | `renderTimer` chạy 5 lần/giây và trước đây ghi lại thanh giờ, 3 class list và text giây **dù không đổi gì** — text giây thực tế chỉ đổi 1 lần/giây, tức 4/5 lần ghi là vô ích. Nay mọi lần ghi đều có guard; đo: **20 lần render thừa → 0 DOM write**. |
+| **Không đo lại layout mỗi nước** | `spawnFlyers` gọi `getBoundingClientRect()` cho bàn + ô SCORE mỗi lần nối → ép **layout đồng bộ cả trang**. Nay cache (`flyGeom`), chỉ xoá khi resize / banner tutorial dịch bàn. Nhịp đập ô SCORE đổi sang WAAPI nên bỏ luôn `void offsetWidth` ở tối đa 6 lần sao đáp. |
+| **Chặn layout ở bàn cờ** | `contain: layout style` trên `#board`. Cố ý **không** thêm `paint`: `.selected` / `.pop` phóng to mặt tile ra ngoài ô nên paint containment sẽ cắt cụt. |
+| **Kiến bò (tutorial) bớt repaint** | `stroke-dashoffset` từng chạy `linear infinite` → repaint SVG **mỗi frame** suốt lúc demo cặp bị chặn (60/s, hoặc 144/s trên panel nhanh) chỉ để dịch 28px. Đổi `steps(16,end)`: nhìn như cũ, rẻ hơn ~4–9×. |
+| **Ẩn tab thì dừng hẳn** | Trước đây đưa WebView xuống nền vẫn để ticker 5Hz + audio context chạy. Nay `visibilitychange` → `pauseGame()`: dừng cả hai, và cũng là hành xử đúng — đồng hồ không nên tiếp tục trôi khi người chơi không nhìn thấy bàn. |
 | **Nền không tốn gì** | Nền **chỉ còn chấm halftone** vẽ một lần (các khối tròn/vuông trôi đã bỏ theo yêu cầu 2026-08-04). Không canvas, không animation nền → animal-connect phải tối ưu vòng vẽ nền xuống 14 lệnh canvas/frame; ở đây là **0**, và giờ không còn cả element nào động. |
 | **Tile rơi** | Đổi `transform` + `transition` → compositor lo. **Không một dòng JS nào chạy mỗi frame trong lúc rơi.** |
 | **Tìm cặp** | BFS **theo nguồn**: một lần quét tia đánh dấu mọi tile nối được từ một nguồn → nhóm k tile cùng loại tốn **k** lần quét thay vì **k(k−1)/2** lần tìm đường. Thoát sớm + cache cặp tìm được cho auto-hint. |
@@ -189,10 +210,15 @@ auto-xáo khoảng **1 lần mỗi ~30 màn** — đúng nghĩa lưới an toàn
 
 ## 📋 Backlog
 
-- [ ] **3 cover PNG vẫn vẽ tile CÓ bóng đổ cứng** (sinh trước khi bỏ UI 3D) →
-      lệch với bản game phẳng hiện tại. Chưa sinh lại: cover là art cần anh
-      duyệt. Nói một tiếng là em render lại trong 1 lệnh.
+- [x] ~~3 cover PNG vẽ tile CÓ bóng đổ cứng~~ → **đã render lại 2026-08-04**:
+      tile phẳng đúng như trong game, và cover giờ kể đúng cơ chế (cột vừa dọn,
+      tile đang rơi kèm vệt tốc độ, sao điểm bay lên). Sprite quả được **rút
+      thẳng từ `index.html`** lúc sinh nên cover không thể lệch icon so với game.
 - [ ] Kiểm layout ở màn hẹp thật (320/360px) — xem cảnh báo ở trên.
+      **Chưa tự kiểm được**: Edge headless có chiều rộng cửa sổ tối thiểu, nên
+      `innerWidth` không bao giờ xuống dưới **~492px CSS** dù truyền
+      `--window-size` bao nhiêu (`--force-device-scale-factor` cũng không chia
+      viewport). Cần máy thật hoặc DevTools protocol để phủ mốc này.
 - [ ] Hướng trọng lực biến thể theo level (lên / trái / phải / vào giữa).
 - [ ] Dịch nốt HUD/toast cho 23 ngôn ngữ nếu mentor muốn (hiện chủ đích để `en`).
 - [ ] Confetti khi thắng màn; hiệu ứng riêng cho DROP COMBO ×3 trở lên.
