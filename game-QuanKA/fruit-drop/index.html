@@ -1773,6 +1773,16 @@ function showHintPair(pair) {
 let pendingMatch = null;
 function clearPendingMatch() { pendingMatch = null; }
 
+/** Persist because the player just did something. Matches do not need this -
+ *  afterBoardChange() saves once the board settles - so this covers the taps
+ *  that change the selection or bounce off a non-linkable pair. Skipped while
+ *  the board is mid-animation: gameSnapshot() must only ever photograph a
+ *  settled grid. */
+function saveOnAction() {
+  if (tutorialMode || ended || busy) return;
+  saveCurrentState();
+}
+
 let idleAcc = 0;
 function handleTap(r, c) {
   if (ended || paused) return;
@@ -1789,15 +1799,17 @@ function handleTap(r, c) {
   if (!selected) {
     if (tutorialMode && !tutAllowsFirst(r, c)) { tutWrongChoice(r, c); return; }
     select(r, c);
+    saveOnAction();
     return;
   }
-  if (selected === tiles[r][c]) { deselect(); return; }
+  if (selected === tiles[r][c]) { deselect(); saveOnAction(); return; }
 
   const a = { r: selected.r, c: selected.c }, b = { r: r, c: c };
   if (grid[a.r][a.c] !== grid[b.r][b.c]) {          // different fruit -> reselect
     deselect();
     if (tutorialMode && !tutAllowsFirst(r, c)) { tutWrongChoice(r, c); return; }
     select(r, c);
+    saveOnAction();
     return;
   }
   if (tutorialMode && !tutAllowsPair(a, b)) { deselect(); tutWrongChoice(r, c); return; }
@@ -1822,6 +1834,7 @@ function handleTap(r, c) {
     shakeTile(a.r, a.c); shakeTile(b.r, b.c);
     sfxBad();
     deselect();
+    saveOnAction();
   }
 }
 
@@ -2360,12 +2373,6 @@ document.getElementById('tut-skip').addEventListener('click', function (e) {
  * ============================================================= */
 const TICK_MS = 200;
 const IDLE_HINT_S = 5;
-/* Autosave cadence. The board is already persisted on every move; this exists
-   for the time between moves - without it `timeLeft` in the snapshot goes
-   stale and a kill hands back free seconds. 3s costs one 544-byte
-   localStorage write, which measured as noise next to a single move. */
-const AUTOSAVE_S = 3;
-let autosaveAcc = 0;
 let tickHandle = 0, lastTickAt = 0, lastTickSec = -1;
 
 function startTicker() {
@@ -2399,12 +2406,6 @@ function tick() {
   timeLeft -= dt;
   if (timeLeft <= 0) { timeLeft = 0; renderTimer(); loseLevel(); return; }
   renderTimer();
-
-  autosaveAcc += dt;
-  if (autosaveAcc >= AUTOSAVE_S) {
-    autosaveAcc = 0;
-    if (!busy) saveCurrentState();      // never mid-animation: the grid is settled
-  }
   const s = Math.ceil(timeLeft);
   if (s <= 10 && s !== lastTickSec) { lastTickSec = s; sfxTick(); }
 }

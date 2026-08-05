@@ -252,21 +252,37 @@ auto-xáo khoảng **1 lần mỗi ~30 màn** — đúng nghĩa lưới an toàn
   đặc không đọc được. Nay chọn = **phóng to + viền mực dày**, đọc được trên mọi
   icon. Hint dùng **xanh dương** vì trong bộ **không có quả nào màu xanh dương**.
 
-### Lưu liên tục
+### Lưu liên tục — theo HÀNH ĐỘNG, không theo đồng hồ
 
-Bàn cờ vốn đã được ghi sau **mỗi nước**, nhưng **đồng hồ thì không**: ngồi yên
-một phút rồi bị kill là quay lại với số giây của một phút trước — tức được
-tặng thời gian. Nay bổ sung:
+Tiến trình được ghi vì **người chơi vừa làm gì đó**, không bao giờ vì một
+timer chạy tới hạn. (Lần đầu em làm nhầm thành tự lưu mỗi 3 giây — đã bỏ hẳn.)
 
-- **Tự lưu mỗi 3 giây** từ chính ticker (chỉ khi `!busy`, để không chụp bàn
-  đang giữa animation). Giá: một lần ghi 544 byte — đo ra là không đáng kể so
-  với một nước đi.
-- **Ghi ngay khi ẩn tab** (`visibilitychange`) và khi `pagehide` — đúng lúc hệ
-  điều hành sắp kill app. Làm cả hai vì `visibilitychange` không phủ hết mọi
-  đường teardown (bfcache).
+Bàn cờ vốn đã được ghi sau mỗi **nước nối thành công** (`afterBoardChange`
+chạy khi bàn lắng). Chỗ hụt là những thao tác **không** dẫn tới một nước nối —
+chọn ô, bỏ chọn, chạm phải cặp không nối được — khi đó `timeLeft` trong bản
+lưu vẫn đứng ở lần nối cuối. Nay **mọi cú chạm làm thay đổi thứ gì đó đều
+ghi** (`saveOnAction`), nên bản lưu luôn mang số giây **đúng tại thời điểm
+người chơi thao tác**.
 
-Đo: đứng yên **không đi nước nào** trong 9 giây thì bản lưu cũng lùi 8 giây
-(bám sát nhịp 3s); ẩn tab và `pagehide` đều ghi ngay.
+`saveOnAction` bỏ qua khi `busy`: `gameSnapshot()` chỉ được phép chụp một bàn
+đã lắng, không phải bàn đang giữa animation. Nước nối không cần gọi nó vì
+`afterBoardChange` đã lo.
+
+Ngoài ra vẫn ghi khi **ẩn tab** (`visibilitychange`) và `pagehide` — đó cũng là
+hành động của người chơi (bấm home), và là cơ hội cuối trước khi hệ điều hành
+kill app. Làm cả hai vì `visibilitychange` không phủ hết mọi đường teardown.
+
+Đo bằng máy:
+
+| Tình huống | Số lần ghi |
+|---|---|
+| Đứng yên 7 giây, không chạm gì | **0** — không có nhịp thời gian nào |
+| Một cú chạm (chỉ chọn ô) | **1**, và bản lưu bắt kịp đúng đồng hồ lúc chạm |
+| Chạm bỏ chọn | 1 |
+| Chạm phải cặp không nối được | 2 (chọn + nảy) |
+| Ẩn tab | ghi ngay |
+
+Tải ghi khi chơi thật: **2 lần/nước** (chọn + nối), mỗi lần 571 byte.
 
 ## Tối ưu hiệu năng
 
