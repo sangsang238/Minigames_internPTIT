@@ -214,16 +214,20 @@ body {
 #link-svg { position: absolute; z-index: 3; pointer-events: none; overflow: visible; }
 /* Stroke widths scale with the cell (set in resize()): a fixed 9px under-stroke
    is a quarter of a 35px cell and blots out whatever tile the route crosses. */
-.link-under { fill: none; stroke: var(--ink); stroke-width: var(--lw-under, 8px); stroke-linecap: square; stroke-linejoin: miter; }
-.link-path  { fill: none; stroke: var(--tomato); stroke-width: var(--lw-core, 4px); stroke-linecap: square; stroke-linejoin: miter; }
-@keyframes linkFade { 0%,72% { opacity: 1; } 100% { opacity: 0; } }
-.link-anim { animation: linkFade .34s steps(4,end) forwards; }
+/* Rounded caps and joins, like animal-connect. Square caps overshot the end
+   cell and mitre joins threw a spike out of every corner, which is what made
+   the connector look crude at a turn. The fade is eased, not stepped, for the
+   same reason - a 4-step fade on a thin line reads as flicker. */
+.link-under { fill: none; stroke: var(--ink); stroke-width: var(--lw-under, 8px); stroke-linecap: round; stroke-linejoin: round; }
+.link-path  { fill: none; stroke: var(--tomato); stroke-width: var(--lw-core, 4px); stroke-linecap: round; stroke-linejoin: round; }
+@keyframes linkFade { 0%,70% { opacity: 1; } 100% { opacity: 0; } }
+.link-anim { animation: linkFade .34s ease-in forwards; }
 
 /* Blocked-pair demo route (> 2 turns) shown in the tutorial */
-.bend-under { fill: none; stroke: var(--ink); stroke-width: var(--lw-under, 8px); stroke-linecap: square; stroke-linejoin: miter; }
+.bend-under { fill: none; stroke: var(--ink); stroke-width: var(--lw-under, 8px); stroke-linecap: round; stroke-linejoin: round; }
 .bend-path {
   fill: none; stroke: var(--tomato); stroke-width: var(--lw-core, 4px);
-  stroke-linecap: square; stroke-linejoin: miter;
+  stroke-linecap: round; stroke-linejoin: round;
   stroke-dasharray: 7 7;
   /* steps(), not linear: `linear` repainted this path on every frame for as
      long as the demo was up (60/s, or 144/s on a fast panel) to move it 28px.
@@ -272,7 +276,9 @@ body {
   /* NOTE: every state animation lives on .tile-face, never on .tile — a
      keyframe with transform on .tile would override the inline grid translate
      and snap the tile to (0,0). */
-  transition: transform .1s steps(2,end), box-shadow .1s steps(2,end);
+  /* Eased, not stepped: a 2-step scale looks like the device dropped frames.
+     Everything else in this file may stay chunky; growth and shrink may not. */
+  transition: transform .12s ease, box-shadow .15s ease;
 }
 .tile-face svg { width: 86%; height: 86%; flex-shrink: 0; display: block; pointer-events: none; }
 
@@ -281,7 +287,7 @@ body {
    so if it came later it would silently outrank them and a tile selected or
    hinted during the first 200ms of a level would show neither state. */
 @keyframes tilePopin { 0% { opacity: 0; transform: translate(0,-8px); } 100% { opacity: 1; transform: translate(0,0); } }
-.tile.popin .tile-face { animation: tilePopin .2s steps(3,end) backwards; }
+.tile.popin .tile-face { animation: tilePopin .22s ease-out backwards; }
 
 /* Selected: grows and gains a much fatter INK outline.
    Deliberately colour-free — the tiles are 14 different coloured fruits, so any
@@ -310,11 +316,11 @@ body {
                      45% { transform: scale(1.18); opacity: 1; }
                      100% { transform: scale(.2); opacity: 0; } }
 .tile.pop { pointer-events: none; z-index: 4; }
-.tile.pop .tile-face { animation: tilePop .26s steps(5,end) forwards; }
+.tile.pop .tile-face { animation: tilePop .26s ease-in forwards; }
 
 /* Landing squash — sells the gravity without any JS per frame */
 @keyframes tileLand { 0% { transform: scaleY(1); } 40% { transform: scaleY(.86) translateY(6%); } 100% { transform: scaleY(1); } }
-.tile.landed .tile-face { animation: tileLand .16s steps(3,end); }
+.tile.landed .tile-face { animation: tileLand .18s ease-out; }
 
 /* Invalid pair shake — margin-left, not transform: transform is holding the
    grid position, and the standalone `translate` property needs Chromium 104+ */
@@ -433,12 +439,8 @@ body {
    on the very first frame. The old shape put scale(1) at 0% and the peak at
    45% under steps(2,end), which meant the pill sat perfectly still for the
    first half of the animation before doing anything. */
-@keyframes scorePulse {
-  0%,  42%  { transform: scale(1.085); }
-  43%, 72%  { transform: scale(1.035); }
-  73%, 100% { transform: scale(1); }
-}
-.hud-pill.score-hit { animation: scorePulse .21s linear; }
+@keyframes scorePulse { 0%, 100% { transform: scale(1); } 35% { transform: scale(1.12); } }
+.hud-pill.score-hit { animation: scorePulse .28s ease-out; }
 
 /* ── Tutorial ─────────────────────────────────────────────────── */
 #tut-banner {
@@ -1193,7 +1195,24 @@ function onSettled(ep, moves) {
     }, 180);
   }
   busy = false;
+  if (runPendingMatch(ep)) return;    // the queued pair owns the board now
   afterBoardChange(ep);
+}
+
+/** Play a pair the player queued mid-animation, if it is still playable.
+ *  Re-validated against the SETTLED board: gravity may have moved both tiles,
+ *  and a route that existed mid-fall may not exist now. */
+function runPendingMatch(ep) {
+  const q = pendingMatch;
+  pendingMatch = null;
+  if (!q || ep !== levelEpoch || ended || paused || busy) return false;
+  const ta = q[0], tb = q[1];
+  if (!ta || !tb || ta.r < 0 || tb.r < 0) return false;
+  if (tiles[ta.r][ta.c] !== ta || tiles[tb.r][tb.c] !== tb) return false;
+  if (grid[ta.r][ta.c] !== grid[tb.r][tb.c]) return false;
+  if (!linkable(ta.r, ta.c, tb.r, tb.c)) return false;
+  doMatch({ r: ta.r, c: ta.c }, { r: tb.r, c: tb.c });
+  return true;
 }
 
 /* ================================================================
@@ -1524,14 +1543,15 @@ let scorePulseAnim = null;
 function pulseScorePill() {
   if (scorePulseAnim) { try { scorePulseAnim.cancel(); } catch (e) {} }
   if (pillScore.animate) {
+    /* Eased interpolation, so it is BOTH smooth and immediate: unlike a
+       stepped curve, an eased one starts changing on the very first frame, so
+       the "throb lags the score" problem does not come back. Verified by
+       sampling the rendered transform - see the throb test. */
     scorePulseAnim = pillScore.animate([
-      { transform: 'scale(1.085)', offset: 0    },
-      { transform: 'scale(1.085)', offset: 0.42 },
-      { transform: 'scale(1.035)', offset: 0.43 },
-      { transform: 'scale(1.035)', offset: 0.72 },
-      { transform: 'scale(1)',     offset: 0.73 },
-      { transform: 'scale(1)',     offset: 1    }
-    ], { duration: 210 });
+      { transform: 'scale(1)',    offset: 0    },
+      { transform: 'scale(1.12)', offset: 0.35 },
+      { transform: 'scale(1)',    offset: 1    }
+    ], { duration: 280, easing: 'ease-out' });
   } else {
     pillScore.classList.remove('score-hit');
     void pillScore.offsetWidth;
@@ -1731,14 +1751,13 @@ function sfxTick() { tone(880, 0.05, 0.07, 'sine'); }
 function tileAt(p) { return tiles[p.r][p.c]; }
 
 function select(r, c) {
-  selected = { r: r, c: c };
-  tiles[r][c].el.classList.add('selected');
+  selected = tiles[r][c];          // the tile OBJECT: survives a gravity pass
+  selected.el.classList.add('selected');
   sfxSelect();
 }
 function deselect() {
   if (!selected) return;
-  const t = tiles[selected.r][selected.c];
-  if (t) t.el.classList.remove('selected');
+  selected.el.classList.remove('selected');
   selected = null;
 }
 function shakeTile(r, c) {
@@ -1767,9 +1786,17 @@ function showHintPair(pair) {
   }
 }
 
+/* A pair the player completed while the board was still animating. Held here
+   and fired the moment the board is ready. See handleTap / runPendingMatch. */
+let pendingMatch = null;
+function clearPendingMatch() { pendingMatch = null; }
+
 let idleAcc = 0;
 function handleTap(r, c) {
-  if (busy || ended || paused) return;
+  if (ended || paused) return;
+  /* The tutorial drives its own pacing and asserts on each step, so it keeps
+     the old hard lock rather than queuing anything. */
+  if (busy && tutorialMode) return;
   if (!tiles[r] || !tiles[r][c]) return;
   idleAcc = 0;
   audioEnsure();
@@ -1782,9 +1809,9 @@ function handleTap(r, c) {
     select(r, c);
     return;
   }
-  if (selected.r === r && selected.c === c) { deselect(); return; }
+  if (selected === tiles[r][c]) { deselect(); return; }
 
-  const a = selected, b = { r: r, c: c };
+  const a = { r: selected.r, c: selected.c }, b = { r: r, c: c };
   if (grid[a.r][a.c] !== grid[b.r][b.c]) {          // different fruit -> reselect
     deselect();
     if (tutorialMode && !tutAllowsFirst(r, c)) { tutWrongChoice(r, c); return; }
@@ -1794,6 +1821,16 @@ function handleTap(r, c) {
   if (tutorialMode && !tutAllowsPair(a, b)) { deselect(); tutWrongChoice(r, c); return; }
 
   if (linkable(a.r, a.c, b.r, b.c)) {
+    /* Busy means tiles are still popping or falling. Rather than swallow the
+       tap - which is what made the game feel like it stopped listening while
+       the score stars were still on screen - remember the pair and play it as
+       soon as the board settles. The two tile OBJECTS are stored, so the
+       pending pair stays valid even if gravity moves them in the meantime. */
+    if (busy) {
+      pendingMatch = [tiles[a.r][a.c], tiles[b.r][b.c]];
+      deselect();
+      return;
+    }
     deselect();
     doMatch(a, b);
   } else {
@@ -1871,6 +1908,12 @@ function afterBoardChange(ep) {
  *  a workable arrangement always exists — we just have to find one. */
 function autoShuffle(ep) {
   busy = true;
+  /* A shuffle reassigns FRUIT to the tiles already on the board, so anything
+     the player picked before it refers to a tile that has since become a
+     different fruit. Drop both, or they would see a selection ring sitting on
+     something they never chose. */
+  deselect();
+  clearPendingMatch();
   const cells = [], vals = [];
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
@@ -2022,6 +2065,7 @@ function ensureGridArrays() {
 
 function loadLevel(idx, snap) {
   levelEpoch++;                       // invalidates every in-flight continuation
+  clearPendingMatch();
   clearTimeout(linkTimer);
   linkSvg.innerHTML = '';
   clearHint();
@@ -2377,6 +2421,7 @@ function tick() {
 function pauseGame() {
   if (paused || ended) return;
   paused = true;
+  clearPendingMatch();
   stopTicker();
   pauseVeil.classList.remove('hidden');
   try { if (actx && actx.state === 'running') actx.suspend(); } catch (e) {}

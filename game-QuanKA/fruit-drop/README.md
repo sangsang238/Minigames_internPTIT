@@ -133,6 +133,47 @@ nhường việc cho đồng hồ:
 - Vô hạn → **không có màn cuối, không bắn `victory`** (deviation có chủ ý so với
   game-common §1.5, giống animal-connect / runic-blaze).
 
+### Gạch nối — vẽ theo kiểu `animal-connect`
+
+Sửa 2026-08-05, feedback: "cái gạch nối hơi thô → dùng cái dạng mà game
+animal-connect làm". Đối chiếu hai file thì khác biệt nằm ở đúng ba chỗ:
+
+| | fruit-drop (cũ) | animal-connect | fruit-drop (nay) |
+|---|---|---|---|
+| `stroke-linecap` | `square` | `round` | **`round`** |
+| `stroke-linejoin` | `miter` | `round` | **`round`** |
+| Mờ dần | `steps(4,end)` | `ease-in` | **`ease-in`** |
+
+`miter` **bắn một cái gai ra khỏi mỗi góc rẽ**, còn `square` thì **thò quá ô
+cuối** — đó chính là chỗ "thô". Fade 4 nấc trên một nét mảnh thì đọc ra là
+nhấp nháy chứ không phải mờ dần. Đường vẽ minh hoạ trong tutorial (`.bend-*`)
+sửa cùng lý do.
+
+### Không chặn nhấn giữa animation
+
+Feedback: "đừng chặn nhấn khi đang diễn anim mấy ngôi sao bay lên, nó bị mất
+nhịp chơi á". Đo trước đã, vì cảm nhận và nguyên nhân không trùng nhau: sao
+bay tới **826ms**, nhưng `busy` chỉ khoá tới **200ms** (dài hơn khi có tile
+rơi) — tức game **không** hề chặn suốt lúc sao bay. Cái người chơi vấp là
+**cửa sổ chết ~200-440ms** ngay sau khi nối, và họ quy nó cho hiệu ứng sao vì
+đó là thứ đang chuyển động trên màn hình.
+
+Cách sửa: **không nuốt cú chạm nữa**. Trong lúc bàn còn pop/rơi, cú chạm vẫn
+được nhận và hiện vòng chọn ngay; nếu nó hoàn thành một cặp thì cặp đó được
+**xếp hàng** và nổ ra đúng lúc bàn lắng xuống (`runPendingMatch`). Nhịp chơi
+liền mạch mà **không** có hai lượt trọng lực chồng nhau.
+
+Hai chi tiết bắt buộc để nó đúng:
+- `selected` nay giữ **đối tượng tile**, không phải cặp toạ độ `{r,c}`. Toạ độ
+  sẽ **ôi thiu**: tile được chọn trong lúc pop có thể bị lượt trọng lực ngay
+  sau đó dời đi, và `{r,c}` khi ấy trỏ vào **tile khác** vừa rơi vào chỗ đó.
+- Cặp đang xếp hàng được **kiểm lại trên bàn ĐÃ LẮNG** (còn tồn tại? còn cùng
+  loại? còn nối được?) trước khi chơi — đường đi tồn tại lúc đang rơi có thể
+  không còn tồn tại sau khi rơi xong.
+- Tutorial **giữ khoá cũ** (nó tự điều nhịp và assert theo từng bước), và
+  `autoShuffle` huỷ cả ô đang chọn lẫn cặp đang xếp hàng vì nó gán **loại quả
+  mới** lên chính những tile cũ.
+
 ### ⚠️ Phát hiện quan trọng: trọng lực làm DEADLOCK NHIỀU HƠN, không ít hơn
 
 Giả định ban đầu (ghi trong plan) là trọng lực sẽ *giảm* deadlock. **Đo bằng
@@ -182,7 +223,13 @@ auto-xáo khoảng **1 lần mỗi ~30 màn** — đúng nghĩa lưới an toàn
   - → chọn **`mushroom`**: silhouette mũ-vòm-cộng-thân là duy nhất trong bộ, và là
     món hai tông đỏ/kem duy nhất.
 - **Phong cách: neo-brutalist in ấn PHẲNG HOÀN TOÀN** — nền giấy kem + chấm
-  halftone, viền mực đen 3px, khối màu phẳng, mọi animation dùng `steps()`.
+  halftone, viền mực đen 3px, khối màu phẳng.
+- **`steps()` dùng cho FADE/NHÁY, KHÔNG dùng cho PHÓNG TO/THU NHỎ**
+  (sửa 2026-08-05 theo playtest: "mấy hiệu ứng phóng to thu nhỏ ô hơi giật").
+  Trên một cú mờ dần hay nháy, `steps()` đọc ra là *có chủ ý*; trên một cú
+  **scale** thì nó chỉ đọc ra là **máy rớt frame**. Nên chọn tile, pop, land,
+  pop-in và nhịp ô SCORE nay đều dùng `ease` — đúng như `animal-connect` làm.
+  Còn nháy gợi ý / mờ đường nối / kiến bò vẫn giữ `steps()`.
   **Không có bóng đổ nổi/3D ở bất kỳ đâu** (theo yêu cầu 2026-08-04: bỏ hết UI
   kiểu nút 3D) — nút/pill/khung bàn/banner chỉ còn viền mực; nút bấm phản hồi
   bằng thu nhỏ + đổi nền, không phải "lún vào bóng". Các `box-shadow` còn lại
