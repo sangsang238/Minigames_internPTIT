@@ -1393,6 +1393,15 @@ const BASE_POINTS  = 10;
 const MAX_MULT     = 4;
 const FLY_STAGGER  = 55;
 const FLY_MS       = 620;    // flight time; pushed into .fly as --fly-ms
+/* The flight uses cubic-bezier(.45,0,.3,1), which is heavily decelerating: by
+   90% of FLY_MS it has already covered 99.3% of the distance (measured from
+   the curve itself - see the bezier walk in the commit that added this). The
+   last 10% of the duration is therefore a sub-pixel crawl the eye cannot
+   follow. Crediting on the literal transitionend (100%) waited out that dead
+   tail on every single star, which read as the SCORE pulse lagging a beat
+   behind a star that visibly already arrived. FLY_ARRIVE_FRAC moves the
+   credit to the moment that is actually indistinguishable from arrival. */
+const FLY_ARRIVE_FRAC = 0.9;
 
 /* -- Score delivery ------------------------------------------------
    `score` is the TRUTH and moves the instant a pair clears - saves, the
@@ -1507,42 +1516,51 @@ function flyOne(x, y, tx, ty, i, share) {
   document.body.appendChild(el);
 
   const dx = tx - x, dy = ty - y;
-  let landed = false;
+  let credited = false, removed = false;
 
-  /* The points land on `transitionend` - the exact frame the star touches the
-     pill - rather than on a timer that merely approximates it. */
-  function arrive() {
-    if (landed) return;
-    landed = true;
-    el.removeEventListener('transitionend', onEnd);
-    clearTimeout(safety);
-    if (el.parentNode) el.parentNode.removeChild(el);
+  /* Crediting and removing the element are deliberately separate. Crediting
+     happens the instant the star is visually (not literally) at the pill;
+     removal waits for the star's own transition to actually finish so it
+     never pops out mid-flight. */
+  function credit() {
+    if (credited) return;
+    credited = true;
     deliverScore(share);
     pulseScorePill();
   }
-  function onEnd(e) { if (e.propertyName === 'transform') arrive(); }
+  function remove() {
+    if (removed) return;
+    removed = true;
+    el.removeEventListener('transitionend', onEnd);
+    clearTimeout(creditTimer);
+    clearTimeout(safety);
+    if (el.parentNode) el.parentNode.removeChild(el);
+    credit();   // fallback: guarantees the points land even if creditTimer was throttled
+  }
+  function onEnd(e) { if (e.propertyName === 'transform') remove(); }
   el.addEventListener('transitionend', onEnd);
-  /* Second, independent route to the same instant. `transitionend` is the
-     precise one and normally wins, but it does not fire at all when frames are
-     not being produced - a hidden tab, or a WebView that has stopped
-     compositing - and the points would then sit in `scorePending` forever with
-     the HUD stuck. So this is aimed at the NOMINAL landing time (flight plus
-     the two-frame kick), not parked far out as a panic timer: whichever route
-     fires first, the score moves when the star arrives rather than a second
-     later. `landed` makes the loser a no-op. */
-  const safety = setTimeout(arrive, i * FLY_STAGGER + FLY_MS + 90);
+  /* Independent route to the same cleanup. `transitionend` normally wins, but
+     it does not fire at all when frames are not being produced - a hidden
+     tab, or a WebView that has stopped compositing - and the star would then
+     sit in the DOM (and any un-credited points in `scorePending`) forever.
+     Aimed at the NOMINAL landing time (flight plus the two-frame kick), not
+     parked far out as a panic timer. */
+  const safety = setTimeout(remove, i * FLY_STAGGER + FLY_MS + 90);
 
+  let creditTimer = 0;
   /* Kick off on a frame boundary. A bare setTimeout fires anywhere inside a
      frame, so the same stagger produced a different first-frame offset at
      60 / 120 / 144Hz; two rAFs are two frames on every one of them (and the
      second is what guarantees the start transform was computed, so the
-     transition actually runs). */
+     transition actually runs - and so this is the true zero point FLY_ARRIVE_FRAC
+     is measured from, not the spawn time). */
   function kick() {
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
-        if (landed) return;
+        if (removed) return;
         el.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(.45)';
         el.style.opacity = '0';
+        creditTimer = setTimeout(credit, FLY_MS * FLY_ARRIVE_FRAC);
       });
     });
   }

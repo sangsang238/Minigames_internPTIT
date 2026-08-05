@@ -30,12 +30,20 @@
     payload win/lose đều đọc nó, nên **bị kill giữa chừng không mất điểm**.
     `scoreShown` mới là thứ HUD hiển thị. Bất biến `scoreShown + scorePending
     === score` được kiểm sau **mỗi** nước trong bot test.
-  - Sao đáp là lúc `transitionend` của `transform` bắn — đúng frame chạm, không
-    phải hẹn giờ áng chừng. Có đường thứ hai bằng timer nhắm **đúng thời điểm
-    đáp danh nghĩa** (bay + 2 frame khởi động) phòng khi tab bị ẩn / WebView
-    ngừng composite khiến `transitionend` không bao giờ bắn; ai tới trước thì
-    tính, cái sau thành no-op. Thời lượng bay do JS giữ (`FLY_MS`) rồi đẩy sang
-    CSS qua `--fly-ms`, nên hai bên **không thể lệch nhau**.
+  - **Cộng điểm KHÔNG đợi `transitionend`** (sửa 2026-08-04, phát hiện từ
+    playtest: khung SCORE nảy trễ "một tích tắc" so với lúc sao có vẻ đã tới).
+    Nguyên nhân đo được bằng chính công thức bezier: đường bay dùng
+    `cubic-bezier(.45,0,.3,1)` — một đường **giảm tốc mạnh về cuối**, tới
+    **90% thời lượng đã đi được 99.3% quãng đường** (10% cuối chỉ dịch <1%,
+    dưới 1px, mắt không thấy). Đợi `transitionend` (100%) để cộng điểm nghĩa
+    là luôn "ngồi không" qua cái đuôi chết đó — đúng cảm giác trễ mà mentor
+    chỉ ra. Nay **tách rời** hai việc: `credit()` (cộng điểm + nảy pill) bắn ở
+    `FLY_MS * FLY_ARRIVE_FRAC` (0.9) tính từ lúc transform THẬT SỰ bắt đầu
+    (trong `kick()`, sau 2 rAF) — còn `remove()` (dọn phần tử) vẫn đợi
+    `transitionend`/timer dự phòng như cũ nên ngôi sao không bao giờ biến mất
+    giữa chừng. `remove()` gọi lại `credit()` như lưới an toàn (idempotent)
+    phòng khi `creditTimer` bị throttle lúc tab ẩn. Đo bằng test: cộng điểm ở
+    đúng 558ms/620ms (=0.9), sao vẫn còn trên DOM tới hết bay.
   - Thắng/thua gọi `updateScoreHud()` để chốt: sao còn đang bay **không bao giờ**
     giữ lại điểm trên bảng kết quả.
 - **Cơ chế điểm đặc trưng — DROP COMBO**: nếu lần nối kế tiếp dùng ít nhất một
