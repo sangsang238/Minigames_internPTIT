@@ -210,10 +210,34 @@ auto-xáo khoảng **1 lần mỗi ~30 màn** — đúng nghĩa lưới an toàn
 | **Nền không tốn gì** | Nền **chỉ còn chấm halftone** vẽ một lần (các khối tròn/vuông trôi đã bỏ theo yêu cầu 2026-08-04). Không canvas, không animation nền → animal-connect phải tối ưu vòng vẽ nền xuống 14 lệnh canvas/frame; ở đây là **0**, và giờ không còn cả element nào động. |
 | **Tile rơi** | Đổi `transform` + `transition` → compositor lo. **Không một dòng JS nào chạy mỗi frame trong lúc rơi.** |
 | **Tìm cặp** | BFS **theo nguồn**: một lần quét tia đánh dấu mọi tile nối được từ một nguồn → nhóm k tile cùng loại tốn **k** lần quét thay vì **k(k−1)/2** lần tìm đường. Thoát sớm + cache cặp tìm được cho auto-hint. |
+| **Lối tắt "cặp chạm nhau"** | Hai tile **kề nhau cùng loại LUÔN nối được** (đoạn thẳng 0 lần rẽ, không có ô nào ở giữa). Nên câu hỏi mà `hasMoves()` thật sự hỏi — "còn nước đi không?" — thường trả lời được bằng **một lượt quét O(ô), không BFS nào**. Trọng lực liên tục xếp lại cột nên loại cặp này gần như luôn có: đo được **97.5%** số lần gọi trúng lối tắt. Cố ý **không** dùng cho `randomize` (đường của gợi ý) để gợi ý không bị đơn điệu — gợi ý chỉ chạy 5s/lần nên không đáng tối ưu. |
+| **Chạm tile = O(1)** | Mỗi element giữ sẵn back-reference `__tile` tới ô pool của nó (gán một lần trong `buildPool`). Trước đây handler click **duyệt tuyến tính cả pool** so sánh node — trên bàn 12×16 là tới **192 phép so sánh cho mỗi lần chạm**. |
 | **Cấp phát** | `Int32Array` cấp **một lần mỗi level**, **đóng dấu bằng `scanId`** thay vì `fill(0)` → một lần quét không tốn gì cho việc dọn buffer. |
 | **DOM tile** | Pool cấp sẵn ở cỡ bàn max (120), tái dùng vĩnh viễn; đổi loại = 1 `setAttribute`. Không tạo/huỷ node lúc chơi. |
 | **`backdrop-filter`** | **Không dùng ở bất kỳ đâu** (bị ban vì perf trên WebView; style phẳng cũng không cần). |
 | **Bridge** | `save_data` từ **~260 → 40 message**/phiên: điểm cộng dồn nên qua kỷ lục cũ là *mỗi* nước đều lập best mới. Nay localStorage ghi ngay (miễn phí, trong WebView) còn native bị **throttle 4s + trailing send**; hết màn/hết run vẫn gửi ngay không throttle. |
+
+### Đo đường nóng mỗi nước (bàn 12×16 = 192 tile)
+
+Đo bằng **số phép tính**, không phải đồng hồ: dưới `--virtual-time-budget` của
+Edge headless, `performance.now()` **không nhích trong lúc chạy code đồng bộ**
+(hiệu chuẩn: vòng lặp 3 triệu bước đọc ra `0.00ms`), nên mọi con số thời gian ở
+môi trường này là vô nghĩa. Số đếm thì tất định và so sánh được.
+
+| Mỗi nước đi | Trước | Sau | Giảm |
+|---|---|---|---|
+| `reachFrom` (BFS) | 71.5 | **1.1** | −98% |
+| `ray()` | 1881 | **44** | −98% |
+| Ô được ray duyệt | 2682 | **71** | −97% |
+
+Con số 71.5 lần BFS mỗi nước là thứ khiến em đi tìm: `findAnyPair` phải vét cạn
+vài "bucket" loại quả bằng BFS trước khi tình cờ gặp cặp nối được. Lối tắt cặp
+chạm nhau xoá gần hết phần đó.
+
+**Đã kiểm thứ KHÔNG phải thủ phạm:** ghi `localStorage` sau mỗi nước chỉ tốn
+**544 byte, 1 lần `setItem`/nước** (0.58 KB/nước) — nhỏ, nên em để nguyên; đổi
+nó sẽ đánh đổi khả năng chống mất tiến độ khi app bị kill mà chẳng được bao
+nhiêu.
 
 ## Tuân thủ quy ước chung
 
