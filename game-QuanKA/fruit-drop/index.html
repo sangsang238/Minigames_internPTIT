@@ -428,8 +428,17 @@ body {
               opacity   var(--fly-ms,620ms) steps(4,end);
 }
 .fly svg { width: 100%; height: 100%; display: block; }
-@keyframes scorePulse { 0%,100% { transform: scale(1); } 45% { transform: scale(1.07); } }
-.hud-pill.score-hit { animation: scorePulse .26s steps(2,end); }
+/* The pop is at 0%, and each value is HELD to its own stop rather than
+   interpolated - a chunky 3-frame decay in the house steps() style that starts
+   on the very first frame. The old shape put scale(1) at 0% and the peak at
+   45% under steps(2,end), which meant the pill sat perfectly still for the
+   first half of the animation before doing anything. */
+@keyframes scorePulse {
+  0%,  42%  { transform: scale(1.085); }
+  43%, 72%  { transform: scale(1.035); }
+  73%, 100% { transform: scale(1); }
+}
+.hud-pill.score-hit { animation: scorePulse .21s linear; }
 
 /* ── Tutorial ─────────────────────────────────────────────────── */
 #tut-banner {
@@ -1437,14 +1446,31 @@ function deliverScore(share) {
 }
 
 /* WAAPI restart: no class juggling and, more to the point, no
-   `void offsetWidth` forced layout on each of the up-to-6 arrivals. */
+   `void offsetWidth` forced layout on each of the up-to-6 arrivals.
+
+   The throb MUST start on the frame the number changes. It used to be
+   `easing:'steps(2,end)'` over keyframes 1 -> 1.07 -> 1, and in WAAPI that
+   `easing` is the ITERATION easing: it quantises eased progress to {0, .5, 1},
+   which maps to scale(1) / scale(1.07) / scale(1). The pill therefore held
+   scale(1) - i.e. did nothing visible - for the first 130ms of a 260ms
+   animation, then popped. Measured directly off computed style; that dead
+   half is exactly the lag playtest reported.
+
+   Now the peak is the offset-0 keyframe and each value is held flat to its own
+   stop (the 1% gaps are a sub-frame ramp, not a visible tween), giving the same
+   chunky look with the response on frame one. */
 let scorePulseAnim = null;
 function pulseScorePill() {
   if (scorePulseAnim) { try { scorePulseAnim.cancel(); } catch (e) {} }
   if (pillScore.animate) {
-    scorePulseAnim = pillScore.animate(
-      [{ transform: 'scale(1)' }, { transform: 'scale(1.07)' }, { transform: 'scale(1)' }],
-      { duration: 260, easing: 'steps(2,end)' });
+    scorePulseAnim = pillScore.animate([
+      { transform: 'scale(1.085)', offset: 0    },
+      { transform: 'scale(1.085)', offset: 0.42 },
+      { transform: 'scale(1.035)', offset: 0.43 },
+      { transform: 'scale(1.035)', offset: 0.72 },
+      { transform: 'scale(1)',     offset: 0.73 },
+      { transform: 'scale(1)',     offset: 1    }
+    ], { duration: 210 });
   } else {
     pillScore.classList.remove('score-hit');
     void pillScore.offsetWidth;

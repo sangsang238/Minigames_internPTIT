@@ -44,6 +44,18 @@
     giữa chừng. `remove()` gọi lại `credit()` như lưới an toàn (idempotent)
     phòng khi `creditTimer` bị throttle lúc tab ẩn. Đo bằng test: cộng điểm ở
     đúng 558ms/620ms (=0.9), sao vẫn còn trên DOM tới hết bay.
+  - **Throb của ô SCORE bung ngay frame đầu** (sửa 2026-08-04, lần 2 —
+    playtest vẫn thấy trễ *sau khi* đã sửa thời điểm cộng điểm). Thủ phạm là
+    chính đường easing chứ không phải lúc gọi: WAAPI hiểu `easing` trong
+    options là easing của **cả iteration**, nên `steps(2,end)` lượng tử hoá
+    tiến độ thành {0, .5, 1} → ứng với keyframe `scale(1)` / `scale(1.07)` /
+    `scale(1)`. Nghĩa là ô SCORE **giữ nguyên `scale(1)` suốt 130ms đầu của
+    260ms** rồi mới bung — đo trực tiếp bằng cách kéo `Animation.currentTime`
+    và đọc computed style. Nay đỉnh nằm ở **keyframe offset 0** và mỗi giá trị
+    được **giữ phẳng** tới stop của nó (các khe 1% là ramp dưới một frame,
+    không phải tween nhìn thấy được): vẫn 3 nấc chunky đúng style `steps()`,
+    nhưng phản hồi ngay frame đầu. Đo lại: **130ms → 0ms** trước khi có thay
+    đổi nhìn thấy, và về đúng `scale(1)` khi kết thúc.
   - Thắng/thua gọi `updateScoreHud()` để chốt: sao còn đang bay **không bao giờ**
     giữ lại điểm trên bảng kết quả.
 - **Cơ chế điểm đặc trưng — DROP COMBO**: nếu lần nối kế tiếp dùng ít nhất một
