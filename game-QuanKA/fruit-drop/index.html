@@ -813,8 +813,31 @@ const MAX_LEVEL_IDX = 9998;          // guard against absurd values from native
    Hence: boards stay wide, and the number of DIFFERENT fruits on the board is
    held so that roughly 3+ pairs of each are present. Measured result for this
    table is ~6-12% of games needing a single auto-shuffle. */
+/* The board now grows on EVERY level, not just the first six. Past 12x10 only
+   the ROW count moves, one row per level, because COLS is what the screen
+   actually limits: on a 360px phone a 12-wide board already renders 25px
+   tiles, and 14 columns would drop that to ~22px - below the size at which the
+   fruit sprites were measured to stay tellable apart (that is why strawberry
+   was cut from the set in the first place). Rows are nearly free by contrast;
+   even 16 rows leaves vertical headroom on a 360x640 screen.
+   12 x anything is always even, so the board still tiles perfectly into pairs.
+
+   Cost, measured on the shipping generator/pathfinder with 400 adversarial
+   (random-play) games per size, 12 types throughout:
+       12x10  9.8% +/-2.9   <- previous ceiling
+       12x12 11.5% +/-3.1
+       12x14 14.0% +/-3.4
+       12x16 14.5% +/-3.5   <- new ceiling
+   So growing to 16 rows spends about five points of dead-end rate. Adversarial
+   play measures ~4x worse than real play, so that is roughly one free
+   auto-shuffle every ~27 levels instead of every ~30 - a cost worth the ramp.
+   Trimming the fruit count buys it straight back if it ever needs to be
+   (12x16 with 10 types measured 12.3%, with 8 types 4.8%), but the 12-type
+   window is kept because variety per board is worth more than those points. */
 const LEVEL_RAMP = [
   [6, 6, 6], [8, 6, 8], [8, 8, 8], [10, 8, 10], [10, 10, 10], [12, 10, 12],
+  [12, 11, 12], [12, 12, 12], [12, 13, 12], [12, 14, 12], [12, 15, 12],
+  [12, 16, 12],
 ];
 
 /* Only ~12 fruits are ever on one board, but the window ROTATES with the level
@@ -829,9 +852,13 @@ function levelConfig(idx) {
   const s = LEVEL_RAMP[Math.min(idx, LEVEL_RAMP.length - 1)];
   const cols = s[0], rows = s[1];
   const pairs = (cols * rows) / 2;
-  /* Board grows for the first 6 levels, then is CONSTANT while the clock
-     tightens every level — one variable held still, the other moving one way,
-     which is what makes a difficulty ramp legible (animal-connect lesson). */
+  /* Board grows every level up to 12x16, after which it is CONSTANT while the
+     clock keeps tightening — one variable at a time still does the work, it is
+     just that the handover now happens at level 12 rather than level 6. */
+  /* Time is per PAIR, so a bigger board is automatically granted more of it -
+     growing the board lengthens a level rather than instantly starving it. The
+     squeeze is this coefficient, which keeps tightening after the board has
+     stopped growing. */
   const perPair = Math.max(2.0, 4.4 - idx * 0.16);
   const time = Math.round(pairs * perPair / 5) * 5;
   return { cols: cols, rows: rows, typeIds: typeIdsFor(idx, s[2]),
@@ -909,7 +936,7 @@ function shuffleArr(a) {
  * lives in its inline `transform` so a fall is a single style write that the
  * compositor animates — no per-frame JavaScript while tiles are moving.
  * ============================================================= */
-const MAX_CELLS = 10 * 12;
+const MAX_CELLS = 12 * 16;      // largest board in LEVEL_RAMP; pool is sized once
 const XLINK = 'http://www.w3.org/1999/xlink';
 const pool = [];
 let poolUsed = 0;

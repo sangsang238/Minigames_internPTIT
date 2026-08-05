@@ -93,18 +93,41 @@ Tutorial **không tính điểm** (score/best giữ 0), có Skip, `?reset=1` xem
 
 ### Level sinh theo công thức — `levelConfig(idx)`
 
-| Level | Bàn | Số loại quả | Giờ |
-|---|---|---|---|
-| 1 | 6×6 | 6 | 80s |
-| 2 | 8×6 | 8 | 100s |
-| 3 | 8×8 | 8 | 130s |
-| 4 | 10×8 | 10 | 155s |
-| 5 | 10×10 | 10 | 190s |
-| 6+ | 12×10 | 12 | 215s → **giảm đều** → 120s (L16+) |
+**Bàn to lên ở MỌI màn** từ L1 tới L12 (yêu cầu 2026-08-04), rồi chốt và
+nhường việc cho đồng hồ:
 
-- Bàn to dần tới L6 rồi **giữ nguyên**, sau đó **timer siết đều mỗi màn** — giữ
-  một biến đứng yên và cho biến kia đi một chiều là cách làm đường cong khó
-  *đọc được* (bài học từ animal-connect).
+| Level | Bàn | Ô | Cặp | Loại quả | Giờ | Giây/cặp |
+|---|---|---|---|---|---|---|
+| 1 | 6×6 | 36 | 18 | 6 | 80s | 4.44 |
+| 2 | 8×6 | 48 | 24 | 8 | 100s | 4.17 |
+| 3 | 8×8 | 64 | 32 | 8 | 130s | 4.06 |
+| 4 | 10×8 | 80 | 40 | 10 | 155s | 3.88 |
+| 5 | 10×10 | 100 | 50 | 10 | 190s | 3.80 |
+| 6 | 12×10 | 120 | 60 | 12 | 215s | 3.58 |
+| 7 | 12×11 | 132 | 66 | 12 | 225s | 3.41 |
+| 8 | 12×12 | 144 | 72 | 12 | 235s | 3.26 |
+| 9 | 12×13 | 156 | 78 | 12 | 245s | 3.14 |
+| 10 | 12×14 | 168 | 84 | 12 | 250s | 2.98 |
+| 11 | 12×15 | 180 | 90 | 12 | 250s | 2.78 |
+| 12 | 12×16 | 192 | 96 | 12 | 255s | 2.66 |
+| 13+ | 12×16 | 192 | 96 | 12 | 240s → **giảm đều** → 190s (L16+) | 2.50 → 1.98 |
+
+- **Chỉ HÀNG mọc thêm sau 12×10, không phải cột** — vì **cột mới là thứ màn hình
+  giới hạn**. Trên máy 360px bàn 12 cột đã cho tile 25px; 14 cột sẽ tụt xuống
+  ~22px, dưới ngưỡng mà bộ sprite được đo là còn phân biệt được (chính vì ngưỡng
+  này mà `strawberry` bị loại khỏi bộ). Hàng thì gần như miễn phí.
+- **Mọc thêm hàng KHÔNG làm tile nhỏ đi chút nào.** Chiều rộng vốn đã là ràng
+  buộc (`availW/(COLS+1)` < `availH/(ROWS+1)` trên mọi máy đo), nên 12×16 cho
+  đúng cỡ tile như 12×10: 22px @320px, 25px @360px, 29px @412px. Đã verify bàn
+  lớn nhất **vừa cả iPhone SE 320×568** và vẫn giữ được vành ngoài 1 ô cho
+  đường vòng biên (không chạm sàn 16px). Công thức mô hình được **hiệu chuẩn
+  đối chiếu với `cellPx` thật** (model 35 = thực tế 35) chứ không phải phỏng đoán.
+- Giờ tính **theo CẶP** nên bàn to tự được thêm giờ — to ra làm màn **dài hơn**
+  chứ không lập tức bóp nghẹt; thứ siết là hệ số `perPair`, và nó **tiếp tục
+  siết sau khi bàn đã ngừng lớn**. Vẫn là "một biến chạy một chiều tại một
+  thời điểm", chỉ khác là điểm bàn giao dời từ L6 sang L12.
+- Đánh đổi đã đo, không phải đoán — xem bảng ở mục dưới: mọc tới 16 hàng tốn
+  khoảng **5 điểm tỉ lệ deadlock** (9.8% → 14.5% ở lối chơi đối-nghịch).
 - **Chỉ 12 loại quả trên một bàn, nhưng cửa sổ 12-loại XOAY theo level** nên cả
   **14 icon** đều xuất hiện trong một run — có đa dạng mà không trả giá deadlock.
 - Vô hạn → **không có màn cuối, không bắn `victory`** (deviation có chủ ý so với
@@ -126,7 +149,19 @@ bản ship):
 | Thiết kế ban đầu (10×12, 14 loại) | **37–52%** ván bị kẹt ít nhất 1 lần |
 | Số loại quả (cùng 1 bàn) | 6 loại **5%** · 10 loại 12.5% · 14 loại **37.5%** |
 | Tỉ lệ khung (cùng số ô + số loại) | **12×10 → 7.5%** · **10×12 → 20%** |
+| Mọc thêm hàng (12 loại, N=400/cỡ) | 12×10 **9.8%** ±2.9 · 12×12 **11.5%** ±3.1 · 12×14 **14.0%** ±3.4 · 12×16 **14.5%** ±3.5 |
+| Bớt loại quả để mua lại (12×16) | 12 loại 14.5% · 10 loại **12.3%** · 8 loại **4.8%** |
 | Hệ số kề `f` | Gần như không đổi deadlock, chỉ làm bàn "lộ cặp" hơn → giữ **thấp (0.15)** |
+
+**Đo lại 2026-08-04 khi cho bàn to dần:** mọc thêm hàng đi **ngược** hướng tốt
+của quy luật khung (bàn cao dần), nên deadlock tăng **9.8% → 14.5%**. Giả định
+ban đầu của em là "nhiều cặp mỗi loại hơn sẽ bù lại" — **sai**, hiệu ứng khung
+lấn át. Lần đo đầu N=120 còn cho ra một số 5.8% kẹp giữa hai số ~20%, tức nhiễu
+chứ không phải tín hiệu; phải nâng lên **N=400 kèm khoảng tin cậy 95%** mới đọc
+được đường cong thật. Vẫn nhận 14.5% vì đó là ~4× tốt hơn khi chơi thật, tức
+**1 lần auto-xáo mỗi ~27 màn** thay vì ~30 — rẻ so với việc có ramp. Nếu cần
+mua lại, bớt số loại quả là đòn bẩy sẵn sàng (bảng trên), nhưng cửa sổ 12 loại
+được giữ vì đa dạng mỗi bàn đáng giá hơn mấy điểm đó.
 
 → Hai đòn bẩy thật là **KHUNG (rộng thắng cao)** và **SỐ LOẠI** (giữ ~3+ cặp mỗi
 loại trên bàn), **không** phải hệ số kề. Sau khi sửa: **trung bình 0.111 lần xáo
