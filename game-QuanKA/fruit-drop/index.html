@@ -220,10 +220,11 @@ body {
    same reason - a 4-step fade on a thin line reads as flicker. */
 .link-under { fill: none; stroke: var(--ink); stroke-width: var(--lw-under, 8px); stroke-linecap: round; stroke-linejoin: round; }
 .link-path  { fill: none; stroke: var(--tomato); stroke-width: var(--lw-core, 4px); stroke-linecap: round; stroke-linejoin: round; }
-/* Clears sooner than it used to (.34s -> .26s, and the hold before the fade is
-   shorter too) so the connector is out of the way before the next pair. */
-@keyframes linkFade { 0%,55% { opacity: 1; } 100% { opacity: 0; } }
-.link-anim { animation: linkFade .26s ease-in forwards; }
+/* Short on purpose, tightened twice on feedback (.34s -> .26s -> .2s, and the
+   hold before the fade cut with it) so the connector is gone before the eye
+   goes looking for the next pair. */
+@keyframes linkFade { 0%,40% { opacity: 1; } 100% { opacity: 0; } }
+.link-anim { animation: linkFade .2s ease-in forwards; }
 
 /* Blocked-pair demo route (> 2 turns) shown in the tutorial */
 .bend-under { fill: none; stroke: var(--ink); stroke-width: var(--lw-under, 8px); stroke-linecap: round; stroke-linejoin: round; }
@@ -243,6 +244,10 @@ body {
 .tile {
   position: absolute;
   cursor: pointer;
+  /* One number for the whole board (set on #board in resize()), not 192 pairs
+     of inline width/height writes every level load and every resize. */
+  width: var(--tile-size, 40px);
+  height: var(--tile-size, 40px);
   -webkit-user-select: none;
   user-select: none;
   /* transform carries the grid position; a fall just changes it and lets the
@@ -988,11 +993,6 @@ function releaseAll() {
   for (let i = 0; i < poolUsed; i++) pool[i].el.className = 'tile hidden';
   poolUsed = 0;
 }
-function applyTileSize(t) {
-  const s = cellPx - gapPx;
-  t.el.style.width = s + 'px';
-  t.el.style.height = s + 'px';
-}
 function applyTilePos(t) {
   const h = gapPx / 2;
   t.el.style.transform = 'translate(' + (t.c * cellPx + h) + 'px,' + (t.r * cellPx + h) + 'px)';
@@ -1019,6 +1019,7 @@ function resize() {
   const w = COLS * cellPx, h = ROWS * cellPx;
   boardEl.style.width = w + 'px';
   boardEl.style.height = h + 'px';
+  boardEl.style.setProperty('--tile-size', (cellPx - gapPx) + 'px');
   linkSvg.style.left = -cellPx + 'px';
   linkSvg.style.top  = -cellPx + 'px';
   linkSvg.setAttribute('width',  (w + cellPx * 2) + '');
@@ -1035,12 +1036,11 @@ function resize() {
   invalidateFlyGeom();        // board and HUD rects just moved
   if (tutorialMode) positionTutorialChrome();
 }
+/** Only positions. Size comes from --tile-size on the board. */
 function layoutAll() {
   for (let i = 0; i < poolUsed; i++) {
     const t = pool[i];
-    if (t.r < 0) continue;
-    applyTileSize(t);
-    applyTilePos(t);
+    if (t.r >= 0) applyTilePos(t);
   }
 }
 
@@ -1470,7 +1470,7 @@ function drawLink(pts) {
   linkSvg.firstChild.classList.add('link-anim');
   linkSvg.lastChild.classList.add('link-anim');
   clearTimeout(linkTimer);
-  linkTimer = setTimeout(function () { linkSvg.innerHTML = ''; }, 280);
+  linkTimer = setTimeout(function () { linkSvg.innerHTML = ''; }, 210);
 }
 
 /** Tutorial: draw a route that needs MORE than 2 turns, with a dot on each
@@ -1773,16 +1773,11 @@ function showHintPair(pair) {
 let pendingMatch = null;
 function clearPendingMatch() { pendingMatch = null; }
 
-/** Persist because the player just did something. Matches do not need this -
- *  afterBoardChange() saves once the board settles - so this covers the taps
- *  that change the selection or bounce off a non-linkable pair. Skipped while
- *  the board is mid-animation: gameSnapshot() must only ever photograph a
- *  settled grid. */
-function saveOnAction() {
-  if (tutorialMode || ended || busy) return;
-  saveCurrentState();
-}
-
+/* Progress is written by afterBoardChange() once a completed move has settled,
+   and nowhere else during play. Selecting, deselecting and bouncing off a
+   blocked pair change nothing that is worth a localStorage write on a low-end
+   phone - the board is identical and only the clock has moved, which the next
+   completed move records anyway. */
 let idleAcc = 0;
 function handleTap(r, c) {
   if (ended || paused) return;
@@ -1799,17 +1794,15 @@ function handleTap(r, c) {
   if (!selected) {
     if (tutorialMode && !tutAllowsFirst(r, c)) { tutWrongChoice(r, c); return; }
     select(r, c);
-    saveOnAction();
     return;
   }
-  if (selected === tiles[r][c]) { deselect(); saveOnAction(); return; }
+  if (selected === tiles[r][c]) { deselect(); return; }
 
   const a = { r: selected.r, c: selected.c }, b = { r: r, c: c };
   if (grid[a.r][a.c] !== grid[b.r][b.c]) {          // different fruit -> reselect
     deselect();
     if (tutorialMode && !tutAllowsFirst(r, c)) { tutWrongChoice(r, c); return; }
     select(r, c);
-    saveOnAction();
     return;
   }
   if (tutorialMode && !tutAllowsPair(a, b)) { deselect(); tutWrongChoice(r, c); return; }
@@ -1834,7 +1827,6 @@ function handleTap(r, c) {
     shakeTile(a.r, a.c); shakeTile(b.r, b.c);
     sfxBad();
     deselect();
-    saveOnAction();
   }
 }
 
@@ -2437,18 +2429,8 @@ window.onAppPause = function () { pauseGame(); };
    running. Pausing on hide stops both, and it is also the honest behaviour: the
    countdown should not keep draining while the player cannot see the board. */
 document.addEventListener('visibilitychange', function () {
-  if (document.visibilityState !== 'hidden') return;
-  saveNow();                            // last chance before the OS can kill us
-  pauseGame();
+  if (document.visibilityState === 'hidden') pauseGame();
 });
-/* pagehide fires on paths visibilitychange does not always cover (bfcache,
-   real teardown), and both are cheap enough to just do twice. */
-window.addEventListener('pagehide', saveNow);
-
-function saveNow() {
-  if (tutorialMode || ended) return;
-  try { saveCurrentState(); } catch (e) {}
-}
 window.onNextLevel = function () {
   if (currentLevelIdx >= MAX_LEVEL_IDX) return;
   loadLevel(currentLevelIdx + 1, null);      // score carries over across levels
