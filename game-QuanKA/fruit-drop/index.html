@@ -220,8 +220,10 @@ body {
    same reason - a 4-step fade on a thin line reads as flicker. */
 .link-under { fill: none; stroke: var(--ink); stroke-width: var(--lw-under, 8px); stroke-linecap: round; stroke-linejoin: round; }
 .link-path  { fill: none; stroke: var(--tomato); stroke-width: var(--lw-core, 4px); stroke-linecap: round; stroke-linejoin: round; }
-@keyframes linkFade { 0%,70% { opacity: 1; } 100% { opacity: 0; } }
-.link-anim { animation: linkFade .34s ease-in forwards; }
+/* Clears sooner than it used to (.34s -> .26s, and the hold before the fade is
+   shorter too) so the connector is out of the way before the next pair. */
+@keyframes linkFade { 0%,55% { opacity: 1; } 100% { opacity: 0; } }
+.link-anim { animation: linkFade .26s ease-in forwards; }
 
 /* Blocked-pair demo route (> 2 turns) shown in the tutorial */
 .bend-under { fill: none; stroke: var(--ink); stroke-width: var(--lw-under, 8px); stroke-linecap: round; stroke-linejoin: round; }
@@ -439,8 +441,9 @@ body {
    on the very first frame. The old shape put scale(1) at 0% and the peak at
    45% under steps(2,end), which meant the pill sat perfectly still for the
    first half of the animation before doing anything. */
-@keyframes scorePulse { 0%, 100% { transform: scale(1); } 35% { transform: scale(1.12); } }
-.hud-pill.score-hit { animation: scorePulse .28s ease-out; }
+/* No throb on the SCORE pill: removed on request. The number changing as each
+   star lands is the feedback; scaling the whole pill on top of that was noise,
+   and with up to six stars per match it fired six times in a row. */
 
 /* ── Tutorial ─────────────────────────────────────────────────── */
 #tut-banner {
@@ -972,8 +975,13 @@ function takeTile(type, r, c) {
   setTileType(t, type);
   t.r = r; t.c = c;
   t.el.className = 'tile';
-  applyTileSize(t);
-  applyTilePos(t);
+  /* Deliberately NOT laid out here. Every caller of buildTileDom() runs
+     resize() immediately afterwards, and resize() -> layoutAll() positions the
+     whole board in one pass. Doing it per tile as well meant 192 extra width /
+     height / transform writes per level load - and they were WRONG anyway,
+     because the board size changes between levels so cellPx here is still the
+     PREVIOUS level's value until resize() recomputes it. Pure waste that was
+     immediately overwritten. */
   return t;
 }
 function releaseAll() {
@@ -1016,8 +1024,13 @@ function resize() {
   linkSvg.setAttribute('width',  (w + cellPx * 2) + '');
   linkSvg.setAttribute('height', (h + cellPx * 2) + '');
   linkSvg.setAttribute('viewBox', '0 0 ' + (w + cellPx * 2) + ' ' + (h + cellPx * 2));
-  linkSvg.style.setProperty('--lw-under', Math.max(5, Math.round(cellPx * 0.17)) + 'px');
-  linkSvg.style.setProperty('--lw-core',  Math.max(2, Math.round(cellPx * 0.085)) + 'px');
+  /* The dark under-stroke exists only to keep the connector readable where it
+     crosses a tile, so it is now the THINNEST thing that still does that job:
+     the core plus one pixel of ink on each side. It used to be roughly double
+     the core, which is what still read as heavy. */
+  const core = Math.max(2, Math.round(cellPx * 0.085));
+  linkSvg.style.setProperty('--lw-core',  core + 'px');
+  linkSvg.style.setProperty('--lw-under', (core + 2) + 'px');
   layoutAll();
   invalidateFlyGeom();        // board and HUD rects just moved
   if (tutorialMode) positionTutorialChrome();
@@ -1122,6 +1135,9 @@ function fillBoard(typeIds, idx) {
   forceOneMove();
 }
 
+/** Binds pool entries to grid cells. Leaves them UNPOSITIONED on purpose -
+ *  the caller must follow with resize(), which lays the whole board out once
+ *  with the correct cellPx for this level. */
 function buildTileDom() {
   releaseAll();
   for (let r = 0; r < ROWS; r++) {
@@ -1454,7 +1470,7 @@ function drawLink(pts) {
   linkSvg.firstChild.classList.add('link-anim');
   linkSvg.lastChild.classList.add('link-anim');
   clearTimeout(linkTimer);
-  linkTimer = setTimeout(function () { linkSvg.innerHTML = ''; }, 360);
+  linkTimer = setTimeout(function () { linkSvg.innerHTML = ''; }, 280);
 }
 
 /** Tutorial: draw a route that needs MORE than 2 turns, with a dot on each
@@ -1525,39 +1541,6 @@ function deliverScore(share) {
   if (scoreShown > bestShown) { bestShown = scoreShown; renderBestHud(); }
 }
 
-/* WAAPI restart: no class juggling and, more to the point, no
-   `void offsetWidth` forced layout on each of the up-to-6 arrivals.
-
-   The throb MUST start on the frame the number changes. It used to be
-   `easing:'steps(2,end)'` over keyframes 1 -> 1.07 -> 1, and in WAAPI that
-   `easing` is the ITERATION easing: it quantises eased progress to {0, .5, 1},
-   which maps to scale(1) / scale(1.07) / scale(1). The pill therefore held
-   scale(1) - i.e. did nothing visible - for the first 130ms of a 260ms
-   animation, then popped. Measured directly off computed style; that dead
-   half is exactly the lag playtest reported.
-
-   Now the peak is the offset-0 keyframe and each value is held flat to its own
-   stop (the 1% gaps are a sub-frame ramp, not a visible tween), giving the same
-   chunky look with the response on frame one. */
-let scorePulseAnim = null;
-function pulseScorePill() {
-  if (scorePulseAnim) { try { scorePulseAnim.cancel(); } catch (e) {} }
-  if (pillScore.animate) {
-    /* Eased interpolation, so it is BOTH smooth and immediate: unlike a
-       stepped curve, an eased one starts changing on the very first frame, so
-       the "throb lags the score" problem does not come back. Verified by
-       sampling the rendered transform - see the throb test. */
-    scorePulseAnim = pillScore.animate([
-      { transform: 'scale(1)',    offset: 0    },
-      { transform: 'scale(1.12)', offset: 0.35 },
-      { transform: 'scale(1)',    offset: 1    }
-    ], { duration: 280, easing: 'ease-out' });
-  } else {
-    pillScore.classList.remove('score-hit');
-    void pillScore.offsetWidth;
-    pillScore.classList.add('score-hit');
-  }
-}
 function updateLevelHud() { elLevel.textContent = String(currentLevelIdx + 1); }
 
 function popText(el, text, cls) {
@@ -1633,7 +1616,6 @@ function flyOne(x, y, tx, ty, i, share) {
     if (credited) return;
     credited = true;
     deliverScore(share);
-    pulseScorePill();
   }
   function remove() {
     if (removed) return;
@@ -2378,6 +2360,12 @@ document.getElementById('tut-skip').addEventListener('click', function (e) {
  * ============================================================= */
 const TICK_MS = 200;
 const IDLE_HINT_S = 5;
+/* Autosave cadence. The board is already persisted on every move; this exists
+   for the time between moves - without it `timeLeft` in the snapshot goes
+   stale and a kill hands back free seconds. 3s costs one 544-byte
+   localStorage write, which measured as noise next to a single move. */
+const AUTOSAVE_S = 3;
+let autosaveAcc = 0;
 let tickHandle = 0, lastTickAt = 0, lastTickSec = -1;
 
 function startTicker() {
@@ -2411,6 +2399,12 @@ function tick() {
   timeLeft -= dt;
   if (timeLeft <= 0) { timeLeft = 0; renderTimer(); loseLevel(); return; }
   renderTimer();
+
+  autosaveAcc += dt;
+  if (autosaveAcc >= AUTOSAVE_S) {
+    autosaveAcc = 0;
+    if (!busy) saveCurrentState();      // never mid-animation: the grid is settled
+  }
   const s = Math.ceil(timeLeft);
   if (s <= 10 && s !== lastTickSec) { lastTickSec = s; sfxTick(); }
 }
@@ -2442,8 +2436,18 @@ window.onAppPause = function () { pauseGame(); };
    running. Pausing on hide stops both, and it is also the honest behaviour: the
    countdown should not keep draining while the player cannot see the board. */
 document.addEventListener('visibilitychange', function () {
-  if (document.visibilityState === 'hidden') pauseGame();
+  if (document.visibilityState !== 'hidden') return;
+  saveNow();                            // last chance before the OS can kill us
+  pauseGame();
 });
+/* pagehide fires on paths visibilitychange does not always cover (bfcache,
+   real teardown), and both are cheap enough to just do twice. */
+window.addEventListener('pagehide', saveNow);
+
+function saveNow() {
+  if (tutorialMode || ended) return;
+  try { saveCurrentState(); } catch (e) {}
+}
 window.onNextLevel = function () {
   if (currentLevelIdx >= MAX_LEVEL_IDX) return;
   loadLevel(currentLevelIdx + 1, null);      // score carries over across levels

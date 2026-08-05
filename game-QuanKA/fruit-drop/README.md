@@ -58,6 +58,9 @@
     đổi nhìn thấy, và về đúng `scale(1)` khi kết thúc.
   - Thắng/thua gọi `updateScoreHud()` để chốt: sao còn đang bay **không bao giờ**
     giữ lại điểm trên bảng kết quả.
+- **Ô SCORE không còn hiệu ứng throb** (bỏ 2026-08-05). Con số nhảy theo từng
+  ngôi sao đáp đã là phản hồi rồi; phóng to cả cái ô chồng lên trên là thừa, mà
+  với tối đa 6 sao mỗi lần nối thì nó nổ liên tiếp 6 lần.
 - **Cơ chế điểm đặc trưng — DROP COMBO**: nếu lần nối kế tiếp dùng ít nhất một
   tile **vừa rơi** ở lần trước thì combo tăng một bậc (×1.5 → ×2 → ×2.5, trần
   ×4) và hiện tem `DROP ×N`. Trọng lực vì thế là **động cơ tính điểm**, không
@@ -143,6 +146,13 @@ animal-connect làm". Đối chiếu hai file thì khác biệt nằm ở đúng
 | `stroke-linecap` | `square` | `round` | **`round`** |
 | `stroke-linejoin` | `miter` | `round` | **`round`** |
 | Mờ dần | `steps(4,end)` | `ease-in` | **`ease-in`** |
+| Viền mực | `max(5, cell·0.17)` = 6px | — | **`lõi + 2`** = 5px |
+| Thời gian sống | .34s / xoá ở 360ms | — | **.26s / xoá ở 280ms** |
+
+Vòng hai (2026-08-05, "vẫn hơi thô → viền mảnh nhất có thể, biến mất sớm hơn"):
+viền mực chỉ tồn tại để đường nối đọc được **khi nó cắt ngang một tile**, nên
+nay nó mảnh đúng mức tối thiểu làm được việc đó — **lõi cộng 1px mực mỗi bên**.
+Trước là gần gấp đôi lõi, đó là chỗ còn nặng. Tỉ lệ viền/lõi 2.0 → **1.67**.
 
 `miter` **bắn một cái gai ra khỏi mỗi góc rẽ**, còn `square` thì **thò quá ô
 cuối** — đó chính là chỗ "thô". Fade 4 nấc trên một nét mảnh thì đọc ra là
@@ -242,6 +252,22 @@ auto-xáo khoảng **1 lần mỗi ~30 màn** — đúng nghĩa lưới an toàn
   đặc không đọc được. Nay chọn = **phóng to + viền mực dày**, đọc được trên mọi
   icon. Hint dùng **xanh dương** vì trong bộ **không có quả nào màu xanh dương**.
 
+### Lưu liên tục
+
+Bàn cờ vốn đã được ghi sau **mỗi nước**, nhưng **đồng hồ thì không**: ngồi yên
+một phút rồi bị kill là quay lại với số giây của một phút trước — tức được
+tặng thời gian. Nay bổ sung:
+
+- **Tự lưu mỗi 3 giây** từ chính ticker (chỉ khi `!busy`, để không chụp bàn
+  đang giữa animation). Giá: một lần ghi 544 byte — đo ra là không đáng kể so
+  với một nước đi.
+- **Ghi ngay khi ẩn tab** (`visibilitychange`) và khi `pagehide` — đúng lúc hệ
+  điều hành sắp kill app. Làm cả hai vì `visibilitychange` không phủ hết mọi
+  đường teardown (bfcache).
+
+Đo: đứng yên **không đi nước nào** trong 9 giây thì bản lưu cũng lùi 8 giây
+(bám sát nhịp 3s); ẩn tab và `pagehide` đều ghi ngay.
+
 ## Tối ưu hiệu năng
 
 | Hạng mục | Cách làm |
@@ -258,6 +284,7 @@ auto-xáo khoảng **1 lần mỗi ~30 màn** — đúng nghĩa lưới an toàn
 | **Tile rơi** | Đổi `transform` + `transition` → compositor lo. **Không một dòng JS nào chạy mỗi frame trong lúc rơi.** |
 | **Tìm cặp** | BFS **theo nguồn**: một lần quét tia đánh dấu mọi tile nối được từ một nguồn → nhóm k tile cùng loại tốn **k** lần quét thay vì **k(k−1)/2** lần tìm đường. Thoát sớm + cache cặp tìm được cho auto-hint. |
 | **Lối tắt "cặp chạm nhau"** | Hai tile **kề nhau cùng loại LUÔN nối được** (đoạn thẳng 0 lần rẽ, không có ô nào ở giữa). Nên câu hỏi mà `hasMoves()` thật sự hỏi — "còn nước đi không?" — thường trả lời được bằng **một lượt quét O(ô), không BFS nào**. Trọng lực liên tục xếp lại cột nên loại cặp này gần như luôn có: đo được **97.5%** số lần gọi trúng lối tắt. Cố ý **không** dùng cho `randomize` (đường của gợi ý) để gợi ý không bị đơn điệu — gợi ý chỉ chạy 5s/lần nên không đáng tối ưu. |
+| **Không bố trí tile hai lần** | `takeTile` từng gọi `applyTileSize` + `applyTilePos` cho từng tile, rồi `resize()` → `layoutAll()` ngay sau đó làm lại toàn bộ. Trên bàn 192 tile là **192 lượt ghi width/height/transform thừa mỗi lần load level** — mà lượt đầu còn **sai**, vì kích thước bàn đổi giữa các màn nên `cellPx` lúc đó vẫn là của màn TRƯỚC, chỉ được lượt sau ghi đè. Đo: **384 → 192** mỗi loại. |
 | **Chạm tile = O(1)** | Mỗi element giữ sẵn back-reference `__tile` tới ô pool của nó (gán một lần trong `buildPool`). Trước đây handler click **duyệt tuyến tính cả pool** so sánh node — trên bàn 12×16 là tới **192 phép so sánh cho mỗi lần chạm**. |
 | **Cấp phát** | `Int32Array` cấp **một lần mỗi level**, **đóng dấu bằng `scanId`** thay vì `fill(0)` → một lần quét không tốn gì cho việc dọn buffer. |
 | **DOM tile** | Pool cấp sẵn ở cỡ bàn max (120), tái dùng vĩnh viễn; đổi loại = 1 `setAttribute`. Không tạo/huỷ node lúc chơi. |
