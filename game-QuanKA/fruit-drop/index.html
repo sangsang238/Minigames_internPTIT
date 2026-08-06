@@ -294,7 +294,16 @@ body {
    so if it came later it would silently outrank them and a tile selected or
    hinted during the first 200ms of a level would show neither state. */
 @keyframes tilePopin { 0% { opacity: 0; transform: translate(0,-8px); } 100% { opacity: 1; transform: translate(0,0); } }
-.tile.popin .tile-face { animation: tilePopin .22s ease-out backwards; }
+/* Driven by ONE class on the board, not one per tile: a 112-tile level used to
+   cost 224 classList operations (add on every tile, remove on every tile) at
+   exactly the moment the level is trying to appear smoothly. Now it is 2.
+
+   Specificity is deliberately UNCHANGED at (0,3,0) - `.board-popin .tile
+   .tile-face` counts the same three classes as `.tile.selected .tile-face` -
+   so the declaration-order rule below still decides, exactly as before. Do not
+   "tidy" this into `#board.popin ...`: an id would outrank the state rules and
+   a tile selected or hinted during the first 220ms would show neither. */
+.board-popin .tile .tile-face { animation: tilePopin .22s ease-out backwards; }
 
 /* Selected: grows and gains a much fatter INK outline.
    Deliberately colour-free — the tiles are 14 different coloured fruits, so any
@@ -1587,11 +1596,36 @@ function deliverScore(share) {
 
 function updateLevelHud() { elLevel.textContent = String(currentLevelIdx + 1); }
 
+/** Replay a CSS animation from frame zero WITHOUT forcing a synchronous layout.
+ *
+ *  The classic trick is remove-class / read offsetWidth / add-class, because
+ *  reading offsetWidth flushes pending style and layout and so makes the
+ *  browser notice the class went away. That flush is the single most expensive
+ *  DOM operation on the hot path: it stalls the main thread on the WHOLE
+ *  document, and it happened while tiles were mid-animation - the worst moment
+ *  to block. Measured at ~2 per move just from the praise/combo popups, plus
+ *  one more on every mistapped pair.
+ *
+ *  Restarting through the animation object costs none of that: the animation is
+ *  already there, so it is simply rewound. The old trick is kept for WebViews
+ *  without getAnimations(), which is also where the class is being added for
+ *  the first time and there is nothing to rewind. */
+function restartAnim(el, cls) {
+  if (el.classList.contains(cls) && el.getAnimations) {
+    const anims = el.getAnimations();
+    if (anims.length) {
+      for (let i = 0; i < anims.length; i++) { anims[i].currentTime = 0; anims[i].play(); }
+      return;
+    }
+  }
+  el.classList.remove(cls);
+  void el.offsetWidth;            // only reached on the first play, or very old WebViews
+  el.classList.add(cls);
+}
+
 function popText(el, text, cls) {
   el.textContent = text;
-  el.classList.remove(cls);
-  void el.offsetWidth;            // restart the animation
-  el.classList.add(cls);
+  restartAnim(el, cls);
 }
 function showPraise(text) { popText(praiseEl, text, 'praise-anim'); }
 function showCombo(text)  { popText(comboEl, text, 'combo-anim'); }
@@ -1789,9 +1823,7 @@ function deselect() {
 function shakeTile(r, c) {
   const t = tiles[r][c];
   if (!t) return;
-  t.el.classList.remove('shake');
-  void t.el.offsetWidth;
-  t.el.classList.add('shake');
+  restartAnim(t.el, 'shake');
   setTimeout(function () { t.el.classList.remove('shake'); }, 240);
 }
 function clearHint() {
@@ -2024,8 +2056,8 @@ function fixDeadBoard(ep) {
 let repairs = 0, shuffleFallbacks = 0;
 
 function popTwo(a, b) {
-  if (a) { a.el.classList.remove('landed'); void a.el.offsetWidth; a.el.classList.add('landed'); }
-  if (b) { b.el.classList.remove('landed'); void b.el.offsetWidth; b.el.classList.add('landed'); }
+  if (a) restartAnim(a.el, 'landed');
+  if (b) restartAnim(b.el, 'landed');
 }
 
 function autoShuffle(ep) {
@@ -2225,9 +2257,9 @@ function loadLevel(idx, snap) {
 }
 
 function popInAll() {
-  for (let i = 0; i < poolUsed; i++) pool[i].el.classList.add('popin');
+  boardEl.classList.add('board-popin');
   setTimeout(function () {
-    for (let i = 0; i < poolUsed; i++) pool[i].el.classList.remove('popin');
+    boardEl.classList.remove('board-popin');
   }, 240);
 }
 
@@ -2437,9 +2469,7 @@ function spawnCheck(r, c) {
   const rect = boardEl.getBoundingClientRect();
   tutCheck.style.left = (rect.left + c * cellPx + cellPx / 2) + 'px';
   tutCheck.style.top  = (rect.top  + r * cellPx + cellPx / 2) + 'px';
-  tutCheck.classList.remove('tut-check-anim');
-  void tutCheck.offsetWidth;
-  tutCheck.classList.add('tut-check-anim');
+  restartAnim(tutCheck, 'tut-check-anim');
 }
 function tutShowBend(a, b) {
   const mp = findMinTurnPath(a.r, a.c, b.r, b.c);
