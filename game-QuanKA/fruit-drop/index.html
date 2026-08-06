@@ -867,27 +867,53 @@ function levelConfig(idx) {
   const pairs = (cols * rows) / 2;
   /* Time is per PAIR, so a bigger board is automatically granted more of it -
      growing the board lengthens a level rather than instantly starving it. The
-     squeeze is this coefficient.
+     squeeze is this coefficient, and it moves in THREE named phases so that
+     only ONE difficulty lever is ever in motion:
+
+       L1-L9    the BOARD grows (see LEVEL_RAMP) and the clock tightens with it
+       L10-L15  the board is fixed at 7x16; the CLOCK alone keeps tightening
+       L16+     nothing moves. This is the difficulty CEILING, held for ever.
+
+     The handovers are exact on purpose: perPair is 1.6 at L9, which is both the
+     end of the growth phase and the start of the clock phase, and it reaches
+     the floor exactly at L15 so that L16 is the first level identical to the
+     one before it.
 
      Tuned so a RUN lasts roughly 5-10 minutes. A run ends when the clock gets
      tighter than the player is fast, so it all follows from ONE assumption:
-     how many seconds a player needs per pair, scanning included. Modelled
-     against the real level table at four rates:
-         2.6s/pair (slow)      fails L6   run ~6.0 min
-         2.2s/pair (typical)   fails L8   run ~8.3 min
-         1.8s/pair (quick)     fails L9   run ~8.5 min
-         1.5s/pair (very fast) fails L10  run ~8.4 min
+     how many seconds a player needs per pair, scanning included:
+         2.6s/pair (slow)       fails L6   run ~6.1 min
+         2.2s/pair (typical)    fails L8   run ~8.3 min
+         1.8s/pair (quick)      fails L9   run ~8.5 min
+         1.5s/pair (very fast)  fails L10  run ~8.6 min
+         1.2s/pair (implausible)fails L13  run ~10.2 min
+     The last row runs slightly over the 10-minute target, and that is the
+     direct price of stretching the squeeze out to L15: a longer tail means the
+     very fastest players get more levels before it bites. It is paid by a rate
+     no playtest has yet shown to be real, and steepening the early phase to
+     claw it back would spoil the common case, so it is left alone.
 
      THE FLOOR MUST SIT BELOW THE FASTEST PLAUSIBLE RATE or quick players never
-     lose at all - at a 1.5 floor a 1.5s/pair player ran for 274 minutes in the
-     model without ever failing a level. 1.2 is under any rate a human sustains
-     on a 56-pair board, so every run ends.
+     lose at all - with the floor at 1.5 a 1.5s/pair player once ran 274 minutes
+     in the model without failing a level. 0.9 is under any rate a human
+     sustains across 56 pairs, so every run ends.
 
      That per-pair figure is an ASSUMPTION, not a measurement: it is the one
      number to re-tune if playtests disagree, and everything else follows from
-     it. A steeper decay shortens every run; a higher floor lengthens the fast
-     end most. */
-  const perPair = Math.max(1.2, 4.0 - idx * 0.30);
+     it. */
+  const GROWTH_END = 8;                 // idx of L9, last level whose board grew
+  const SQUEEZE_END = 14;               // idx of L15, last level that gets less time
+  const PER_PAIR_HANDOVER = 1.6;        // value at L9, shared by both phases
+  const PER_PAIR_FLOOR = 0.9;           // value from L15 on
+  let perPair;
+  if (idx <= GROWTH_END) {
+    perPair = 4.0 - idx * 0.30;                       // 4.0 at L1 down to 1.6 at L9
+  } else if (idx <= SQUEEZE_END) {
+    const step = (PER_PAIR_HANDOVER - PER_PAIR_FLOOR) / (SQUEEZE_END - GROWTH_END);
+    perPair = PER_PAIR_HANDOVER - (idx - GROWTH_END) * step;
+  } else {
+    perPair = PER_PAIR_FLOOR;
+  }
   const time = Math.round(pairs * perPair / 5) * 5;
   return { cols: cols, rows: rows, typeIds: typeIdsFor(idx, s[2]),
            time: time, pairs: pairs };

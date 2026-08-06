@@ -110,7 +110,13 @@ nhường việc cho đồng hồ:
 | 7 | 7×12 | 84 | 42 | 12 | 90s | 2.14 |
 | 8 | 7×14 | 98 | 49 | 12 | 95s | 1.94 |
 | 9 | 7×16 | 112 | 56 | 12 | 90s | 1.61 |
-| 10+ | 7×16 | 112 | 56 | 12 | 75s → **giảm đều** → 67s (L11+) | 1.34 → 1.20 |
+| 10 | 7×16 | 112 | 56 | 12 | 85s | 1.52 |
+| 11 | 7×16 | 112 | 56 | 12 | 75s | 1.34 |
+| 12 | 7×16 | 112 | 56 | 12 | 70s | 1.25 |
+| 13 | 7×16 | 112 | 56 | 12 | 65s | 1.16 |
+| 14 | 7×16 | 112 | 56 | 12 | 55s | 0.98 |
+| 15 | 7×16 | 112 | 56 | 12 | **50s** | 0.89 |
+| 16+ | 7×16 | 112 | 56 | 12 | **50s — trần, giữ mãi mãi** | 0.89 |
 
 **Bàn DỌC** (sửa 2026-08-05 theo brief: "thiết kế cho màn hình điện thoại dọc").
 Level 1 là **6 hàng × 5 cột** — nhiều hàng hơn cột — và **không bao giờ quá 7
@@ -152,7 +158,27 @@ tệ nhất khoảng **1 lần thấy 2 ô đổi quả mỗi ~4 màn**.
 - **Pool giảm 192 → 112 tile** (`MAX_CELLS = 7×16`), tức **ít hơn 42% node DOM**
   phải dựng và bố trí — thêm một khoản lãi cho máy yếu.
 
-#### Đồng hồ: chỉnh cho mỗi run dài 5–10 phút
+#### Ba pha độ khó — mỗi lúc chỉ MỘT đòn bẩy chạy
+
+Chốt 2026-08-05 theo brief: *"từ màn 10 trở đi không tăng số tile nữa, mà giảm
+thời gian dần đến màn 15, từ màn 16 trở đi đến vô tận giữ nguyên độ khó."*
+
+| Pha | Màn | Cái gì đang chạy |
+|---|---|---|
+| A | 1 – 9 | **BÀN to dần** (5×6 → 7×16), đồng hồ siết theo |
+| B | 10 – 15 | Bàn đứng yên; **ĐỒNG HỒ siết một mình** 85s → 50s |
+| C | 16 → ∞ | **Không gì đổi nữa.** Trần độ khó: 7×16, 56 cặp, 50s |
+
+Điểm bàn giao được đặt trùng khít có chủ ý: `perPair` bằng `1.6` ở **M9** —
+vừa là cuối pha A vừa là đầu pha B — và chạm sàn đúng ở **M15**, nên **M16 là
+màn đầu tiên giống hệt màn trước nó**. Ba hằng số trong `levelConfig` nói thẳng
+điều đó: `GROWTH_END = 8`, `SQUEEZE_END = 14`, `PER_PAIR_FLOOR = 0.9`.
+
+> Một chỗ không đều cần biết: trong **pha A** thời gian **không đơn điệu tăng** —
+> M7 bằng M6 (90s) và M9 tụt nhẹ so với M8 (95s → 90s). Đó là vì `perPair` giảm
+> nhanh hơn số cặp tăng ở hai nấc đó. Màn vẫn khó hơn (bàn to hơn hẳn), nên em
+> để nguyên; nếu muốn giờ tăng đều tuyệt đối thì phải làm pha A thoải hơn, mà
+> như thế sẽ kéo dài run của người chơi trung bình.
 
 Một run kết thúc khi đồng hồ siết chặt hơn tốc độ người chơi, nên mọi thứ suy ra
 từ **một giả định**: người chơi cần bao nhiêu giây cho một cặp, tính cả thời
@@ -163,18 +189,22 @@ gian dò tìm. Mô hình chạy trên chính bảng giờ ở trên:
 | Chậm | 2.6 | 6 | **6.1 phút** |
 | Trung bình | 2.2 | 7 | **6.7 phút** |
 | Nhanh | 1.8 | 9 | **8.5 phút** |
-| Rất nhanh | 1.5 | 10 | **8.5 phút** |
+| Rất nhanh | 1.5 | 11 | **9.9 phút** |
+| Khó tin | 1.2 | 13 | 10.2 phút |
+| Siêu nhân | 1.0 | 14 | 9.5 phút |
+
+Hai hàng cuối **nhỉnh hơn mốc 10 phút** một chút, và đó là **cái giá trực tiếp
+của việc kéo đoạn siết ra tới M15**: đuôi dài hơn thì người nhanh nhất được
+thêm vài màn trước khi bị bóp. Nó chỉ ảnh hưởng tới những tốc độ chưa playtest
+nào chứng minh là có thật, còn dốc thêm pha A để đòi lại thì sẽ làm hỏng trường
+hợp phổ biến — nên em để nguyên.
 
 - **Sàn `perPair` BẮT BUỘC phải thấp hơn tốc độ nhanh nhất có thể**, không thì
-  người giỏi **không bao giờ thua**. Lần chỉnh đầu em để sàn `1.5` — đúng bằng
-  tốc độ của người chơi rất nhanh — và mô hình cho ra **274 phút** không hề
-  trượt màn nào. Sàn nay là `1.2`, dưới mọi tốc độ người thật giữ được trên bàn
-  56 cặp.
-- Đường cong là `perPair = max(1.2, 4.0 − idx × 0.30)`.
-- **Con số giây/cặp là GIẢ ĐỊNH, không phải phép đo** — nó là một con số duy
-  nhất cần chỉnh lại nếu playtest thật nói khác, và mọi thứ còn lại suy ra từ
-  nó. Dốc hơn thì mọi run ngắn lại; sàn cao hơn thì kéo dài đầu nhanh nhiều
-  nhất.
+  người giỏi **không bao giờ thua**. Lần chỉnh trước em để sàn `1.5` — đúng bằng
+  tốc độ người chơi rất nhanh — và mô hình cho ra **274 phút** không trượt màn
+  nào. Sàn nay là `0.9`, dưới mọi tốc độ người thật giữ được qua 56 cặp.
+- **Con số giây/cặp là GIẢ ĐỊNH, không phải phép đo** — nó là con số duy nhất
+  cần chỉnh lại nếu playtest thật nói khác, và mọi thứ còn lại suy ra từ nó.
 
 - **Tối đa 12 loại quả trên một bàn, và cửa sổ XOAY theo level** nên cả **14
   icon** đều xuất hiện trong một run — có đa dạng mà không trả giá deadlock.
