@@ -301,6 +301,36 @@ Hai chi tiết bắt buộc để nó đúng:
 - `autoShuffle` huỷ cả ô đang chọn lẫn cặp đang xếp hàng vì nó gán **loại quả
   mới** lên chính những tile cũ.
 
+### Hai lỗi playtest 2026-08-06 (mentor báo)
+
+**1. Tutorial kẹt còn 2 cặp không nối được.** Nguyên nhân: `afterBoardChange()`
+mở đầu bằng `if (tutorialMode) { tutOnBoardChange(); return; }` — **return
+trước** dòng `if (!hasMoves()) fixDeadBoard(ep)`. Tức **tutorial hoàn toàn
+không có lưới chặn bế tắc**; cả `repairOneSwap` lẫn `autoShuffle` đều không bao
+giờ chạy ở đó. Bàn mentor gặp là **2×2 xen kẽ** (táo/chuối một đường chéo,
+chuối/táo đường kia): hai cặp, **không cặp nào nối được**, vì mọi đường giữa một
+đường chéo đều bị cặp kia chặn — kể cả vòng ra ngoài viền.
+
+Sửa: `tutOnBoardChange` nhận `ep` và chạy đúng lưới đó ở **bước 3**. Bước 0–2
+không cần: chúng chỉ nhận cặp mẫu, mà cặp mẫu được generator bảo đảm nối được.
+
+Bài học rút ra và đã ghi thẳng lên đầu hàm: `tutOnBoardChange` là **bản thay thế
+trọn vẹn** cho phần còn lại của `afterBoardChange`, nên **thứ gì phải đúng trên
+mọi bàn thì phải lặp lại ở đây**.
+
+**2. Nhấp nháy lệch nhịp.** `hintPair` lưu **toạ độ**. Trọng lực dời tile đang
+được gợi ý đi chỗ khác, rồi `clearHint()` tra `tiles[r][c]` và gỡ class khỏi
+**tile vừa rơi vào ô đó** — tile thật vẫn nháy mãi. Gợi ý kế tiếp thắp thêm ô
+nữa, mỗi ô bắt đầu ở một thời điểm khác nhau → chúng nháy chọi nhau.
+
+**Đúng loại lỗi đã sửa cho `selected` hôm trước mà bỏ sót `hintPair`.** Nay
+`hintPair` giữ **đối tượng tile**, và hai nửa được **tua về cùng mốc 0** vô điều
+kiện (một tile đang được gợi ý sẵn thì remove+add trong cùng một task không hề
+restart animation, nên vẫn lệch nếu không tua).
+
+Đo: gợi ý đầu sáng đúng 2 ô → sau một lượt trọng lực còn **0 ô sót** → gợi ý thứ
+hai sáng đúng **2 ô**, lệch nhịp **0 ms**, `clearHint` gỡ sạch.
+
 ### Không bao giờ phải xáo bàn nữa
 
 Hỏi 2026-08-05: "làm sao để 0 bao giờ phải xáo mà tốn ít tài nguyên?". Câu trả

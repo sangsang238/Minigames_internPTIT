@@ -1825,19 +1825,34 @@ function shakeTile(r, c) {
 }
 function clearHint() {
   if (!hintPair) return;
+  /* Tile OBJECTS, not coordinates: a hinted tile can be moved by gravity
+     between being lit and being cleared, and {r,c} would then point at the
+     tile that fell into its place. */
   for (let i = 0; i < hintPair.length; i++) {
-    const p = hintPair[i], t = tiles[p.r] && tiles[p.r][p.c];
-    if (t) t.el.classList.remove('hint');
+    const t = hintPair[i];
+    if (t && t.el) t.el.classList.remove('hint');
   }
   hintPair = null;
 }
 function showHintPair(pair) {
   clearHint();
   if (!pair) return;
-  hintPair = pair;
+  const shown = [];
   for (let i = 0; i < pair.length; i++) {
     const p = pair[i], t = tiles[p.r] && tiles[p.r][p.c];
-    if (t) t.el.classList.add('hint');
+    if (t) { t.el.classList.add('hint'); shown.push(t); }
+  }
+  if (!shown.length) return;
+  hintPair = shown;
+  /* Put both halves on the SAME beat. Adding the class together is usually
+     enough, but a tile that was already hinted keeps its old animation running
+     (a remove+add inside one task is never seen by the browser), and it would
+     then blink against its partner. Rewinding both is unconditional and cheap. */
+  for (let i = 0; i < shown.length; i++) {
+    const face = shown[i].face;
+    if (!face || !face.getAnimations) continue;
+    const anims = face.getAnimations();
+    for (let k = 0; k < anims.length; k++) anims[k].currentTime = 0;
   }
 }
 
@@ -1965,7 +1980,7 @@ function doMatch(a, b) {
 /** Runs after every settle: win check, deadlock net, persistence. */
 function afterBoardChange(ep) {
   if (ep !== levelEpoch || ended) return;
-  if (tutorialMode) { tutOnBoardChange(); return; }
+  if (tutorialMode) { tutOnBoardChange(ep); return; }
   if (pairsLeft <= 0) { winLevel(); return; }
   if (!hasMoves()) { fixDeadBoard(ep); return; }
   saveCurrentState();
@@ -2491,8 +2506,11 @@ function tutShowBend(a, b) {
   }, 2500);
 }
 
-/** Called after every settle while the tutorial is running. */
-function tutOnBoardChange() {
+/** Called after every settle while the tutorial is running.
+ *  NOTE this is a full replacement for the rest of afterBoardChange(), so
+ *  anything that must hold on every board - the dead-end net especially - has
+ *  to be repeated here. It once was not, and the tutorial could dead-end. */
+function tutOnBoardChange(ep) {
   if (tutStep === 0) {
     const moved = [];
     if (droppedSet) {
@@ -2509,7 +2527,15 @@ function tutOnBoardChange() {
     if (tutBendPair) { setTutPhase(2, tutBendPair); return; }
     setTutPhase(3, null); return;
   }
-  if (tutStep === 3 && pairsLeft <= 0) { finishTutorial(); return; }
+  if (tutStep === 3) {
+    if (pairsLeft <= 0) { finishTutorial(); return; }
+    /* The same net the real levels get. Step 3 asks the player to clear the
+       WHOLE board, so a dead end here is a hard stop - and the tutorial is the
+       worst possible place to strand someone. Steps 0-2 do not need it: they
+       only accept the scripted pair, which the generator guarantees is
+       linkable, and they hand over as soon as it is played. */
+    if (!hasMoves()) { fixDeadBoard(ep); return; }
+  }
 }
 
 function finishTutorial() {
