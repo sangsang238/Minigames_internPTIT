@@ -115,6 +115,17 @@ nhường việc cho đồng hồ:
 | 12 | 12×16 | 192 | 96 | 12 | 255s | 2.66 |
 | 13+ | 12×16 | 192 | 96 | 12 | 240s → **giảm đều** → 190s (L16+) | 2.50 → 1.98 |
 
+- **Bàn mọc MỘT CẠNH MỘT ĐƠN VỊ mỗi màn, luân phiên, suốt 17 màn** (sửa
+  2026-08-05). Trước đây nó nhảy hai cột một lúc ở đầu game (6×6 → 8×6 → 8×8),
+  đọc ra là *bậc thang* chứ không phải *dốc thoải*. Dãy số ô nay là
+  `36 42 48 56 64 72 80 90 100 110 120 132 144 156 168 180 192`
+  — bước `+6, +6, +8×4, +10×4, +12×6`.
+- **Không phải cứ `6×6 → 6×7 → 7×7 → 7×8` được**, vì hai ràng buộc cứng:
+  1. **`COLS × ROWS` phải CHẴN**, không thì bàn không chia hết thành cặp. Cộng 1
+     luân phiên sẽ rơi vào **lẻ × lẻ** cứ cách một bậc (7×7 = 49, 9×9 = 81), nên
+     những nấc đó bị **bỏ qua** và lấy cỡ hợp lệ kế tiếp.
+  2. **RỘNG THẮNG CAO** — xem mục đo bên dưới; lật bàn nằm sang đứng tốn 4–10
+     điểm deadlock. Nên **mọi nấc đều `cols ≥ rows`**.
 - **Chỉ HÀNG mọc thêm sau 12×10, không phải cột** — vì **cột mới là thứ màn hình
   giới hạn**. Trên máy 360px bàn 12 cột đã cho tile 25px; 14 cột sẽ tụt xuống
   ~22px, dưới ngưỡng mà bộ sprite được đo là còn phân biệt được (chính vì ngưỡng
@@ -128,7 +139,12 @@ nhường việc cho đồng hồ:
 - Giờ tính **theo CẶP** nên bàn to tự được thêm giờ — to ra làm màn **dài hơn**
   chứ không lập tức bóp nghẹt; thứ siết là hệ số `perPair`, và nó **tiếp tục
   siết sau khi bàn đã ngừng lớn**. Vẫn là "một biến chạy một chiều tại một
-  thời điểm", chỉ khác là điểm bàn giao dời từ L6 sang L12.
+  thời điểm", chỉ khác là điểm bàn giao dời sang **L17**.
+- **Hệ số siết giờ là `0.12`, không phải `0.16` — VÌ ramp dài ra.** Ở `0.16` hệ
+  số chạm đáy `2.0` tại **L16** trong khi bàn còn lớn tới **L17**: hai đòn bẩy
+  kết thúc cùng lúc và **sau đó không còn gì thay đổi nữa**. Ở `0.12` nó chạm
+  đáy tại **L21**, tức còn bốn màn siết-đồng-hồ thuần sau khi bàn ngừng lớn —
+  đúng hình dạng "một biến một thời điểm" mà ramp cần có.
 - Đánh đổi đã đo, không phải đoán — xem bảng ở mục dưới: mọc tới 16 hàng tốn
   khoảng **5 điểm tỉ lệ deadlock** (9.8% → 14.5% ở lối chơi đối-nghịch).
 - **Chỉ 12 loại quả trên một bàn, nhưng cửa sổ 12-loại XOAY theo level** nên cả
@@ -203,6 +219,7 @@ bản ship):
 | Số loại quả (cùng 1 bàn) | 6 loại **5%** · 10 loại 12.5% · 14 loại **37.5%** |
 | Tỉ lệ khung (cùng số ô + số loại) | **12×10 → 7.5%** · **10×12 → 20%** |
 | Mọc thêm hàng (12 loại, N=400/cỡ) | 12×10 **9.8%** ±2.9 · 12×12 **11.5%** ±3.1 · 12×14 **14.0%** ±3.4 · 12×16 **14.5%** ±3.5 |
+| **Lật khung, N=300/cỡ** (2026-08-05) | 7×6 **11.0%** vs 6×7 **15.3%** · 8×7 **10.0%** vs 7×8 **16.0%** · 9×8 **8.7%** vs 8×9 **18.7%** · 10×9 **9.7%** vs 9×10 **14.0%** · 11×10 **12.0%** vs 10×11 **16.3%** · 12×11 **10.7%** vs 11×12 **15.0%** |
 | Bớt loại quả để mua lại (12×16) | 12 loại 14.5% · 10 loại **12.3%** · 8 loại **4.8%** |
 | Hệ số kề `f` | Gần như không đổi deadlock, chỉ làm bàn "lộ cặp" hơn → giữ **thấp (0.15)** |
 
@@ -215,6 +232,19 @@ chứ không phải tín hiệu; phải nâng lên **N=400 kèm khoảng tin c�
 **1 lần auto-xáo mỗi ~27 màn** thay vì ~30 — rẻ so với việc có ramp. Nếu cần
 mua lại, bớt số loại quả là đòn bẩy sẵn sàng (bảng trên), nhưng cửa sổ 12 loại
 được giữ vì đa dạng mỗi bàn đáng giá hơn mấy điểm đó.
+
+**Đo lại 2026-08-05 khi làm ramp thoải hơn:** feedback đề nghị dãy `6×7, 7×8,
+8×8…` — tức bàn **cao hơn rộng**. Đo sáu cỡ, mỗi cỡ 300 ván, **cùng số ô và
+cùng số loại**, khác biệt duy nhất là *xoay hướng nào*: **cả sáu lần đều cho
+cùng một câu trả lời**, bàn đứng tốn **4–10 điểm** deadlock. Nên em giữ đúng
+**bậc tăng** anh muốn nhưng **lật lại cho `cols ≥ rows`** — cùng dãy số ô, không
+trả giá. Toàn ramp mới đo được **12.0% đối-nghịch ≈ 3.0% chơi thật**, tức
+**1 lần auto-xáo mỗi ~33 màn** (trước là ~27).
+
+Vừa màn hình, đo trên chính đường `resize()` của bản ship với khung bàn bị ép
+về từng bề rộng máy: tile nhỏ nhất **20px @320px · 23px @360px · 26px @412px**,
+và điểm nhỏ nhất rơi vào **L11 (12×10)** chứ không phải L17 — vì **chiều rộng
+mới là thứ ràng buộc**, thêm hàng về sau không làm tile nhỏ thêm chút nào.
 
 → Hai đòn bẩy thật là **KHUNG (rộng thắng cao)** và **SỐ LOẠI** (giữ ~3+ cặp mỗi
 loại trên bàn), **không** phải hệ số kề. Sau khi sửa: **trung bình 0.111 lần xáo
