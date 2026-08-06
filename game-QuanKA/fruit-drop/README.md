@@ -99,6 +99,29 @@ toạ độ), nên không bao giờ có bước yêu cầu thứ mà bàn không
    `steps()` ở đây là **đúng chỗ** — đây là một cú *nháy*, thứ mà stepped timing
    sinh ra để làm (một cú *scale* thì không).
 
+**Tutorial TÍNH ĐIỂM y như màn thật** (sửa 2026-08-05). Trước đây cả khối tính
+điểm nằm trong `if (!tutorialMode)`, nên bàn đầu tiên **im lặng hoàn toàn**:
+không điểm, không sao bay, không lời khen, không drop-combo. Học cách chơi mà
+không thấy phần thưởng thì dạy sai một nửa. Nay chạy đủ.
+
+Hai ràng buộc đi kèm:
+
+- **`BEST` là thứ duy nhất buổi tập KHÔNG được đụng.** Đó là kỷ lục bền, có
+  đường ghi thẳng ra native, nên một buổi tập không được phép lập kỷ lục. Chỉ
+  dòng ghi `best` bị chặn (`if (!tutorialMode && score > best)`); còn **BEST
+  hiển thị vẫn leo theo SCORE** (qua `bestShown` trong `deliverScore`) nên nhìn
+  vẫn y hệt màn thật.
+- **Xong thì RESET.** `finishTutorial()` xoá điểm tập trước khi bàn giao cho màn
+  1: gỡ sao còn bay (`clearFlyers`), `score = 0`, `updateScoreHud()` (đưa
+  `scoreShown`/`scorePending` về 0), `updateBestHud()` (đưa BEST hiển thị về
+  đúng kỷ lục thật). Làm **trước** `saveDataNow` nên điểm tập không bao giờ
+  được lưu.
+
+Đo với kỷ lục có sẵn 500: trong tutorial điểm leo tới 360 với **12 ngôi sao**
+cùng lúc trên màn; sau khi xong `score = 0`, `BEST` thật vẫn **500**, HUD hiện
+`SCORE=0 BEST=500`, không còn ngôi sao nào sót; localStorage giữ `score: 0,
+best: 500`; và **đúng một** bản tin ra app, mang `score=0 best=500`.
+
 `buildTutorialBoard()` sinh lại bàn tới khi **cả 4 bài học đều dạy được** và
 greedy-solve (có trọng lực) còn **0 ô** — verify bằng máy, không phải bằng mắt.
 Tutorial **không tính điểm** (score/best giữ 0), có Skip, `?reset=1` xem lại.

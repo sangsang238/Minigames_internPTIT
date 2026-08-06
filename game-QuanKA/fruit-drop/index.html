@@ -1922,7 +1922,11 @@ function doMatch(a, b) {
   if (usedDrop) dropCombo++; else dropCombo = 0;
   const mult = Math.min(1 + 0.5 * dropCombo, MAX_MULT);
 
-  if (!tutorialMode) {
+  /* The tutorial scores TOO - points, flying stars, praise, drop combo, all of
+     it. Learning the feedback is half of what the tutorial is for, and a
+     silent first board taught the wrong thing. The practice points are wiped
+     in finishTutorial() before level 1 starts. */
+  {
     const now = nowMs();
     const findMs = now - lastFindAt;
     lastFindAt = now;
@@ -1932,7 +1936,13 @@ function doMatch(a, b) {
 
     const gained = Math.round((BASE_POINTS + bonus) * mult);
     score += gained;
-    if (score > best) { best = score; saveDataThrottled(lightData()); }   // record survives a kill
+    /* BEST is the one thing practice may NOT touch: it is a persistent record
+       that gets written through to native storage, and a tutorial must not be
+       able to set it. The on-screen BEST still climbs with SCORE (bestShown,
+       updated by deliverScore), so it looks exactly like a real level - it is
+       only the saved number that is held back, and finishTutorial() puts the
+       display back in step with it. */
+    if (!tutorialMode && score > best) { best = score; saveDataThrottled(lightData()); }
     /* The HUD is NOT touched here. The stars carry `gained` and each credits
        its slice on arrival; with no path to fly along there is nothing to
        wait for, so those points are banked immediately instead. */
@@ -2508,9 +2518,28 @@ function finishTutorial() {
   tutBanner.classList.add('hidden');
   barBg.classList.remove('tut-focus');
   hudSubEl.style.display = '';
+
+  /* Practice is over: the points earned learning the game do not carry into
+     the run. Both HUD numbers are put back in step with the real state -
+     SCORE to zero, BEST to the record the tutorial was not allowed to write.
+     Done BEFORE saveDataNow so the practice score is never persisted. */
+  clearFlyers();
+  score = 0;
+  updateScoreHud();               // scoreShown = 0, scorePending = 0
+  updateBestHud();                // bestShown = best
+
   tutorialSeen = true;
   saveDataNow(lightData());
   loadLevel(0, null);
+}
+
+/** Drop any star still in the air. Their credit callbacks may still run - the
+ *  clamps in deliverScore() turn those into no-ops once score is back to 0 -
+ *  but the elements must not fly on into the next board. */
+function clearFlyers() {
+  const flying = document.querySelectorAll('.fly');
+  for (let i = 0; i < flying.length; i++)
+    if (flying[i].parentNode) flying[i].parentNode.removeChild(flying[i]);
 }
 document.getElementById('tut-skip').addEventListener('click', function (e) {
   e.stopPropagation();
