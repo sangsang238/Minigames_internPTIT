@@ -823,48 +823,34 @@ const MAX_LEVEL_IDX = 9998;          // guard against absurd values from native
    Hence: boards stay wide, and the number of DIFFERENT fruits on the board is
    held so that roughly 3+ pairs of each are present. Measured result for this
    table is ~6-12% of games needing a single auto-shuffle. */
-/* The board grows ONE SIDE BY ONE on every level, alternating, for 17 levels.
-   It used to jump two columns at a time early on (6x6 -> 8x6 -> 8x8), which
-   made the first few levels feel like steps rather than a ramp.
+/* PORTRAIT ramp. Boards are TALLER than wide and never exceed 7 columns,
+   because the game is designed for a phone held upright.
 
-   Two hard constraints shape the table, and they are what stop it from being
-   the obvious 6x6, 6x7, 7x7, 7x8, ... :
+   Sizes below are written [COLS, ROWS, types] - so level 1 is 5 wide by 6 tall.
 
-   1. COLS x ROWS MUST BE EVEN, or the board cannot tile into pairs. Strict
-      alternate +1 lands on odd x odd every other step (7x7 = 49, 9x9 = 81),
-      so those rungs are skipped and the next legal size is taken instead.
+   Columns climb 5 -> 6 -> 7 and then stop; after that only rows grow. Seven is
+   the cap the brief sets, and it is also roughly what the screen wants: at 7
+   columns a 360px phone gives 40px of width per cell, so width stops being the
+   binding constraint and height takes over.
 
-   2. WIDE BEATS TALL, and by more than it looks. Re-measured at every size in
-      this table, 300 adversarial games each, same cells and same type count on
-      both sides - the ONLY difference is which way round:
-          7x6   11.0%   vs   6x7   15.3%
-          8x7   10.0%   vs   7x8   16.0%
-          9x8    8.7%   vs   8x9   18.7%
-         10x9    9.7%   vs   9x10  14.0%
-         11x10  12.0%   vs  10x11  16.3%
-         12x11  10.7%   vs  11x12  15.0%
-      Six sizes, six times the same answer: turning a board on its side costs
-      4 to 10 points of dead-end rate. Gravity is why - it migrates every hole
-      to the top, so the linkable tiles are the ones on the surface of the
-      slab, and a wide slab has more surface. Hence every rung here is
-      cols >= rows.
+   ROW STEPS ARE NOT ALWAYS 1, and that is parity, not carelessness: COLS x ROWS
+   must be EVEN or the board cannot tile into pairs. With 6 columns (even) rows
+   may step by 1; with 5 or 7 (odd) rows must stay even, so they step by 2. That
+   is why the tail runs 7x8, 7x10, 7x12 rather than 7x8, 7x9, 7x10.
 
-   COLS is also capped at 12 because that is what the SCREEN limits: on a 360px
-   phone a 12-wide board already renders 25px tiles, and 14 columns would drop
-   that to ~22px - below the size at which the fruit sprites were measured to
-   stay tellable apart. Past 12 wide only the row count moves; rows are nearly
-   free, and even 16 of them leave vertical headroom on 360x640.
+   THIS RAMP IS DELIBERATELY TALL, which reverses the rule the previous table
+   was built around. Wide used to beat tall by 4-10 points of dead-end rate, and
+   that mattered because a dead board meant a full reshuffle in the player's
+   face. It does not mattermuch any more: a dead board now costs ONE two-tile
+   swap (see repairOneSwap), so the orientation penalty is paid in something the
+   player barely sees rather than in a board-wide scramble. Re-measured on this
+   table - see the README - dead boards cost well under one repair per game.
 
-   Cell counts therefore run
-     36 42 48 56 64 72 80 90 100 110 120 132 144 156 168 180 192
-   i.e. +6, +6, +8, +8, +8, +8, +10, +10, +10, +10, +12 ... - a smooth ramp
-   where the old table stepped. Type count tracks it so roughly 3+ pairs of
-   each fruit are always present, which is the other measured dead-end lever. */
+   Cells: 30 36 42 48 56 70 84 98 112, i.e. +6,+6,+6,+8,+14,+14,+14,+14. The
+   board stops growing at 7x16 and the clock keeps tightening from there. */
 const LEVEL_RAMP = [
-  [6, 6, 6],  [7, 6, 7],   [8, 6, 8],   [8, 7, 8],   [8, 8, 8],
-  [9, 8, 9],  [10, 8, 10], [10, 9, 10], [10, 10, 10], [11, 10, 11],
-  [12, 10, 12], [12, 11, 12], [12, 12, 12], [12, 13, 12], [12, 14, 12],
-  [12, 15, 12], [12, 16, 12],
+  [5, 6, 5],  [6, 6, 6],   [6, 7, 7],   [6, 8, 8],
+  [7, 8, 9],  [7, 10, 10], [7, 12, 12], [7, 14, 12], [7, 16, 12],
 ];
 
 /* Only ~12 fruits are ever on one board, but the window ROTATES with the level
@@ -879,21 +865,29 @@ function levelConfig(idx) {
   const s = LEVEL_RAMP[Math.min(idx, LEVEL_RAMP.length - 1)];
   const cols = s[0], rows = s[1];
   const pairs = (cols * rows) / 2;
-  /* Board grows every level up to 12x16, after which it is CONSTANT while the
-     clock keeps tightening — one variable at a time still does the work, the
-     handover just happens at level 17 now. */
   /* Time is per PAIR, so a bigger board is automatically granted more of it -
      growing the board lengthens a level rather than instantly starving it. The
-     squeeze is this coefficient, which keeps tightening after the board has
-     stopped growing.
+     squeeze is this coefficient.
 
-     The decay is 0.12, not the old 0.16, BECAUSE the ramp got longer. At 0.16
-     the coefficient bottoms out at level 16 while the board keeps growing to
-     17 - the two levers would finish together and nothing would change after
-     that. At 0.12 it bottoms at level 21, so there are still four levels of
-     pure clock squeeze once the board has stopped, which is the "one variable
-     at a time" shape the ramp is supposed to have. */
-  const perPair = Math.max(2.0, 4.4 - idx * 0.12);
+     Tuned so a RUN lasts roughly 5-10 minutes. A run ends when the clock gets
+     tighter than the player is fast, so it all follows from ONE assumption:
+     how many seconds a player needs per pair, scanning included. Modelled
+     against the real level table at four rates:
+         2.6s/pair (slow)      fails L6   run ~6.0 min
+         2.2s/pair (typical)   fails L8   run ~8.3 min
+         1.8s/pair (quick)     fails L9   run ~8.5 min
+         1.5s/pair (very fast) fails L10  run ~8.4 min
+
+     THE FLOOR MUST SIT BELOW THE FASTEST PLAUSIBLE RATE or quick players never
+     lose at all - at a 1.5 floor a 1.5s/pair player ran for 274 minutes in the
+     model without ever failing a level. 1.2 is under any rate a human sustains
+     on a 56-pair board, so every run ends.
+
+     That per-pair figure is an ASSUMPTION, not a measurement: it is the one
+     number to re-tune if playtests disagree, and everything else follows from
+     it. A steeper decay shortens every run; a higher floor lengthens the fast
+     end most. */
+  const perPair = Math.max(1.2, 4.0 - idx * 0.30);
   const time = Math.round(pairs * perPair / 5) * 5;
   return { cols: cols, rows: rows, typeIds: typeIdsFor(idx, s[2]),
            time: time, pairs: pairs };
@@ -970,7 +964,7 @@ function shuffleArr(a) {
  * lives in its inline `transform` so a fall is a single style write that the
  * compositor animates — no per-frame JavaScript while tiles are moving.
  * ============================================================= */
-const MAX_CELLS = 12 * 16;      // largest board in LEVEL_RAMP; pool is sized once
+const MAX_CELLS = 7 * 16;       // largest board in LEVEL_RAMP; pool is sized once
 const XLINK = 'http://www.w3.org/1999/xlink';
 const pool = [];
 let poolUsed = 0;

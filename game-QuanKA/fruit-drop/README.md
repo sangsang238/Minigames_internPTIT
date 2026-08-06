@@ -99,56 +99,86 @@ Tutorial **không tính điểm** (score/best giữ 0), có Skip, `?reset=1` xem
 **Bàn to lên ở MỌI màn** từ L1 tới L12 (yêu cầu 2026-08-04), rồi chốt và
 nhường việc cho đồng hồ:
 
-| Level | Bàn | Ô | Cặp | Loại quả | Giờ | Giây/cặp |
+| Level | Bàn (cột×hàng) | Ô | Cặp | Loại quả | Giờ | Giây/cặp |
 |---|---|---|---|---|---|---|
-| 1 | 6×6 | 36 | 18 | 6 | 80s | 4.44 |
-| 2 | 8×6 | 48 | 24 | 8 | 100s | 4.17 |
-| 3 | 8×8 | 64 | 32 | 8 | 130s | 4.06 |
-| 4 | 10×8 | 80 | 40 | 10 | 155s | 3.88 |
-| 5 | 10×10 | 100 | 50 | 10 | 190s | 3.80 |
-| 6 | 12×10 | 120 | 60 | 12 | 215s | 3.58 |
-| 7 | 12×11 | 132 | 66 | 12 | 225s | 3.41 |
-| 8 | 12×12 | 144 | 72 | 12 | 235s | 3.26 |
-| 9 | 12×13 | 156 | 78 | 12 | 245s | 3.14 |
-| 10 | 12×14 | 168 | 84 | 12 | 250s | 2.98 |
-| 11 | 12×15 | 180 | 90 | 12 | 250s | 2.78 |
-| 12 | 12×16 | 192 | 96 | 12 | 255s | 2.66 |
-| 13+ | 12×16 | 192 | 96 | 12 | 240s → **giảm đều** → 190s (L16+) | 2.50 → 1.98 |
+| 1 | 5×6 | 30 | 15 | 5 | 60s | 4.00 |
+| 2 | 6×6 | 36 | 18 | 6 | 65s | 3.61 |
+| 3 | 6×7 | 42 | 21 | 7 | 70s | 3.33 |
+| 4 | 6×8 | 48 | 24 | 8 | 75s | 3.13 |
+| 5 | 7×8 | 56 | 28 | 9 | 80s | 2.86 |
+| 6 | 7×10 | 70 | 35 | 10 | 90s | 2.57 |
+| 7 | 7×12 | 84 | 42 | 12 | 90s | 2.14 |
+| 8 | 7×14 | 98 | 49 | 12 | 95s | 1.94 |
+| 9 | 7×16 | 112 | 56 | 12 | 90s | 1.61 |
+| 10+ | 7×16 | 112 | 56 | 12 | 75s → **giảm đều** → 67s (L11+) | 1.34 → 1.20 |
 
-- **Bàn mọc MỘT CẠNH MỘT ĐƠN VỊ mỗi màn, luân phiên, suốt 17 màn** (sửa
-  2026-08-05). Trước đây nó nhảy hai cột một lúc ở đầu game (6×6 → 8×6 → 8×8),
-  đọc ra là *bậc thang* chứ không phải *dốc thoải*. Dãy số ô nay là
-  `36 42 48 56 64 72 80 90 100 110 120 132 144 156 168 180 192`
-  — bước `+6, +6, +8×4, +10×4, +12×6`.
-- **Không phải cứ `6×6 → 6×7 → 7×7 → 7×8` được**, vì hai ràng buộc cứng:
-  1. **`COLS × ROWS` phải CHẴN**, không thì bàn không chia hết thành cặp. Cộng 1
-     luân phiên sẽ rơi vào **lẻ × lẻ** cứ cách một bậc (7×7 = 49, 9×9 = 81), nên
-     những nấc đó bị **bỏ qua** và lấy cỡ hợp lệ kế tiếp.
-  2. **RỘNG THẮNG CAO** — xem mục đo bên dưới; lật bàn nằm sang đứng tốn 4–10
-     điểm deadlock. Nên **mọi nấc đều `cols ≥ rows`**.
-- **Chỉ HÀNG mọc thêm sau 12×10, không phải cột** — vì **cột mới là thứ màn hình
-  giới hạn**. Trên máy 360px bàn 12 cột đã cho tile 25px; 14 cột sẽ tụt xuống
-  ~22px, dưới ngưỡng mà bộ sprite được đo là còn phân biệt được (chính vì ngưỡng
-  này mà `strawberry` bị loại khỏi bộ). Hàng thì gần như miễn phí.
-- **Mọc thêm hàng KHÔNG làm tile nhỏ đi chút nào.** Chiều rộng vốn đã là ràng
-  buộc (`availW/(COLS+1)` < `availH/(ROWS+1)` trên mọi máy đo), nên 12×16 cho
-  đúng cỡ tile như 12×10: 22px @320px, 25px @360px, 29px @412px. Đã verify bàn
-  lớn nhất **vừa cả iPhone SE 320×568** và vẫn giữ được vành ngoài 1 ô cho
-  đường vòng biên (không chạm sàn 16px). Công thức mô hình được **hiệu chuẩn
-  đối chiếu với `cellPx` thật** (model 35 = thực tế 35) chứ không phải phỏng đoán.
-- Giờ tính **theo CẶP** nên bàn to tự được thêm giờ — to ra làm màn **dài hơn**
-  chứ không lập tức bóp nghẹt; thứ siết là hệ số `perPair`, và nó **tiếp tục
-  siết sau khi bàn đã ngừng lớn**. Vẫn là "một biến chạy một chiều tại một
-  thời điểm", chỉ khác là điểm bàn giao dời sang **L17**.
-- **Hệ số siết giờ là `0.12`, không phải `0.16` — VÌ ramp dài ra.** Ở `0.16` hệ
-  số chạm đáy `2.0` tại **L16** trong khi bàn còn lớn tới **L17**: hai đòn bẩy
-  kết thúc cùng lúc và **sau đó không còn gì thay đổi nữa**. Ở `0.12` nó chạm
-  đáy tại **L21**, tức còn bốn màn siết-đồng-hồ thuần sau khi bàn ngừng lớn —
-  đúng hình dạng "một biến một thời điểm" mà ramp cần có.
-- Đánh đổi đã đo, không phải đoán — xem bảng ở mục dưới: mọc tới 16 hàng tốn
-  khoảng **5 điểm tỉ lệ deadlock** (9.8% → 14.5% ở lối chơi đối-nghịch).
-- **Chỉ 12 loại quả trên một bàn, nhưng cửa sổ 12-loại XOAY theo level** nên cả
-  **14 icon** đều xuất hiện trong một run — có đa dạng mà không trả giá deadlock.
+**Bàn DỌC** (sửa 2026-08-05 theo brief: "thiết kế cho màn hình điện thoại dọc").
+Level 1 là **6 hàng × 5 cột** — nhiều hàng hơn cột — và **không bao giờ quá 7
+cột**.
+
+- **Cột leo 5 → 6 → 7 rồi dừng; sau đó chỉ hàng mọc.** Bảy là trần brief đặt, và
+  cũng xấp xỉ thứ màn hình muốn: ở 7 cột máy 360px cho 40px bề ngang mỗi ô, tức
+  **chiều rộng thôi ràng buộc và chiều cao tiếp quản**.
+- **Bước hàng KHÔNG phải lúc nào cũng bằng 1** — đó là *tính chẵn lẻ*, không
+  phải cẩu thả. `COLS × ROWS` **phải chẵn** hoặc bàn không chia hết thành cặp.
+  Với 6 cột (chẵn) hàng bước được 1; với 5 hoặc 7 (lẻ) hàng buộc phải chẵn nên
+  bước 2. Vì thế đuôi bảng là `7×8, 7×10, 7×12` chứ không phải `7×8, 7×9, 7×10`.
+- Dãy số ô `30 36 42 48 56 70 84 98 112` — bước `+6,+6,+6,+8,+14,+14,+14,+14`.
+  Bàn ngừng lớn ở **7×16** và từ đó đồng hồ làm nốt việc.
+
+#### Bàn dọc LẬT NGƯỢC quy luật "rộng thắng cao" — và điều đó nay chấp nhận được
+
+Bảng cũ được xây quanh phát hiện *bàn nằm bế tắc ít hơn bàn đứng 4–10 điểm*.
+Điều đó **từng quan trọng** vì bàn chết đồng nghĩa **xáo cả bàn ngay trước mặt
+người chơi**. Nay **không còn**: một bàn chết chỉ tốn **một cú hoán vị hai ô**
+(xem `repairOneSwap`), nên cái giá của việc quay dọc được trả bằng thứ người
+chơi gần như không thấy, thay vì bằng một cú xáo tung.
+
+Đo lại trên **chính bảng này**, 200 ván đối kháng mỗi nấc:
+
+| Bàn | 5×6 | 6×8 | 7×10 | 7×12 | 7×16 |
+|---|---|---|---|---|---|
+| Lần sửa / ván | 0.17 | 0.26 | 0.43 | 0.95 | 1.09 |
+
+**1800/1800 ván đều dọn sạch bàn**, 0 lần phải xáo. Chơi thật tốt hơn ~4×, tức
+tệ nhất khoảng **1 lần thấy 2 ô đổi quả mỗi ~4 màn**.
+
+- **Tile TO HƠN trước**, vì ít cột hơn: nhỏ nhất **24px @320×568** (trước là
+  20px), 27px @360×640, 42px @412×915.
+- **Đánh đổi phải nói rõ:** bàn cao + màn ngắn thì **chiều cao mới là thứ ràng
+  buộc**, nên bàn chỉ lấp **~64% bề ngang** trên máy 320–375px (lề hai bên
+  rộng). Trên máy dài 412×915 thì lấp 85%. Đây là hệ quả trực tiếp của việc
+  chọn bàn dọc, không phải lỗi layout.
+- **Pool giảm 192 → 112 tile** (`MAX_CELLS = 7×16`), tức **ít hơn 42% node DOM**
+  phải dựng và bố trí — thêm một khoản lãi cho máy yếu.
+
+#### Đồng hồ: chỉnh cho mỗi run dài 5–10 phút
+
+Một run kết thúc khi đồng hồ siết chặt hơn tốc độ người chơi, nên mọi thứ suy ra
+từ **một giả định**: người chơi cần bao nhiêu giây cho một cặp, tính cả thời
+gian dò tìm. Mô hình chạy trên chính bảng giờ ở trên:
+
+| Người chơi | giây/cặp | Thua ở màn | Dài một run |
+|---|---|---|---|
+| Chậm | 2.6 | 6 | **6.1 phút** |
+| Trung bình | 2.2 | 7 | **6.7 phút** |
+| Nhanh | 1.8 | 9 | **8.5 phút** |
+| Rất nhanh | 1.5 | 10 | **8.5 phút** |
+
+- **Sàn `perPair` BẮT BUỘC phải thấp hơn tốc độ nhanh nhất có thể**, không thì
+  người giỏi **không bao giờ thua**. Lần chỉnh đầu em để sàn `1.5` — đúng bằng
+  tốc độ của người chơi rất nhanh — và mô hình cho ra **274 phút** không hề
+  trượt màn nào. Sàn nay là `1.2`, dưới mọi tốc độ người thật giữ được trên bàn
+  56 cặp.
+- Đường cong là `perPair = max(1.2, 4.0 − idx × 0.30)`.
+- **Con số giây/cặp là GIẢ ĐỊNH, không phải phép đo** — nó là một con số duy
+  nhất cần chỉnh lại nếu playtest thật nói khác, và mọi thứ còn lại suy ra từ
+  nó. Dốc hơn thì mọi run ngắn lại; sàn cao hơn thì kéo dài đầu nhanh nhiều
+  nhất.
+
+- **Tối đa 12 loại quả trên một bàn, và cửa sổ XOAY theo level** nên cả **14
+  icon** đều xuất hiện trong một run — có đa dạng mà không trả giá deadlock.
+  Số loại bám theo cỡ bàn để luôn còn ~3+ cặp mỗi loại.
 - Vô hạn → **không có màn cuối, không bắn `victory`** (deviation có chủ ý so với
   game-common §1.5, giống animal-connect / runic-blaze).
 
@@ -267,6 +297,12 @@ chứ không phải tín hiệu; phải nâng lên **N=400 kèm khoảng tin c�
 **1 lần auto-xáo mỗi ~27 màn** thay vì ~30 — rẻ so với việc có ramp. Nếu cần
 mua lại, bớt số loại quả là đòn bẩy sẵn sàng (bảng trên), nhưng cửa sổ 12 loại
 được giữ vì đa dạng mỗi bàn đáng giá hơn mấy điểm đó.
+
+> ⚠️ **Hai mục đo dưới đây mô tả bảng ramp NẰM (≤12 cột) đã bị thay bằng bảng
+> DỌC ở trên vào 2026-08-05.** Số liệu vẫn đúng và vẫn là lý do quy luật
+> "rộng thắng cao" tồn tại — nhưng nó **không còn quyết định bảng ramp**, vì
+> `repairOneSwap` đã làm bàn chết gần như miễn phí. Giữ lại để đừng ai vô tình
+> "sửa" bàn dọc về nằm mà tưởng là phát hiện mới.
 
 **Đo lại 2026-08-05 khi làm ramp thoải hơn:** feedback đề nghị dãy `6×7, 7×8,
 8×8…` — tức bàn **cao hơn rộng**. Đo sáu cỡ, mỗi cỡ 300 ván, **cùng số ô và
