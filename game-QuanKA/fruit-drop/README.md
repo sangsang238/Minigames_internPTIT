@@ -1,4 +1,4 @@
-# Fruit Drop — QuanKA
+# Fruit Connect — QuanKA
 
 > **Onet / Pikachu connect CÓ TRỌNG LỰC** | HTML5 single-file | Level vô hạn sinh theo công thức
 
@@ -6,7 +6,7 @@
 
 | Trường | Giá trị |
 |---|---|
-| **Package** | `com.falcon.fruitdrop` |
+| **Package** | `com.falcon.fruitconnect` |
 | **Engine / Version** | HTML5 single-file · 1.0.0 |
 | **Category** | PUZZLE |
 | **Loại** | Game **có level** — vô hạn, thắng/thua theo màn |
@@ -249,7 +249,7 @@ hợp phổ biến — nên em để nguyên.
 Sửa 2026-08-05, feedback: "cái gạch nối hơi thô → dùng cái dạng mà game
 animal-connect làm". Đối chiếu hai file thì khác biệt nằm ở đúng ba chỗ:
 
-| | fruit-drop (cũ) | animal-connect | fruit-drop (nay) |
+| | fruit-connect (cũ) | animal-connect | fruit-connect (nay) |
 |---|---|---|---|
 | `stroke-linecap` | `square` | `round` | **`round`** |
 | `stroke-linejoin` | `miter` | `round` | **`round`** |

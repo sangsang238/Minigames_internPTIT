@@ -1,0 +1,24 @@
+{
+  "title": "Energy Loops",
+  "packageName": "com.falcon.energyloops",
+  "engine": "HTML5",
+  "version": "1.0.0",
+  "category": "PUZZLE",
+  "tags": ["loops", "rotate", "circuit", "relax", "puzzle"],
+  "description": "A calm rotate-to-connect circuit puzzle. Turn each tile until the whole grid is wired back into the power core and every lamp lights up. No timer, no fail state — just 60 hand-tuned boards that grow from a tiny 3x3 loop to a 7x9 network with two cores.",
+  "controls": "Tap a tile to turn it 90 degrees",
+  "aiContext": "",
+  "aiBuildLink": "",
+  "demoUrl": "",
+  "storeLinks": {
+    "googlePlay": { "url": "", "downloads": 0 },
+    "iosAppStore": { "url": "", "downloads": 0 },
+    "steam": { "url": "", "downloads": 0 }
+  },
+  "entry": "index.html",
+  "coverImages": {
+    "landscape16x9": "cover-landscape-1920x1080.png",
+    "portrait2x3": "cover-portrait-800x1200.png",
+    "square1x1": "cover-square-800x800.png"
+  }
+}

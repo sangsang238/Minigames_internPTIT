@@ -1,0 +1,1220 @@
+<!--
+  Energy Loops — QuanKA
+  Rotate-to-connect wire puzzle ("Net" / loops genre). Tap a tile to turn it 90°
+  clockwise; the level is solved when EVERY tile is powered from the core.
+
+  Why "every tile is lit" is a complete win condition (no second check needed):
+  the pieces are cut from a spanning FOREST with `k` trees, so the board holds
+  exactly N-k edges = 2(N-k) connector stubs. Lighting all N cells needs a
+  spanning powered subgraph, which needs at least N-k matched edges — and only
+  N-k exist. So "all lit" forces every single stub to be matched; none can be
+  left pointing at a wall. One BFS decides the level.
+
+  Levels are generated from a SEEDED rng (mulberry32 over the level index), so
+  level 7 is the same puzzle on every device and after every restart — which is
+  what makes the star rating (moves vs. par) mean anything.
+
+  Style: flat dark "circuit board" — solid fills, 0 gradients, 0 blur, no
+  filter/backdrop-filter anywhere. Rotation is a CSS transform; the power
+  spreading outward is a staggered transition-delay, NOT an animation loop.
+  Nothing in this game runs a requestAnimationFrame loop.
+
+  Tuân thủ .claude/game-common.md (bridge, level, statusBarHeight, i18n),
+  popup-common.md (game theo level => KHÔNG tự vẽ popup kết quả, showModal:true),
+  zip-common.md (single-file index.html).
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Energy Loops</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap" rel="stylesheet" />
+<style>
+/* ── Reset + mobile tap fixes (game-common §UI) ───────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+:root {
+  --ui-font: 'Google Sans Flex', system-ui, sans-serif;
+  /* Flat circuit-board palette — every value is a solid colour. */
+  --bg:       #0D1420;
+  --panel:    #16202F;
+  --line:     #22314A;
+  --tile:     #16202F;
+  --tile-on:  #182B3A;
+  --off:      #38496A;   /* unpowered wire */
+  --on:       #4FE3C1;   /* core 1 — mint */
+  --on2:      #FFB454;   /* core 2 — amber */
+  --text:     #E8EEF7;
+  --text-soft: rgba(232,238,247,.52);
+  --gold:     #FFC24D;
+  --d: 0ms;              /* per-tile power delay, set from JS */
+}
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: var(--ui-font);
+  font-weight: 700;
+  color: var(--text);
+  background-color: var(--bg);
+  /* Circuit grid — painted once by the compositor, never redrawn. */
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 34px 34px, 34px 34px;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+/* ── Header (same FORM as the other QuanKA games) ─────────────── */
+#topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 520px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: calc(max(var(--sbh, 0px), env(safe-area-inset-top, 0px)) + 8px)
+           max(10px, env(safe-area-inset-right)) 0 max(10px, env(safe-area-inset-left));
+  pointer-events: none;
+}
+#topbar .btn3d, .hud-scores { pointer-events: auto; }
+
+#hud-bar { display: flex; align-items: center; gap: 8px; }
+
+.hud-scores { flex: 1; min-width: 0; display: flex; gap: 8px; }
+.hud-pill {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px 8px 5px 6px;
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  -webkit-user-select: none; user-select: none;
+}
+.pill-text { display: flex; flex-direction: column; align-items: center; min-width: 0; flex: 1 0 auto; }
+.pill-ico { flex: 0 0 auto; width: clamp(15px, 4.4vw, 20px); height: clamp(15px, 4.4vw, 20px); display: block; }
+.hud-pill .label {
+  font-size: clamp(8px, 2.7vw, 10px);
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  color: var(--text-soft);
+  line-height: 1.05;
+  white-space: nowrap;
+}
+.hud-pill .value {
+  font-size: clamp(15px, 4.6vw, 22px);
+  line-height: 1.1;
+  color: var(--text);
+  white-space: nowrap;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+#hud-moves { color: var(--gold); }
+
+/* Sub-row: Restart | lit-progress bar | n/N */
+#hud-sub { display: flex; align-items: center; gap: 9px; padding: 0 2px; }
+#prog-bg {
+  flex: 1;
+  height: 8px;
+  border-radius: 5px;
+  background: var(--panel);
+  border: 2px solid var(--line);
+  overflow: hidden;
+}
+#prog-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--on);
+  border-radius: 3px;
+  transition: width .22s linear;
+}
+#hud-count {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .6px;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+  min-width: 44px;
+  text-align: right;
+}
+
+/* ── btn3d (game-common §1.4 / §1.6), flat skin ───────────────── */
+.btn3d {
+  --radius: 10px;
+  --surface-color: var(--panel);
+  --surface-text: var(--text);
+  --surface-height: 42px;
+  --surface-width: auto;
+  --surface-padding-x: 16px;
+  --surface-font-size: 16px;
+  position: relative;
+  display: inline-block;
+  padding: 0; border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit; color: inherit;
+  -webkit-user-select: none; user-select: none;
+}
+.btn3d-shadow { display: none; }
+.btn3d-surface {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: var(--surface-height);
+  width: var(--surface-width);
+  padding: 0 var(--surface-padding-x);
+  border-radius: var(--radius);
+  background: var(--surface-color);
+  border: 2px solid var(--line);
+  color: var(--surface-text);
+  font-family: var(--ui-font);
+  font-size: var(--surface-font-size);
+  font-weight: 800;
+  letter-spacing: .6px;
+  transition: transform .08s ease-out;
+}
+.btn3d:active .btn3d-surface { transform: scale(.93); }
+.btn3d.btn-icon { --surface-height: 42px; --surface-width: 42px; --surface-padding-x: 0; }
+.btn3d.sm { --surface-height: 26px; --surface-width: 26px; --radius: 8px; }
+.back-ico    { width: 52%; height: 52%; fill: currentColor; display: block; }
+.restart-ico { width: 62%; height: 62%; fill: currentColor; display: block; }
+.snd-ico     { width: 58%; height: 58%; display: block; }
+.snd-slash   { display: none; }
+#sound-btn.muted .snd-waves { display: none; }
+#sound-btn.muted .snd-slash { display: block; }
+#sound-btn.muted .snd-ico   { color: var(--text-soft); }
+
+/* ── App / board ──────────────────────────────────────────────── */
+#app {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+#board {
+  display: grid;
+  grid-template-columns: repeat(var(--w, 3), var(--t, 48px));
+  grid-auto-rows: var(--t, 48px);
+  gap: var(--g, 3px);
+  /* Wire round-caps spill into the gap on purpose, bridging neighbours. */
+  transition: transform .3s ease-out;
+}
+#board.solved { transform: scale(1.03); }
+
+.tile {
+  position: relative;
+  width: var(--t, 48px);
+  height: var(--t, 48px);
+  border-radius: 22%;
+  background: var(--tile);
+  transition: background .22s linear var(--d);
+  cursor: pointer;
+}
+.tile.lit { background: var(--tile-on); }
+
+/* The rotating layer. Only this transforms, so the tile box never moves. */
+.ti {
+  width: 100%; height: 100%;
+  transition: transform .19s cubic-bezier(.34,1.3,.64,1);
+  will-change: transform;
+}
+.tile svg { width: 100%; height: 100%; display: block; overflow: visible; }
+
+.wire {
+  fill: none;
+  stroke: var(--off);
+  stroke-width: 15;
+  stroke-linecap: round;
+  transition: stroke .22s linear var(--d);
+}
+.tile.lit .wire      { stroke: var(--on); }
+.tile.lit.s2 .wire   { stroke: var(--on2); }
+
+.node { fill: var(--off); transition: fill .22s linear var(--d); }
+.tile.lit .node    { fill: var(--on); }
+.tile.lit.s2 .node { fill: var(--on2); }
+
+/* Leaf tiles are lamps: hollow ring while dark, solid while powered. */
+.bulb {
+  fill: var(--tile);
+  stroke: var(--off);
+  stroke-width: 9;
+  transition: fill .22s linear var(--d), stroke .22s linear var(--d);
+}
+.tile.lit .bulb      { fill: var(--on);  stroke: var(--on); }
+.tile.lit.s2 .bulb   { fill: var(--on2); stroke: var(--on2); }
+
+/* The core is the source — always powered, never rotates. */
+.cg      { fill: var(--on); }
+.core.s2 .cg { fill: var(--on2); }
+.cg-in   { fill: var(--bg); }
+
+/* Cross tiles look identical when turned, so they do not turn at all. */
+.tile.fixed { cursor: default; }
+@keyframes nudge { 0%,100% { transform: scale(1); } 45% { transform: scale(.9); } }
+.tile.fixed.nudge .ti { animation: nudge .2s steps(3,end); }
+
+/* Tutorial pulse — a breathing tile, no arrows (fruit-drop playtest lesson). */
+@keyframes hintPulse { 0%,100% { opacity: 1; } 50% { opacity: .38; } }
+.tile.hint { animation: hintPulse 1s ease-in-out infinite; }
+
+/* ── Tutorial banner ──────────────────────────────────────────── */
+#tut {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  margin: 0 auto;
+  width: min(92%, 460px);
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  opacity: 1;
+  transition: opacity .25s linear;
+}
+#tut.hidden { opacity: 0; pointer-events: none; visibility: hidden; }
+#tut-text { flex: 1; font-size: 14px; font-weight: 700; line-height: 1.35; color: var(--text); }
+#tut-skip { --surface-height: 30px; --surface-font-size: 12px; --surface-padding-x: 12px; flex: 0 0 auto; }
+
+/* ── Level-complete flourish — the star rating ONLY: no title, no scrim, no
+       buttons. The app owns the win popup (popup-common §1) and this must not
+       look like a second one; stars are the one thing the app cannot know.
+       Gold on a dark stroke stays legible over lit mint wires. ─────── */
+#done {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  pointer-events: none;
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity .25s linear, transform .25s ease-out;
+}
+#done.hidden { opacity: 0; transform: scale(.86); visibility: hidden; }
+#done svg { width: clamp(44px, 14vw, 62px); height: clamp(44px, 14vw, 62px); display: block; }
+.star-p { fill: #26334A; stroke: var(--bg); stroke-width: 1.4; }
+.star-p.won { fill: var(--gold); }
+
+/* Landscape: the board just centres; the layout is portrait-first. */
+</style>
+</head>
+<body>
+
+<!-- Header: Back | LEVEL | MOVES | Sound, with Restart + progress beneath -->
+<div id="topbar">
+  <div id="hud-bar">
+    <div class="btn3d btn-icon" id="back-btn" role="button" aria-label="Back" tabindex="0">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="back-ico" viewBox="0 0 447.243 447.243" aria-hidden="true">
+          <path fill="currentColor" d="M420.361 192.229a31.967 31.967 0 0 0-5.535-.41H99.305l6.88-3.2a63.998 63.998 0 0 0 18.08-12.8l88.48-88.48c11.653-11.124 13.611-29.019 4.64-42.4-10.441-14.259-30.464-17.355-44.724-6.914a32.018 32.018 0 0 0-3.276 2.754l-160 160c-12.504 12.49-12.515 32.751-.025 45.255l.025.025 160 160c12.514 12.479 32.775 12.451 45.255-.063a32.084 32.084 0 0 0 2.745-3.137c8.971-13.381 7.013-31.276-4.64-42.4l-88.32-88.64a64.002 64.002 0 0 0-16-11.68l-9.6-4.32h314.24c16.347.607 30.689-10.812 33.76-26.88 2.829-17.445-9.019-33.88-26.464-36.71z"/>
+        </svg>
+      </span>
+    </div>
+    <div class="hud-scores">
+      <div class="hud-pill">
+        <svg class="pill-ico" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M13.6 2 5.4 13.4h5.1L9.6 22l8.8-11.8h-5.4z" fill="#4FE3C1"/>
+        </svg>
+        <div class="pill-text">
+          <div class="label" id="lbl-level">LEVEL</div>
+          <div class="value" id="hud-level">1</div>
+        </div>
+      </div>
+      <div class="hud-pill">
+        <svg class="pill-ico" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 4.2a7.8 7.8 0 1 0 7.4 5.3" fill="none" stroke="#FFC24D" stroke-width="2.6" stroke-linecap="round"/>
+          <path d="M13.2 2.1 18 5.4l-4.4 3.5z" fill="#FFC24D"/>
+        </svg>
+        <div class="pill-text">
+          <div class="label" id="lbl-moves">MOVES</div>
+          <div class="value" id="hud-moves">0</div>
+        </div>
+      </div>
+    </div>
+    <div class="btn3d btn-icon" id="sound-btn" role="button" aria-label="Sound" tabindex="0">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="snd-ico" viewBox="0 0 100 100" aria-hidden="true">
+          <path fill="currentColor" d="M14 38 v24 h16 l21 18 V20 L30 38 Z"/>
+          <path class="snd-waves" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" d="M62 36 q9 14 0 28 M73 27 q15 23 0 46"/>
+          <path class="snd-slash" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" d="M63 35 L86 65 M86 35 L63 65"/>
+        </svg>
+      </span>
+    </div>
+  </div>
+  <div id="hud-sub">
+    <div class="btn3d btn-icon sm" id="restart-btn" role="button" aria-label="Restart" tabindex="0">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="restart-ico" viewBox="0 0 100 100" aria-hidden="true">
+          <path fill="currentColor" d="m50.7 19.003 4.793-4.793c2.696-2.697 2.696-6.991 0-9.688s-6.991-2.696-9.687 0L29.327 21.001a6.812 6.812 0 0 0 0 9.687l16.479 16.478a6.9 6.9 0 0 0 4.793 1.998c1.798 0 3.496-.7 4.794-1.998a6.812 6.812 0 0 0 0-9.687l-4.794-4.794c13.682.4 24.768 11.685 24.768 25.467 0 14.081-11.485 25.466-25.467 25.466S24.534 72.233 24.534 58.252c0-3.096.599-6.192 1.597-8.989 1.299-3.495-.4-7.49-3.994-8.788-3.496-1.298-7.49.4-8.789 3.995-1.698 4.394-2.496 9.088-2.496 13.882C10.852 79.923 28.428 97.5 50 97.5s39.148-17.577 39.148-39.148c0-21.472-17.177-38.95-38.449-39.349z"/>
+        </svg>
+      </span>
+    </div>
+    <div id="prog-bg"><div id="prog-fill"></div></div>
+    <span id="hud-count">0/9</span>
+  </div>
+</div>
+
+<div id="app">
+  <div id="board"></div>
+</div>
+
+<div id="tut" class="hidden">
+  <span id="tut-text"></span>
+  <div class="btn3d" id="tut-skip" role="button" tabindex="0">
+    <span class="btn3d-shadow"></span>
+    <span class="btn3d-surface" id="tut-skip-label">Skip</span>
+  </div>
+</div>
+
+<div id="done" class="hidden"></div>
+
+<script>
+'use strict';
+
+/* ================================================================
+ * §0. i18n (game-common §5) — INLINE, never a separate file.
+ * UI labels stay English (LEVEL / MOVES) following the animal-connect /
+ * fruit-drop precedent after the "over-localized" QA note; the tutorial — the
+ * only prose in the game — is translated into all 23 supported languages.
+ * ============================================================= */
+const SUPPORTED_LANGS = [
+  'en','vi','zh-Hans','zh-Hant','ja','ko','es','es-MX','es-AR','pt-BR','pt',
+  'fr','de','it','nl','pl','ru','tr','ar','hi','th','id','fil',
+];
+/* Google Sans Flex only covers Latin (incl. Vietnamese). Anything else must
+   fall back to system-ui or a single line renders in TWO fonts. */
+const LATIN_LANGS = new Set([
+  'en','vi','es','es-MX','es-AR','pt-BR','pt','fr','de','it','nl','pl','tr','id','fil',
+]);
+const DEFAULT_LANG = 'en';
+
+const I18N = {
+  en: {
+    level: 'LEVEL', moves: 'MOVES', skip: 'Skip',
+    tutRotate: 'Tap a tile to turn it.',
+    tutCore:   'Power flows out from the core.',
+    tutFinish: 'Light up every tile to finish.',
+  },
+  vi: { skip:'Bỏ qua', tutRotate:'Chạm vào một ô để xoay nó.', tutCore:'Điện lan ra từ lõi năng lượng.', tutFinish:'Làm sáng mọi ô là qua màn.' },
+  'zh-Hans': { skip:'跳过', tutRotate:'点击方块即可旋转它。', tutCore:'能量从核心向外流动。', tutFinish:'点亮所有方块即可过关。' },
+  'zh-Hant': { skip:'跳過', tutRotate:'點擊方塊即可旋轉它。', tutCore:'能量從核心向外流動。', tutFinish:'點亮所有方塊即可過關。' },
+  ja: { skip:'スキップ', tutRotate:'タイルをタップすると回転します。', tutCore:'エネルギーはコアから広がります。', tutFinish:'すべてのタイルを光らせるとクリア。' },
+  ko: { skip:'건너뛰기', tutRotate:'타일을 탭하면 회전합니다.', tutCore:'에너지는 코어에서 퍼져 나갑니다.', tutFinish:'모든 타일을 밝히면 완료됩니다.' },
+  es: { skip:'Saltar', tutRotate:'Toca una pieza para girarla.', tutCore:'La energía fluye desde el núcleo.', tutFinish:'Enciende todas las piezas para terminar.' },
+  'es-MX': { skip:'Saltar', tutRotate:'Toca una pieza para girarla.', tutCore:'La energía fluye desde el núcleo.', tutFinish:'Enciende todas las piezas para terminar.' },
+  'es-AR': { skip:'Saltar', tutRotate:'Tocá una pieza para girarla.', tutCore:'La energía fluye desde el núcleo.', tutFinish:'Encendé todas las piezas para terminar.' },
+  'pt-BR': { skip:'Pular', tutRotate:'Toque em uma peça para girá-la.', tutCore:'A energia flui a partir do núcleo.', tutFinish:'Acenda todas as peças para concluir.' },
+  pt: { skip:'Saltar', tutRotate:'Toca numa peça para a rodares.', tutCore:'A energia flui a partir do núcleo.', tutFinish:'Acende todas as peças para terminares.' },
+  fr: { skip:'Passer', tutRotate:'Touche une tuile pour la faire pivoter.', tutCore:"L'énergie part du noyau.", tutFinish:'Allume toutes les tuiles pour finir.' },
+  de: { skip:'Überspringen', tutRotate:'Tippe ein Feld an, um es zu drehen.', tutCore:'Die Energie fließt vom Kern aus.', tutFinish:'Bringe alle Felder zum Leuchten.' },
+  it: { skip:'Salta', tutRotate:'Tocca una tessera per ruotarla.', tutCore:"L'energia parte dal nucleo.", tutFinish:'Accendi tutte le tessere per finire.' },
+  nl: { skip:'Overslaan', tutRotate:'Tik op een tegel om hem te draaien.', tutCore:'De energie stroomt vanuit de kern.', tutFinish:'Laat alle tegels oplichten om te winnen.' },
+  pl: { skip:'Pomiń', tutRotate:'Dotknij kafelka, aby go obrócić.', tutCore:'Energia płynie z rdzenia.', tutFinish:'Zapal wszystkie kafelki, aby ukończyć.' },
+  ru: { skip:'Пропустить', tutRotate:'Коснитесь плитки, чтобы повернуть её.', tutCore:'Энергия растекается от ядра.', tutFinish:'Зажгите все плитки, чтобы пройти уровень.' },
+  tr: { skip:'Atla', tutRotate:'Döndürmek için bir kareye dokun.', tutCore:'Enerji çekirdekten yayılır.', tutFinish:'Bitirmek için tüm kareleri yak.' },
+  ar: { skip:'تخطٍّ', tutRotate:'المس المربّع لتدويره.', tutCore:'تتدفّق الطاقة من النواة.', tutFinish:'أضئ كل المربّعات لإكمال المستوى.' },
+  hi: { skip:'छोड़ें', tutRotate:'टाइल घुमाने के लिए उस पर टैप करें।', tutCore:'ऊर्जा कोर से बाहर की ओर बहती है।', tutFinish:'स्तर पूरा करने के लिए सभी टाइलें जलाएँ।' },
+  th: { skip:'ข้าม', tutRotate:'แตะช่องเพื่อหมุนช่องนั้น', tutCore:'พลังงานไหลออกจากแกนกลาง', tutFinish:'ทำให้ทุกช่องสว่างเพื่อผ่านด่าน' },
+  id: { skip:'Lewati', tutRotate:'Ketuk ubin untuk memutarnya.', tutCore:'Energi mengalir dari inti.', tutFinish:'Nyalakan semua ubin untuk menyelesaikan.' },
+  fil: { skip:'Laktawan', tutRotate:'I-tap ang tile para paikutin ito.', tutCore:'Dumadaloy ang enerhiya mula sa core.', tutFinish:'Paliwanagin ang lahat ng tile para matapos.' },
+};
+
+let LANG = DEFAULT_LANG;
+/** key -> current language, then `en`, then the key itself. */
+function t(key) {
+  return (I18N[LANG] && I18N[LANG][key]) || I18N.en[key] || key;
+}
+function getLanguage() {
+  const fromWin = typeof window.language === 'string' ? window.language : null;
+  const fromUrl = new URLSearchParams(window.location.search).get('language');
+  const raw = fromWin != null ? fromWin : fromUrl;
+  return SUPPORTED_LANGS.indexOf(raw) !== -1 ? raw : DEFAULT_LANG;
+}
+function applyUiFont(lang) {
+  if (!LATIN_LANGS.has(lang)) {
+    document.documentElement.style.setProperty('--ui-font', 'system-ui, sans-serif');
+  }
+}
+
+/* ================================================================
+ * §1. Native bridge (game-common §1) — game WITH levels
+ * ============================================================= */
+const TOTAL_LEVELS = 60;
+let currentLevelIdx = 0;
+
+function post(msg) {
+  try {
+    if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+      window.ReactNativeWebView.postMessage(JSON.stringify(msg));
+    } else {
+      console.log('[energy-loops → native]', msg);
+      devSimulateNative(msg);
+    }
+  } catch (e) { /* ignore */ }
+}
+function sendMessage(type, opts) {
+  opts = opts || {};
+  post({
+    type: type,
+    level: currentLevelIdx + 1,
+    result: opts.result != null ? opts.result : null,
+    data: opts.data != null ? opts.data : null,
+    showModal: opts.showModal === true,
+  });
+}
+/** Dev-only: a plain browser has no app popup, so fake the button the app
+ *  would show. Never runs inside the real WebView. */
+let devAuto = true;
+function devSimulateNative(msg) {
+  if (!devAuto) return;
+  if (msg.type !== 'game_result') return;
+  setTimeout(function () {
+    if (msg.result === 'win' && typeof window.onNextLevel === 'function') window.onNextLevel();
+    else if (typeof window.onRetryLevel === 'function') window.onRetryLevel();
+  }, 1400);
+}
+function saveData(payload) {
+  const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
+  sendMessage('save_data', { data: data });
+}
+
+const LS_KEY = 'energy_loops_v1';
+function saveLocal(payload) {
+  try {
+    const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
+    localStorage.setItem(LS_KEY, data);
+  } catch (e) { /* private mode / quota */ }
+}
+function readLocal() { try { return localStorage.getItem(LS_KEY) || ''; } catch (e) { return ''; } }
+
+function getStatusBarHeight() {
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = params.get('statusBarHeight');
+  const fromWin = typeof window.statusBarHeight !== 'undefined' ? window.statusBarHeight : null;
+  let h = Number(fromUrl != null ? fromUrl : fromWin);
+  if (!isFinite(h) || h < 0) h = 0;
+  return h;
+}
+/** 1-indexed level from native, clamped; 0/absent means "no saved level". */
+function getInitialLevelIdx() {
+  const fromWin = typeof window.currentLevel === 'number' ? window.currentLevel : null;
+  const fromUrl = new URLSearchParams(window.location.search).get('currentLevel');
+  const raw = Number(fromWin != null ? fromWin : fromUrl);
+  if (!isFinite(raw) || raw < 1) return -1;                 // -1 = "app said nothing"
+  return Math.min(Math.floor(raw), TOTAL_LEVELS) - 1;
+}
+function getInitialData() {
+  const fromWin = typeof window.data === 'string' ? window.data : null;
+  const fromUrl = new URLSearchParams(window.location.search).get('data');
+  return fromWin != null ? fromWin : (fromUrl || '');
+}
+/** Light fields come from native (authoritative); the half-played board comes
+ *  from localStorage, which native never holds (game-common §1.2). */
+function parseInitialData() {
+  let nat = null, loc = null;
+  const raw = getInitialData();
+  if (raw) { try { nat = JSON.parse(raw); } catch (e) {} }
+  const lraw = readLocal();
+  if (lraw) { try { loc = JSON.parse(lraw); } catch (e) {} }
+  if (!nat && !loc) return null;
+  const merged = Object.assign({}, loc || {}, nat || {});
+  /* Native holds the light fields only; the half-played board is local-only, so
+     it must survive the merge even when native supplied a `data` blob. */
+  if (loc && typeof loc.r === 'string') { merged.r = loc.r; merged.mv = loc.mv; merged.blv = loc.blv; }
+  else { delete merged.r; delete merged.blv; }
+  return merged;
+}
+
+/* ── Persisted state ─────────────────────────────────────────── */
+let stars = new Array(TOTAL_LEVELS).fill(0);   // 0..3 per level
+let muted = false;
+let tutorialSeen = false;
+/** Which level to open on next launch — "where you left off", not "furthest
+ *  reached". It has to track the level actually being played, or replaying an
+ *  old one would strand its half-finished board (which is tagged `blv`).
+ *  Completion is not lost by this: a level's star digit is its record. */
+let progressIdx = 0;
+
+function lightData() {
+  return { lv: progressIdx, st: stars.join(''), m: muted ? 1 : 0, tut: tutorialSeen ? 1 : 0 };
+}
+/** The half-played board is tagged with ITS level (`blv`), not the progress
+ *  pointer, so a snapshot is never replayed onto the wrong puzzle. */
+function snapshot() {
+  const snap = lightData();
+  if (B && !B.solved) { snap.blv = currentLevelIdx; snap.r = B.rot.join(''); snap.mv = B.moves; }
+  return snap;
+}
+/** Light -> native, board snapshot -> localStorage (game-common §1.2). */
+function persist() {
+  saveData(lightData());
+  saveLocal(snapshot());
+}
+/** localStorage only — used after every single tap (free, in-WebView). */
+function persistLocalOnly() { saveLocal(snapshot()); }
+
+/* ================================================================
+ * §2. Level generation — a spanning forest, so it is always solvable
+ * ============================================================= */
+/* Direction bits: N=1 E=2 S=4 W=8, index 0..3 in that order. */
+const DX = [0, 1, 0, -1];
+const DY = [-1, 0, 1, 0];
+const OPP = [4, 8, 1, 2];
+
+/** Rotate a connector mask r quarter-turns clockwise. */
+function rotMask(m, r) { r &= 3; return ((m << r) | (m >> (4 - r))) & 15; }
+/** Smallest number of quarter-turns that maps the mask onto itself: 1, 2 or 4. */
+function periodOf(m) {
+  if (rotMask(m, 1) === m) return 1;      // 0 (empty) and 15 (cross)
+  if (rotMask(m, 2) === m) return 2;      // 5 (N|S) and 10 (E|W)
+  return 4;
+}
+function popcount(m) { return (m & 1) + ((m >> 1) & 1) + ((m >> 2) & 1) + ((m >> 3) & 1); }
+
+/** mulberry32 — one seeded rng per level, so a level is the same everywhere. */
+function rngFor(seed) {
+  let a = (seed | 0) + 0x6D2B79F5;
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let x = Math.imul(a ^ (a >>> 15), 1 | a);
+    x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** Board shape per level. Max 7 columns — the portrait-phone lesson from
+ *  fruit-drop: more than 7 and tiles get too small to tap comfortably. */
+function levelConfig(idx) {
+  const n = idx + 1;
+  let w, h, cores = 1;
+  if (n <= 3)       { w = 3; h = 3; }
+  else if (n <= 8)  { w = 4; h = 4; }
+  else if (n <= 14) { w = 4; h = 5; }
+  else if (n <= 20) { w = 5; h = 5; }
+  else if (n <= 25) { w = 5; h = 6; }
+  else if (n <= 30) { w = 5; h = 7; }
+  else if (n <= 37) { w = 6; h = 7; }
+  else if (n <= 45) { w = 6; h = 8; }
+  else if (n <= 52) { w = 7; h = 8; }
+  else              { w = 7; h = 9; }
+  /* Second act: a second core (and a second colour of power) from level 31,
+     with every third level dropping back to one so the rhythm varies. */
+  if (n >= 31 && n % 3 !== 0) cores = 2;
+  return { w: w, h: h, cores: cores };
+}
+
+/**
+ * Randomized-Prim spanning forest with `k` trees. Prim (random frontier pick)
+ * is used rather than DFS on purpose: DFS makes long snaking corridors, Prim
+ * makes short branchy trees — i.e. lots of lamps, which is what reads as a
+ * circuit. Returns { w, h, mask, cores }.
+ */
+function genBoard(idx) {
+  const cfg = levelConfig(idx);
+  const w = cfg.w, h = cfg.h, N = w * h;
+  const rnd = rngFor(idx * 2654435761 + 12345);
+  const mask = new Uint8Array(N);
+  const owner = new Int8Array(N).fill(-1);
+
+  /* Seeds: for 2 cores, one in the top third and one in the bottom third, so
+     both trees end up substantial instead of one swallowing the board. */
+  const cores = [];
+  if (cfg.cores === 1) {
+    /* Anywhere off the border, not dead centre — 40 levels with the core in
+       the exact middle of the board would read as a template. */
+    if (w > 2 && h > 2) {
+      cores.push((1 + Math.floor(rnd() * (h - 2))) * w + 1 + Math.floor(rnd() * (w - 2)));
+    } else {
+      cores.push(((h >> 1) * w) + (w >> 1));
+    }
+  } else {
+    const yA = Math.floor(rnd() * Math.max(1, Math.floor(h / 3)));
+    const yB = h - 1 - Math.floor(rnd() * Math.max(1, Math.floor(h / 3)));
+    cores.push(yA * w + Math.floor(rnd() * w));
+    let b = yB * w + Math.floor(rnd() * w);
+    if (b === cores[0]) b = (b + w) % N;
+    cores.push(b);
+  }
+
+  const frontier = [];
+  function pushEdges(i) {
+    const x = i % w, y = (i / w) | 0;
+    for (let d = 0; d < 4; d++) {
+      const nx = x + DX[d], ny = y + DY[d];
+      if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+      const j = ny * w + nx;
+      if (owner[j] !== -1) continue;
+      frontier.push((i << 10) | (j << 2) | d);
+    }
+  }
+  for (let c = 0; c < cores.length; c++) { owner[cores[c]] = c; pushEdges(cores[c]); }
+
+  while (frontier.length) {
+    const k = Math.floor(rnd() * frontier.length);
+    const e = frontier[k];
+    frontier[k] = frontier[frontier.length - 1];
+    frontier.pop();
+    const i = e >> 10, j = (e >> 2) & 255, d = e & 3;
+    if (owner[j] !== -1) continue;
+    owner[j] = owner[i];
+    mask[i] |= (1 << d);
+    mask[j] |= OPP[d];
+    pushEdges(j);
+  }
+
+  /* Scramble. Solution is rot === 0 for every cell, by construction. */
+  const rot = new Uint8Array(N);
+  for (let i = 0; i < N; i++) rot[i] = (Math.floor(rnd() * 4)) & 3;
+
+  /* Par = fewest turns back to the generated solution, symmetry-aware. */
+  const period = new Uint8Array(N);
+  for (let i = 0; i < N; i++) period[i] = periodOf(mask[i]);
+  function parOf(r) {
+    let p = 0;
+    for (let i = 0; i < N; i++) {
+      const pe = period[i];
+      p += (pe - (r[i] % pe)) % pe;
+    }
+    return p;
+  }
+  /* Never hand the player an already-solved board. */
+  if (parOf(rot) === 0) {
+    for (let i = 0; i < N; i++) if (period[i] > 1) { rot[i] = 1; break; }
+  }
+
+  return { w: w, h: h, mask: mask, rot: rot, period: period, cores: cores, par: parOf(rot) };
+}
+
+/* ================================================================
+ * §3. Board state + rendering
+ * ============================================================= */
+const elBoard   = document.getElementById('board');
+const elTopbar  = document.getElementById('topbar');
+const elLevel   = document.getElementById('hud-level');
+const elMoves   = document.getElementById('hud-moves');
+const elProg    = document.getElementById('prog-fill');
+const elCount   = document.getElementById('hud-count');
+const elTut     = document.getElementById('tut');
+const elTutText = document.getElementById('tut-text');
+const elDone    = document.getElementById('done');
+
+let B = null;          // live board
+let tiles = null;      // HTMLCollection of .tile
+let lockInput = false;
+/** Bumped by every loadLevel. The result message is fired on a 1.1s timer, so
+ *  it must re-check the epoch: Back/Retry/Next landing inside that window would
+ *  otherwise report a result for a level the player already left. */
+let levelEpoch = 0;
+
+const POWER_BASE_MS = 105;   // ~55% of the rotation, so light lands as it snaps
+const POWER_STEP_MS = 22;    // per BFS ring
+
+function wirePath(m) {
+  let d = '';
+  if (m & 1) d += 'M50 50L50 0';
+  if (m & 2) d += 'M50 50L100 50';
+  if (m & 4) d += 'M50 50L50 100';
+  if (m & 8) d += 'M50 50L0 50';
+  return d;
+}
+function centreGlyph(i) {
+  const deg = popcount(B.mask[i]);
+  if (B.cores.indexOf(i) !== -1) {
+    /* Core: a thick diamond ring — unchanged by 90° turns, so it reads as the
+       one fixed thing on the board. It has to out-weigh the lamps visually or
+       it vanishes into a big lit network. */
+    return '<path class="cg" d="M50 8 92 50 50 92 8 50Z"/><path class="cg-in" d="M50 36 64 50 50 64 36 50Z"/>';
+  }
+  if (deg === 1) return '<circle class="bulb" cx="50" cy="50" r="18"/>';
+  return '<circle class="node" cx="50" cy="50" r="9"/>';
+}
+
+function buildBoard() {
+  const N = B.w * B.h;
+  let html = '';
+  for (let i = 0; i < N; i++) {
+    const fixed = B.period[i] === 1 ? ' fixed' : '';
+    const core  = B.cores.indexOf(i) !== -1 ? ' core' : '';
+    html += '<div class="tile' + fixed + core + '" data-i="' + i + '">'
+          +   '<div class="ti" style="transform:rotate(' + (B.rot[i] * 90) + 'deg)">'
+          +     '<svg viewBox="0 0 100 100" aria-hidden="true">'
+          +       '<path class="wire" d="' + wirePath(B.mask[i]) + '"/>'
+          +       centreGlyph(i)
+          +     '</svg>'
+          +   '</div>'
+          + '</div>';
+  }
+  elBoard.style.setProperty('--w', B.w);
+  elBoard.innerHTML = html;
+  tiles = elBoard.children;
+  B.vis = new Int32Array(N);
+  for (let i = 0; i < N; i++) B.vis[i] = B.rot[i];
+  B.shown = new Uint8Array(N);   // 0 = dark, 1+src = lit by that core
+  layout();
+}
+
+/** Current (rotated) connector mask of cell i. */
+function cur(i) { return rotMask(B.mask[i], B.rot[i]); }
+
+/** One BFS from the cores decides everything (see the header comment). */
+function computePower() {
+  const w = B.w, h = B.h, N = w * h;
+  B.lit.fill(0); B.depth.fill(0); B.src.fill(0);
+  const q = B.queue;
+  let qn = 0;
+  for (let c = 0; c < B.cores.length; c++) {
+    const s = B.cores[c];
+    B.lit[s] = 1; B.depth[s] = 0; B.src[s] = c; q[qn++] = s;
+  }
+  for (let qi = 0; qi < qn; qi++) {
+    const i = q[qi], x = i % w, y = (i / w) | 0, m = cur(i);
+    for (let d = 0; d < 4; d++) {
+      if (!(m & (1 << d))) continue;
+      const nx = x + DX[d], ny = y + DY[d];
+      if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+      const j = ny * w + nx;
+      if (B.lit[j]) continue;
+      if (!(cur(j) & OPP[d])) continue;
+      B.lit[j] = 1; B.depth[j] = B.depth[i] + 1; B.src[j] = B.src[i];
+      q[qn++] = j;
+    }
+  }
+  B.litCount = qn;
+  return qn === N;
+}
+
+/** Only touch tiles whose state actually changed — a level entry must not cost
+ *  a class write per tile per frame (the fruit-drop "224 class ops" lesson). */
+function renderPower() {
+  const N = B.w * B.h;
+  for (let i = 0; i < N; i++) {
+    const want = B.lit[i] ? (1 + B.src[i]) : 0;
+    if (want === B.shown[i]) continue;
+    const el = tiles[i];
+    /* Lighting up ripples outward; going dark is instant, which feels honest. */
+    el.style.setProperty('--d', want ? (POWER_BASE_MS + B.depth[i] * POWER_STEP_MS) + 'ms' : '0ms');
+    if (want) { el.classList.add('lit'); el.classList.toggle('s2', want === 2); }
+    else      { el.classList.remove('lit', 's2'); }
+    B.shown[i] = want;
+  }
+  const N2 = B.w * B.h;
+  elProg.style.width = (B.litCount / N2 * 100).toFixed(1) + '%';
+  elCount.textContent = B.litCount + '/' + N2;
+}
+
+function updateHud() {
+  elLevel.textContent = String(currentLevelIdx + 1);
+  elMoves.textContent = String(B.moves);
+}
+
+/* ── Layout: fit the grid into whatever space the HUD leaves ──── */
+let topbarH = 0;
+/** The status-bar gap is pure CSS — `calc(max(--sbh, env(safe-area-inset-top)))`
+ *  in #topbar — so the OS value still wins when native reports 0 on a notched
+ *  phone (game-common §2, priority 3). JS only feeds --sbh and reads the height. */
+function measureTopbar() {
+  document.documentElement.style.setProperty('--sbh', getStatusBarHeight() + 'px');
+  topbarH = elTopbar.offsetHeight;
+}
+function layout() {
+  if (!B) return;
+  const gap = 3;
+  const availW = Math.min(window.innerWidth, 520) - 22;
+  const availH = window.innerHeight - topbarH - 26;
+  const t = Math.max(22, Math.floor(Math.min(
+    (availW - gap * (B.w - 1)) / B.w,
+    (availH - gap * (B.h - 1)) / B.h
+  )));
+  elBoard.style.setProperty('--t', t + 'px');
+  elBoard.style.setProperty('--g', gap + 'px');
+  document.getElementById('app').style.paddingTop = topbarH + 'px';
+}
+window.addEventListener('resize', function () { measureTopbar(); layout(); });
+
+/* ================================================================
+ * §4. Input — tap to turn
+ * ============================================================= */
+elBoard.addEventListener('pointerdown', function (e) {
+  const el = e.target.closest ? e.target.closest('.tile') : null;
+  if (!el) return;
+  e.preventDefault();
+  tapTile(Number(el.dataset.i));
+});
+
+function tapTile(i) {
+  if (lockInput || !B) return;
+  ensureAudio();
+  const el = tiles[i];
+  /* A cross turned 90° is the same cross: turning it would look broken and
+     would cost a move for nothing, so it just acknowledges the tap. */
+  if (B.period[i] === 1) {
+    el.classList.remove('nudge');
+    void el.offsetWidth;
+    el.classList.add('nudge');
+    sfxClick(true);
+    return;
+  }
+  B.rot[i] = (B.rot[i] + 1) & 3;
+  B.vis[i] += 1;
+  el.firstElementChild.style.transform = 'rotate(' + (B.vis[i] * 90) + 'deg)';
+  B.moves++;
+  updateHud();
+  sfxClick(false);
+
+  const before = B.litCount;
+  const solved = computePower();
+  renderPower();
+  if (B.litCount > before) sfxSurge(B.litCount - before);
+  persistLocalOnly();
+  if (tutStep >= 0) tutAdvance();
+  if (solved) levelSolved();
+}
+
+/* ================================================================
+ * §5. Level flow
+ * ============================================================= */
+function loadLevel(idx) {
+  levelEpoch++;
+  currentLevelIdx = Math.max(0, Math.min(idx, TOTAL_LEVELS - 1));
+  progressIdx = currentLevelIdx;
+  const gen = genBoard(currentLevelIdx);
+  B = gen;
+  const N = B.w * B.h;
+  B.lit = new Uint8Array(N);
+  B.depth = new Int16Array(N);
+  B.src = new Uint8Array(N);
+  B.queue = new Int16Array(N);
+  B.moves = 0;
+  B.solved = false;
+  B.litCount = 0;
+  lockInput = false;
+  elBoard.classList.remove('solved');
+  elDone.classList.add('hidden');
+  buildBoard();
+  computePower();
+  renderPower();
+  updateHud();
+  persist();
+  maybeStartTutorial();
+}
+
+/** Restore a half-played board saved in localStorage for THIS level. */
+function restoreRotations(rotStr, moves) {
+  const N = B.w * B.h;
+  if (typeof rotStr !== 'string' || rotStr.length !== N) return false;
+  for (let i = 0; i < N; i++) {
+    const c = rotStr.charCodeAt(i) - 48;
+    if (c < 0 || c > 3) return false;
+    B.rot[i] = c;
+  }
+  B.moves = (typeof moves === 'number' && moves >= 0) ? moves : 0;
+  for (let i = 0; i < N; i++) B.vis[i] = B.rot[i];
+  for (let i = 0; i < N; i++) {
+    tiles[i].firstElementChild.style.transform = 'rotate(' + (B.rot[i] * 90) + 'deg)';
+  }
+  computePower();
+  renderPower();
+  updateHud();
+  return true;
+}
+
+function starsFor(moves, par) {
+  if (moves <= par) return 3;
+  if (moves <= Math.ceil(par * 1.4)) return 2;
+  return 1;
+}
+
+function levelSolved() {
+  B.solved = true;
+  lockInput = true;
+  const s = starsFor(B.moves, B.par);
+  if (s > stars[currentLevelIdx]) stars[currentLevelIdx] = s;
+  elBoard.classList.add('solved');
+  hideTutorial();
+  sfxWin();
+  showDone(s);
+
+  /* Resume point moves on; the board snapshot is dropped because the level is
+     finished (`snapshot` omits it while B.solved). */
+  const finishedIdx = currentLevelIdx;
+  progressIdx = Math.min(finishedIdx + 1, TOTAL_LEVELS - 1);
+  persist();
+
+  const ep = levelEpoch;
+  setTimeout(function () {
+    if (ep !== levelEpoch) return;      // player already left this level
+    elDone.classList.add('hidden');
+    elBoard.classList.remove('solved');
+    /* Ad break every 5 levels (game-common §1.7) — the app decides if it has
+       one to show; the game only states the intent. */
+    if ((finishedIdx + 1) % 5 === 0 && finishedIdx + 1 < TOTAL_LEVELS) sendMessage('ads');
+    if (finishedIdx === TOTAL_LEVELS - 1) {
+      sendMessage('victory');                                     // §1.5 — NOT game_result
+    } else {
+      sendMessage('game_result', { result: 'win', showModal: true });
+    }
+  }, 1100);
+}
+
+function showDone(s) {
+  let html = '';
+  for (let k = 0; k < 3; k++) {
+    html += '<svg viewBox="0 0 24 24" aria-hidden="true"><path class="star-p'
+         + (k < s ? ' won' : '')
+         + '" d="M12 2l3 6.5 7 .7-5.2 4.7 1.5 6.9L12 17.4 5.7 20.8l1.5-6.9L2 9.2l7-.7z"/></svg>';
+  }
+  elDone.innerHTML = html;
+  elDone.classList.remove('hidden');
+}
+
+/* ── Native callbacks (game-common §1.3) ─────────────────────── */
+window.onAppPause = function () {
+  persist();
+  try { if (ac && ac.suspend) ac.suspend(); } catch (e) {}
+};
+window.onNextLevel = function () {
+  if (currentLevelIdx < TOTAL_LEVELS - 1) loadLevel(currentLevelIdx + 1);
+  else loadLevel(currentLevelIdx);
+};
+window.onRetryLevel = function () { loadLevel(currentLevelIdx); };
+
+/* ── HUD buttons ─────────────────────────────────────────────── */
+document.getElementById('back-btn').addEventListener('click', function (e) {
+  e.stopPropagation();
+  persist();
+  sendMessage('quit');
+});
+/* Restart is a local reset only — it fires NO event (game-common §1.6). */
+document.getElementById('restart-btn').addEventListener('click', function (e) {
+  e.stopPropagation();
+  if (lockInput) return;               // mid-celebration — let the win land
+  loadLevel(currentLevelIdx);
+});
+document.getElementById('sound-btn').addEventListener('click', function (e) {
+  e.stopPropagation();
+  muted = !muted;
+  this.classList.toggle('muted', muted);
+  if (!muted) { ensureAudio(); sfxClick(false); }
+  persist();
+});
+
+/* ================================================================
+ * §6. Tutorial — 3 steps, never blocks a tap (fruit-drop lesson)
+ * ============================================================= */
+let tutStep = -1;
+let tutTimer = 0;
+let tutOffered = false;
+
+/** Runs on the FIRST level of the session, not specifically level 1 — the app
+ *  can drop a brand-new player straight onto level 7 via `currentLevel`, and
+ *  they would otherwise never be told what a tap does. */
+function maybeStartTutorial() {
+  if (tutorialSeen || tutOffered) { hideTutorial(); return; }
+  tutOffered = true;
+  tutStep = 0;
+  showTutStep();
+}
+function showTutStep() {
+  const keys = ['tutRotate', 'tutCore', 'tutFinish'];
+  elTutText.textContent = t(keys[tutStep]);
+  elTutText.dir = (LANG === 'ar') ? 'rtl' : 'ltr';
+  elTut.classList.remove('hidden');
+  clearHint();
+  if (tutStep === 0) {
+    /* Breathe the first tile that is actually wrong — no arrow, no blocking. */
+    const N = B.w * B.h;
+    for (let i = 0; i < N; i++) {
+      if (B.period[i] > 1 && !B.lit[i]) { tiles[i].classList.add('hint'); break; }
+    }
+  } else if (tutStep === 1) {
+    tiles[B.cores[0]].classList.add('hint');
+    clearTimeout(tutTimer);
+    tutTimer = setTimeout(function () { tutStep = 2; showTutStep(); }, 2400);
+  } else {
+    clearTimeout(tutTimer);
+    tutTimer = setTimeout(finishTutorial, 3200);
+  }
+}
+function tutAdvance() {
+  if (tutStep === 0) { tutStep = 1; showTutStep(); }
+  else if (tutStep === 2) { clearTimeout(tutTimer); tutTimer = setTimeout(finishTutorial, 1600); }
+}
+function clearHint() {
+  const hinted = elBoard.querySelectorAll('.hint');
+  for (let i = 0; i < hinted.length; i++) hinted[i].classList.remove('hint');
+}
+function finishTutorial() {
+  tutorialSeen = true;
+  persist();
+  hideTutorial();
+}
+function hideTutorial() {
+  tutStep = -1;
+  clearTimeout(tutTimer);
+  elTut.classList.add('hidden');
+  if (B) clearHint();
+}
+document.getElementById('tut-skip').addEventListener('click', function (e) {
+  e.stopPropagation();
+  finishTutorial();
+});
+
+/* ================================================================
+ * §7. Sound — synthesised, no external files, no music bed
+ * ============================================================= */
+let ac = null, bus = null;
+function ensureAudio() {
+  if (ac) { if (ac.state === 'suspended') { try { ac.resume(); } catch (e) {} } return; }
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    ac = new Ctx();
+    bus = ac.createGain();
+    bus.gain.value = 0.5;
+    bus.connect(ac.destination);
+  } catch (e) { ac = null; }
+}
+function blip(freq, dur, type, gain, delay) {
+  if (!ac || muted) return;
+  const t0 = ac.currentTime + (delay || 0);
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = type || 'sine';
+  o.frequency.setValueAtTime(freq, t0);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(gain, t0 + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g); g.connect(bus);
+  o.start(t0); o.stop(t0 + dur + 0.02);
+}
+function sfxClick(soft) {
+  if (!ac || muted) return;
+  blip(soft ? 190 : 320, 0.07, 'triangle', soft ? 0.05 : 0.09, 0);
+}
+/** One gliding tone for a whole surge instead of one oscillator per tile — a
+ *  chain reaction can light 30 tiles at once and 30 voices sounds like static. */
+function sfxSurge(n) {
+  if (!ac || muted) return;
+  const t0 = ac.currentTime;
+  const dur = Math.min(0.5, 0.09 + n * 0.02);
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(520, t0);
+  o.frequency.exponentialRampToValueAtTime(520 * (1 + Math.min(1, n / 12)), t0 + dur);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(0.07, t0 + 0.03);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g); g.connect(bus);
+  o.start(t0); o.stop(t0 + dur + 0.02);
+}
+function sfxWin() {
+  const f = [523.25, 659.25, 783.99, 1046.5];
+  for (let i = 0; i < f.length; i++) blip(f[i], 0.4, 'sine', 0.09, i * 0.075);
+}
+
+/* ================================================================
+ * §8. Boot
+ * ============================================================= */
+function bootGame() {
+  LANG = getLanguage();
+  applyUiFont(LANG);
+  document.getElementById('lbl-level').textContent = t('level');
+  document.getElementById('lbl-moves').textContent = t('moves');
+  document.getElementById('tut-skip-label').textContent = t('skip');
+
+  const saved = parseInitialData();
+  let resumeIdx = 0, resumeRot = null, resumeMoves = 0;
+  if (saved) {
+    if (typeof saved.st === 'string') {
+      for (let i = 0; i < TOTAL_LEVELS && i < saved.st.length; i++) {
+        const v = saved.st.charCodeAt(i) - 48;
+        stars[i] = (v >= 0 && v <= 3) ? v : 0;
+      }
+    }
+    muted = saved.m === 1 || saved.m === true;
+    tutorialSeen = saved.tut === 1 || saved.tut === true;
+    if (typeof saved.lv === 'number' && saved.lv >= 0) resumeIdx = Math.min(saved.lv, TOTAL_LEVELS - 1);
+    if (typeof saved.r === 'string') { resumeRot = saved.r; resumeMoves = saved.mv || 0; }
+  }
+  /* The app is authoritative when it names a level; otherwise use our own
+     saved progress (game-common §3: 0/absent means "no saved level"). */
+  const fromNative = getInitialLevelIdx();
+  const startIdx = fromNative >= 0 ? fromNative : resumeIdx;
+  /* Only replay the snapshot onto the level it was taken on. */
+  if (!saved || saved.blv !== startIdx) resumeRot = null;
+
+  document.getElementById('sound-btn').classList.toggle('muted', muted);
+  measureTopbar();
+  loadLevel(startIdx);
+  if (resumeRot) restoreRotations(resumeRot, resumeMoves);
+}
+
+/* Android can run injectedJavaScriptBeforeContentLoaded AFTER this inline
+   script, so poll briefly for any injected input, then boot anyway. */
+(function waitForNativeInjection() {
+  const start = Date.now();
+  (function check() {
+    if (typeof window.currentLevel === 'number' ||
+        typeof window.data === 'string' ||
+        typeof window.language === 'string' ||
+        Date.now() - start > 200) {
+      bootGame();
+    } else {
+      setTimeout(check, 10);
+    }
+  })();
+})();
+
+/* QA hook — lets the headless-browser bot drive the game without faking taps
+   through the pointer stack. Harmless in production. */
+window.__el = {
+  get B() { return B; },
+  get level() { return currentLevelIdx; },
+  tap: tapTile,
+  load: loadLevel,
+  rotMask: rotMask,
+  periodOf: periodOf,
+  genBoard: genBoard,
+  levelConfig: levelConfig,
+  TOTAL_LEVELS: TOTAL_LEVELS,
+  setAuto: function (v) { devAuto = v; },
+};
+</script>
+</body>
+</html>
