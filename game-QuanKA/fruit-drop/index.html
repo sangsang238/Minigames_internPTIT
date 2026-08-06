@@ -329,6 +329,24 @@ body {
    No fruit in the set is blue, so this one accent is always distinguishable.
    The ring is declared on the element as well as in the keyframes so it still
    shows if the animation never runs (reduced-motion, or a paused compositor). */
+/* ORDER MATTERS HERE, and it is `landed` then `hint` then `pop`.
+   All three set `animation` on .tile-face at the SAME specificity (0,3,0), so
+   whichever is declared LAST wins on a tile carrying more than one class.
+
+   `landed` must lose to `hint`. It used to win, and that was a real bug: at the
+   tutorial's DROP step one of the two hinted tiles has just fallen, so it
+   carried `landed` too and ran tileLand INSTEAD of hintBlink. It therefore did
+   not blink at all for 180ms, and only started once `landed` came off - about
+   half of hintBlink's 380ms half-period later, so the pair blinked ALTERNATELY
+   instead of together. Removing `landed` later does not restart anything,
+   because the winning `animation` value never changes.
+
+   `pop` must still beat `hint`, or a pair matched straight off a hint would
+   blink instead of popping. Hence landed < hint < pop, not simply hint last. */
+/* Landing squash — sells the gravity without any JS per frame */
+@keyframes tileLand { 0% { transform: scaleY(1); } 40% { transform: scaleY(.86) translateY(6%); } 100% { transform: scaleY(1); } }
+.tile.landed .tile-face { animation: tileLand .18s ease-out; }
+
 .tile.hint { z-index: 2; }
 .tile.hint .tile-face {
   box-shadow: 0 0 0 4px var(--sky);
@@ -342,10 +360,6 @@ body {
                      100% { transform: scale(.2); opacity: 0; } }
 .tile.pop { pointer-events: none; z-index: 4; }
 .tile.pop .tile-face { animation: tilePop .26s ease-in forwards; }
-
-/* Landing squash — sells the gravity without any JS per frame */
-@keyframes tileLand { 0% { transform: scaleY(1); } 40% { transform: scaleY(.86) translateY(6%); } 100% { transform: scaleY(1); } }
-.tile.landed .tile-face { animation: tileLand .18s ease-out; }
 
 /* Invalid pair shake — margin-left, not transform: transform is holding the
    grid position, and the standalone `translate` property needs Chromium 104+ */

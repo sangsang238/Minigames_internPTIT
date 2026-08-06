@@ -331,6 +331,29 @@ restart animation, nên vẫn lệch nếu không tua).
 Đo: gợi ý đầu sáng đúng 2 ô → sau một lượt trọng lực còn **0 ô sót** → gợi ý thứ
 hai sáng đúng **2 ô**, lệch nhịp **0 ms**, `clearHint` gỡ sạch.
 
+**2b. Vẫn lệch nhịp — ở đúng bước "fruit falls".** Lần sửa trên chưa đủ, vì
+nguyên nhân thứ hai nằm ở **CSS chứ không phải JS**. `.tile.landed .tile-face`,
+`.tile.hint .tile-face` và `.tile.pop .tile-face` **cùng đặt `animation` ở cùng
+độ ưu tiên (0,3,0)**, nên cái nào **khai báo sau thì thắng**. `landed` đang khai
+báo sau `hint`.
+
+Bước DROP là bước **duy nhất** mà một trong hai ô gợi ý **vừa rơi xuống**, nên
+nó mang cả `landed` lẫn `hint` và chạy `tileLand` **thay vì** `hintBlink`: nó
+**không nháy chút nào trong 180ms**, rồi mới bắt đầu khi `landed` được gỡ — trễ
+xấp xỉ nửa chu kỳ 380ms của `hintBlink`, nên hai ô nháy **so le** nhau.
+
+Thứ tự bắt buộc là **`landed` < `hint` < `pop`**, không phải cứ để `hint` cuối:
+- `hint` phải thắng `landed` (lỗi trên).
+- `pop` vẫn phải thắng `hint`, không thì một cặp được nối ngay từ gợi ý sẽ
+  **nháy thay vì nổ**.
+
+Gỡ `landed` sau đó không restart gì cả, vì giá trị `animation` thắng cuộc không
+hề đổi. Đã ghi rõ ràng buộc ba chiều này ngay trên khối CSS.
+
+Test `dropblink` kiểm cả ba quan hệ và đi tới bước DROP thật. Chạy nó trên
+**thứ tự CSS cũ** thì nó bắt lỗi đúng như mentor mô tả (`tileLand` vs
+`hintBlink`); trên thứ tự mới thì cả hai ô đều `hintBlink`.
+
 ### Không bao giờ phải xáo bàn nữa
 
 Hỏi 2026-08-05: "làm sao để 0 bao giờ phải xáo mà tốn ít tài nguyên?". Câu trả
