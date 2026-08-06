@@ -174,6 +174,15 @@ body {
   will-change: transform;
   transition: transform .25s linear, background .3s;
 }
+/* Tutorial: the timer BLINKS to introduce itself, instead of an arrow pointing
+   at it from below. The arrow was a fixed-position SVG that had to be measured
+   and repositioned against the bar on every layout change; the bar can simply
+   draw attention to itself. `steps()` is right here - this is a blink, and a
+   blink is exactly what stepped timing is for (a SCALE would not be). Animating
+   opacity keeps it on the compositor, so it costs no main-thread work. */
+@keyframes tutBarBlink { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+#time-bar-bg.tut-focus { animation: tutBarBlink .7s steps(2,end) infinite; }
+
 #time-bar-fill.warn { background: var(--sun); }
 @keyframes timeDanger { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
 #time-bar-fill.danger { background: var(--tomato); animation: timeDanger .6s steps(2,end) infinite; }
@@ -479,12 +488,6 @@ body {
 #tut-banner.hidden { opacity: 0; pointer-events: none; }
 #tut-text { flex: 1; color: var(--ink); font-size: 14px; line-height: 1.4; font-weight: 800; }
 
-#tut-arrow {
-  position: fixed; z-index: 245; width: 26px; height: 54px; pointer-events: none;
-  animation: arrowBob .9s steps(3,end) infinite;
-}
-#tut-arrow.hidden { display: none; }
-@keyframes arrowBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 
 #tut-check { position: fixed; z-index: 45; pointer-events: none; width: 46px; height: 46px;
              margin: -23px 0 0 -23px; opacity: 0; }
@@ -599,12 +602,6 @@ body {
   </button>
 </div>
 
-<svg id="tut-arrow" class="hidden" viewBox="0 0 26 54" aria-hidden="true">
-  <path d="M13 52 L13 14 M4 24 L13 6 L22 24" fill="none" stroke="#141210"
-        stroke-width="6" stroke-linecap="square" stroke-linejoin="miter"/>
-  <path d="M13 52 L13 14 M4 24 L13 6 L22 24" fill="none" stroke="#E8462F"
-        stroke-width="2.5" stroke-linecap="square" stroke-linejoin="miter"/>
-</svg>
 
 <!-- Overlays -->
 <div id="combo-badge" class="pop-txt" aria-live="polite"></div>
@@ -979,7 +976,7 @@ const praiseEl     = document.getElementById('praise');
 const comboEl      = document.getElementById('combo-badge');
 const tutBanner    = document.getElementById('tut-banner');
 const tutTextEl    = document.getElementById('tut-text');
-const tutArrow     = document.getElementById('tut-arrow');
+const barBg        = document.getElementById('time-bar-bg');
 const tutCheck     = document.getElementById('tut-check');
 const pauseVeil    = document.getElementById('pause-veil');
 const soundBtn     = document.getElementById('sound-btn');
@@ -1857,9 +1854,6 @@ function clearPendingMatch() { pendingMatch = null; }
 let idleAcc = 0;
 function handleTap(r, c) {
   if (ended || paused) return;
-  /* The tutorial drives its own pacing and asserts on each step, so it keeps
-     the old hard lock rather than queuing anything. */
-  if (busy && tutorialMode) return;
   if (!tiles[r] || !tiles[r][c]) return;
   idleAcc = 0;
   audioEnsure();
@@ -2236,7 +2230,7 @@ function loadLevel(idx, snap) {
   dropCombo = 0; droppedSet = null; idleAcc = 0; lastTickSec = -1;
   tutorialMode = false; tutTimerRunning = false;
   tutBanner.classList.add('hidden');
-  tutArrow.classList.add('hidden');
+  barBg.classList.remove('tut-focus');
   hudSubEl.style.display = '';
   pauseVeil.classList.add('hidden');
 
@@ -2416,16 +2410,21 @@ function startTutorial() {
 function setTutPhase(n, target) {
   tutStep = n;
   tutTarget = target || null;
+  /* The lesson - and therefore which pair is legal - just changed, so a pair
+     queued against the previous step must not survive into this one.
+     (Steps 0-2 only accept taps on their own target, so this is belt and
+     braces; step 3 is free play and can genuinely have one in flight.) */
+  clearPendingMatch();
   clearHint();
   const key = ['tutLink', 'tutDrop', 'tutBend', 'tutClear'][n] || 'tutClear';
   tutTextEl.textContent = t(key);
   tutBanner.classList.remove('hidden');
   if (n === 3) {
-    hudSubEl.style.display = '';        // reveal the timer and point at it
+    hudSubEl.style.display = '';        // reveal the timer, and let it blink
     renderTimer();
-    tutArrow.classList.remove('hidden');
+    barBg.classList.add('tut-focus');
   } else {
-    tutArrow.classList.add('hidden');
+    barBg.classList.remove('tut-focus');
   }
   if (tutTarget) showHintPair(tutTarget);
   resize();
@@ -2437,11 +2436,8 @@ function positionTutorialChrome() {
   const bh = Math.ceil(tutBanner.getBoundingClientRect().height);
   const wrapTop = boardWrapEl.getBoundingClientRect().top;
   tutBanner.style.top = Math.max(headH + 6, headH + (wrapTop - headH - bh) / 2) + 'px';
-  if (!tutArrow.classList.contains('hidden')) {
-    const bar = document.getElementById('time-bar-bg').getBoundingClientRect();
-    tutArrow.style.left = (bar.left + bar.width / 2 - 13) + 'px';
-    tutArrow.style.top  = (bar.bottom + 6) + 'px';
-  }
+  /* Nothing else to place: the timer cue lives on the bar itself now, so this
+     no longer has to measure the bar on every layout change. */
 }
 
 function samePair(p, a, b) {
@@ -2510,7 +2506,7 @@ function finishTutorial() {
   tutorialMode = false;
   tutTarget = null;
   tutBanner.classList.add('hidden');
-  tutArrow.classList.add('hidden');
+  barBg.classList.remove('tut-focus');
   hudSubEl.style.display = '';
   tutorialSeen = true;
   saveDataNow(lightData());

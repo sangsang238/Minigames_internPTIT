@@ -87,8 +87,17 @@ toạ độ), nên không bao giờ có bước yêu cầu thứ mà bàn không
 2. **DROP** — sau cú rơi, game tự tìm **cặp do chính cú rơi tạo ra** và bắt dọn nó.
 3. **BEND** — chạm cặp cùng loại **bị chặn**; game vẽ đường "quá vòng" **đúng 3
    lần rẽ** (đỏ nét đứt + chấm ở mỗi chỗ rẽ) cho thấy vì sao không nối được.
-4. **CLEAR** — dọn nốt bàn, hiện **timer demo** + mũi tên chỉ lên nó (timer chỉ
-   chạy sau thao tác đầu tiên, và **không bao giờ gây thua**).
+4. **CLEAR** — dọn nốt bàn, hiện **timer demo** và **chính thanh giờ nhấp nháy**
+   để tự giới thiệu (timer chỉ chạy sau thao tác đầu tiên, và **không bao giờ
+   gây thua**).
+
+   Trước đây là một **mũi tên SVG `position:fixed` chỉ lên thanh giờ** — nó phải
+   được **đo và đặt lại vị trí theo thanh giờ mỗi lần layout đổi**. Thanh giờ tự
+   nháy được thì cần gì ai chỉ vào: bỏ hẳn mũi tên (markup + CSS + JS), và
+   `positionTutorialChrome()` không còn phải `getBoundingClientRect()` thanh giờ
+   nữa. Nháy bằng `opacity` nên chạy trên compositor, không tốn main thread; và
+   `steps()` ở đây là **đúng chỗ** — đây là một cú *nháy*, thứ mà stepped timing
+   sinh ra để làm (một cú *scale* thì không).
 
 `buildTutorialBoard()` sinh lại bàn tới khi **cả 4 bài học đều dạy được** và
 greedy-solve (có trọng lực) còn **0 ô** — verify bằng máy, không phải bằng mắt.
@@ -258,8 +267,15 @@ Hai chi tiết bắt buộc để nó đúng:
 - Cặp đang xếp hàng được **kiểm lại trên bàn ĐÃ LẮNG** (còn tồn tại? còn cùng
   loại? còn nối được?) trước khi chơi — đường đi tồn tại lúc đang rơi có thể
   không còn tồn tại sau khi rơi xong.
-- Tutorial **giữ khoá cũ** (nó tự điều nhịp và assert theo từng bước), và
-  `autoShuffle` huỷ cả ô đang chọn lẫn cặp đang xếp hàng vì nó gán **loại quả
+- **Tutorial nay cũng KHÔNG chặn nữa** (sửa 2026-08-05 — trước đó nó giữ khoá
+  cứng `if (busy && tutorialMode) return;`). An toàn vì **chính tutorial đã chặn
+  ở tầng khác**: bước 0–2 chỉ nhận cú chạm vào đúng cặp mẫu (`tutAllowsFirst`),
+  nên **không thể** có nước xếp hàng làm hụt bài học; bước 3 là chơi tự do và
+  `tutOnBoardChange` ở bước đó chỉ kiểm `pairsLeft <= 0`, tức nếu một nước xếp
+  hàng làm bỏ qua một nhịp `afterBoardChange` thì lần settle sau bắt lại ngay.
+  `setTutPhase` vẫn gọi `clearPendingMatch()` cho chắc, vì đổi bước là đổi luôn
+  cặp nào được coi là hợp lệ.
+- `autoShuffle` huỷ cả ô đang chọn lẫn cặp đang xếp hàng vì nó gán **loại quả
   mới** lên chính những tile cũ.
 
 ### Không bao giờ phải xáo bàn nữa
