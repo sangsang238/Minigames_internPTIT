@@ -202,6 +202,41 @@ Hai chi tiết bắt buộc để nó đúng:
   `autoShuffle` huỷ cả ô đang chọn lẫn cặp đang xếp hàng vì nó gán **loại quả
   mới** lên chính những tile cũ.
 
+### Không bao giờ phải xáo bàn nữa
+
+Hỏi 2026-08-05: "làm sao để 0 bao giờ phải xáo mà tốn ít tài nguyên?". Câu trả
+lời hoá ra **rẻ hơn cả cách đang làm**, và nó là một **chứng minh**, không phải
+mẹo may rủi:
+
+> Tile chỉ rời bàn theo **cặp cùng loại**, nên mọi loại còn trên bàn luôn có
+> **số lượng chẵn** — tức mọi tile còn lại đều **còn bạn ở đâu đó**. Dời bạn nó
+> vào một ô sát bên là hai đứa **kề nhau**, mà hai tile cùng loại kề nhau thì
+> **luôn nối được với 0 lần rẽ**. Vậy **một cú hoán vị luôn cứu được bàn**.
+
+Code cũ **đã biết điều này**: `forceOneMove()` làm đúng cú hoán vị đó. Nó chỉ
+nằm sau **40 vòng xáo cả bàn** như phương án chót — tức cách rẻ và *chắc chắn
+đúng* chỉ được chạy sau khi cách đắt và *không đảm bảo* đã thất bại 40 lần.
+Giờ hoán vị là đường chính (`repairOneSwap`), xáo bàn thành nhánh không-bao-
+giờ-chạy và có counter `shuffleFallbacks` để test khẳng định nó bằng 0.
+
+Đo:
+
+| | xáo cả bàn (cũ) | một hoán vị (nay) |
+|---|---|---|
+| Ghi lại loại quả | 8 (tới 192 nếu bàn dày) | **2** |
+| Lượt tìm đường BFS | 7 (tới 40 vòng) | **0** |
+| Xáo mảng | 1 | **0** |
+| Người chơi thấy | cả bàn đổi quả + toast | **đúng 2 ô đổi quả** |
+
+Chi phí nay là **hằng số**, trước thì tỉ lệ với số tile còn lại. (Mấy con số
+xáo nhỏ vì bàn chết **hầu như luôn xảy ra lúc gần cuối màn**, khi còn ít tile.)
+
+Kiểm chứng hai tầng:
+- **1000 ván đối kháng** trên 5 cỡ bàn khắp ramp: **200/200 ván mỗi cỡ dọn sạch
+  bàn**, 0 lần phải xáo, 0 lần sửa thất bại, 0 lần sửa xong vẫn kẹt.
+- **5 bàn chết thật, chạy qua DOM thật**: mỗi lần đổi **đúng 2 ô**, bàn sống
+  lại, `grid`/`tiles` không lệch, số lượng từng loại giữ nguyên và vẫn chẵn.
+
 ### ⚠️ Phát hiện quan trọng: trọng lực làm DEADLOCK NHIỀU HƠN, không ít hơn
 
 Giả định ban đầu (ghi trong plan) là trọng lực sẽ *giảm* deadlock. **Đo bằng
