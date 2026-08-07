@@ -95,6 +95,9 @@ body {
 
 #hud-bar { display: flex; align-items: center; gap: 8px; }
 
+/* Pill metrics are lifted from index(exampleforheader).html — the file the
+   mentor pointed at. The first pass copied fruit-connect's numbers, which are
+   ~20% tighter, so the whole header read small next to the reference. */
 .hud-scores { flex: 1; min-width: 0; display: flex; gap: 8px; }
 .hud-pill {
   flex: 1 1 0;
@@ -103,17 +106,17 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 4px 8px 5px 6px;
+  gap: 5px;
+  padding: 7px 8px 9px 4px;
   background: var(--panel);
   border: 2px solid var(--line);
-  border-radius: 10px;
+  border-radius: 14px;
   -webkit-user-select: none; user-select: none;
 }
 .pill-text { display: flex; flex-direction: column; align-items: center; min-width: 0; flex: 1 0 auto; }
-.pill-ico { flex: 0 0 auto; width: clamp(15px, 4.4vw, 20px); height: clamp(15px, 4.4vw, 20px); display: block; }
+.pill-ico { flex: 0 0 auto; width: clamp(16px, 4.8vw, 21px); height: clamp(16px, 4.8vw, 21px); display: block; }
 .hud-pill .label {
-  font-size: clamp(8px, 2.7vw, 10px);
+  font-size: clamp(10px, 3.2vw, 13px);
   font-weight: 800;
   letter-spacing: 1.4px;
   color: var(--text-soft);
@@ -121,42 +124,55 @@ body {
   white-space: nowrap;
 }
 .hud-pill .value {
-  font-size: clamp(15px, 4.6vw, 22px);
+  font-size: clamp(16px, 5vw, 24px);
   line-height: 1.1;
   color: var(--text);
   white-space: nowrap;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
 }
-#hud-moves { color: var(--gold); }
+#hud-best { color: var(--gold); }
 
-/* Sub-row: Restart | lit-progress bar | n/N */
+/* Sub-row: LEVEL n | moves-left bar | moves left — same shape as the timer row
+   in fruit-connect / animal-connect, with the countdown being moves not time. */
 #hud-sub { display: flex; align-items: center; gap: 9px; padding: 0 2px; }
-#prog-bg {
-  flex: 1;
-  height: 8px;
-  border-radius: 5px;
-  background: var(--panel);
-  border: 2px solid var(--line);
-  overflow: hidden;
-}
-#prog-fill {
-  height: 100%;
-  width: 0%;
-  background: var(--on);
-  border-radius: 3px;
-  transition: width .22s linear;
-}
-#hud-count {
+.sub-level {
   flex: 0 0 auto;
   font-size: 12px;
-  font-weight: 800;
-  letter-spacing: .6px;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
   color: var(--text-soft);
-  font-variant-numeric: tabular-nums;
-  min-width: 44px;
-  text-align: right;
+  white-space: nowrap;
 }
+.sub-level #hud-level { color: var(--text); font-weight: 900; }
+
+#moves-bar-bg {
+  flex: 1; min-width: 0; height: 12px;
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: 5px;
+  overflow: hidden;
+}
+#moves-bar-fill {
+  height: 100%; width: 100%;
+  background: var(--on);
+  /* scaleX, NOT width — width relayouts and repaints the bar on every tap;
+     transform stays on the compositor (fruit-connect's timer-bar lesson). */
+  transform-origin: left center;
+  transform: scaleX(1);
+  will-change: transform;
+  transition: transform .2s linear, background .3s;
+}
+#moves-bar-fill.warn   { background: var(--gold); }
+@keyframes movesDanger { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+#moves-bar-fill.danger { background: #FF5A4E; animation: movesDanger .6s steps(2,end) infinite; }
+
+#hud-left {
+  flex: 0 0 auto; min-width: 30px; text-align: right;
+  font-size: 15px; font-weight: 900; color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+#hud-left.danger { color: #FF5A4E; }
 
 /* ── btn3d (game-common §1.4 / §1.6), flat skin ───────────────── */
 .btn3d {
@@ -197,10 +213,9 @@ body {
   transition: transform .08s ease-out;
 }
 .btn3d:active .btn3d-surface { transform: scale(.93); }
-.btn3d.btn-icon { --surface-height: 42px; --surface-width: 42px; --surface-padding-x: 0; }
-.btn3d.sm { --surface-height: 26px; --surface-width: 26px; --radius: 8px; }
+/* 50px ≈ 0.92 × the pill height, the same ratio the reference header uses. */
+.btn3d.btn-icon { --surface-height: 50px; --surface-width: 50px; --surface-padding-x: 0; --radius: 14px; }
 .back-ico    { width: 52%; height: 52%; fill: currentColor; display: block; }
-.restart-ico { width: 62%; height: 62%; fill: currentColor; display: block; }
 .snd-ico     { width: 58%; height: 58%; display: block; }
 .snd-slash   { display: none; }
 #sound-btn.muted .snd-waves { display: none; }
@@ -245,7 +260,10 @@ body {
   transition: transform .19s cubic-bezier(.34,1.3,.64,1);
   will-change: transform;
 }
-.tile svg { width: 100%; height: 100%; display: block; overflow: visible; }
+/* overflow stays CLIPPED. The first pass let the round caps spill past the
+   tile so they bridged the 3px gap, but that put a visible blob outside every
+   tile's rounded frame — worst on stubs pointing at the board edge. */
+.tile svg { width: 100%; height: 100%; display: block; }
 
 .wire {
   fill: none;
@@ -256,10 +274,6 @@ body {
 }
 .tile.lit .wire      { stroke: var(--on); }
 .tile.lit.s2 .wire   { stroke: var(--on2); }
-
-.node { fill: var(--off); transition: fill .22s linear var(--d); }
-.tile.lit .node    { fill: var(--on); }
-.tile.lit.s2 .node { fill: var(--on2); }
 
 /* Leaf tiles are lamps: hollow ring while dark, solid while powered. */
 .bulb {
@@ -351,18 +365,18 @@ body {
           <path d="M13.6 2 5.4 13.4h5.1L9.6 22l8.8-11.8h-5.4z" fill="#4FE3C1"/>
         </svg>
         <div class="pill-text">
-          <div class="label" id="lbl-level">LEVEL</div>
-          <div class="value" id="hud-level">1</div>
+          <div class="label" id="lbl-score">SCORE</div>
+          <div class="value" id="hud-score">0</div>
         </div>
       </div>
       <div class="hud-pill">
         <svg class="pill-ico" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 4.2a7.8 7.8 0 1 0 7.4 5.3" fill="none" stroke="#FFC24D" stroke-width="2.6" stroke-linecap="round"/>
-          <path d="M13.2 2.1 18 5.4l-4.4 3.5z" fill="#FFC24D"/>
+          <path d="M3 18 4.2 8 9 12.5 12 5.5 15 12.5 19.8 8 21 18Z" fill="#FFC24D"/>
+          <rect x="3.4" y="16.6" width="17.2" height="3.2" rx="1" fill="#FFC24D"/>
         </svg>
         <div class="pill-text">
-          <div class="label" id="lbl-moves">MOVES</div>
-          <div class="value" id="hud-moves">0</div>
+          <div class="label" id="lbl-best">BEST</div>
+          <div class="value" id="hud-best">0</div>
         </div>
       </div>
     </div>
@@ -378,16 +392,9 @@ body {
     </div>
   </div>
   <div id="hud-sub">
-    <div class="btn3d btn-icon sm" id="restart-btn" role="button" aria-label="Restart" tabindex="0">
-      <span class="btn3d-shadow"></span>
-      <span class="btn3d-surface">
-        <svg class="restart-ico" viewBox="0 0 100 100" aria-hidden="true">
-          <path fill="currentColor" d="m50.7 19.003 4.793-4.793c2.696-2.697 2.696-6.991 0-9.688s-6.991-2.696-9.687 0L29.327 21.001a6.812 6.812 0 0 0 0 9.687l16.479 16.478a6.9 6.9 0 0 0 4.793 1.998c1.798 0 3.496-.7 4.794-1.998a6.812 6.812 0 0 0 0-9.687l-4.794-4.794c13.682.4 24.768 11.685 24.768 25.467 0 14.081-11.485 25.466-25.467 25.466S24.534 72.233 24.534 58.252c0-3.096.599-6.192 1.597-8.989 1.299-3.495-.4-7.49-3.994-8.788-3.496-1.298-7.49.4-8.789 3.995-1.698 4.394-2.496 9.088-2.496 13.882C10.852 79.923 28.428 97.5 50 97.5s39.148-17.577 39.148-39.148c0-21.472-17.177-38.95-38.449-39.349z"/>
-        </svg>
-      </span>
-    </div>
-    <div id="prog-bg"><div id="prog-fill"></div></div>
-    <span id="hud-count">0/9</span>
+    <span class="sub-level"><span id="lbl-level">LEVEL</span> <span id="hud-level">1</span></span>
+    <div id="moves-bar-bg"><div id="moves-bar-fill"></div></div>
+    <span id="hud-left">0</span>
   </div>
 </div>
 
@@ -427,7 +434,7 @@ const DEFAULT_LANG = 'en';
 
 const I18N = {
   en: {
-    level: 'LEVEL', moves: 'MOVES', skip: 'Skip',
+    score: 'SCORE', best: 'BEST', level: 'LEVEL', skip: 'Skip',
     tutRotate: 'Tap a tile to turn it.',
     tutCore:   'Power flows out from the core.',
     tutFinish: 'Light up every tile to finish.',
@@ -566,6 +573,15 @@ function parseInitialData() {
 let stars = new Array(TOTAL_LEVELS).fill(0);   // 0..3 per level
 let muted = false;
 let tutorialSeen = false;
+/** Score accumulates across a RUN (level 1 -> out of moves), like
+ *  fruit-connect. `best` is the highest run ever finished. */
+let score = 0;
+let best = 0;
+/** What the BEST pill shows. game-common §1.2 is explicit that the Best HUD
+ *  must NOT track the score live — it holds the old record while you play and
+ *  only refreshes when the run ends, so you can see yourself passing it. `best`
+ *  is still written the instant it changes, so a kill mid-run loses nothing. */
+let bestShown = 0;
 /** Which level to open on next launch — "where you left off", not "furthest
  *  reached". It has to track the level actually being played, or replaying an
  *  old one would strand its half-finished board (which is tagged `blv`).
@@ -573,13 +589,16 @@ let tutorialSeen = false;
 let progressIdx = 0;
 
 function lightData() {
-  return { lv: progressIdx, st: stars.join(''), m: muted ? 1 : 0, tut: tutorialSeen ? 1 : 0 };
+  return {
+    lv: progressIdx, st: stars.join(''), m: muted ? 1 : 0, tut: tutorialSeen ? 1 : 0,
+    sc: score, best: best,
+  };
 }
 /** The half-played board is tagged with ITS level (`blv`), not the progress
  *  pointer, so a snapshot is never replayed onto the wrong puzzle. */
 function snapshot() {
   const snap = lightData();
-  if (B && !B.solved) { snap.blv = currentLevelIdx; snap.r = B.rot.join(''); snap.mv = B.moves; }
+  if (B && !B.solved && !runOver) { snap.blv = currentLevelIdx; snap.r = B.rot.join(''); snap.mv = B.moves; }
   return snap;
 }
 /** Light -> native, board snapshot -> localStorage (game-common §1.2). */
@@ -728,9 +747,10 @@ function genBoard(idx) {
 const elBoard   = document.getElementById('board');
 const elTopbar  = document.getElementById('topbar');
 const elLevel   = document.getElementById('hud-level');
-const elMoves   = document.getElementById('hud-moves');
-const elProg    = document.getElementById('prog-fill');
-const elCount   = document.getElementById('hud-count');
+const elScore   = document.getElementById('hud-score');
+const elBest    = document.getElementById('hud-best');
+const elLeft    = document.getElementById('hud-left');
+const elBarFill = document.getElementById('moves-bar-fill');
 const elTut     = document.getElementById('tut');
 const elTutText = document.getElementById('tut-text');
 const elDone    = document.getElementById('done');
@@ -738,6 +758,9 @@ const elDone    = document.getElementById('done');
 let B = null;          // live board
 let tiles = null;      // HTMLCollection of .tile
 let lockInput = false;
+/** True once the run has ended on an out-of-moves loss; the app's popup owns
+ *  what happens next, and Retry then means "new run", not "same level". */
+let runOver = false;
 /** Bumped by every loadLevel. The result message is fired on a 1.1s timer, so
  *  it must re-check the epoch: Back/Retry/Next landing inside that window would
  *  otherwise report a result for a level the player already left. */
@@ -746,12 +769,17 @@ let levelEpoch = 0;
 const POWER_BASE_MS = 105;   // ~55% of the rotation, so light lands as it snaps
 const POWER_STEP_MS = 22;    // per BFS ring
 
+/* Stop each arm HALF A STROKE short of the edge (15/2 = 7.5) so the round cap
+   lands exactly ON the tile boundary instead of hanging past it. The caps also
+   pile up at (50,50) into a clean disc of exactly the stroke's own radius, so
+   T-junctions and elbows join smoothly with nothing added on top — the lump the
+   mentor spotted was a separate r=9 dot sitting proud of the 7.5 stroke. */
 function wirePath(m) {
   let d = '';
-  if (m & 1) d += 'M50 50L50 0';
-  if (m & 2) d += 'M50 50L100 50';
-  if (m & 4) d += 'M50 50L50 100';
-  if (m & 8) d += 'M50 50L0 50';
+  if (m & 1) d += 'M50 50L50 7.5';
+  if (m & 2) d += 'M50 50L92.5 50';
+  if (m & 4) d += 'M50 50L50 92.5';
+  if (m & 8) d += 'M50 50L7.5 50';
   return d;
 }
 function centreGlyph(i) {
@@ -763,7 +791,7 @@ function centreGlyph(i) {
     return '<path class="cg" d="M50 8 92 50 50 92 8 50Z"/><path class="cg-in" d="M50 36 64 50 50 64 36 50Z"/>';
   }
   if (deg === 1) return '<circle class="bulb" cx="50" cy="50" r="18"/>';
-  return '<circle class="node" cx="50" cy="50" r="9"/>';
+  return '';   /* junctions need no dot — the round caps already form one */
 }
 
 function buildBoard() {
@@ -834,14 +862,31 @@ function renderPower() {
     else      { el.classList.remove('lit', 's2'); }
     B.shown[i] = want;
   }
-  const N2 = B.w * B.h;
-  elProg.style.width = (B.litCount / N2 * 100).toFixed(1) + '%';
-  elCount.textContent = B.litCount + '/' + N2;
 }
 
 function updateHud() {
   elLevel.textContent = String(currentLevelIdx + 1);
-  elMoves.textContent = String(B.moves);
+  elScore.textContent = String(score);
+  updateMovesHud();
+}
+/** Only at run start and run end — never mid-run (see `bestShown`). */
+function updateBestHud() {
+  bestShown = best;
+  elBest.textContent = String(bestShown);
+}
+
+/** Moves left drives both the bar and the fail state, so it gets its own
+ *  refresh: scaleX on the compositor, colour steps at 1/3 and 1/6 left. */
+function updateMovesHud() {
+  const left = Math.max(0, B.movesLimit - B.moves);
+  const frac = B.movesLimit > 0 ? left / B.movesLimit : 0;
+  elLeft.textContent = String(left);
+  elBarFill.style.transform = 'scaleX(' + frac.toFixed(4) + ')';
+  const warn = frac <= 0.34 && frac > 0.16;
+  const danger = frac <= 0.16;
+  elBarFill.classList.toggle('warn', warn);
+  elBarFill.classList.toggle('danger', danger);
+  elLeft.classList.toggle('danger', danger);
 }
 
 /* ── Layout: fit the grid into whatever space the HUD leaves ──── */
@@ -895,7 +940,7 @@ function tapTile(i) {
   B.vis[i] += 1;
   el.firstElementChild.style.transform = 'rotate(' + (B.vis[i] * 90) + 'deg)';
   B.moves++;
-  updateHud();
+  updateMovesHud();
   sfxClick(false);
 
   const before = B.litCount;
@@ -905,17 +950,50 @@ function tapTile(i) {
   persistLocalOnly();
   if (tutStep >= 0) tutAdvance();
   if (solved) levelSolved();
+  else if (B.moves >= B.movesLimit) levelLost();
 }
 
 /* ================================================================
  * §5. Level flow
  * ============================================================= */
+/**
+ * How many turns the player gets. Deliberately loose early — the mentor asked
+ * for "rộng rãi, tầm lv10 trở lên rồi bắt đầu khó" — and it tightens toward par
+ * later. `par + 3` is a hard floor so no level can ever be handed out
+ * unwinnable, however small its par happens to be.
+ */
+function movesLimitFor(par, levelNum) {
+  let k;
+  if (levelNum <= 9)       k = 3.0;
+  else if (levelNum <= 20) k = 2.4;
+  else if (levelNum <= 35) k = 2.1;
+  else if (levelNum <= 50) k = 1.9;
+  else                     k = 1.8;
+  return Math.max(par + 3, Math.ceil(par * k));
+}
+
+/** Points for clearing a level: a base that grows with depth, plus a bonus for
+ *  every turn left unspent — so playing near par is what actually scores. */
+function levelScoreFor(levelNum, movesLeft) {
+  return 50 * levelNum + 25 * movesLeft;
+}
+
+/** Wipe the run back to level 1, keeping `best` (fruit-connect's model). */
+function newRun() {
+  score = 0;
+  runOver = false;
+  loadLevel(0);
+  updateBestHud();          // new run — the record on show is the one to beat
+}
+
 function loadLevel(idx) {
   levelEpoch++;
+  runOver = false;
   currentLevelIdx = Math.max(0, Math.min(idx, TOTAL_LEVELS - 1));
   progressIdx = currentLevelIdx;
   const gen = genBoard(currentLevelIdx);
   B = gen;
+  B.movesLimit = movesLimitFor(B.par, currentLevelIdx + 1);
   const N = B.w * B.h;
   B.lit = new Uint8Array(N);
   B.depth = new Int16Array(N);
@@ -939,6 +1017,9 @@ function loadLevel(idx) {
 function restoreRotations(rotStr, moves) {
   const N = B.w * B.h;
   if (typeof rotStr !== 'string' || rotStr.length !== N) return false;
+  /* A snapshot at or past the budget would restore straight into a dead board
+     with no legal tap left, so drop it and hand over a fresh level instead. */
+  if (typeof moves === 'number' && moves >= B.movesLimit) return false;
   for (let i = 0; i < N; i++) {
     const c = rotStr.charCodeAt(i) - 48;
     if (c < 0 || c > 3) return false;
@@ -966,6 +1047,9 @@ function levelSolved() {
   lockInput = true;
   const s = starsFor(B.moves, B.par);
   if (s > stars[currentLevelIdx]) stars[currentLevelIdx] = s;
+  score += levelScoreFor(currentLevelIdx + 1, Math.max(0, B.movesLimit - B.moves));
+  if (score > best) best = score;      // persisted below; the pill stays put
+  updateHud();
   elBoard.classList.add('solved');
   hideTutorial();
   sfxWin();
@@ -986,11 +1070,31 @@ function levelSolved() {
        one to show; the game only states the intent. */
     if ((finishedIdx + 1) % 5 === 0 && finishedIdx + 1 < TOTAL_LEVELS) sendMessage('ads');
     if (finishedIdx === TOTAL_LEVELS - 1) {
+      updateBestHud();          // clearing level 60 ends the run as well
       sendMessage('victory');                                     // §1.5 — NOT game_result
     } else {
       sendMessage('game_result', { result: 'win', showModal: true });
     }
   }, 1100);
+}
+
+/** Out of turns. The run ends here — the app shows the popup, and its Retry
+ *  starts a fresh run from level 1 (see window.onRetryLevel). */
+function levelLost() {
+  lockInput = true;
+  runOver = true;
+  hideTutorial();
+  sfxLose();
+  if (score > best) best = score;
+  updateHud();
+  updateBestHud();          // run over — now the pill catches up
+  persist();
+
+  const ep = levelEpoch;
+  setTimeout(function () {
+    if (ep !== levelEpoch) return;
+    sendMessage('game_result', { result: 'lose', showModal: true });
+  }, 700);
 }
 
 function showDone(s) {
@@ -1013,7 +1117,13 @@ window.onNextLevel = function () {
   if (currentLevelIdx < TOTAL_LEVELS - 1) loadLevel(currentLevelIdx + 1);
   else loadLevel(currentLevelIdx);
 };
-window.onRetryLevel = function () { loadLevel(currentLevelIdx); };
+/** After an out-of-moves loss the whole RUN is over, so Retry restarts at
+ *  level 1 with the score reset (fruit-connect precedent). Any other time it
+ *  just rebuilds the level being played. */
+window.onRetryLevel = function () {
+  if (runOver) newRun();
+  else loadLevel(currentLevelIdx);
+};
 
 /* ── HUD buttons ─────────────────────────────────────────────── */
 document.getElementById('back-btn').addEventListener('click', function (e) {
@@ -1021,12 +1131,8 @@ document.getElementById('back-btn').addEventListener('click', function (e) {
   persist();
   sendMessage('quit');
 });
-/* Restart is a local reset only — it fires NO event (game-common §1.6). */
-document.getElementById('restart-btn').addEventListener('click', function (e) {
-  e.stopPropagation();
-  if (lockInput) return;               // mid-celebration — let the win land
-  loadLevel(currentLevelIdx);
-});
+/* No Restart button by design (mentor, 2026-08-06): with a moves budget the
+   fail state IS the reset, and the app's lose popup owns Retry. */
 document.getElementById('sound-btn').addEventListener('click', function (e) {
   e.stopPropagation();
   muted = !muted;
@@ -1147,6 +1253,12 @@ function sfxWin() {
   const f = [523.25, 659.25, 783.99, 1046.5];
   for (let i = 0; i < f.length; i++) blip(f[i], 0.4, 'sine', 0.09, i * 0.075);
 }
+/** Out of moves: the win arpeggio turned downward, kept soft — this is a zen
+ *  puzzle, the loss should read as "power drained", not as a buzzer. */
+function sfxLose() {
+  const f = [440, 349.23, 261.63];
+  for (let i = 0; i < f.length; i++) blip(f[i], 0.45, 'sine', 0.075, i * 0.1);
+}
 
 /* ================================================================
  * §8. Boot
@@ -1154,8 +1266,9 @@ function sfxWin() {
 function bootGame() {
   LANG = getLanguage();
   applyUiFont(LANG);
+  document.getElementById('lbl-score').textContent = t('score');
+  document.getElementById('lbl-best').textContent = t('best');
   document.getElementById('lbl-level').textContent = t('level');
-  document.getElementById('lbl-moves').textContent = t('moves');
   document.getElementById('tut-skip-label').textContent = t('skip');
 
   const saved = parseInitialData();
@@ -1169,6 +1282,9 @@ function bootGame() {
     }
     muted = saved.m === 1 || saved.m === true;
     tutorialSeen = saved.tut === 1 || saved.tut === true;
+    if (typeof saved.best === 'number' && saved.best >= 0) best = Math.floor(saved.best);
+    if (typeof saved.sc === 'number' && saved.sc >= 0) score = Math.floor(saved.sc);
+    if (score > best) best = score;
     if (typeof saved.lv === 'number' && saved.lv >= 0) resumeIdx = Math.min(saved.lv, TOTAL_LEVELS - 1);
     if (typeof saved.r === 'string') { resumeRot = saved.r; resumeMoves = saved.mv || 0; }
   }
@@ -1182,6 +1298,7 @@ function bootGame() {
   document.getElementById('sound-btn').classList.toggle('muted', muted);
   measureTopbar();
   loadLevel(startIdx);
+  updateBestHud();
   if (resumeRot) restoreRotations(resumeRot, resumeMoves);
 }
 
@@ -1206,12 +1323,19 @@ function bootGame() {
 window.__el = {
   get B() { return B; },
   get level() { return currentLevelIdx; },
+  get score() { return score; },
+  get best() { return best; },
+  get bestShown() { return bestShown; },
+  get runOver() { return runOver; },
   tap: tapTile,
   load: loadLevel,
+  newRun: newRun,
   rotMask: rotMask,
   periodOf: periodOf,
   genBoard: genBoard,
   levelConfig: levelConfig,
+  movesLimitFor: movesLimitFor,
+  levelScoreFor: levelScoreFor,
   TOTAL_LEVELS: TOTAL_LEVELS,
   setAuto: function (v) { devAuto = v; },
 };

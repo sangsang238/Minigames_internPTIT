@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "category": "PUZZLE",
   "tags": ["loops", "rotate", "circuit", "relax", "puzzle"],
-  "description": "A calm rotate-to-connect circuit puzzle. Turn each tile until the whole grid is wired back into the power core and every lamp lights up. No timer, no fail state — just 60 hand-tuned boards that grow from a tiny 3x3 loop to a 7x9 network with two cores.",
+  "description": "A calm rotate-to-connect circuit puzzle. Turn each tile until the whole grid is wired back into the power core and every lamp lights up. Sixty boards grow from a tiny 3x3 loop to a 7x9 network with two cores, and every turn you save on one board is score banked toward your best run.",
   "controls": "Tap a tile to turn it 90 degrees",
   "aiContext": "",
   "aiBuildLink": "",
