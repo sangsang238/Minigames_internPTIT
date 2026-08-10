@@ -10,7 +10,7 @@
 | **Engine / Version** | HTML5 single-file · 1.0.0 |
 | **Category** | PUZZLE |
 | **Loại** | Game **có level** — 60 màn, tính điểm theo **run**, `victory` ở màn cuối |
-| **Kích thước** | `index.html` ~50 KB (không asset ngoài, không sprite) |
+| **Kích thước** | `index.html` ~63 KB (không asset ngoài, không sprite) |
 | **Tham khảo** | `Energy: Anti-Stress Loops` |
 
 ## Gameplay
@@ -20,7 +20,8 @@
 - Mục tiêu: xoay sao cho **mọi ô đều nhận điện** từ ô **lõi** (hình thoi). Điện lan
   ra từ lõi; ô nào nối tới được thì sáng lên.
 - **Ngân sách lượt xoay** cho mỗi màn. Hết lượt mà chưa xong = **THUA = hết run**
-  → app hiện popup, bấm Retry là **chơi lại từ màn 1** (giữ BEST).
+  → **game tự vẽ popup Game Over** (SCORE / BEST / Play Again), bấm Play Again là
+  **chơi lại từ màn 1** (giữ BEST).
 - Từ **màn 31** có **2 lõi** (2 mạng điện, 2 màu: bạc hà + hổ phách), cứ mỗi màn
   thứ 3 lại quay về 1 lõi để nhịp độ không đơn điệu.
 - **SCORE cộng dồn cả run**: `50 × số màn + 25 × số lượt còn thừa`. Tiết kiệm lượt
@@ -121,7 +122,28 @@ thu nhỏ lại.
 - Hàng dưới: `LEVEL n` · **thanh lượt còn lại** · **số lượt còn lại**
 - Thanh lượt vàng khi còn ≤1/3, **đỏ + nháy** khi còn ≤1/6.
 - **Không có nút Restart** (mentor yêu cầu bỏ): có ngân sách lượt rồi thì
-  trạng thái thua chính là nút reset, và Retry thuộc về popup của app.
+  trạng thái thua chính là nút reset, và Play Again nằm trên popup Game Over.
+
+### Popup Game Over (`popup-common.md`)
+
+Hết lượt → **game tự vẽ** popup: **một tiêu đề** → khối SCORE / BEST → nút
+**Play Again**. Không subtitle, không nút thừa, không badge "New Best!" riêng.
+
+- Tiêu đề tự đổi chữ: **"New Best!"** khi phá kỷ lục, **"Game Over"** khi không.
+  Mốc so sánh là `bestShown` (kỷ lục **trước** run) chứ không phải `best` — vì
+  `best` đã ăn theo từng nước trong run rồi, lấy nó mà so thì **không bao giờ**
+  hiện được "New Best!".
+- Màu **cố định dùng chung mọi game QuanKA**: nhãn `#8fb4ff`, SCORE trắng,
+  BEST `#ffd23f`, nút `#ffb02e`, tiêu đề trắng. Chỉ **nền card** đi theo theme —
+  ở đây để **phẳng** (`--panel` + viền) thay vì gradient như `popup-common §7`,
+  cùng lựa chọn với runic-blaze vì cả game này không có một gradient nào.
+- **Tự co cỡ số** khi điểm dài (§5b): 32px tràn card từ ~6 chữ số. Overlay ẩn
+  bằng `opacity` chứ **không** `display:none`, đúng để đo được cả lúc chưa hiện.
+- Ẩn bằng class → fade `.25s` + card `scale .9→1`. Kèm `visibility: hidden` trễ
+  đúng bằng thời gian fade: `opacity: 0` **không** gỡ một lớp phủ kín màn khỏi
+  cây composite, nó vẫn được ghép lại mỗi frame suốt lúc chơi.
+- **Thắng thì KHÔNG hiện popup này** — thắng màn vẫn là `showModal:true` để app
+  lo nút "Next Level", và màn 60 vẫn là `victory` do app lo.
 
 ### Bàn chơi
 
@@ -158,10 +180,35 @@ thu nhỏ lại.
   điện dâng là **một** giọng lướt tần số cho cả đợt sáng, **không phải một
   oscillator mỗi ô** — một phản ứng dây chuyền có thể thắp 30 ô cùng lúc, 30 giọng
   chồng lên nghe như nhiễu.
-- **Tutorial 3 bước**, **không chặn thao tác**, dùng ô nhấp nháy thay mũi tên
-  (bài học playtest fruit-connect). Chạy ở **màn đầu tiên của phiên chơi**, không
-  phải riêng màn 1 — app có thể thả người chơi mới thẳng vào màn 7 qua
-  `currentLevel`.
+### Tutorial — visual là chính, chữ chỉ để gọi tên
+
+3 bước, **không chặn thao tác** một giây nào (bài học playtest fruit-connect).
+Chạy ở **màn đầu tiên của phiên chơi**, không phải riêng màn 1 — app có thể thả
+người chơi mới thẳng vào màn 7 qua `currentLevel`.
+
+| Bước | Visual | Chữ |
+|---|---|---|
+| 1 | **Điểm chạm trắng + vòng ripple** nhấp trên một ô **thật sự đang sai**, ô đó nhấp nháy | "Tap to turn" |
+| 2 | Vòng ripple chuyển sang **ô lõi** (bỏ điểm chạm) | "Power starts here" |
+| 3 | — | "Light them all" |
+
+- **Caption tối đa 3–4 chữ** ở mọi ngôn ngữ, có assertion chặn ≤ 5 chữ. Bản
+  trước dài gấp 3 ("Tap a tile to turn it.") — nay chuyển động mới là thứ dạy,
+  chữ chỉ gọi tên cái đang xảy ra.
+- **Điểm chạm chứ không phải bàn tay.** Đã dựng thử hình bàn tay bằng 3 shape
+  chồng nhau: mỗi shape có viền riêng nên chỗ giao nhau lộ đường viền, nhìn ra
+  **3 cục rời** chứ không ra bàn tay — và một bàn tay hoạt hoạ cũng chỏi với
+  theme hình học phẳng. Điểm chạm + ripple là đúng affordance mà chính hệ điều
+  hành dùng, lại render chắc chắn đúng ở mọi cỡ.
+- **Ripple không bao giờ tàng hình hoàn toàn**: nửa đầu chu kỳ nó nằm im mờ
+  (opacity .32) làm dấu chỉ đích, rồi mới loé sáng và bung ra. Bản đầu để
+  opacity 0 nửa chu kỳ → nhiều thời điểm coach mark chỉ còn là một chấm trắng
+  vô nghĩa.
+- **Cỡ theo ô** (`--cz` = 40% bề rộng ô, kẹp 17–32px): chấm cố định 30px sẽ
+  nuốt gần hết ô ở bàn 7×9 và lọt thỏm ở bàn 3×3.
+- Bước 2 **bỏ điểm chạm**, chỉ còn vòng: ô lõi thường là ô chữ thập — **không
+  xoay được** — chỉ tay vào đó là đang dạy một nước đi vô nghĩa.
+- Coach mark `pointer-events: none` → không bao giờ nuốt mất cú chạm.
 
 ## Tuân thủ quy ước chung
 
@@ -176,9 +223,18 @@ thu nhỏ lại.
   chừng không mất kỷ lục), nhưng **ô BEST trên HUD giữ kỷ lục cũ suốt run** và chỉ
   refresh khi **hết run** (thua / xong màn 60) và khi **vào run mới** — để người
   chơi nhìn thấy mình đang vượt qua nó. Có assertion riêng.
-- ✅ **popup-common.md** — game theo level nên **không tự vẽ popup kết quả**.
-  Thắng màn chỉ hiện **3 ngôi sao** trong 1.1s: không tiêu đề, không lớp phủ tối,
-  không nút. Sao là thứ **duy nhất** app không thể tự biết.
+- ✅ **popup-common.md** — **chia theo loại kết thúc**, vì game này là lai giữa
+  "theo level" và "điểm cao":
+  - **Thắng màn** → `showModal:true`, **app** vẽ popup (có nút Next Level). Game
+    chỉ hiện **3 ngôi sao** trong 1.1s: không tiêu đề, không lớp phủ, không nút —
+    sao là thứ **duy nhất** app không thể tự biết.
+  - **Hết lượt (thua)** → hết cả run, và thứ đáng hiện lúc đó là **SCORE/BEST** —
+    app **không biết** hai số này. Nên game bắn `showModal:false` (đúng cái cờ
+    dùng để nói "tôi tự lo màn kết quả", game-common §1.1) rồi tự vẽ popup theo
+    đúng khuôn §3–§9; Play Again bắn `retry_level` (§1.3). App **không** chồng
+    thêm popup thứ hai.
+  - Deviation duy nhất so với §1.1: `level` và `result:'lose'` vẫn có giá trị thật
+    (không phải `null` như game thuần điểm-cao), vì game này thực sự có màn.
 - ✅ **Lưu 2 tầng (§1.2)** — `save_data` **nhẹ**: `{lv, st, m, tut, sc, best}`.
   Ván dở (`blv` + chuỗi góc xoay + số lượt) **chỉ nằm ở `localStorage`**
   (`energy_loops_v1`), ghi sau mỗi nước vì nó miễn phí trong WebView.
@@ -205,7 +261,7 @@ thu nhỏ lại.
 ## Kiểm chứng
 
 Bot chạy trong **headless Edge**, có **bản BFS + bản tính `par` viết độc lập** để
-đối chiếu chéo với code game. **15.441 assertion, 0 fail, 0 lỗi JS.**
+đối chiếu chéo với code game. **15.476 assertion, 0 fail, 0 lỗi JS.**
 
 | Hạng mục | Kết quả |
 |---|---|
@@ -215,10 +271,14 @@ Bot chạy trong **headless Edge**, có **bản BFS + bản tính `par` viết �
 | Bot chơi 60 màn | Giải được **toàn bộ**, dùng **đúng `par` lượt**, 3★, không màn nào chạm trần lượt |
 | Điểm | Mỗi màn cộng **đúng** `50×lvl + 25×lượt thừa`; `best` không bao giờ tụt sau `score` |
 | Fuzz | 4.800 nước ngẫu nhiên: **không lần nào** "sáng hết mà còn đầu thừa"; BFS của game khớp BFS độc lập ở **mọi** nước; **không nước nào vượt quá trần lượt** |
-| Bridge | Màn 5: đúng **1** `game_result` (win + `showModal:true`, `level:5`) + `ads`; màn 6 không `ads`; màn 60 chỉ `victory`; hết lượt ở màn 21 → đúng **1** `game_result` (**lose** + `showModal:true`, `level:21`), không kèm `victory`; mọi message đủ 5 trường |
-| Thua → Retry | Retry sau khi thua → về **màn 1**, `score` về 0, `best` giữ nguyên, run chơi lại được. Retry giữa màn (chưa thua) → dựng lại **đúng màn đó**, `moves` về 0 |
+| Bridge | Màn 5: đúng **1** `game_result` (win + `showModal:true`, `level:5`) + `ads`; màn 6 không `ads`; màn 60 chỉ `victory`; hết lượt ở màn 21 → đúng **1** `game_result` (**lose** + **`showModal:false`**, `level:21`), không kèm `victory`; mọi message đủ 5 trường |
+| Popup Game Over | Hiện đúng lúc thua & **không bao giờ hiện khi thắng**; `visibility: visible` thật; tiêu đề chỉ là `New Best!` / `Game Over` (không nhét số vào); SCORE/BEST khớp state; đúng **1** nút "Play Again"; nằm **trên** header (z-index); card lọt trong màn hình |
+| Màu popup | Nhãn `rgb(143,180,255)`, SCORE trắng, BEST `rgb(255,210,63)`, nút `rgb(255,176,46)`, tiêu đề trắng — đúng bảng cố định `popup-common §7` |
+| Auto-fit điểm | Điểm 9 chữ số vẫn lọt trong card và **co nhỏ** so với điểm ngắn; điểm ngắn quay lại đúng **32px** (không kẹt cỡ nhỏ của lần trước) |
+| Thua → Play Again | Bắn `retry_level` (và **không** bắn lại `game_result`), đóng popup, về **màn 1**, `score` về 0, `best` giữ nguyên, run chơi lại được. Retry giữa màn (chưa thua) → dựng lại **đúng màn đó**, `moves` về 0 |
 | Ô BEST | Vào run mới hiện kỷ lục cũ; **giữa run không nhúc nhích** dù `score` tăng; hết run mới bắt kịp. Ô SCORE thì chạy live |
 | Hình học dây | Mọi nhánh **đáp đúng lên mép ô** (sai < 0.9px), mọi cạnh không nhánh **cách mép > 2px**, **không nét nào vẽ ra ngoài ô** |
+| Tutorial | Coach mark hiện lúc mới cài; `pointer-events: none`; điểm chạm + ripple **đang chạy animation**; đậu **đúng trên một ô** và ô đó **xoay được thật** (`period > 1`) + đang nhấp nháy; caption **≤ 5 chữ**; chạm xong sang bước 2 → bỏ điểm chạm, vòng chuyển sang **đúng ô lõi**; Skip ẩn cả coach lẫn caption và **không quay lại** ở màn sau |
 | Cỡ header | Nhãn 12.48px, số 19.5px, pill ~55px, nút **50×50px**, tỉ lệ nút/pill 0.92 — đúng `index(exampleforheader).html` |
 | HUD | Không còn nút Restart; pill trên là SCORE/BEST; hàng dưới có LEVEL + lượt còn lại; thanh lượt bắt đầu đầy |
 | Determinism | Màn 24 sinh 2 lần ra y hệt; màn 24 ≠ màn 25 |
@@ -248,6 +308,47 @@ Bot chạy trong **headless Edge**, có **bản BFS + bản tính `par` viết �
 > `getBoundingClientRect()` trên `<path>` SVG trả **hộp hình học, không gồm nét
 > vẽ**, mà 6.67px đúng bằng nửa nét (7.5% cạnh ô). Test đã được sửa để cộng bù
 > nửa nét; code render vốn đã đúng.
+
+## Tối ưu để không lag ở máy yếu
+
+Headless **không đo được wall-clock** (`--virtual-time-budget` đóng băng
+`performance.now()` trong lúc chạy code đồng bộ → mọi con số ra `0.00ms`). Nên
+thay vì đoán mò theo ms, đo thẳng **những thứ cấu trúc gây giật**, và những cái
+này đo được chính xác:
+
+| Chỉ số | Trước | Sau |
+|---|---|---|
+| **Layer compositor bị ghim** (bàn 7×9) | **64** | **1** |
+| **Ghi localStorage / mỗi lần chạm** | **1.02** | **0.02** |
+| Forced sync layout / mỗi lần chạm | 0 | 0 |
+| Animation chạy lúc rảnh | 0 | 0 |
+| DOM node | 343 | 346 |
+
+**1. `will-change: transform` trên `.ti` ghim 1 layer cho MỖI ô.** 64 layer nằm
+thường trú trong bộ nhớ GPU và bị ghép lại mỗi frame, đổi lấy việc tiết kiệm
+thao tác promote cho **một** cú xoay 190ms — Chromium vốn tự promote trong lúc
+transition chạy. Bỏ hẳn → còn đúng 1 layer (thanh lượt).
+
+**2. `localStorage.setItem` là ĐỒNG BỘ và trên Android nó chạm đĩa thật.** Bản
+đầu ghi sau *mỗi* cú chạm → I/O nằm thẳng trong đường tap, đúng kiểu giật khi
+người chơi bấm nhanh. Nay gom lại tối đa **1 lần / 500ms** kèm ghi đuôi, và
+**flush thật** ở những lúc phiên chơi có thể kết thúc: hết màn, `onAppPause`,
+`visibilitychange → hidden`, `pagehide`. Xấu nhất khi bị kill đột ngột là mất
+1–2 nước xoay — không ai nhận ra. (Test resume vẫn pass **nhờ** flush ở
+`pagehide`, tức lưới an toàn đó hoạt động thật.)
+
+**3. `contain: layout paint` cho `.tile`** — giờ không nét nào vẽ ra ngoài ô nữa
+nên vùng invalidate paint được nhốt trong từng ô: đổi màu một sợi dây không làm
+bẩn cả bàn.
+
+**4. Bỏ `void el.offsetWidth`** ở hiệu ứng nảy của ô chữ thập — mẹo restart
+animation đó **ép layout đồng bộ cả trang**. Nay dùng 2 class luân phiên.
+
+**5. `visibility: hidden` KHÔNG dừng CSS animation.** Bắt được nhờ chính bảng đo
+này: coach mark bị ẩn nhưng 2 animation vẫn tick mãi mãi, tốn compositor suốt
+phần đời còn lại của phiên. Phải `animation: none` khi ẩn. Lỗi này **tái phát
+một lần nữa** khi đổi tên `#coach-hand` → `#coach-dot` làm selector trỏ trượt,
+và cũng chính bảng đo bắt lại.
 
 ## 📋 Backlog
 
