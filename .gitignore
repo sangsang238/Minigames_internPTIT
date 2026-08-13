@@ -1,6 +1,11 @@
 index(exampleforheader).html
 *.mp4
 
+# Internal tracking sheet (game list, assignments, statuses) — team-internal,
+# not part of any deliverable.
+*.xlsx
+*.xls
+
 # Publish artefacts + build/scratch files.
 # The fruit-drop tooling (icon downloads, sprite builder, test harnesses,
 # deadlock simulator, cover renderer) all lives in the session scratchpad

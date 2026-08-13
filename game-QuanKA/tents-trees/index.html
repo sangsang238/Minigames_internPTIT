@@ -1,0 +1,1657 @@
+<!--
+  Tents and Trees — QuanKA
+  Camp a tent beside every tree. The numbers down the side and across the top say
+  how many tents belong in that row or column, tents may never touch each other
+  (not even diagonally), and every tree gets exactly one tent of its own.
+
+  WHY THE WIN CHECK NEEDS A *MATCHING*, NOT A COUNT (the trap of this genre):
+  the obvious third test is "every tree has a tent beside it". That is wrong, and
+  a 3x3 board is enough to show it:
+
+        T A T          trees at (0,0) and (0,2), tents at (0,1) and (2,2)
+        . . .          both trees touch ONLY tent (0,1)
+        . . C          tent (2,2) touches no tree at all
+
+  Every tree does have a tent beside it. The tent count equals the tree count. No
+  two tents touch. Every row and column clue is satisfied. And yet the two trees
+  are fighting over the same tent while another tent is orphaned, so no one-to-one
+  assignment exists — this is NOT a solution. Only a bipartite PERFECT MATCHING
+  (Kuhn's augmenting paths, `matchesAllTrees`) rejects it. The bot harness builds
+  exactly this board and asserts the game refuses it.
+
+  LEVELS ARE SOLVABLE BY DEDUCTION, PROVABLY:
+  a level is built by laying down a legal SOLVED board first — each tent is placed
+  where no other tent touches it, then its tree goes on a free orthogonal
+  neighbour — so a valid solution and a perfect matching both exist by
+  construction. The clues are read off that board, and the puzzle is then handed
+  to a solver that only makes FORCED moves. If it finishes, the level needs no
+  guessing AND its solution is unique, because every cell it filled was the only
+  option at that moment.
+
+  DIFFICULTY: `par` here is just the tree count, so it is fixed by the ramp and
+  identical for every level inside a band. The second lever is how much deduction
+  a board demands, measured as the number of steps that need the matching rule.
+  Measuring first mattered: only 6 boards in 221 need that rule at all and the
+  hardest needs it twice, so the ramp asks for 0 steps early, 1 in the middle and
+  2 late — an earlier attempt asked for 3 and 4 and simply could not be built.
+
+  Style: flat dark forest — solid fills, 0 gradients, 0 blur, no filter or
+  backdrop-filter. Nothing here runs a requestAnimationFrame loop.
+
+  Tuân thủ .claude/game-common.md (bridge, level, statusBarHeight, i18n),
+  popup-common.md (game theo level => KHÔNG tự vẽ popup kết quả, showModal:true),
+  zip-common.md (single-file index.html).
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>Tents and Trees</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap" rel="stylesheet" />
+<style>
+/* ── Reset + mobile tap fixes (game-common §UI) ───────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+:root {
+  --ui-font: 'Google Sans Flex', system-ui, sans-serif;
+  /* Flat forest palette — every value is a solid colour. */
+  --bg:        #0E1A16;
+  --panel:     #17261F;
+  --line:      #23392F;
+  --cell:      #16241E;
+  --cell-alt:  #182A22;   /* checker shading so rows stay countable */
+  --tree:      #4FBF7A;
+  --tent:      #FFA23E;
+  --grass:     #38564A;   /* the "no tent here" mark */
+  --text:      #E9F2EC;
+  --text-soft: rgba(233,242,236,.52);
+  --ok:        #4FE3A1;
+  --over:      #FF5A4E;
+  --gold:      #FFC24D;
+}
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: var(--ui-font);
+  font-weight: 700;
+  color: var(--text);
+  background-color: var(--bg);
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+/* ── Header — same FORM and same metrics as the other QuanKA games ─ */
+#topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 520px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: calc(max(var(--sbh, 0px), env(safe-area-inset-top, 0px)) + 8px)
+           max(10px, env(safe-area-inset-right)) 0 max(10px, env(safe-area-inset-left));
+  pointer-events: none;
+}
+#topbar .btn3d, .hud-scores { pointer-events: auto; }
+#hud-bar { display: flex; align-items: center; gap: 8px; }
+
+/* Pill metrics come from index(exampleforheader).html — the file the mentor
+   pointed at when the first Energy Loops header read ~20% too small. */
+.hud-scores { flex: 1; min-width: 0; display: flex; gap: 8px; }
+.hud-pill {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 8px 9px 4px;
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  -webkit-user-select: none; user-select: none;
+}
+.pill-text { display: flex; flex-direction: column; align-items: center; min-width: 0; flex: 1 0 auto; }
+.pill-ico { flex: 0 0 auto; width: clamp(16px, 4.8vw, 21px); height: clamp(16px, 4.8vw, 21px); display: block; }
+.hud-pill .label {
+  font-size: clamp(10px, 3.2vw, 13px);
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  color: var(--text-soft);
+  line-height: 1.05;
+  white-space: nowrap;
+}
+.hud-pill .value {
+  font-size: clamp(16px, 5vw, 24px);
+  line-height: 1.1;
+  color: var(--text);
+  white-space: nowrap;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+#hud-best { color: var(--gold); }
+
+/* Sub-row: LEVEL n | moves-left bar | moves left */
+#hud-sub { display: flex; align-items: center; gap: 9px; padding: 0 2px; }
+.sub-level {
+  flex: 0 0 auto;
+  font-size: 12px;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+.sub-level #hud-level { color: var(--text); font-weight: 900; }
+
+#moves-bar-bg {
+  flex: 1; min-width: 0; height: 12px;
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: 5px;
+  overflow: hidden;
+}
+#moves-bar-fill {
+  height: 100%; width: 100%;
+  background: var(--ok);
+  /* scaleX, NOT width — width relayouts and repaints the bar on every tap;
+     transform stays on the compositor (fruit-connect's timer-bar lesson). */
+  transform-origin: left center;
+  transform: scaleX(1);
+  will-change: transform;
+  transition: transform .2s linear, background .3s;
+}
+#moves-bar-fill.warn { background: var(--gold); }
+@keyframes movesDanger { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+#moves-bar-fill.danger { background: var(--over); animation: movesDanger .6s steps(2,end) infinite; }
+
+#hud-left {
+  flex: 0 0 auto; min-width: 30px; text-align: right;
+  font-size: 15px; font-weight: 900; color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+#hud-left.danger { color: var(--over); }
+
+/* ── btn3d (game-common §1.4 / §1.6), flat skin ───────────────── */
+.btn3d {
+  --radius: 10px;
+  --surface-color: var(--panel);
+  --surface-text: var(--text);
+  --surface-height: 42px;
+  --surface-width: auto;
+  --surface-padding-x: 16px;
+  --surface-font-size: 16px;
+  position: relative;
+  display: inline-block;
+  padding: 0; border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit; color: inherit;
+  -webkit-user-select: none; user-select: none;
+}
+.btn3d-shadow { display: none; }
+.btn3d-surface {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: var(--surface-height);
+  width: var(--surface-width);
+  padding: 0 var(--surface-padding-x);
+  border-radius: var(--radius);
+  background: var(--surface-color);
+  border: 2px solid var(--line);
+  color: var(--surface-text);
+  font-family: var(--ui-font);
+  font-size: var(--surface-font-size);
+  font-weight: 800;
+  letter-spacing: .6px;
+  transition: transform .08s ease-out;
+}
+.btn3d:active .btn3d-surface { transform: scale(.93); }
+.btn3d.btn-icon { --surface-height: 50px; --surface-width: 50px; --surface-padding-x: 0; --radius: 14px; }
+.back-ico  { width: 52%; height: 52%; fill: currentColor; display: block; }
+.snd-ico   { width: 58%; height: 58%; display: block; }
+.snd-slash { display: none; }
+#sound-btn.muted .snd-waves { display: none; }
+#sound-btn.muted .snd-slash { display: block; }
+#sound-btn.muted .snd-ico   { color: var(--text-soft); }
+
+/* ── App / board ──────────────────────────────────────────────── */
+#app {
+  position: relative;
+  width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+#board { display: block; overflow: visible; transition: transform .3s ease-out; }
+#board.solved { transform: scale(1.03); }
+
+/* The whole board is ONE <svg>. Every cell, clue and piece is created once at
+   level load; a tap only swaps classes, so it can never force a layout. */
+.cell-bg { fill: var(--cell); }
+.cell-bg.alt { fill: var(--cell-alt); }
+
+/* Pieces live in one group per cell and are shown by the group's class. */
+.piece { display: none; }
+.c.has-tree .p-tree  { display: block; }
+.c.has-tent .p-tent  { display: block; }
+.c.has-grass .p-grass { display: block; }
+
+.tree-top   { fill: var(--tree); }
+.tree-trunk { fill: #2C7A4E; }
+.tent-body  { fill: var(--tent); }
+.tent-door  { fill: #7A3F09; }
+/* A tent pitched against another is illegal, but the clue numbers cannot show
+   it: a row can hold the right COUNT of tents and still have two of them
+   touching. Without this the player is stuck with nothing on screen explaining
+   why. Both offenders go red on the spot. */
+.c.bad .tent-body { fill: var(--over); }
+.c.bad .tent-door { fill: #6B1712; }
+.tent-pole  { stroke: #7A3F09; stroke-width: 5; stroke-linecap: round; }
+.grass-dot  { fill: var(--grass); }
+
+/* Clues. They go dim once that row or column holds its quota, and red if it
+   holds more — the fastest possible read of "this line is done / overdone". */
+.clue {
+  fill: var(--text-soft);
+  font-family: var(--ui-font);
+  font-weight: 900;
+  font-size: 42px;
+  text-anchor: middle;
+  dominant-baseline: central;
+  transition: fill .2s linear;
+}
+.clue.met  { fill: var(--ok); }
+.clue.over { fill: var(--over); }
+
+@keyframes cellPulse { 0%,100% { opacity: 1; } 50% { opacity: .34; } }
+.c.hint .cell-bg { animation: cellPulse 1s ease-in-out infinite; }
+
+.hit { fill: transparent; cursor: pointer; }
+
+/* ── Coach mark: a hand that taps, plus the ripple it leaves ───────
+      Captions are 2-5 words because the motion does the teaching. `left/top`
+      are set once per step, never per frame; only transform/opacity animate. */
+#coach {
+  position: fixed;
+  left: 0; top: 0;
+  width: 0; height: 0;
+  z-index: 7;
+  pointer-events: none;      /* the board must stay tappable underneath */
+  opacity: 1;
+  transition: opacity .2s linear;
+}
+#coach.hidden { opacity: 0; visibility: hidden; }
+/* `visibility: hidden` does NOT stop a CSS animation — it keeps ticking and
+   costing compositor work for the rest of the session. Kill it outright. */
+#coach.hidden #coach-hand, #coach.hidden #coach-ring { animation: none; }
+#coach-ring {
+  position: absolute;
+  left: calc(var(--cz, 30px) * -1); top: calc(var(--cz, 30px) * -1);
+  width: calc(var(--cz, 30px) * 2); height: calc(var(--cz, 30px) * 2);
+  border-radius: 50%;
+  /* White, not a theme colour: it has to stay visible over a green tree, an
+     amber tent, a green clue and a red one alike. */
+  border: 3px solid #fff;
+  animation: coachRipple 1.6s ease-out infinite;
+}
+/* Same pointing-hand asset as runic-blaze's tutorial, so the gesture reads the
+   same across QuanKA games. The outer div carries the static anchor offset that
+   puts the fingertip on the target; the inner img carries the press bob — a CSS
+   animation cannot be combined with a separate static transform on one element. */
+#coach-hand-anchor {
+  position: absolute;
+  left: 0; top: 0;
+  width: calc(var(--cz, 30px) * 3.6);
+  transform: translate(-20%, -7%);
+}
+#coach.ring-only #coach-hand-anchor { display: none; }
+#coach-hand {
+  display: block;
+  width: 100%; height: auto;
+  animation: coachBob 1.6s ease-in-out infinite;
+}
+@keyframes coachBob {
+  0%, 100% { transform: translateY(0); }
+  38%      { transform: translateY(calc(var(--cz, 30px) * -0.12)); }
+  55%      { transform: translateY(calc(var(--cz, 30px) * 0.22)); }
+  72%      { transform: translateY(0); }
+}
+/* Never fully invisible: the ring sits dim as a target marker for the first
+   half, then flashes and expands on the press. */
+@keyframes coachRipple {
+  0%, 50%  { transform: scale(.62); opacity: .32; }
+  60%      { transform: scale(.70); opacity: .95; }
+  100%     { transform: scale(1.25); opacity: 0; }
+}
+
+/* ── Tutorial banner ──────────────────────────────────────────── */
+#tut {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  margin: 0 auto;
+  width: min(92%, 460px);
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  opacity: 1;
+  transition: opacity .25s linear;
+}
+#tut.hidden { opacity: 0; pointer-events: none; visibility: hidden; }
+#tut-text { flex: 1; font-size: 14px; font-weight: 700; line-height: 1.35; color: var(--text); }
+#tut-skip { --surface-height: 30px; --surface-font-size: 12px; --surface-padding-x: 12px; flex: 0 0 auto; }
+
+/* ── Level-complete flourish — the star rating ONLY: no title, no scrim, no
+      buttons. The app owns the win popup (popup-common §1) and this must not
+      look like a second one; stars are the one thing the app cannot know. ── */
+#done {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  pointer-events: none;
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity .25s linear, transform .25s ease-out;
+}
+#done.hidden { opacity: 0; transform: scale(.86); visibility: hidden; }
+#done svg { width: clamp(44px, 14vw, 62px); height: clamp(44px, 14vw, 62px); display: block; }
+.star-p { fill: #24382E; stroke: var(--bg); stroke-width: 1.4; }
+.star-p.won { fill: var(--gold); }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div id="hud-bar">
+    <div class="btn3d btn-icon" id="back-btn" role="button" aria-label="Back" tabindex="0">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="back-ico" viewBox="0 0 447.243 447.243" aria-hidden="true">
+          <path fill="currentColor" d="M420.361 192.229a31.967 31.967 0 0 0-5.535-.41H99.305l6.88-3.2a63.998 63.998 0 0 0 18.08-12.8l88.48-88.48c11.653-11.124 13.611-29.019 4.64-42.4-10.441-14.259-30.464-17.355-44.724-6.914a32.018 32.018 0 0 0-3.276 2.754l-160 160c-12.504 12.49-12.515 32.751-.025 45.255l.025.025 160 160c12.514 12.479 32.775 12.451 45.255-.063a32.084 32.084 0 0 0 2.745-3.137c8.971-13.381 7.013-31.276-4.64-42.4l-88.32-88.64a64.002 64.002 0 0 0-16-11.68l-9.6-4.32h314.24c16.347.607 30.689-10.812 33.76-26.88 2.829-17.445-9.019-33.88-26.464-36.71z"/>
+        </svg>
+      </span>
+    </div>
+
+    <div class="hud-scores">
+      <div class="hud-pill">
+        <svg class="pill-ico" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2 L14.9 8.6 L22 9.3 L16.7 14 L18.3 21 L12 17.3 L5.7 21 L7.3 14 L2 9.3 L9.1 8.6 Z"
+                fill="#ffce4d" stroke="#e39a12" stroke-width="1" stroke-linejoin="round"/>
+        </svg>
+        <div class="pill-text">
+          <div class="label" id="lbl-score">SCORE</div>
+          <div class="value" id="hud-score">0</div>
+        </div>
+      </div>
+      <div class="hud-pill">
+        <svg class="pill-ico" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 18 L4.2 8 L9 12.5 L12 5.5 L15 12.5 L19.8 8 L21 18 Z" fill="#ffce4d" stroke="#c8820a" stroke-width="1.2" stroke-linejoin="round"/>
+          <rect x="3.4" y="16.6" width="17.2" height="3" rx="1.2" fill="#f0a800"/>
+          <circle cx="4.2" cy="8" r="1.5" fill="#fff3c4"/>
+          <circle cx="12" cy="5.5" r="1.6" fill="#fff3c4"/>
+          <circle cx="19.8" cy="8" r="1.5" fill="#fff3c4"/>
+        </svg>
+        <div class="pill-text">
+          <div class="label" id="lbl-best">BEST</div>
+          <div class="value" id="hud-best">0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn3d btn-icon" id="sound-btn" role="button" aria-label="Sound" tabindex="0">
+      <span class="btn3d-shadow"></span>
+      <span class="btn3d-surface">
+        <svg class="snd-ico" viewBox="0 0 100 100" aria-hidden="true">
+          <path fill="currentColor" d="M14 38 v24 h16 l21 18 V20 L30 38 Z"/>
+          <path class="snd-waves" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round" d="M62 36 q9 14 0 28 M73 27 q15 23 0 46"/>
+          <path class="snd-slash" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" d="M63 35 L86 65 M86 35 L63 65"/>
+        </svg>
+      </span>
+    </div>
+  </div>
+
+  <div id="hud-sub">
+    <span class="sub-level"><span id="lbl-level">LEVEL</span> <span id="hud-level">1</span></span>
+    <div id="moves-bar-bg"><div id="moves-bar-fill"></div></div>
+    <span id="hud-left">0</span>
+  </div>
+</div>
+
+<div id="app">
+  <svg id="board" xmlns="http://www.w3.org/2000/svg" aria-label="Board"></svg>
+</div>
+
+<!-- Coach mark. Sits above the board but never intercepts a tap
+     (pointer-events:none), so the player can act at any time. -->
+<div id="coach" class="hidden" aria-hidden="true">
+  <div id="coach-ring"></div>
+  <div id="coach-hand-anchor"><img id="coach-hand" alt="" src="data:image/png;base64,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"></div>
+</div>
+
+<div id="tut" class="hidden">
+  <span id="tut-text"></span>
+  <div class="btn3d" id="tut-skip" role="button" tabindex="0">
+    <span class="btn3d-shadow"></span>
+    <span class="btn3d-surface" id="tut-skip-label">Skip</span>
+  </div>
+</div>
+
+<div id="done" class="hidden"></div>
+
+<script>
+'use strict';
+
+/* ================================================================
+ * §0. i18n (game-common §5) — INLINE, never a separate file.
+ * UI labels stay English (SCORE / BEST / LEVEL) following the
+ * animal-connect / fruit-connect precedent; the tutorial — the only prose in
+ * the game — is translated into all 23 supported languages.
+ * ============================================================= */
+const SUPPORTED_LANGS = [
+  'en','vi','zh-Hans','zh-Hant','ja','ko','es','es-MX','es-AR','pt-BR','pt',
+  'fr','de','it','nl','pl','ru','tr','ar','hi','th','id','fil',
+];
+/* Google Sans Flex only covers Latin (incl. Vietnamese). Anything else must
+   fall back to system-ui or a single line renders in TWO fonts. */
+const LATIN_LANGS = new Set([
+  'en','vi','es','es-MX','es-AR','pt-BR','pt','fr','de','it','nl','pl','tr','id','fil',
+]);
+const DEFAULT_LANG = 'en';
+
+const I18N = {
+  en: {
+    score: 'SCORE', best: 'BEST', level: 'LEVEL', skip: 'Skip',
+    /* One action per line, 2-5 words, each tied to something that appears on
+       screen the moment the player does it. Step 1 says "twice" on purpose: one
+       tap marks grass, the second raises the tent, and a caption that promised a
+       tent in one tap would read as a dead tap. */
+    tutPlace: 'Tap twice for a tent',
+    tutPair:  'One tent per tree',
+    tutTouch: 'Tents never touch',
+    tutClue:  'Match the numbers',
+  },
+  vi: { skip:'Bỏ qua', tutPlace:'Chạm hai lần ra lều', tutPair:'Mỗi cây một lều', tutTouch:'Lều không chạm nhau', tutClue:'Khớp với các số' },
+  'zh-Hans': { skip:'跳过', tutPlace:'点两下搭帐篷', tutPair:'一树一帐篷', tutTouch:'帐篷不相邻', tutClue:'对上边上的数' },
+  'zh-Hant': { skip:'跳過', tutPlace:'點兩下搭帳篷', tutPair:'一樹一帳篷', tutTouch:'帳篷不相鄰', tutClue:'對上邊上的數' },
+  ja: { skip:'スキップ', tutPlace:'2回タップでテント', tutPair:'木1本にテント1つ', tutTouch:'テント同士は離す', tutClue:'数字に合わせる' },
+  ko: { skip:'건너뛰기', tutPlace:'두 번 탭하면 텐트', tutPair:'나무마다 텐트 하나', tutTouch:'텐트끼리 안 닿게', tutClue:'숫자에 맞추기' },
+  es: { skip:'Saltar', tutPlace:'Toca dos veces: tienda', tutPair:'Una tienda por árbol', tutTouch:'Las tiendas no se tocan', tutClue:'Iguala los números' },
+  'es-MX': { skip:'Saltar', tutPlace:'Toca dos veces: tienda', tutPair:'Una tienda por árbol', tutTouch:'Las tiendas no se tocan', tutClue:'Iguala los números' },
+  'es-AR': { skip:'Saltar', tutPlace:'Tocá dos veces: carpa', tutPair:'Una carpa por árbol', tutTouch:'Las carpas no se tocan', tutClue:'Igualá los números' },
+  'pt-BR': { skip:'Pular', tutPlace:'Toque duas vezes: barraca', tutPair:'Uma barraca por árvore', tutTouch:'Barracas não se tocam', tutClue:'Iguale os números' },
+  pt: { skip:'Saltar', tutPlace:'Toca duas vezes: tenda', tutPair:'Uma tenda por árvore', tutTouch:'Tendas não se tocam', tutClue:'Iguala os números' },
+  fr: { skip:'Passer', tutPlace:'Touche deux fois: tente', tutPair:'Une tente par arbre', tutTouch:'Tentes toujours séparées', tutClue:'Respecte les nombres' },
+  de: { skip:'Überspringen', tutPlace:'Zweimal tippen für Zelt', tutPair:'Ein Zelt pro Baum', tutTouch:'Zelte berühren sich nie', tutClue:'Zahlen genau treffen' },
+  it: { skip:'Salta', tutPlace:'Tocca due volte: tenda', tutPair:'Una tenda per albero', tutTouch:'Le tende non si toccano', tutClue:'Rispetta i numeri' },
+  nl: { skip:'Overslaan', tutPlace:'Tik twee keer voor tent', tutPair:'Eén tent per boom', tutTouch:'Tenten raken elkaar nooit', tutClue:'Klopt met de getallen' },
+  pl: { skip:'Pomiń', tutPlace:'Dotknij dwa razy: namiot', tutPair:'Namiot na każde drzewo', tutTouch:'Namioty się nie stykają', tutClue:'Zgadza się z liczbami' },
+  ru: { skip:'Пропустить', tutPlace:'Нажмите дважды — палатка', tutPair:'Одна палатка на дерево', tutTouch:'Палатки не касаются', tutClue:'Совпади с числами' },
+  tr: { skip:'Atla', tutPlace:'İki kez dokun: çadır', tutPair:'Her ağaca bir çadır', tutTouch:'Çadırlar birbirine değmez', tutClue:'Sayılara tam uy' },
+  ar: { skip:'تخطٍّ', tutPlace:'المس مرتين: خيمة', tutPair:'خيمة لكل شجرة', tutTouch:'الخيام لا تتلامس', tutClue:'طابق الأرقام' },
+  hi: { skip:'छोड़ें', tutPlace:'दो बार टैप: तंबू', tutPair:'हर पेड़ को एक तंबू', tutTouch:'तंबू कभी न छुएँ', tutClue:'संख्याओं से मिलाएँ' },
+  th: { skip:'ข้าม', tutPlace:'แตะสองครั้งได้เต็นท์', tutPair:'ต้นไม้ละหนึ่งเต็นท์', tutTouch:'เต็นท์ห้ามติดกัน', tutClue:'ให้ตรงกับตัวเลข' },
+  id: { skip:'Lewati', tutPlace:'Ketuk dua kali: tenda', tutPair:'Satu tenda tiap pohon', tutTouch:'Tenda tak boleh bersentuhan', tutClue:'Sesuaikan angkanya' },
+  fil: { skip:'Laktawan', tutPlace:'I-tap dalawang beses: tolda', tutPair:'Isang tolda kada puno', tutTouch:'Di nagdidikit ang tolda', tutClue:'Itugma ang mga numero' },
+};
+
+let LANG = DEFAULT_LANG;
+/** key -> current language, then `en`, then the key itself. */
+function t(key) {
+  return (I18N[LANG] && I18N[LANG][key]) || I18N.en[key] || key;
+}
+function getLanguage() {
+  const fromWin = typeof window.language === 'string' ? window.language : null;
+  const fromUrl = new URLSearchParams(window.location.search).get('language');
+  const raw = fromWin != null ? fromWin : fromUrl;
+  return SUPPORTED_LANGS.indexOf(raw) !== -1 ? raw : DEFAULT_LANG;
+}
+function applyUiFont(lang) {
+  if (!LATIN_LANGS.has(lang)) {
+    document.documentElement.style.setProperty('--ui-font', 'system-ui, sans-serif');
+  }
+}
+
+/* ================================================================
+ * §1. Native bridge (game-common §1) — game WITH levels
+ * ============================================================= */
+const TOTAL_LEVELS = 60;
+let currentLevelIdx = 0;
+
+function post(msg) {
+  try {
+    if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+      window.ReactNativeWebView.postMessage(JSON.stringify(msg));
+    } else {
+      console.log('[tents-trees → native]', msg);
+      devSimulateNative(msg);
+    }
+  } catch (e) { /* ignore */ }
+}
+function sendMessage(type, opts) {
+  opts = opts || {};
+  post({
+    type: type,
+    level: currentLevelIdx + 1,
+    result: opts.result != null ? opts.result : null,
+    data: opts.data != null ? opts.data : null,
+    showModal: opts.showModal === true,
+  });
+}
+/** Dev-only: a plain browser has no app popup, so fake the button the app
+ *  would show. Never runs inside the real WebView. */
+let devAuto = true;
+function devSimulateNative(msg) {
+  if (!devAuto) return;
+  if (msg.type !== 'game_result' || msg.showModal !== true) return;
+  setTimeout(function () {
+    if (msg.result === 'win' && typeof window.onNextLevel === 'function') window.onNextLevel();
+    else if (typeof window.onRetryLevel === 'function') window.onRetryLevel();
+  }, 1400);
+}
+function saveData(payload) {
+  const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
+  sendMessage('save_data', { data: data });
+}
+
+const LS_KEY = 'tents_trees_v1';
+function saveLocal(payload) {
+  try {
+    const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
+    localStorage.setItem(LS_KEY, data);
+  } catch (e) { /* private mode / quota */ }
+}
+function readLocal() { try { return localStorage.getItem(LS_KEY) || ''; } catch (e) { return ''; } }
+/** `?reset=1` wipes the saved snapshot before boot reads it, so a fresh install
+ *  can be replayed without clearing browser storage by hand. Never sent by
+ *  native. `?tutorial=1` replays the tutorial only — a convention the mentors
+ *  check for (Feedback sheet r18) even though it is not in game-common. */
+function maybeResetLocal() {
+  if (new URLSearchParams(window.location.search).get('reset') === '1') {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+  }
+}
+function forcedTutorial() {
+  return new URLSearchParams(window.location.search).get('tutorial') === '1';
+}
+
+function getStatusBarHeight() {
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = params.get('statusBarHeight');
+  const fromWin = typeof window.statusBarHeight !== 'undefined' ? window.statusBarHeight : null;
+  let h = Number(fromUrl != null ? fromUrl : fromWin);
+  if (!isFinite(h) || h < 0) h = 0;
+  return h;
+}
+/** 1-indexed level from native, clamped; 0/absent means "no saved level". */
+function getInitialLevelIdx() {
+  const fromWin = typeof window.currentLevel === 'number' ? window.currentLevel : null;
+  const fromUrl = new URLSearchParams(window.location.search).get('currentLevel');
+  const raw = Number(fromWin != null ? fromWin : fromUrl);
+  if (!isFinite(raw) || raw < 1) return -1;                 // -1 = "app said nothing"
+  return Math.min(Math.floor(raw), TOTAL_LEVELS) - 1;
+}
+function getInitialData() {
+  const fromWin = typeof window.data === 'string' ? window.data : null;
+  const fromUrl = new URLSearchParams(window.location.search).get('data');
+  return fromWin != null ? fromWin : (fromUrl || '');
+}
+/** Light fields come from native (authoritative); the half-played board comes
+ *  from localStorage, which native never holds (game-common §1.2). */
+function parseInitialData() {
+  let nat = null, loc = null;
+  const raw = getInitialData();
+  if (raw) { try { nat = JSON.parse(raw); } catch (e) {} }
+  const rawLoc = readLocal();
+  if (rawLoc) { try { loc = JSON.parse(rawLoc); } catch (e) {} }
+  if (!nat && !loc) return null;
+  const out = {};
+  if (loc) for (const k in loc) out[k] = loc[k];
+  if (nat) for (const k in nat) out[k] = nat[k];
+  if (loc) { out.cs = loc.cs; out.mv = loc.mv; out.blv = loc.blv; }
+  return out;
+}
+
+/* ================================================================
+ * §2. Run state + persistence
+ * ============================================================= */
+let stars = new Array(TOTAL_LEVELS).fill(0);
+let muted = false;
+let tutorialSeen = false;
+let score = 0;
+let best = 0;
+let progressIdx = 0;
+
+function lightData() {
+  return {
+    lv: progressIdx,
+    st: stars.join(''),
+    m: muted ? 1 : 0,
+    tut: tutorialSeen ? 1 : 0,
+    best: best,
+    sc: score,
+  };
+}
+function snapshot() {
+  const d = lightData();
+  if (B && !B.solved) { d.blv = currentLevelIdx; d.cs = B.state.join(''); d.mv = B.moves; }
+  return d;
+}
+function persist() {
+  saveData(lightData());     // light -> native
+  saveLocal(snapshot());     // light + board -> localStorage
+}
+/* `localStorage.setItem` is synchronous disk I/O; doing it on every tap puts
+   real I/O in the tap path on Android. Coalesce, then flush for real on any
+   teardown signal. */
+const SNAP_MS = 500;
+let snapTimer = 0;
+function persistLocalOnly() {
+  if (snapTimer) return;
+  snapTimer = setTimeout(function () { snapTimer = 0; saveLocal(snapshot()); }, SNAP_MS);
+}
+function flushLocal() {
+  if (snapTimer) { clearTimeout(snapTimer); snapTimer = 0; }
+  saveLocal(snapshot());
+}
+
+/* ================================================================
+ * §3. Level generation, matching, and the deduction solver
+ * ============================================================= */
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t2 = Math.imul(a ^ (a >>> 15), 1 | a);
+    t2 = (t2 + Math.imul(t2 ^ (t2 >>> 7), 61 | t2)) ^ t2;
+    return ((t2 ^ (t2 >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const ORTH = [[-1, 0], [0, 1], [1, 0], [0, -1]];
+const AROUND = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+/* Player-facing cell states. The tap cycle runs EMPTY -> GRASS -> TENT -> EMPTY,
+   and the order matters: a 3-cycle always makes you pass through the middle
+   state, so whichever state sits second is the one that costs a move to reach.
+   Grass is by far the more frequent action — a 7x13 board has 91 cells and only
+   17 tents, so a player rules out cells far more often than they fill them — and
+   marking grass is the deduction aid this game is meant to reward. Putting tent
+   in the middle (the first build did) charged 2 moves for every grass mark; a
+   screenshot with 8 marks had already burned most of the budget. */
+const S_EMPTY = 0, S_GRASS = 1, S_TENT = 2;
+
+/** Kuhn's augmenting paths. `adjOf(treeIndex)` lists the cells that tree could
+ *  camp on. Returns the size of the largest one-to-one assignment.
+ *  THIS is the function that makes the win check correct — see the file header. */
+function maxMatching(nTrees, adjOf) {
+  const owner = new Map();          // cell -> tree index
+  let seen = null;
+  function tryTree(ti) {
+    for (const cell of adjOf(ti)) {
+      if (seen.has(cell)) continue;
+      seen.add(cell);
+      const holder = owner.get(cell);
+      if (holder === undefined || tryTree(holder)) { owner.set(cell, ti); return true; }
+    }
+    return false;
+  }
+  let count = 0;
+  for (let ti = 0; ti < nTrees; ti++) {
+    seen = new Set();
+    if (tryTree(ti)) count++;
+  }
+  return count;
+}
+
+/** Every tree gets a tent of its own — a perfect matching, not merely "each
+ *  tree has a tent beside it". */
+function matchesAllTrees(W, H, trees, isTentAt) {
+  const adjOf = (ti) => {
+    const out = [];
+    const t = trees[ti];
+    for (const d of ORTH) {
+      const r = t.r + d[0], c = t.c + d[1];
+      if (r < 0 || r >= H || c < 0 || c >= W) continue;
+      if (isTentAt(r, c)) out.push(r * W + c);
+    }
+    return out;
+  };
+  return maxMatching(trees.length, adjOf) === trees.length;
+}
+
+/** Lay down a legal SOLVED board: a tent where nothing touches it, then its tree
+ *  on a free orthogonal neighbour. Both the no-touch rule and the perfect
+ *  matching hold by construction. */
+function buildSolved(W, H, targetTrees, rng) {
+  const cells = new Uint8Array(W * H);          // 0 empty, 1 tree, 2 tent
+  const idx = (r, c) => r * W + c;
+  const inGrid = (r, c) => r >= 0 && r < H && c >= 0 && c < W;
+  const trees = [], tents = [];
+
+  function tentFits(r, c) {
+    if (!inGrid(r, c) || cells[idx(r, c)] !== 0) return false;
+    for (const d of AROUND) {
+      const rr = r + d[0], cc = c + d[1];
+      if (inGrid(rr, cc) && cells[idx(rr, cc)] === 2) return false;
+    }
+    return true;
+  }
+
+  const order = [];
+  for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) order.push([r, c]);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    const tmp = order[i]; order[i] = order[j]; order[j] = tmp;
+  }
+
+  for (const rc of order) {
+    if (trees.length >= targetTrees) break;
+    const r = rc[0], c = rc[1];
+    if (!tentFits(r, c)) continue;
+    const opts = [];
+    for (const d of ORTH) {
+      const rr = r + d[0], cc = c + d[1];
+      if (inGrid(rr, cc) && cells[idx(rr, cc)] === 0) opts.push([rr, cc]);
+    }
+    if (!opts.length) continue;
+    const pick = opts[Math.floor(rng() * opts.length)];
+    cells[idx(r, c)] = 2;
+    cells[idx(pick[0], pick[1])] = 1;
+    tents.push(idx(r, c));
+    trees.push({ r: pick[0], c: pick[1] });
+  }
+  if (trees.length < targetTrees) return null;
+
+  const rowClue = new Array(H).fill(0), colClue = new Array(W).fill(0);
+  for (const cell of tents) { rowClue[(cell / W) | 0]++; colClue[cell % W]++; }
+  return { W: W, H: H, trees: trees, tents: tents, rowClue: rowClue, colClue: colClue };
+}
+
+/** Pure propagation — it NEVER guesses. Finishing proves both that the level
+ *  needs no guessing and that its solution is unique. `stats.hard` counts the
+ *  steps that needed the matching rule; that is the ramp's difficulty measure. */
+function solveLevel(W, H, trees, rowClue, colClue, stats) {
+  const N = W * H;
+  const idx = (r, c) => r * W + c;
+  const inGrid = (r, c) => r >= 0 && r < H && c >= 0 && c < W;
+  const UNK = 0, TENT = 1, GRASS = 2;
+  const state = new Uint8Array(N);
+  const isTree = new Uint8Array(N);
+  for (const t of trees) isTree[idx(t.r, t.c)] = 1;
+
+  /* a cell that is not orthogonally beside a tree can never hold a tent */
+  for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
+    if (isTree[idx(r, c)]) continue;
+    let beside = false;
+    for (const d of ORTH) {
+      const rr = r + d[0], cc = c + d[1];
+      if (inGrid(rr, cc) && isTree[idx(rr, cc)]) { beside = true; break; }
+    }
+    if (!beside) state[idx(r, c)] = GRASS;
+  }
+
+  /** Can every tree still be matched, if `blocked` were grass? */
+  function feasible(blocked) {
+    const adjOf = (ti) => {
+      const out = [];
+      const t = trees[ti];
+      for (const d of ORTH) {
+        const r = t.r + d[0], c = t.c + d[1];
+        if (!inGrid(r, c)) continue;
+        const cell = idx(r, c);
+        if (cell === blocked || isTree[cell]) continue;
+        if (state[cell] === TENT || state[cell] === UNK) out.push(cell);
+      }
+      return out;
+    };
+    return maxMatching(trees.length, adjOf) === trees.length;
+  }
+
+  let changed = true, guard = 0;
+  while (changed && guard++ < 500) {
+    changed = false;
+
+    /* the 8 cells around a tent are grass */
+    for (let cell = 0; cell < N; cell++) {
+      if (state[cell] !== TENT) continue;
+      const r = (cell / W) | 0, c = cell % W;
+      for (const d of AROUND) {
+        const rr = r + d[0], cc = c + d[1];
+        if (!inGrid(rr, cc)) continue;
+        const nb = idx(rr, cc);
+        if (!isTree[nb] && state[nb] === UNK) { state[nb] = GRASS; changed = true; }
+      }
+    }
+
+    /* row / column saturation, both directions */
+    for (let r = 0; r < H; r++) {
+      let tents = 0; const unk = [];
+      for (let c = 0; c < W; c++) {
+        const cell = idx(r, c);
+        if (state[cell] === TENT) tents++;
+        else if (state[cell] === UNK && !isTree[cell]) unk.push(cell);
+      }
+      if (tents > rowClue[r] || tents + unk.length < rowClue[r]) return null;
+      if (tents === rowClue[r]) { for (const cell of unk) { state[cell] = GRASS; changed = true; } }
+      else if (tents + unk.length === rowClue[r]) { for (const cell of unk) { state[cell] = TENT; changed = true; } }
+    }
+    for (let c = 0; c < W; c++) {
+      let tents = 0; const unk = [];
+      for (let r = 0; r < H; r++) {
+        const cell = idx(r, c);
+        if (state[cell] === TENT) tents++;
+        else if (state[cell] === UNK && !isTree[cell]) unk.push(cell);
+      }
+      if (tents > colClue[c] || tents + unk.length < colClue[c]) return null;
+      if (tents === colClue[c]) { for (const cell of unk) { state[cell] = GRASS; changed = true; } }
+      else if (tents + unk.length === colClue[c]) { for (const cell of unk) { state[cell] = TENT; changed = true; } }
+    }
+
+    /* a tree with a single candidate left must use it */
+    for (let ti = 0; ti < trees.length; ti++) {
+      const t = trees[ti];
+      const cand = [];
+      let already = false;
+      for (const d of ORTH) {
+        const r = t.r + d[0], c = t.c + d[1];
+        if (!inGrid(r, c)) continue;
+        const cell = idx(r, c);
+        if (state[cell] === TENT) { already = true; break; }
+        if (state[cell] === UNK && !isTree[cell]) cand.push(cell);
+      }
+      if (already) continue;
+      if (cand.length === 0) return null;
+      if (cand.length === 1) { state[cand[0]] = TENT; changed = true; }
+    }
+    if (changed) continue;
+
+    /* Forced by matching: if calling a cell grass leaves some tree with nowhere
+       to camp, that cell has to be a tent. This is what a player reasons, not
+       backtracking.
+       There is deliberately no mirror rule. Asking "does calling it a TENT break
+       the matching?" can never say yes — an UNKNOWN cell already counts as a
+       candidate, so adding it as a tent yields the very same graph. Measured
+       over 221 generated boards it fired 0 times: dead by construction, and it
+       cost a full matching pass per cell per sweep. */
+    for (let cell = 0; cell < N && !changed; cell++) {
+      if (state[cell] !== UNK || isTree[cell]) continue;
+      if (!feasible(cell)) { state[cell] = TENT; changed = true; if (stats) stats.hard++; }
+    }
+  }
+
+  for (let cell = 0; cell < N; cell++) if (!isTree[cell] && state[cell] === UNK) return null;
+  return state;
+}
+
+/** Every rule a finished board must satisfy. THREE tests — see the file header
+ *  for why the third cannot be a count. Returns null when the board wins. */
+function checkBoard(W, H, trees, rowClue, colClue, isTentAt) {
+  for (let r = 0; r < H; r++) {
+    let n = 0;
+    for (let c = 0; c < W; c++) if (isTentAt(r, c)) n++;
+    if (n !== rowClue[r]) return 'row';
+  }
+  for (let c = 0; c < W; c++) {
+    let n = 0;
+    for (let r = 0; r < H; r++) if (isTentAt(r, c)) n++;
+    if (n !== colClue[c]) return 'col';
+  }
+  for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
+    if (!isTentAt(r, c)) continue;
+    for (const d of AROUND) {
+      const rr = r + d[0], cc = c + d[1];
+      if (rr >= 0 && rr < H && cc >= 0 && cc < W && isTentAt(rr, cc)) return 'touch';
+    }
+  }
+  if (!matchesAllTrees(W, H, trees, isTentAt)) return 'matching';
+  return null;
+}
+
+function levelConfig(lv) {                       // lv is 1-indexed
+  if (lv <= 5)  return { W: 5, H: 5,  n: 4  };
+  if (lv <= 14) return { W: 6, H: 6,  n: 6  };
+  if (lv <= 25) return { W: 6, H: 8,  n: 8  };
+  if (lv <= 38) return { W: 7, H: 9,  n: 11 };
+  if (lv <= 50) return { W: 7, H: 11, n: 14 };
+  return              { W: 7, H: 13, n: 17 };
+}
+
+/* Seed offset per level, found offline. Each is verified to succeed on the FIRST
+   attempt, so entering a level costs one generate call and no search; they were
+   also picked so the deduction depth climbs 0 -> 1 -> 2 matching steps. */
+const SEED_OFF = [1,0,0,0,0,1,2,0,1,0,0,2,1,0,143,19,56,37,6,87,59,80,42,17,131,23,52,45,8,22,26,39,80,25,17,80,125,25,6,8,37,74,1,254,225,196,208,14,228,2,148,257,142,3,203,35,33,152,17,6];
+
+/** One attempt at a level from a specific seed. */
+function tryLevel(W, H, targetTrees, seed) {
+  const rng = mulberry32(seed);
+  const bd = buildSolved(W, H, targetTrees, rng);
+  if (!bd) return null;
+
+  const idx = (r, c) => r * W + c;
+  const tentSet = new Set(bd.tents);
+  if (checkBoard(W, H, bd.trees, bd.rowClue, bd.colClue, (r, c) => tentSet.has(idx(r, c)))) return null;
+
+  const stats = { hard: 0 };
+  const deduced = solveLevel(W, H, bd.trees, bd.rowClue, bd.colClue, stats);
+  if (!deduced) return null;
+
+  /* the deduced board must be the one we built — a mismatch would mean the
+     solver is unsound, not that the puzzle is ambiguous */
+  const isTree = new Uint8Array(W * H);
+  for (const t of bd.trees) isTree[idx(t.r, t.c)] = 1;
+  for (let cell = 0; cell < W * H; cell++) {
+    if (isTree[cell]) continue;
+    const want = tentSet.has(cell) ? 1 : 2;
+    if (deduced[cell] !== want) return null;
+  }
+  return {
+    w: W, h: H,
+    trees: bd.trees,
+    tents: bd.tents.slice(),
+    rowClue: bd.rowClue,
+    colClue: bd.colClue,
+    hard: stats.hard,
+  };
+}
+
+/** Deterministic per level: the baked offset first, then a search as a safety
+ *  net so a future tweak to the generator can never leave a level unplayable. */
+function genLevel(idx) {
+  const lv = idx + 1;
+  const cfg = levelConfig(lv);
+  const baseSeed = lv * 100003;
+  const baked = SEED_OFF[idx];
+  if (baked >= 0) {
+    const L = tryLevel(cfg.W, cfg.H, cfg.n, baseSeed + baked);
+    if (L) return L;
+  }
+  for (let a = 0; a < 20000; a++) {
+    const L = tryLevel(cfg.W, cfg.H, cfg.n, baseSeed + a);
+    if (L) return L;
+  }
+  return null;
+}
+
+/** par = one tent per tree. */
+function parOf(L) { return L.trees.length; }
+/** A wrong tent costs TWO moves to undo (place, then clear). */
+function movesLimitFor(par, levelNum) {
+  let k;
+  if (levelNum <= 9)       k = 3.0;
+  else if (levelNum <= 20) k = 2.5;
+  else if (levelNum <= 35) k = 2.2;
+  else if (levelNum <= 50) k = 2.0;
+  else                     k = 1.9;
+  return Math.max(par + 4, Math.ceil(par * k));
+}
+function levelScoreFor(levelNum, movesLeft) { return 50 * levelNum + 25 * movesLeft; }
+function starsFor(moves, par) {
+  if (moves <= par) return 3;
+  if (moves <= Math.ceil(par * 1.4)) return 2;
+  return 1;
+}
+
+/* ================================================================
+ * §4. Render
+ * ============================================================= */
+const SVGNS = 'http://www.w3.org/2000/svg';
+const CELL = 100;          // board units per grid cell
+const GUT = 1;             // one cell of gutter for the clues, top and left
+
+const elBoard  = document.getElementById('board');
+const elTopbar = document.getElementById('topbar');
+const elLevel  = document.getElementById('hud-level');
+const elScore  = document.getElementById('hud-score');
+const elBest   = document.getElementById('hud-best');
+const elLeft   = document.getElementById('hud-left');
+const elBarFill = document.getElementById('moves-bar-fill');
+const elTut    = document.getElementById('tut');
+const elCoach  = document.getElementById('coach');
+const elTutText = document.getElementById('tut-text');
+const elDone   = document.getElementById('done');
+
+let B = null;              // live board
+let cellGroups = null;     // <g class="c"> per cell
+let rowClueEls = null, colClueEls = null;
+let lockInput = false;
+let runOver = false;
+let levelEpoch = 0;
+
+const px = (c) => (c + GUT) * CELL;      // cell origin x
+const py = (r) => (r + GUT) * CELL;
+
+function mk(tag, attrs) {
+  const el = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  return el;
+}
+
+/** Build every node the level will ever need, once. Taps only swap classes. */
+function buildBoard() {
+  elBoard.textContent = '';
+  elBoard.setAttribute('viewBox', '0 0 ' + ((B.w + GUT) * CELL) + ' ' + ((B.h + GUT) * CELL));
+
+  const gClue = mk('g', {}), gCell = mk('g', {}), gHit = mk('g', {});
+
+  colClueEls = [];
+  for (let c = 0; c < B.w; c++) {
+    const el = mk('text', { class: 'clue', x: px(c) + CELL / 2, y: py(-1) + CELL / 2 });
+    el.textContent = String(B.colClue[c]);
+    gClue.appendChild(el);
+    colClueEls.push(el);
+  }
+  rowClueEls = [];
+  for (let r = 0; r < B.h; r++) {
+    const el = mk('text', { class: 'clue', x: px(-1) + CELL / 2, y: py(r) + CELL / 2 });
+    el.textContent = String(B.rowClue[r]);
+    gClue.appendChild(el);
+    rowClueEls.push(el);
+  }
+
+  cellGroups = [];
+  for (let r = 0; r < B.h; r++) {
+    for (let c = 0; c < B.w; c++) {
+      const x = px(c), y = py(r);
+      const g = mk('g', { class: 'c' + (B.isTree[r * B.w + c] ? ' has-tree' : '') });
+      g.appendChild(mk('rect', {
+        class: 'cell-bg' + (((r + c) & 1) ? ' alt' : ''),
+        x: x + 3, y: y + 3, width: CELL - 6, height: CELL - 6, rx: 12,
+      }));
+
+      /* tree: two stacked triangles over a trunk */
+      const tree = mk('g', { class: 'piece p-tree' });
+      tree.appendChild(mk('rect', { class: 'tree-trunk', x: x + 45, y: y + 62, width: 10, height: 22, rx: 3 }));
+      tree.appendChild(mk('path', { class: 'tree-top', d: 'M' + (x + 50) + ' ' + (y + 16) + 'L' + (x + 76) + ' ' + (y + 52) + 'L' + (x + 24) + ' ' + (y + 52) + 'Z' }));
+      tree.appendChild(mk('path', { class: 'tree-top', d: 'M' + (x + 50) + ' ' + (y + 36) + 'L' + (x + 80) + ' ' + (y + 70) + 'L' + (x + 20) + ' ' + (y + 70) + 'Z' }));
+      g.appendChild(tree);
+
+      /* tent: a triangle with a dark doorway and a guy rope */
+      const tent = mk('g', { class: 'piece p-tent' });
+      tent.appendChild(mk('path', { class: 'tent-body', d: 'M' + (x + 50) + ' ' + (y + 20) + 'L' + (x + 82) + ' ' + (y + 78) + 'L' + (x + 18) + ' ' + (y + 78) + 'Z' }));
+      tent.appendChild(mk('path', { class: 'tent-door', d: 'M' + (x + 50) + ' ' + (y + 40) + 'L' + (x + 63) + ' ' + (y + 78) + 'L' + (x + 37) + ' ' + (y + 78) + 'Z' }));
+      g.appendChild(tent);
+
+      /* grass mark: the player's "definitely nothing here" dot */
+      const grass = mk('g', { class: 'piece p-grass' });
+      grass.appendChild(mk('circle', { class: 'grass-dot', cx: x + CELL / 2, cy: y + CELL / 2, r: 9 }));
+      g.appendChild(grass);
+
+      gCell.appendChild(g);
+      cellGroups.push(g);
+
+      const hit = mk('rect', { class: 'hit', x: x, y: y, width: CELL, height: CELL });
+      hit.setAttribute('data-i', String(r * B.w + c));
+      gHit.appendChild(hit);
+    }
+  }
+
+  elBoard.appendChild(gClue);
+  elBoard.appendChild(gCell);
+  elBoard.appendChild(gHit);   // taps land on top of everything
+}
+
+const isTentAt = (r, c) => B.state[r * B.w + c] === S_TENT;
+
+function renderState() {
+  for (let i = 0; i < cellGroups.length; i++) {
+    const g = cellGroups[i];
+    const isTent = B.state[i] === S_TENT;
+    g.classList.toggle('has-tent', isTent);
+    g.classList.toggle('has-grass', B.state[i] === S_GRASS);
+    /* mark a tent red if it is pitched against another one */
+    let bad = false;
+    if (isTent) {
+      const r = (i / B.w) | 0, c = i % B.w;
+      for (const d of AROUND) {
+        const rr = r + d[0], cc = c + d[1];
+        if (rr < 0 || rr >= B.h || cc < 0 || cc >= B.w) continue;
+        if (B.state[rr * B.w + cc] === S_TENT) { bad = true; break; }
+      }
+    }
+    g.classList.toggle('bad', bad);
+  }
+  for (let r = 0; r < B.h; r++) {
+    let n = 0;
+    for (let c = 0; c < B.w; c++) if (isTentAt(r, c)) n++;
+    rowClueEls[r].classList.toggle('met', n === B.rowClue[r]);
+    rowClueEls[r].classList.toggle('over', n > B.rowClue[r]);
+  }
+  for (let c = 0; c < B.w; c++) {
+    let n = 0;
+    for (let r = 0; r < B.h; r++) if (isTentAt(r, c)) n++;
+    colClueEls[c].classList.toggle('met', n === B.colClue[c]);
+    colClueEls[c].classList.toggle('over', n > B.colClue[c]);
+  }
+}
+
+function updateHud() {
+  elLevel.textContent = String(currentLevelIdx + 1);
+  elScore.textContent = String(score);
+}
+function updateBestHud() { elBest.textContent = String(best); }
+function updateMovesHud() {
+  const left = Math.max(0, B.movesLimit - B.moves);
+  elLeft.textContent = String(left);
+  const frac = B.movesLimit ? left / B.movesLimit : 0;
+  elBarFill.style.transform = 'scaleX(' + frac.toFixed(4) + ')';
+  const danger = frac <= 1 / 6;
+  elBarFill.classList.toggle('warn', frac <= 1 / 3 && !danger);
+  elBarFill.classList.toggle('danger', danger);
+  elLeft.classList.toggle('danger', danger);
+}
+
+let topbarH = 0;
+/** The status-bar gap is pure CSS — `calc(max(--sbh, env(safe-area-inset-top)))`
+ *  in #topbar — so the OS value still wins when native reports 0 on a notched
+ *  phone (game-common §2). JS only feeds --sbh and reads the height. */
+function measureTopbar() {
+  document.documentElement.style.setProperty('--sbh', getStatusBarHeight() + 'px');
+  topbarH = elTopbar.offsetHeight;
+}
+function layout() {
+  if (!B) return;
+  const availW = Math.min(window.innerWidth, 520) - 20;
+  const availH = window.innerHeight - topbarH - 28;
+  /* the gutter costs one extra cell in each direction */
+  const cell = Math.max(26, Math.floor(Math.min(availW / (B.w + GUT), availH / (B.h + GUT))));
+  elBoard.setAttribute('width', String(cell * (B.w + GUT)));
+  elBoard.setAttribute('height', String(cell * (B.h + GUT)));
+  document.getElementById('app').style.paddingTop = topbarH + 'px';
+}
+window.addEventListener('resize', function () {
+  measureTopbar();
+  layout();
+  /* The coach mark is positioned in viewport pixels, so it has to follow the
+     board when the board moves (rotation, keyboard, split-screen). */
+  if (coachCell >= 0) coachAt(coachCell, elCoach.classList.contains('ring-only'));
+});
+
+/* ================================================================
+ * §5. Input — tap a cell to cycle empty -> tent -> grass
+ * ============================================================= */
+elBoard.addEventListener('pointerdown', function (e) {
+  const el = e.target;
+  if (!el || !el.getAttribute) return;
+  const raw = el.getAttribute('data-i');
+  if (raw == null) return;
+  e.preventDefault();
+  tapCell(Number(raw));
+});
+
+function tapCell(i) {
+  if (lockInput || !B) return;
+  if (B.isTree[i]) { sfxClick(true); return; }     // a tree cell is not yours to fill
+  ensureAudio();
+
+  const before = B.state[i];
+  B.state[i] = (before + 1) % 3;                   // empty -> grass -> tent -> empty
+  /* A move is a TENT going up or coming down. Marking grass costs nothing —
+     it is the core deduction aid of this genre, and charging for it would
+     punish exactly the careful play the game is trying to reward. */
+  const tentDelta = (B.state[i] === S_TENT ? 1 : 0) - (before === S_TENT ? 1 : 0);
+  if (tentDelta !== 0) {
+    B.moves++;
+    updateMovesHud();
+  }
+  sfxCell(B.state[i]);
+  renderState();
+  persistLocalOnly();
+  if (tutStep >= 0) { tutLastCell = i; tutOnTap(i, B.state[i]); }
+
+  if (isSolved()) levelSolved();
+  else if (B.moves >= B.movesLimit) levelLost();
+}
+
+/** THREE tests — the third is a matching, not a count. See the file header. */
+function isSolved() {
+  return checkBoard(B.w, B.h, B.trees, B.rowClue, B.colClue, isTentAt) === null;
+}
+
+/* ================================================================
+ * §6. Game flow
+ * ============================================================= */
+function newRun() {
+  score = 0;
+  runOver = false;
+  updateBestHud();
+  loadLevel(0);
+}
+
+function loadLevel(idx) {
+  levelEpoch++;
+  currentLevelIdx = Math.max(0, Math.min(idx, TOTAL_LEVELS - 1));
+  const L = genLevel(currentLevelIdx);
+  if (!L) return;
+
+  B = L;
+  B.state = new Uint8Array(B.w * B.h);
+  B.isTree = new Uint8Array(B.w * B.h);
+  for (const t of B.trees) B.isTree[t.r * B.w + t.c] = 1;
+  B.moves = 0;
+  B.solved = false;
+  B.par = parOf(B);
+  B.movesLimit = movesLimitFor(B.par, currentLevelIdx + 1);
+
+  lockInput = false;
+  runOver = false;
+  elBoard.classList.remove('solved');
+  elDone.classList.add('hidden');
+
+  buildBoard();
+  layout();
+  renderState();
+  updateHud();
+  updateMovesHud();
+
+  if (currentLevelIdx > progressIdx) progressIdx = currentLevelIdx;
+  maybeStartTutorial();
+  persist();
+}
+
+/** Replay a half-played board saved in localStorage. */
+function restoreCells(str, moves) {
+  if (typeof str !== 'string' || str.length !== B.state.length) return;
+  /* A snapshot taken on the move that spent the last turn would restore into a
+     board that is already dead — drop it and start the level fresh. */
+  if (!(moves >= 0 && moves < B.movesLimit)) return;
+  for (let i = 0; i < str.length; i++) {
+    if (B.isTree[i]) continue;
+    const v = str.charCodeAt(i) - 48;
+    if (v >= 0 && v <= 2) B.state[i] = v;
+  }
+  B.moves = moves;
+  renderState();
+  updateMovesHud();
+  if (isSolved()) levelSolved();
+}
+
+function levelSolved() {
+  if (B.solved) return;
+  B.solved = true;
+  lockInput = true;
+  renderState();
+  elBoard.classList.add('solved');
+
+  const left = Math.max(0, B.movesLimit - B.moves);
+  score += levelScoreFor(currentLevelIdx + 1, left);
+  const s = starsFor(B.moves, B.par);
+  if (s > stars[currentLevelIdx]) stars[currentLevelIdx] = s;
+  if (score > best) best = score;
+
+  updateHud();
+  updateBestHud();
+  showDone(s);
+  sfxWin();
+  if (currentLevelIdx + 1 > progressIdx) progressIdx = currentLevelIdx + 1;
+  persist();
+
+  /* The flourish plays first; the app's popup comes after (popup-common §1). */
+  const ep = levelEpoch;
+  setTimeout(function () {
+    if (ep !== levelEpoch) return;
+    if (currentLevelIdx >= TOTAL_LEVELS - 1) {
+      sendMessage('victory', { showModal: true });
+    } else {
+      sendMessage('game_result', { result: 'win', showModal: true });
+      /* a break every 5 levels (game-common §1.7) */
+      if ((currentLevelIdx + 1) % 5 === 0) sendMessage('ads');
+    }
+  }, 1100);
+}
+
+/** Out of moves ends the whole RUN, exactly like animal-connect: the app shows
+ *  its lose popup, and Retry restarts from level 1 with the score cleared. */
+function levelLost() {
+  if (runOver) return;
+  runOver = true;
+  lockInput = true;
+  if (score > best) best = score;
+  updateBestHud();
+  persist();
+  sfxLose();
+  const ep = levelEpoch;
+  setTimeout(function () {
+    if (ep !== levelEpoch) return;
+    sendMessage('game_result', { result: 'lose', showModal: true });
+  }, 700);
+}
+
+function showDone(s) {
+  elDone.textContent = '';
+  for (let i = 0; i < 3; i++) {
+    const svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.appendChild(mk('path', {
+      class: 'star-p' + (i < s ? ' won' : ''),
+      d: 'M12 2 L14.9 8.6 L22 9.3 L16.7 14 L18.3 21 L12 17.3 L5.7 21 L7.3 14 L2 9.3 L9.1 8.6 Z',
+    }));
+    elDone.appendChild(svg);
+  }
+  elDone.classList.remove('hidden');
+}
+
+/* ── Native callbacks (game-common §1.3) ─────────────────────── */
+window.onAppPause = function () {
+  persist();
+  try { if (ac && ac.suspend) ac.suspend(); } catch (e) {}
+};
+/* The WebView can be backgrounded without native calling onAppPause, so make
+   the queued snapshot durable on the platform's own teardown signals too. */
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'hidden') flushLocal();
+});
+window.addEventListener('pagehide', flushLocal);
+
+window.onNextLevel = function () {
+  if (currentLevelIdx < TOTAL_LEVELS - 1) loadLevel(currentLevelIdx + 1);
+  else loadLevel(currentLevelIdx);
+};
+window.onRetryLevel = function () {
+  if (runOver) newRun();
+  else loadLevel(currentLevelIdx);
+};
+
+/* ── HUD buttons ─────────────────────────────────────────────── */
+document.getElementById('back-btn').addEventListener('click', function (e) {
+  e.stopPropagation();
+  persist();
+  sendMessage('quit');
+});
+/* No Restart button by design (mentor, 2026-08-06): with a moves budget the
+   fail state IS the reset, and the app's lose popup owns Retry. */
+document.getElementById('sound-btn').addEventListener('click', function (e) {
+  e.stopPropagation();
+  muted = !muted;
+  this.classList.toggle('muted', muted);
+  if (!muted) { ensureAudio(); sfxClick(false); }
+  persist();
+});
+
+/* ================================================================
+ * §7. Tutorial — 4 steps, never blocks a tap (fruit-drop lesson)
+ * Each step is one action with a result the player can see the instant they do
+ * it, and the coach re-aims from the REAL board state, so tapping somewhere
+ * unexpected never leaves it pointing at a stale cell.
+ * ============================================================= */
+const TUT_KEYS = ['tutPlace', 'tutPair', 'tutTouch', 'tutClue'];
+let tutStep = -1;
+let tutTimer = 0;
+let tutOffered = false;
+let tutLastCell = -1;
+
+function maybeStartTutorial() {
+  if ((tutorialSeen && !forcedTutorial()) || tutOffered) { hideTutorial(); return; }
+  tutOffered = true;
+  tutLastCell = -1;
+  tutStep = 0;
+  showTutStep();
+}
+
+let coachCell = -1;
+/** Park the coach mark over a cell. `left/top` only — the bob and the ripple are
+ *  CSS animations on transform/opacity, so this never runs per frame. */
+function coachAt(i, ringOnly) {
+  if (!cellGroups || !cellGroups[i]) return;
+  const r = cellGroups[i].getBoundingClientRect();
+  coachCell = i;
+  elCoach.style.setProperty('--cz', Math.max(15, Math.min(30, r.width * 0.40)) + 'px');
+  elCoach.style.left = (r.left + r.width / 2) + 'px';
+  elCoach.style.top = (r.top + r.height / 2) + 'px';
+  elCoach.classList.toggle('ring-only', ringOnly === true);
+  elCoach.classList.remove('hidden');
+}
+function hideCoach() { coachCell = -1; elCoach.classList.add('hidden'); }
+function clearHint() {
+  if (!cellGroups) return;
+  for (const g of cellGroups) g.classList.remove('hint');
+}
+
+/** A cell from the real solution that still needs its tent. */
+function tutNextTentCell() {
+  for (const cell of B.tents) if (B.state[cell] !== S_TENT) return cell;
+  return B.tents.length ? B.tents[0] : -1;
+}
+/** The tree that the tent on `cell` belongs to. */
+function tutTreeBeside(cell) {
+  const r = (cell / B.w) | 0, c = cell % B.w;
+  for (const d of ORTH) {
+    const rr = r + d[0], cc = c + d[1];
+    if (rr < 0 || rr >= B.h || cc < 0 || cc >= B.w) continue;
+    if (B.isTree[rr * B.w + cc]) return rr * B.w + cc;
+  }
+  return -1;
+}
+
+function showTutStep() {
+  elTutText.textContent = t(TUT_KEYS[tutStep]);
+  elTutText.dir = (LANG === 'ar') ? 'rtl' : 'ltr';
+  elTut.classList.remove('hidden');
+  clearHint();
+  clearTimeout(tutTimer);
+
+  if (tutStep === 0) {
+    /* Point at a cell the solution really wants a tent on, so following the
+       coach is a correct move rather than a wasted one. */
+    const cell = tutNextTentCell();
+    if (cell >= 0) {
+      cellGroups[cell].classList.add('hint');
+      coachAt(cell, false);
+    }
+    /* advances on the player's own tap — see tutOnTap */
+
+  } else if (tutStep === 1) {
+    /* Ring the tree the tent they just pitched belongs to: "one tent per tree"
+       is then read off a pair that exists on screen. */
+    const tree = (tutLastCell >= 0) ? tutTreeBeside(tutLastCell) : -1;
+    if (tree >= 0) { cellGroups[tree].classList.add('hint'); coachAt(tree, true); }
+    else hideCoach();
+    tutTimer = setTimeout(function () { tutStep = 2; showTutStep(); }, 2600);
+
+  } else if (tutStep === 2) {
+    /* Ring the tent itself and light up the ring of cells it forbids. */
+    if (tutLastCell >= 0) {
+      const r = (tutLastCell / B.w) | 0, c = tutLastCell % B.w;
+      for (const d of AROUND) {
+        const rr = r + d[0], cc = c + d[1];
+        if (rr < 0 || rr >= B.h || cc < 0 || cc >= B.w) continue;
+        const nb = rr * B.w + cc;
+        if (!B.isTree[nb]) cellGroups[nb].classList.add('hint');
+      }
+      coachAt(tutLastCell, true);
+    } else hideCoach();
+    tutTimer = setTimeout(function () { tutStep = 3; showTutStep(); }, 2600);
+
+  } else {
+    /* Ring a clue that the tent just satisfied, else any clue. */
+    hideCoach();
+    tutTimer = setTimeout(finishTutorial, 3000);
+  }
+}
+/** The player tapped `cell`, which is now in `stateNow`. */
+function tutOnTap(cell, stateNow) {
+  if (tutStep === 0) {
+    if (stateNow === S_TENT) { tutStep = 1; showTutStep(); }
+    else showTutStep();                     // they cycled past a tent — re-aim
+  } else if (tutStep === 3) {
+    clearTimeout(tutTimer);
+    tutTimer = setTimeout(finishTutorial, 1800);
+  }
+}
+function finishTutorial() {
+  tutorialSeen = true;
+  persist();
+  hideTutorial();
+}
+function hideTutorial() {
+  tutStep = -1;
+  clearTimeout(tutTimer);
+  elTut.classList.add('hidden');
+  hideCoach();
+  clearHint();
+}
+document.getElementById('tut-skip').addEventListener('click', function (e) {
+  e.stopPropagation();
+  finishTutorial();
+});
+
+/* ================================================================
+ * §8. Audio — synthesised, no asset files
+ * ============================================================= */
+let ac = null, bus = null;
+function ensureAudio() {
+  if (ac) { if (ac.state === 'suspended') { try { ac.resume(); } catch (e) {} } return; }
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    ac = new AC();
+    bus = ac.createGain();
+    bus.gain.value = 0.22;
+    bus.connect(ac.destination);
+  } catch (e) { ac = null; }
+}
+function blip(freq, dur, type, gain, delay) {
+  if (!ac || muted) return;
+  try {
+    const t0 = ac.currentTime + (delay || 0);
+    const osc = ac.createOscillator(), g = ac.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain || 0.5, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g); g.connect(bus);
+    osc.start(t0); osc.stop(t0 + dur + 0.02);
+  } catch (e) { /* ignore */ }
+}
+function sfxClick(soft) { blip(soft ? 300 : 400, 0.06, 'triangle', 0.3); }
+function sfxCell(state) {
+  if (state === S_TENT) blip(560, 0.09, 'triangle', 0.42);
+  else if (state === S_GRASS) blip(360, 0.06, 'triangle', 0.28);
+  else blip(260, 0.06, 'triangle', 0.24);
+}
+function sfxWin() {
+  const notes = [523, 659, 784, 1046];
+  for (let i = 0; i < notes.length; i++) blip(notes[i], 0.2, 'triangle', 0.4, i * 0.075);
+}
+function sfxLose() {
+  blip(300, 0.22, 'sawtooth', 0.3);
+  blip(190, 0.32, 'sawtooth', 0.28, 0.13);
+}
+
+/* ================================================================
+ * §9. Boot
+ * ============================================================= */
+function bootGame() {
+  maybeResetLocal();
+  LANG = getLanguage();
+  applyUiFont(LANG);
+  document.getElementById('lbl-score').textContent = t('score');
+  document.getElementById('lbl-best').textContent = t('best');
+  document.getElementById('lbl-level').textContent = t('level');
+  document.getElementById('tut-skip-label').textContent = t('skip');
+
+  const saved = parseInitialData();
+  let resumeIdx = 0, resumeCells = null, resumeMoves = 0;
+  if (saved) {
+    if (typeof saved.st === 'string') {
+      for (let i = 0; i < TOTAL_LEVELS && i < saved.st.length; i++) {
+        const v = saved.st.charCodeAt(i) - 48;
+        stars[i] = (v >= 0 && v <= 3) ? v : 0;
+      }
+    }
+    muted = saved.m === 1 || saved.m === true;
+    tutorialSeen = saved.tut === 1 || saved.tut === true;
+    if (typeof saved.best === 'number' && saved.best >= 0) best = Math.floor(saved.best);
+    if (typeof saved.sc === 'number' && saved.sc >= 0) score = Math.floor(saved.sc);
+    if (score > best) best = score;
+    if (typeof saved.lv === 'number' && saved.lv >= 0) resumeIdx = Math.min(saved.lv, TOTAL_LEVELS - 1);
+    if (typeof saved.cs === 'string') { resumeCells = saved.cs; resumeMoves = saved.mv || 0; }
+  }
+  /* The app is authoritative when it names a level; otherwise use our own saved
+     progress (game-common §3: 0/absent means "no saved level"). */
+  const fromNative = getInitialLevelIdx();
+  const startIdx = fromNative >= 0 ? fromNative : resumeIdx;
+  /* Only replay the snapshot onto the level it was taken on. */
+  if (!saved || saved.blv !== startIdx) resumeCells = null;
+
+  document.getElementById('sound-btn').classList.toggle('muted', muted);
+  measureTopbar();
+  loadLevel(startIdx);
+  updateBestHud();
+  if (resumeCells) restoreCells(resumeCells, resumeMoves);
+}
+
+/* Android can run injectedJavaScriptBeforeContentLoaded AFTER this inline
+   script, so poll briefly for any injected input, then boot anyway. */
+(function waitForNativeInjection() {
+  let waited = 0;
+  const STEP = 20, LIMIT = 200;
+  (function tick() {
+    const ready = typeof window.statusBarHeight !== 'undefined' ||
+                  typeof window.currentLevel !== 'undefined' ||
+                  typeof window.data !== 'undefined' ||
+                  typeof window.language !== 'undefined';
+    if (ready || waited >= LIMIT) { bootGame(); return; }
+    waited += STEP;
+    setTimeout(tick, STEP);
+  })();
+})();
+
+/* QA hook — used by the headless harnesses, harmless in production. */
+window.__tt = {
+  get B() { return B; },
+  get level() { return currentLevelIdx; },
+  get score() { return score; },
+  get best() { return best; },
+  get runOver() { return runOver; },
+  S_EMPTY: S_EMPTY, S_TENT: S_TENT, S_GRASS: S_GRASS,
+  ORTH: ORTH, AROUND: AROUND,
+  tap: tapCell,
+  load: loadLevel,
+  newRun: newRun,
+  isSolved: isSolved,
+  checkBoard: checkBoard,
+  matchesAllTrees: matchesAllTrees,
+  maxMatching: maxMatching,
+  genLevel: genLevel,
+  tryLevel: tryLevel,
+  solveLevel: solveLevel,
+  buildSolved: buildSolved,
+  levelConfig: levelConfig,
+  movesLimitFor: movesLimitFor,
+  levelScoreFor: levelScoreFor,
+  parOf: parOf,
+  starsFor: starsFor,
+  SEED_OFF: SEED_OFF,
+  TOTAL_LEVELS: TOTAL_LEVELS,
+  setAuto: function (v) { devAuto = !!v; },
+};
+</script>
+</body>
+</html>

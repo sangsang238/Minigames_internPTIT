@@ -1,0 +1,24 @@
+{
+  "title": "Bridge Islands",
+  "packageName": "com.falcon.bridgeislands",
+  "engine": "HTML5",
+  "version": "1.0.0",
+  "category": "PUZZLE",
+  "tags": ["hashi", "bridges", "logic", "islands", "puzzle"],
+  "description": "A quiet logic puzzle of islands and bridges. The number on an island is exactly how many bridges must reach it, bridges never cross, and every island has to end up in one single group. Sixty hand-checked boards grow from a five-island warm-up to a twenty-two island network, and each one is solvable by reasoning alone - never by guessing.",
+  "controls": "Tap an island, then tap a neighbour to add, double or clear a bridge",
+  "aiContext": "",
+  "aiBuildLink": "",
+  "demoUrl": "",
+  "storeLinks": {
+    "googlePlay": { "url": "", "downloads": 0 },
+    "iosAppStore": { "url": "", "downloads": 0 },
+    "steam": { "url": "", "downloads": 0 }
+  },
+  "entry": "index.html",
+  "coverImages": {
+    "landscape16x9": "cover-landscape-1920x1080.png",
+    "portrait2x3": "cover-portrait-800x1200.png",
+    "square1x1": "cover-square-800x800.png"
+  }
+}
