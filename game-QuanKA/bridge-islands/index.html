@@ -31,7 +31,8 @@
   itself the generator made level 37 easier than level 31.
 
   Style: flat dark sea chart — solid fills, 0 gradients, 0 blur, no filter or
-  backdrop-filter anywhere. Nothing here runs a requestAnimationFrame loop.
+  backdrop-filter anywhere. Nothing here runs a requestAnimationFrame LOOP — the
+  only rAF in the file is a one-shot used to collapse a burst of resize events.
 
   Tuân thủ .claude/game-common.md (bridge, level, statusBarHeight, i18n),
   popup-common.md (game theo level => KHÔNG tự vẽ popup kết quả, showModal:true),
@@ -45,7 +46,14 @@
 <title>Bridge Islands</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap" rel="stylesheet" />
+<!-- A plain stylesheet <link> BLOCKS the first paint. Inside a WebView with no
+     usable network — plane, dead SIM, hotel captive portal — that is a black
+     screen for as long as the request takes to give up, which can be tens of
+     seconds. Fetched as `media="print"` it is not render-blocking; `onload`
+     flips it live. The game paints instantly in system-ui and swaps to Google
+     Sans Flex the moment it lands (or simply never, and still plays). -->
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap"
+      rel="stylesheet" media="print" onload="this.media='all'" />
 <style>
 /* ── Reset + mobile tap fixes (game-common §UI) ───────────────── */
 *, *::before, *::after {
@@ -72,9 +80,17 @@
   --gold:      #FFC24D;
 }
 
-html, body { height: 100%; overflow: hidden; }
+html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
 
 body {
+  /* iOS ignores `overflow: hidden` for rubber-band scrolling and Android
+     WebViews still show an overscroll glow; a fixed, inset body is the only
+     thing that actually pins the page so a mis-swipe cannot drag the board.
+     Long-hand on purpose: the `inset` shorthand is Chrome 87 / Safari 14.1, and
+     on anything older it would collapse the body to zero height — a blank game
+     rather than a cosmetic slip. */
+  position: fixed;
+  top: 0; right: 0; bottom: 0; left: 0;
   font-family: var(--ui-font);
   font-weight: 700;
   color: var(--text);
@@ -240,13 +256,22 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  /* iOS Safari has ignored `user-scalable=no` since iOS 10, so without this a
+     pinch on the board zooms the whole game and the player cannot get back.
+     `none` also kills double-tap zoom, which the fast tap-tap cycle of this
+     game would otherwise trigger constantly. The HUD buttons sit outside #app
+     and keep `manipulation`. */
+  touch-action: none;
 }
 #board {
   display: block;
   overflow: visible;
   transition: transform .3s ease-out;
 }
-#board.solved { transform: scale(1.03); }
+/* The win scale would otherwise re-raster the whole board every frame for
+   300ms. Promoting it only while `.solved` is set keeps the idle board on zero
+   extra layers — the class is dropped again on the next level. */
+#board.solved { transform: scale(1.03); will-change: transform; }
 
 /* ── The board itself.
       One <svg>; every island and every candidate bridge slot is created once at
@@ -390,7 +415,7 @@ body {
       look like a second one; stars are the one thing the app cannot know. ── */
 #done {
   position: fixed;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;   /* long-hand: `inset` is Chrome 87+ */
   z-index: 8;
   display: flex;
   align-items: center;
@@ -1120,6 +1145,12 @@ function buildBoard() {
   elBoard.appendChild(gBr);
   elBoard.appendChild(gIs);
   elBoard.appendChild(gHit);   // taps land on top of everything
+
+  /* Seed the diff cache with what was just stamped on: islands are bare, every
+     slot carries `n0`. Anything else and the first renderState would skip a
+     class it still needs to write. */
+  islFlags = new Uint8Array(B.isl.length);
+  brFlags = new Uint8Array(B.pairs.length).fill(1);
 }
 
 /** Degree of each island from the bridges currently drawn. */
@@ -1171,28 +1202,55 @@ function slotBlocked(p) {
   return false;
 }
 
+/** What is currently ON each element, packed into a byte.
+ *  Measured, not assumed: `classList.toggle(tok, force)` is specified to skip
+ *  the update steps when the element is already in the state being asked for, so
+ *  this is NOT about style invalidation — a MutationObserver counts the same 5.4
+ *  class-attribute writes per tap with or without this cache. What it is about is
+ *  the calls themselves. The largest board is 24 islands x 4 classes + ~40 slots
+ *  x 5, and walking all of them blindly spent 225 DOM calls on every tap; diffing
+ *  here first drops that to 18.7, twelve times less crossing out of JS into the
+ *  DOM. It stays higher than the tents figure for a real reason: selecting an
+ *  island re-flags the `ghost` on every slot it touches, so a select genuinely
+ *  does move a dozen elements.
+ *  Zero means "no classes"; buildBoard seeds the slot cache with the `n0` it
+ *  stamps on, and islands start bare. */
+let islFlags = null;    // 1 done, 2 over, 4 lit, 8 selected
+let brFlags = null;     // 1|2|4 = the n0/n1/n2 bit, 8 lit, 16 ghost
+
 function renderState() {
   const deg = degrees();
   const comp = largestComponent();
 
   for (let i = 0; i < islGroups.length; i++) {
+    let f = 0;
+    if (deg[i] === B.numbers[i]) f |= 1;
+    if (deg[i] > B.numbers[i]) f |= 2;
+    if (comp.seen[i] === 1 && comp.n > 1) f |= 4;
+    if (i === sel) f |= 8;
+    if (islFlags[i] === f) continue;
+    islFlags[i] = f;
     const g = islGroups[i];
-    g.classList.toggle('done', deg[i] === B.numbers[i]);
-    g.classList.toggle('over', deg[i] > B.numbers[i]);
-    g.classList.toggle('lit', comp.seen[i] === 1 && comp.n > 1);
-    g.classList.toggle('sel', i === sel);
+    g.classList.toggle('done', (f & 1) !== 0);
+    g.classList.toggle('over', (f & 2) !== 0);
+    g.classList.toggle('lit', (f & 4) !== 0);
+    g.classList.toggle('sel', (f & 8) !== 0);
   }
   for (let p = 0; p < brGroups.length; p++) {
-    const g = brGroups[p];
     const k = B.counts[p];
-    g.classList.toggle('n0', k === 0);
-    g.classList.toggle('n1', k === 1);
-    g.classList.toggle('n2', k === 2);
-    g.classList.toggle('lit', k > 0 && comp.seen[B.pairs[p][0]] === 1);
+    let f = 1 << k;                                        // n0 / n1 / n2
+    if (k > 0 && comp.seen[B.pairs[p][0]] === 1) f |= 8;
     /* dashed hint on every slot the selected island can still use */
-    const isCand = sel >= 0 && (B.pairs[p][0] === sel || B.pairs[p][1] === sel) &&
-                   (k > 0 || !slotBlocked(p));
-    g.classList.toggle('ghost', isCand && k === 0);
+    if (k === 0 && sel >= 0 && (B.pairs[p][0] === sel || B.pairs[p][1] === sel) &&
+        !slotBlocked(p)) f |= 16;
+    if (brFlags[p] === f) continue;
+    brFlags[p] = f;
+    const g = brGroups[p];
+    g.classList.toggle('n0', (f & 1) !== 0);
+    g.classList.toggle('n1', (f & 2) !== 0);
+    g.classList.toggle('n2', (f & 4) !== 0);
+    g.classList.toggle('lit', (f & 8) !== 0);
+    g.classList.toggle('ghost', (f & 16) !== 0);
   }
 }
 
@@ -1213,42 +1271,91 @@ function updateMovesHud() {
   elLeft.classList.toggle('danger', danger);
 }
 
-let topbarH = 0;
+const elApp = document.getElementById('app');
+let topbarH = 0, tutH = 0;
 /** The status-bar gap is pure CSS — `calc(max(--sbh, env(safe-area-inset-top)))`
  *  in #topbar — so the OS value still wins when native reports 0 on a notched
- *  phone (game-common §2). JS only feeds --sbh and reads the height. */
-function measureTopbar() {
+ *  phone (game-common §2). JS only feeds --sbh and reads the height.
+ *  Both reads happen here, back to back, so the whole frame costs one forced
+ *  layout instead of one per caller. */
+function measureChrome() {
   document.documentElement.style.setProperty('--sbh', getStatusBarHeight() + 'px');
   topbarH = elTopbar.offsetHeight;
+  /* The tutorial banner is a real, tappable box pinned to the bottom. On a short
+     screen it used to sit ON the bottom row of islands and eat those taps, so
+     the space it needs comes out of the board's budget while it is up. */
+  tutH = elTut.classList.contains('hidden') ? 0 : elTut.offsetHeight + 20;
 }
 function layout() {
   if (!B) return;
   const availW = Math.min(window.innerWidth, 520) - 24;
-  const availH = window.innerHeight - topbarH - 30;
-  const cell = Math.max(30, Math.floor(Math.min(availW / B.w, availH / B.h)));
+  const availH = window.innerHeight - topbarH - tutH - 30;
+  /* No comfort floor. A floor bigger than what fits does not make the islands
+     nicer to hit — it pushes the board past the edges of a `justify-content:
+     center` flex box, and the overflow above the centre line is unreachable
+     under `overflow: hidden`. Landscape, split-screen and a raised keyboard all
+     produce that case. Shrinking to fit keeps every island on screen; on any
+     real portrait phone this still lands at 34px+ anyway. */
+  const cell = Math.max(8, Math.floor(Math.min(availW / B.w, availH / B.h)));
   elBoard.setAttribute('width', String(cell * B.w));
   elBoard.setAttribute('height', String(cell * B.h));
-  document.getElementById('app').style.paddingTop = topbarH + 'px';
+  elApp.style.paddingTop = topbarH + 'px';
+  elApp.style.paddingBottom = tutH + 'px';
 }
-window.addEventListener('resize', function () {
-  measureTopbar();
-  layout();
-  /* The coach mark is positioned in viewport pixels, so it has to follow the
-     board when the board moves (rotation, keyboard, split-screen). */
-  if (coachIsle >= 0) coachAt(coachIsle, elCoach.classList.contains('ring-only'));
-});
+/** Android fires `resize` in a burst while the URL bar or the soft keyboard
+ *  slides, and every one of those used to cost a forced layout plus a
+ *  `getBoundingClientRect`. Collapse the burst into the next frame. */
+let relayoutPending = 0;
+function relayout() {
+  if (relayoutPending) return;
+  relayoutPending = requestAnimationFrame(function () {
+    relayoutPending = 0;
+    measureChrome();
+    layout();
+    /* The coach mark is positioned in viewport pixels, so it has to follow the
+       board when the board moves (rotation, keyboard, split-screen). */
+    if (coachIsle >= 0) coachAt(coachIsle, elCoach.classList.contains('ring-only'));
+  });
+}
+window.addEventListener('resize', relayout);
+window.addEventListener('orientationchange', relayout);
+/* On iOS the window `resize` does not fire for the keyboard or for a pinch of
+   the visual viewport; this one does. */
+if (window.visualViewport) window.visualViewport.addEventListener('resize', relayout);
 
 /* ================================================================
  * §5. Input — tap an island, then tap a partner
  * ============================================================= */
-elBoard.addEventListener('pointerdown', function (e) {
+function boardPointer(e) {
+  /* A second finger landing on the board fires its own pointerdown, so a
+     two-finger rest on the grid used to select and then bridge in one gesture
+     and silently spend a move. Only the primary pointer plays. */
+  if (e.isPrimary === false) return;
+  if (e.button > 0) return;                       // right-click / stylus barrel
   const el = e.target;
   if (!el || !el.getAttribute) return;
   const raw = el.getAttribute('data-i');
   if (raw == null) return;
   e.preventDefault();
   tapIsland(Number(raw));
-});
+}
+if (window.PointerEvent) {
+  elBoard.addEventListener('pointerdown', boardPointer);
+} else {
+  /* Android WebView below 55 has no Pointer Events at all; without this the
+     board would be completely dead on those devices. */
+  elBoard.addEventListener('touchstart', function (e) {
+    const t = e.changedTouches[0];
+    boardPointer({ isPrimary: true, target: t.target, preventDefault: function () { e.preventDefault(); } });
+  }, { passive: false });
+}
+/* A long press on the board otherwise pops the system text/image menu over the
+   chart, and dismissing it eats the next tap. */
+document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+/* iOS has ignored `user-scalable=no` since iOS 10 and raises these instead of
+   honouring `touch-action` on every surface. Belt and braces against a pinch
+   leaving the player zoomed into a corner of the board with no way out. */
+document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
 
 /** The slot joining i and j, or -1. */
 function slotBetween(i, j) {
@@ -1445,10 +1552,27 @@ window.onAppPause = function () {
   persist();
   try { if (ac && ac.suspend) ac.suspend(); } catch (e) {}
 };
+/* Not in game-common, but findthecow / skydom both ship it and the app calls it
+   — without a resume the game comes back from the app switcher permanently
+   mute. */
+window.onAppResume = function () {
+  try { if (ac && ac.state === 'suspended') ac.resume(); } catch (e) {}
+  relayout();
+};
 /* The WebView can be backgrounded without native calling onAppPause, so make
    the queued snapshot durable on the platform's own teardown signals too. */
 document.addEventListener('visibilitychange', function () {
-  if (document.visibilityState === 'hidden') flushLocal();
+  if (document.visibilityState === 'hidden') {
+    flushLocal();
+    /* A suspended context stops its audio thread; leaving it running in the
+       background is a battery leak on Android. */
+    try { if (ac && ac.suspend) ac.suspend(); } catch (e) {}
+  } else {
+    try { if (ac && ac.state === 'suspended') ac.resume(); } catch (e) {}
+    /* Coming back from a call or the app switcher can land on a different
+       viewport size than the one we left on. */
+    relayout();
+  }
 });
 window.addEventListener('pagehide', flushLocal);
 
@@ -1534,7 +1658,11 @@ function tutPartnerFor(i) {
 function showTutStep() {
   elTutText.textContent = t(TUT_KEYS[tutStep]);
   elTutText.dir = (LANG === 'ar') ? 'rtl' : 'ltr';
+  const wasHidden = elTut.classList.contains('hidden');
   elTut.classList.remove('hidden');
+  /* The banner has just claimed the bottom of the screen — give the board its
+     new budget before the coach mark measures an island. */
+  if (wasHidden) { measureChrome(); layout(); }
   clearHint();
   clearTimeout(tutTimer);
 
@@ -1599,9 +1727,11 @@ function finishTutorial() {
 function hideTutorial() {
   tutStep = -1;
   clearTimeout(tutTimer);
+  const wasShown = !elTut.classList.contains('hidden');
   elTut.classList.add('hidden');
   hideCoach();
   clearHint();
+  if (wasShown) { measureChrome(); layout(); }   // hand the space back to the board
 }
 document.getElementById('tut-skip').addEventListener('click', function (e) {
   e.stopPropagation();
@@ -1621,6 +1751,10 @@ function ensureAudio() {
     bus = ac.createGain();
     bus.gain.value = 0.22;
     bus.connect(ac.destination);
+    /* iOS and Chrome both hand back a context in `suspended` state even when it
+       was created inside a gesture. Without this the very first tap of the
+       session is silent. */
+    if (ac.state === 'suspended') ac.resume();
   } catch (e) { ac = null; }
 }
 function blip(freq, dur, type, gain, delay) {
@@ -1688,7 +1822,7 @@ function bootGame() {
   if (!saved || saved.blv !== startIdx) resumeBr = null;
 
   document.getElementById('sound-btn').classList.toggle('muted', muted);
-  measureTopbar();
+  measureChrome();
   loadLevel(startIdx);
   updateBestHud();
   if (resumeBr) restoreBridges(resumeBr, resumeMoves);
@@ -1739,6 +1873,11 @@ window.__bi = {
   SEED_OFF: SEED_OFF,
   TOTAL_LEVELS: TOTAL_LEVELS,
   setAuto: function (v) { devAuto = !!v; },
+  slotBlocked: slotBlocked,
+  /* Re-fit synchronously. The real resize path goes through a one-shot rAF that
+     a headless run cannot rely on. */
+  syncLayout: function () { measureChrome(); layout(); },
+  get board() { return elBoard; },
 };
 </script>
 </body>

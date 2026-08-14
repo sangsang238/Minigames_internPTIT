@@ -244,6 +244,45 @@ tutorial kết thúc sẽ ra 0 và **nhìn như đạt** mà không kiểm đư�
 
 **Chưa đo ms trên máy thật.** Các con số trên là đếm chính xác, không phải suy diễn.
 
+### Vòng tối ưu thứ hai — sửa 6 lỗi thật trên thiết bị di động
+
+Chạy lại toàn bộ trên **11 kích thước màn hình** (dọc + ngang) và so từng phép đo
+với bản đã commit. Bộ test được **kiểm tra ngược trên bản cũ**: 12/21 assertion
+FAIL ở bản cũ, 0/21 ở bản mới — nghĩa là test thật sự bắt được lỗi, không phải test
+luôn xanh.
+
+| Lỗi | Bản cũ | Bản mới |
+|---|---|---|
+| **Font chặn first paint.** `<link rel=stylesheet>` tới Google Fonts chặn khung hình đầu tiên. Trong WebView **mất mạng** (máy bay, hết data, wifi cổng đăng nhập) đó là màn hình đen tới khi request bỏ cuộc. | chặn | tải qua `media="print"` + `onload` → **không chặn**, game vẽ ngay bằng `system-ui` |
+| **Bàn cờ bị cắt.** Sàn `Math.max(26, …)` đẩy bàn vượt khung `justify-content:center`; phần tràn **phía trên** không với tới được. | **4/33** bố cục bị cắt (ngang, chia đôi màn hình) | **0/33** |
+| **Banner tutorial đè lên bàn cờ** và ăn mất cú chạm ở hàng dưới cùng. | đè tới **61px**, 43 assertion FAIL | chừa chỗ, **gap 22–106px**, 0 FAIL |
+| **Hai ngón cùng chạm** → 2 ô đổi trạng thái, mất lượt oan. | có | chặn pointer không phải `isPrimary` |
+| **Pinch-zoom / double-tap zoom** (iOS bỏ qua `user-scalable=no` từ iOS 10) → phóng to kẹt ở góc bàn cờ. | có | `touch-action: none` + chặn `gesturestart` |
+| **Nhấn giữ** mở menu hệ thống, đóng nó ăn mất cú chạm kế. | có | chặn `contextmenu` |
+
+Thêm: `body` được ghim `position: fixed` + `overscroll-behavior: none` (iOS bỏ qua
+`overflow: hidden` khi rubber-band); `resize`/`orientationchange`/`visualViewport`
+gộp vào **một** rAF thay vì mỗi sự kiện một forced layout; `onAppResume` + resume
+`AudioContext` khi quay lại (trước đó về từ app switcher là **mất tiếng vĩnh viễn**).
+
+### Một giả định sai, đã đo lại
+
+Ban đầu ghi rằng vẽ lại toàn bàn tốn *"~313 style invalidation mỗi lần chạm"*.
+**Sai.** `classList.toggle(tok, force)` theo spec **bỏ qua bước ghi attribute** khi
+phần tử đã ở đúng trạng thái. `MutationObserver` xác nhận: **2.2 lần ghi class mỗi
+cú chạm, cũ và mới y hệt nhau**.
+
+Cái thật sự tốn là **số lời gọi DOM**, và nó vẫn đáng sửa:
+
+| | Lời gọi `classList.toggle` / lần chạm |
+|---|---|
+| Trước | **316,0** |
+| Sau (diff bằng cache byte) | **5,3** |
+
+Cache có thể lệch khỏi DOM nên phải chứng minh là không: **2.203 ảnh chụp DOM**
+(mỗi cú chạm của bot 60 màn + 1.500 cú fuzz) được so với một lần tính lại từ đầu →
+**0 lần lệch**.
+
 ## 📋 Backlog
 
 - Nút **Undo** — hiện phải bấm vòng để gỡ lều, tốn 1 lượt.

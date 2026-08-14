@@ -541,6 +541,39 @@ chạm nhau xoá gần hết phần đó.
 nó sẽ đánh đổi khả năng chống mất tiến độ khi app bị kill mà chẳng được bao
 nhiêu.
 
+### Vòng tối ưu thứ hai — soát lại trên 12 kích thước màn hình
+
+Game này **ship mà không có QA hook**, nên bố cục của nó chưa từng được máy soát
+ở cỡ màn nào ngoài cỡ lúc phát triển. Đã thêm `window.__fc` và chạy bộ soát đã
+dùng cho Bridge Islands / Tents and Trees. Test được **kiểm tra ngược trên bản đã
+commit**: 5 assertion FAIL ở bản cũ, 0 ở bản mới.
+
+**Lỗi nặng nhất — bàn cờ bị cắt mất hàng dưới, trong khi đồng hồ vẫn chạy:**
+
+Sàn `Math.max(16, …)` của `cellPx` là **sàn cứng**. Khi nó chạm sàn, bàn cờ sinh
+ra **cao hơn chỗ đã đo cho nó**, và `#board-outer` là `overflow: hidden` nên cắt
+thẳng phần dôi. Ô không nhìn thấy là ô không bấm được — trên một màn có giờ.
+
+Đo tách bạch (chỉ đổi đúng con số sàn, giữ nguyên mọi thứ khác):
+
+| | Bố cục bị cắt (36 cấu hình: 12 cỡ màn × 3 màn chơi) |
+|---|---|
+| Sàn 16 (bản cũ) | **2/36** — 568×320 ngang, bàn 7×16, đáy bàn ở **347** trong khung cao **320** ⇒ mất **27px** |
+| Sàn 6 (bản mới) | **0/36** |
+
+| Lỗi khác | Bản cũ | Bản mới |
+|---|---|---|
+| **Font chặn first paint.** WebView **mất mạng** = màn hình trắng tới khi request bỏ cuộc. | chặn | `media="print"` + `onload` → **không chặn** |
+| **Pinch-zoom / double-tap zoom** (iOS bỏ qua `user-scalable=no` từ iOS 10) → phóng to kẹt ở góc bàn, **đồng hồ vẫn chạy**. | có | `touch-action: none` + chặn `gesturestart` |
+| **Nhấn giữ** mở menu hệ thống, đóng nó ăn mất cú chạm kế. | có | chặn `contextmenu` |
+| `body` không ghim → iOS rubber-band kéo được cả trang. | có | `position: fixed` + `overscroll-behavior: none` |
+| Chỉ nghe `resize`; iOS **không** bắn `resize` cho bàn phím / visual viewport, Android xoay máy hay báo qua `orientationchange` trước khi số đo ổn định. | thiếu | thêm `orientationchange` + `visualViewport` (vẫn dùng debounce 90ms sẵn có) |
+
+**Không phải lỗi, đã kiểm lại:** banner tutorial **không** đè lên bàn cờ — `resize()`
+vốn đã trừ chiều cao banner từ đầu (0/4 cấu hình đè). Bố cục sau khi ghim `body`
+cũng **giống hệt từng pixel** bản cũ (`board 308x616 at 41,171`), đã soi ảnh chụp
+cạnh nhau.
+
 ## Tuân thủ quy ước chung
 
 - ✅ **game-common.md** — `sendMessage` đủ 5 trường, level 1-indexed;

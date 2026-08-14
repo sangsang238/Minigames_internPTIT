@@ -31,7 +31,14 @@
 <title>Energy Loops</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap" rel="stylesheet" />
+<!-- A plain stylesheet <link> BLOCKS the first paint. Inside a WebView with no
+     usable network — plane, dead SIM, hotel captive portal — that is a black
+     screen for as long as the request takes to give up, which can be tens of
+     seconds. Fetched as `media="print"` it is not render-blocking; `onload`
+     flips it live. The game paints instantly in system-ui and swaps to Google
+     Sans Flex the moment it lands (or simply never, and still plays). -->
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap"
+      rel="stylesheet" media="print" onload="this.media='all'" />
 <style>
 /* ── Reset + mobile tap fixes (game-common §UI) ───────────────── */
 *, *::before, *::after {
@@ -59,9 +66,17 @@
   --d: 0ms;              /* per-tile power delay, set from JS */
 }
 
-html, body { height: 100%; overflow: hidden; }
+html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
 
 body {
+  /* iOS ignores `overflow: hidden` for rubber-band scrolling and Android
+     WebViews still show an overscroll glow; a fixed, inset body is the only
+     thing that actually pins the page so a mis-swipe cannot drag the board.
+     Long-hand on purpose: the `inset` shorthand is Chrome 87 / Safari 14.1, and
+     on anything older it would collapse the body to zero height — a blank game
+     rather than a cosmetic slip. */
+  position: fixed;
+  top: 0; right: 0; bottom: 0; left: 0;
   font-family: var(--ui-font);
   font-weight: 700;
   color: var(--text);
@@ -231,6 +246,12 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  /* iOS Safari has ignored `user-scalable=no` since iOS 10, so without this a
+     pinch on the board zooms the whole game and the player cannot get back.
+     `none` also kills double-tap zoom, which turning a tile twice in a row
+     would otherwise trigger. The HUD buttons sit outside #app and keep
+     `manipulation`. */
+  touch-action: none;
 }
 
 #board {
@@ -399,7 +420,7 @@ body {
        Gold on a dark stroke stays legible over lit mint wires. ─────── */
 #done {
   position: fixed;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;   /* long-hand: `inset` is Chrome 87+ */
   z-index: 8;
   display: flex;
   align-items: center;
@@ -422,7 +443,7 @@ body {
    takes over; see §1.1/§1.3 of game-common for that exact handshake. */
 .overlay {
   position: fixed;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0;   /* long-hand: `inset` is Chrome 87+ */
   z-index: 10;
   display: flex;
   align-items: center;
@@ -1085,44 +1106,83 @@ function updateMovesHud() {
 }
 
 /* ── Layout: fit the grid into whatever space the HUD leaves ──── */
-let topbarH = 0;
+const elApp = document.getElementById('app');
+let topbarH = 0, tutH = 0;
 /** The status-bar gap is pure CSS — `calc(max(--sbh, env(safe-area-inset-top)))`
  *  in #topbar — so the OS value still wins when native reports 0 on a notched
- *  phone (game-common §2, priority 3). JS only feeds --sbh and reads the height. */
-function measureTopbar() {
+ *  phone (game-common §2, priority 3). JS only feeds --sbh and reads the height.
+ *  Both reads happen here, back to back, so the whole frame costs one forced
+ *  layout instead of one per caller. */
+function measureChrome() {
   document.documentElement.style.setProperty('--sbh', getStatusBarHeight() + 'px');
   topbarH = elTopbar.offsetHeight;
+  /* The tutorial banner is a real, tappable box pinned to the bottom. On a short
+     screen it used to sit ON the bottom row of tiles and eat those taps, so the
+     space it needs comes out of the board's budget while it is up. */
+  tutH = elTut.classList.contains('hidden') ? 0 : elTut.offsetHeight + 20;
 }
 function layout() {
   if (!B) return;
   const gap = 3;
   const availW = Math.min(window.innerWidth, 520) - 22;
-  const availH = window.innerHeight - topbarH - 26;
-  const t = Math.max(22, Math.floor(Math.min(
+  const availH = window.innerHeight - topbarH - tutH - 26;
+  /* No comfort floor. A floor bigger than what fits does not make the tiles
+     nicer to hit — it pushes the board past the edges of a `justify-content:
+     center` flex box, and the overflow above the centre line is unreachable
+     under `overflow: hidden`. Landscape, split-screen and a raised keyboard all
+     produce that case. Shrinking to fit keeps every row on screen; on any real
+     portrait phone this still lands well above 22px anyway. */
+  const t = Math.max(8, Math.floor(Math.min(
     (availW - gap * (B.w - 1)) / B.w,
     (availH - gap * (B.h - 1)) / B.h
   )));
   elBoard.style.setProperty('--t', t + 'px');
   elBoard.style.setProperty('--g', gap + 'px');
-  document.getElementById('app').style.paddingTop = topbarH + 'px';
+  elApp.style.paddingTop = topbarH + 'px';
+  elApp.style.paddingBottom = tutH + 'px';
 }
-window.addEventListener('resize', function () {
-  measureTopbar();
-  layout();
-  /* The coach mark is positioned in viewport pixels, so it has to follow the
-     board when the board moves (rotation, keyboard, split-screen). */
-  if (coachTile >= 0) coachAt(coachTile, elCoach.classList.contains('ring-only'));
-});
+/** Android fires `resize` in a burst while the URL bar or the soft keyboard
+ *  slides, and every one of those used to cost a forced layout plus a
+ *  `getBoundingClientRect`. Collapse the burst into the next frame. */
+let relayoutPending = 0;
+function relayout() {
+  if (relayoutPending) return;
+  relayoutPending = requestAnimationFrame(function () {
+    relayoutPending = 0;
+    measureChrome();
+    layout();
+    /* The coach mark is positioned in viewport pixels, so it has to follow the
+       board when the board moves (rotation, keyboard, split-screen). */
+    if (coachTile >= 0) coachAt(coachTile, elCoach.classList.contains('ring-only'));
+  });
+}
+window.addEventListener('resize', relayout);
+window.addEventListener('orientationchange', relayout);
+/* On iOS the window `resize` does not fire for the keyboard or for a pinch of
+   the visual viewport; this one does. */
+if (window.visualViewport) window.visualViewport.addEventListener('resize', relayout);
 
 /* ================================================================
  * §4. Input — tap to turn
  * ============================================================= */
 elBoard.addEventListener('pointerdown', function (e) {
+  /* A second finger landing on the board fires its own pointerdown, so resting
+     two fingers on the grid used to turn two tiles at once and silently spend
+     two moves. Only the primary pointer plays. */
+  if (e.isPrimary === false) return;
+  if (e.button > 0) return;                       // right-click / stylus barrel
   const el = e.target.closest ? e.target.closest('.tile') : null;
   if (!el) return;
   e.preventDefault();
   tapTile(Number(el.dataset.i));
 });
+/* A long press on a tile otherwise pops the system text/image menu over the
+   board, and dismissing it eats the next tap. */
+document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+/* iOS has ignored `user-scalable=no` since iOS 10 and raises these instead of
+   honouring `touch-action` on every surface. Belt and braces against a pinch
+   leaving the player zoomed into a corner of the board with no way out. */
+document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
 
 function tapTile(i) {
   if (lockInput || !B) return;
@@ -1351,10 +1411,27 @@ window.onAppPause = function () {
   persist();
   try { if (ac && ac.suspend) ac.suspend(); } catch (e) {}
 };
+/* Not in game-common, but findthecow / skydom both ship it and the app calls it
+   — without a resume the game comes back from the app switcher permanently
+   mute. */
+window.onAppResume = function () {
+  try { if (ac && ac.state === 'suspended') ac.resume(); } catch (e) {}
+  relayout();
+};
 /* The WebView can be backgrounded without native calling onAppPause, so make
    the queued snapshot durable on the platform's own teardown signals too. */
 document.addEventListener('visibilitychange', function () {
-  if (document.visibilityState === 'hidden') flushLocal();
+  if (document.visibilityState === 'hidden') {
+    flushLocal();
+    /* A suspended context stops its audio thread; leaving it running in the
+       background is a battery leak on Android. */
+    try { if (ac && ac.suspend) ac.suspend(); } catch (e) {}
+  } else {
+    try { if (ac && ac.state === 'suspended') ac.resume(); } catch (e) {}
+    /* Coming back from a call or the app switcher can land on a different
+       viewport size than the one we left on. */
+    relayout();
+  }
 });
 window.addEventListener('pagehide', flushLocal);
 window.onNextLevel = function () {
@@ -1427,7 +1504,11 @@ function showTutStep() {
   const keys = ['tutTap', 'tutCore', 'tutGoal'];
   elTutText.textContent = t(keys[tutStep]);
   elTutText.dir = (LANG === 'ar') ? 'rtl' : 'ltr';
+  const wasHidden = elTut.classList.contains('hidden');
   elTut.classList.remove('hidden');
+  /* The banner has just claimed the bottom of the screen — give the board its
+     new budget before the coach mark measures a tile. */
+  if (wasHidden) { measureChrome(); layout(); }
   clearHint();
   clearTimeout(tutTimer);
   if (tutStep === 0) {
@@ -1468,9 +1549,11 @@ function finishTutorial() {
 function hideTutorial() {
   tutStep = -1;
   clearTimeout(tutTimer);
+  const wasShown = !elTut.classList.contains('hidden');
   elTut.classList.add('hidden');
   hideCoach();
   if (B) clearHint();
+  if (wasShown) { measureChrome(); layout(); }   // hand the space back to the board
 }
 document.getElementById('tut-skip').addEventListener('click', function (e) {
   e.stopPropagation();
@@ -1490,6 +1573,10 @@ function ensureAudio() {
     bus = ac.createGain();
     bus.gain.value = 0.5;
     bus.connect(ac.destination);
+    /* iOS and Chrome both hand back a context in `suspended` state even when it
+       was created inside a gesture. Without this the very first tap of the
+       session is silent. */
+    if (ac.state === 'suspended') ac.resume();
   } catch (e) { ac = null; }
 }
 function blip(freq, dur, type, gain, delay) {
@@ -1575,7 +1662,7 @@ function bootGame() {
   if (!saved || saved.blv !== startIdx) resumeRot = null;
 
   document.getElementById('sound-btn').classList.toggle('muted', muted);
-  measureTopbar();
+  measureChrome();
   loadLevel(startIdx);
   updateBestHud();
   if (resumeRot) restoreRotations(resumeRot, resumeMoves);
@@ -1618,6 +1705,10 @@ window.__el = {
   fitScores: fitOverlayScores,
   TOTAL_LEVELS: TOTAL_LEVELS,
   setAuto: function (v) { devAuto = v; },
+  /* Re-fit synchronously. The real resize path goes through a one-shot rAF that
+     a headless run cannot rely on. */
+  syncLayout: function () { measureChrome(); layout(); },
+  get board() { return elBoard; },
 };
 </script>
 </body>

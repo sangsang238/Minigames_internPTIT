@@ -350,6 +350,32 @@ phần đời còn lại của phiên. Phải `animation: none` khi ẩn. Lỗi 
 một lần nữa** khi đổi tên `#coach-hand` → `#coach-dot` làm selector trỏ trượt,
 và cũng chính bảng đo bắt lại.
 
+### Vòng tối ưu thứ hai — soát lại trên 12 kích thước màn hình
+
+Chạy cùng bộ soát đã dùng cho Bridge Islands / Tents and Trees. Test được **kiểm
+tra ngược trên bản đã commit**: 6 assertion FAIL ở bản cũ, 0 ở bản mới.
+
+| Lỗi | Bản cũ | Bản mới |
+|---|---|---|
+| **Font chặn first paint.** `<link rel=stylesheet>` tới Google Fonts chặn khung hình đầu tiên. WebView **mất mạng** (máy bay, hết data, wifi cổng đăng nhập) = màn hình đen tới khi request bỏ cuộc. | chặn | `media="print"` + `onload` → **không chặn** |
+| **Banner tutorial đè lên bàn cờ**, ăn mất cú chạm ở hàng dưới cùng. | đè ở **12/16** cấu hình (4 cỡ màn × 4 ngôn ngữ), tệ nhất 320×480 | **0/16**, bàn cờ tự thu lại nhường chỗ |
+| **Hai ngón cùng chạm** → xoay 2 ô, mất 2 lượt oan. | có | chặn pointer không phải `isPrimary` |
+| **Pinch-zoom / double-tap zoom** (iOS bỏ qua `user-scalable=no` từ iOS 10). | có | `touch-action: none` + chặn `gesturestart` |
+| **Nhấn giữ** mở menu hệ thống, đóng nó ăn mất cú chạm kế. | có | chặn `contextmenu` |
+| **Về từ app switcher là mất tiếng vĩnh viễn** — `onAppPause` suspend audio nhưng không có ai resume. | có | thêm `onAppResume` + resume theo `visibilitychange` |
+
+Thêm: `body` ghim `position: fixed` + `overscroll-behavior: none`;
+`resize`/`orientationchange`/`visualViewport` gộp vào **một** rAF thay vì mỗi sự
+kiện một forced layout.
+
+**Một thay đổi là phòng ngừa, không phải sửa lỗi thấy được — nói rõ:** sàn
+`Math.max(22, …)` trong `layout()` có thể sinh ra bàn cờ cao hơn chỗ đo được cho
+nó. Đo thật: nó **chạm sàn ở 1/12 cỡ màn** (568×320 ngang) và vượt ngân sách đo
+được ở đúng 1 cấu hình đó — nhưng **chưa bao giờ thực sự bị cắt** (0/36 bố cục
+cắt ở **cả hai bản**), vì 26px dự phòng trong công thức nuốt hết phần dôi. Đã hạ
+sàn xuống 8 để bàn cờ luôn co vừa thay vì dựa vào may mắn. *(Cùng lỗi này ở
+fruit-connect thì cắt thật — xem README bên đó.)*
+
 ## 📋 Backlog
 
 - [ ] Chế độ endless sau màn 60 (sinh vô hạn, vẫn dùng seed)
